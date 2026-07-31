@@ -8,9 +8,22 @@ resulting conversation: answering questions about our services, handling
 objections, and following up on a schedule until the lead replies, converts,
 or opts out.
 
-This repository currently contains the **architecture and delivery plan**
-(see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)); implementation lands in
-phases described there.
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full architecture
+and phased delivery plan.
+
+## Running locally
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+cp .env.example .env  # fill in DATABASE_URL at minimum
+
+alembic upgrade head        # create schema
+uvicorn communicator.api.app:app --reload  # http://localhost:8000/docs
+
+pytest                      # runs without a live DB (compliance-gate + health tests)
+```
 
 ## In one sentence
 
@@ -32,5 +45,9 @@ for the endpoints Harvester needs to expose.
 
 ## Status
 
-Planning stage. No application code yet — see the roadmap in
-`docs/ARCHITECTURE.md` for the phased build-out.
+**Phase 0 (Foundations) in progress.** In place: project scaffold, the full
+data model (leads/contacts/consent/conversations/messages/services/
+follow-up sequences/drafts/audit log), Alembic migrations, a Harvester API
+client, and the opt-out/consent compliance gate. Not yet built: actually
+sending anything, inbound webhooks, and the AI reply engine — see the
+roadmap in `docs/ARCHITECTURE.md` for what's next.
