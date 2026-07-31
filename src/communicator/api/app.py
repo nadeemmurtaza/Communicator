@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 
-from communicator.api.routes import webhooks
+from communicator.api.routes import conversations, drafts, services, webhooks
 
 app = FastAPI(
     title="Communicator API",
@@ -24,3 +24,6 @@ async def health_check():
 # secret) rather than via user bearer auth, so they're not behind any
 # get_current_user-style dependency.
 app.include_router(webhooks.router, prefix="/api/v1")
+app.include_router(drafts.router, prefix="/api/v1")
+app.include_router(services.router, prefix="/api/v1")
+app.include_router(conversations.router, prefix="/api/v1")

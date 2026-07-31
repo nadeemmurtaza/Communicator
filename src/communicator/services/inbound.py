@@ -20,6 +20,7 @@ from communicator.models.conversation import ConversationState
 from communicator.models.lead import Lead
 from communicator.models.message import Message, MessageDirection, MessageStatus
 from communicator.services.messaging import get_or_create_conversation
+from communicator.services.reply_engine import generate_reply
 
 _TERMINAL_STATES = (
     ConversationState.OPTED_OUT,
@@ -84,6 +85,12 @@ async def process_inbound_message(
         except httpx.HTTPError:
             # Best-effort: an unreachable Harvester must never cost us the
             # inbound message we already have safely recorded.
+            pass
+
+    if conversation.state not in _TERMINAL_STATES:
+        try:
+            await generate_reply(session, conversation.id)
+        except Exception:
             pass
 
     return message
