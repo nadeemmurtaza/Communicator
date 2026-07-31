@@ -29,20 +29,29 @@ class MessageStatus(str, enum.Enum):
 
 class Message(Base):
     """A single inbound or outbound message within a Conversation."""
+
     __tablename__ = "messages"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    conversation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("conversations.id"), nullable=False, index=True)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("conversations.id"), nullable=False, index=True
+    )
 
     direction: Mapped[MessageDirection] = mapped_column(Enum(MessageDirection), nullable=False)
     channel: Mapped[ChannelType] = mapped_column(Enum(ChannelType), nullable=False)
     body: Mapped[str] = mapped_column(Text, default="", nullable=False)
 
     provider: Mapped[str] = mapped_column(String(50), default="", nullable=False)
-    provider_message_id: Mapped[str] = mapped_column(String(255), default="", nullable=False, index=True)
-    status: Mapped[MessageStatus] = mapped_column(Enum(MessageStatus), default=MessageStatus.QUEUED, nullable=False)
+    provider_message_id: Mapped[str] = mapped_column(
+        String(255), default="", nullable=False, index=True
+    )
+    status: Mapped[MessageStatus] = mapped_column(
+        Enum(MessageStatus), default=MessageStatus.QUEUED, nullable=False
+    )
     provider_metadata: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
 
-    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    sent_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
 
     conversation: Mapped["Conversation"] = relationship("Conversation", back_populates="messages")

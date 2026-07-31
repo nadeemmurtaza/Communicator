@@ -22,11 +22,15 @@ def _patch_async_client(monkeypatch, handler):
 
 
 def _email_contact() -> Contact:
-    return Contact(id=uuid.uuid4(), lead_id=uuid.uuid4(), channel=ChannelType.EMAIL, value="lead@example.com")
+    return Contact(
+        id=uuid.uuid4(), lead_id=uuid.uuid4(), channel=ChannelType.EMAIL, value="lead@example.com"
+    )
 
 
 def _sms_contact() -> Contact:
-    return Contact(id=uuid.uuid4(), lead_id=uuid.uuid4(), channel=ChannelType.SMS, value="+15551234567")
+    return Contact(
+        id=uuid.uuid4(), lead_id=uuid.uuid4(), channel=ChannelType.SMS, value="+15551234567"
+    )
 
 
 @pytest.mark.asyncio
@@ -76,7 +80,9 @@ async def test_twilio_provider_sends_and_returns_sid(monkeypatch):
 
     _patch_async_client(monkeypatch, handler)
 
-    provider = TwilioSMSProvider(account_sid="ACxxx", auth_token="secret", from_number="+15559876543")
+    provider = TwilioSMSProvider(
+        account_sid="ACxxx", auth_token="secret", from_number="+15559876543"
+    )
     result = await provider.send(_sms_contact(), "Hi! Quick follow-up on your inquiry.")
 
     assert result.provider == "twilio"

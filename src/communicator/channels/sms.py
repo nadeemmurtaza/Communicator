@@ -36,4 +36,6 @@ class TwilioSMSProvider(ChannelProvider):
             response.raise_for_status()
             payload = response.json()
 
-        return SendResult(provider="twilio", provider_message_id=payload.get("sid", ""), raw_response=payload)
+        return SendResult(
+            provider="twilio", provider_message_id=payload.get("sid", ""), raw_response=payload
+        )

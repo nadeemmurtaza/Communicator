@@ -56,14 +56,20 @@ async def test_upsert_lead_creates_lead_and_contacts(db_session):
     assert lead.name == "Sunrise Medical Clinic"
     assert lead.city == "Islamabad, Pakistan"
 
-    contacts = (await db_session.execute(select(Contact).where(Contact.lead_id == lead.id))).scalars().all()
+    contacts = (
+        (await db_session.execute(select(Contact).where(Contact.lead_id == lead.id)))
+        .scalars()
+        .all()
+    )
     channels = {c.channel for c in contacts}
     # telegram is skipped: no channel provider maps to it yet
     assert channels == {ChannelType.EMAIL, ChannelType.SMS}
 
     for contact in contacts:
         consent = (
-            await db_session.execute(select(ConsentRecord).where(ConsentRecord.contact_id == contact.id))
+            await db_session.execute(
+                select(ConsentRecord).where(ConsentRecord.contact_id == contact.id)
+            )
         ).scalar_one()
         assert consent.status == ConsentStatus.OPTED_IN
         assert consent.source == "harvester_sync"
@@ -77,9 +83,19 @@ async def test_upsert_lead_is_idempotent(db_session):
     await db_session.flush()
 
     leads = (
-        await db_session.execute(select(Lead).where(Lead.harvester_institution_id == INSTITUTION_PAYLOAD["id"]))
-    ).scalars().all()
+        (
+            await db_session.execute(
+                select(Lead).where(Lead.harvester_institution_id == INSTITUTION_PAYLOAD["id"])
+            )
+        )
+        .scalars()
+        .all()
+    )
     assert len(leads) == 1
 
-    contacts = (await db_session.execute(select(Contact).where(Contact.lead_id == lead_again.id))).scalars().all()
+    contacts = (
+        (await db_session.execute(select(Contact).where(Contact.lead_id == lead_again.id)))
+        .scalars()
+        .all()
+    )
     assert len(contacts) == 2  # not duplicated on re-sync

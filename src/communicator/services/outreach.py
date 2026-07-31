@@ -4,6 +4,7 @@ yet -- that's Phase 3), sent through the right channel adapter, with the
 send reported back to Harvester's OutreachOutcome. See
 docs/ARCHITECTURE.md sections 5 and 9.
 """
+
 from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession

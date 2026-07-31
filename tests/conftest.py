@@ -1,8 +1,12 @@
+import pytest
 import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
 import communicator.models  # noqa: F401
+from communicator.api.app import app
+from communicator.api.dependencies import get_db_session
 from communicator.config import settings, validate_test_database_url
 from communicator.database import Base
 
@@ -34,3 +38,19 @@ async def db_session(async_engine):
         finally:
             await session.close()
             await outer_transaction.rollback()
+
+
+@pytest.fixture
+def override_database_dependency(db_session):
+    async def get_test_session():
+        yield db_session
+
+    app.dependency_overrides[get_db_session] = get_test_session
+    yield
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def test_client(override_database_dependency):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        yield client

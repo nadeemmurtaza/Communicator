@@ -4,6 +4,7 @@ docs/ARCHITECTURE.md section 7 step 1. Every call here checks the
 compliance gate before touching a channel provider, and always records a
 Message row, whether the send succeeds or fails.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import select
@@ -15,7 +16,11 @@ from communicator.models.contact import Contact
 from communicator.models.conversation import Conversation, ConversationState
 from communicator.models.message import Message, MessageDirection, MessageStatus
 
-_TERMINAL_STATES = (ConversationState.OPTED_OUT, ConversationState.CLOSED_WON, ConversationState.CLOSED_LOST)
+_TERMINAL_STATES = (
+    ConversationState.OPTED_OUT,
+    ConversationState.CLOSED_WON,
+    ConversationState.CLOSED_LOST,
+)
 
 
 class NotSendableError(RuntimeError):

@@ -3,7 +3,9 @@ import pytest
 from communicator.compliance.optout import is_opt_in_message, is_opt_out_message
 
 
-@pytest.mark.parametrize("body", ["STOP", "stop", "  Stop  ", "unsubscribe", "opt out", "cancel", "remove me"])
+@pytest.mark.parametrize(
+    "body", ["STOP", "stop", "  Stop  ", "unsubscribe", "opt out", "cancel", "remove me"]
+)
 def test_recognizes_opt_out_keywords(body):
     assert is_opt_out_message(body) is True
 

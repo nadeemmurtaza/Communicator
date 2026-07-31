@@ -26,16 +26,21 @@ class ConsentRecord(Base):
     every inbound STOP-class message writes a new OPTED_OUT row before
     anything else in the reply pipeline runs.
     """
+
     __tablename__ = "consent_records"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    contact_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("contacts.id"), nullable=False, index=True)
+    contact_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("contacts.id"), nullable=False, index=True
+    )
 
     status: Mapped[ConsentStatus] = mapped_column(Enum(ConsentStatus), nullable=False)
     # e.g. "harvester_sync", "inbound_stop_keyword", "inbound_start_keyword", "manual"
     source: Mapped[str] = mapped_column(String(100), default="", nullable=False)
     note: Mapped[str] = mapped_column(Text, default="", nullable=False)
 
-    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
 
     contact: Mapped["Contact"] = relationship("Contact", back_populates="consent_records")

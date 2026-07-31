@@ -1,15 +1,13 @@
 from communicator.channels.base import ChannelProvider, SendResult
 from communicator.channels.email import PostmarkEmailProvider
 from communicator.channels.sms import TwilioSMSProvider
+from communicator.channels.whatsapp import TwilioWhatsAppProvider
 from communicator.models.contact import ChannelType
 
-# WhatsApp is intentionally absent -- Phase 2 per docs/ARCHITECTURE.md,
-# since it needs the 24h-session/template-message handling that doesn't
-# exist yet. get_provider() fails loudly for it rather than silently
-# no-op'ing.
 _PROVIDERS: dict[ChannelType, type[ChannelProvider]] = {
     ChannelType.EMAIL: PostmarkEmailProvider,
     ChannelType.SMS: TwilioSMSProvider,
+    ChannelType.WHATSAPP: TwilioWhatsAppProvider,
 }
 
 

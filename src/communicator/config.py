@@ -3,7 +3,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://postgres:development-only@localhost:5432/communicator"
-    test_database_url: str = "postgresql+asyncpg://communicator_test:TEST_PASSWORD@127.0.0.1:5432/communicator_test"
+    test_database_url: str = (
+        "postgresql+asyncpg://communicator_test:TEST_PASSWORD@127.0.0.1:5432/communicator_test"
+    )
     app_env: str = "development"
 
     # Harvester integration -- Communicator only ever talks to Harvester's
@@ -21,6 +23,12 @@ class Settings(BaseSettings):
     twilio_whatsapp_from: str = ""
     email_provider_api_key: str = ""
     email_from_address: str = ""
+
+    # Shared secret Postmark's inbound-webhook URL must include as
+    # ?token=... -- Postmark doesn't sign inbound webhook requests, unlike
+    # Twilio, so this is the only thing standing between the endpoint and
+    # anyone who finds the URL.
+    postmark_inbound_webhook_secret: str = ""
 
     dev_auth_enabled: bool = False
 
