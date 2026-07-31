@@ -5,6 +5,7 @@ Message, running the compliance gate first. Intent classification and
 AI-drafted replies are Phase 3 (see docs/ARCHITECTURE.md section 7); this
 module only gets as far as recording the message and updating state.
 """
+
 from __future__ import annotations
 
 import httpx
@@ -20,7 +21,11 @@ from communicator.models.lead import Lead
 from communicator.models.message import Message, MessageDirection, MessageStatus
 from communicator.services.messaging import get_or_create_conversation
 
-_TERMINAL_STATES = (ConversationState.OPTED_OUT, ConversationState.CLOSED_WON, ConversationState.CLOSED_LOST)
+_TERMINAL_STATES = (
+    ConversationState.OPTED_OUT,
+    ConversationState.CLOSED_WON,
+    ConversationState.CLOSED_LOST,
+)
 
 
 class UnknownContactError(RuntimeError):

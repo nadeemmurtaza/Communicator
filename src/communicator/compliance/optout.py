@@ -3,6 +3,7 @@ The compliance gate: this module must run before any reply-engine logic
 touches an inbound message, and before any send touches a Contact. See
 docs/ARCHITECTURE.md section 7, step 1.
 """
+
 from __future__ import annotations
 
 import re
@@ -18,7 +19,9 @@ from communicator.models.consent import ConsentRecord, ConsentStatus
 # (Twilio, etc.) apply their own backstop handling of these keywords too --
 # this is our own durable record of consent state, independent of the
 # provider.
-_OPT_OUT_PATTERN = re.compile(r"^\s*(stop|unsubscribe|opt\s*out|cancel|remove\s*me)\s*$", re.IGNORECASE)
+_OPT_OUT_PATTERN = re.compile(
+    r"^\s*(stop|unsubscribe|opt\s*out|cancel|remove\s*me)\s*$", re.IGNORECASE
+)
 _OPT_IN_PATTERN = re.compile(r"^\s*(start|subscribe|opt\s*in|yes)\s*$", re.IGNORECASE)
 
 
@@ -73,9 +76,13 @@ async def process_inbound_consent_signal(
     Returns the new status if the message changed consent, else None.
     """
     if is_opt_out_message(body):
-        await record_consent(session, contact_id, ConsentStatus.OPTED_OUT, source="inbound_stop_keyword")
+        await record_consent(
+            session, contact_id, ConsentStatus.OPTED_OUT, source="inbound_stop_keyword"
+        )
         return ConsentStatus.OPTED_OUT
     if is_opt_in_message(body):
-        await record_consent(session, contact_id, ConsentStatus.OPTED_IN, source="inbound_start_keyword")
+        await record_consent(
+            session, contact_id, ConsentStatus.OPTED_IN, source="inbound_start_keyword"
+        )
         return ConsentStatus.OPTED_IN
     return None

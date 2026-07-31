@@ -71,7 +71,9 @@ async def test_regular_reply_records_message_and_engages_conversation(db_session
     assert message.status == MessageStatus.RECEIVED
 
     conversation = (
-        await db_session.execute(select(Conversation).where(Conversation.id == message.conversation_id))
+        await db_session.execute(
+            select(Conversation).where(Conversation.id == message.conversation_id)
+        )
     ).scalar_one()
     assert conversation.state == ConversationState.ENGAGED
 
@@ -99,7 +101,9 @@ async def test_stop_keyword_opts_out_and_closes_conversation(db_session):
     assert consent_status == ConsentStatus.OPTED_OUT
 
     conversation = (
-        await db_session.execute(select(Conversation).where(Conversation.id == message.conversation_id))
+        await db_session.execute(
+            select(Conversation).where(Conversation.id == message.conversation_id)
+        )
     ).scalar_one()
     assert conversation.state == ConversationState.OPTED_OUT
 

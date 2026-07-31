@@ -6,6 +6,7 @@ that package isn't a project dependency, so the check isn't repeated at
 test time, but the fixed values are a real reference implementation's
 output, not invented.
 """
+
 from communicator.webhooks.twilio_signature import (
     compute_twilio_signature,
     validate_twilio_signature,
@@ -41,7 +42,9 @@ def test_rejects_tampered_params():
 
 
 def test_rejects_tampered_url():
-    assert validate_twilio_signature(AUTH_TOKEN, URL + "&extra=1", PARAMS, EXPECTED_SIGNATURE) is False
+    assert (
+        validate_twilio_signature(AUTH_TOKEN, URL + "&extra=1", PARAMS, EXPECTED_SIGNATURE) is False
+    )
 
 
 def test_round_trip_for_arbitrary_params():

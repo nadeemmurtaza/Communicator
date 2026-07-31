@@ -9,6 +9,7 @@ proposed but not yet implemented on the Harvester side; they're written
 against the contract documented there so this client is ready the moment
 those endpoints land.
 """
+
 from __future__ import annotations
 
 import httpx
@@ -35,21 +36,27 @@ class HarvesterClient:
         if updated_since:
             params["updated_since"] = updated_since
 
-        async with httpx.AsyncClient(base_url=self.base_url, headers=self._headers(), timeout=30.0) as client:
+        async with httpx.AsyncClient(
+            base_url=self.base_url, headers=self._headers(), timeout=30.0
+        ) as client:
             response = await client.get("/institutions", params=params)
             response.raise_for_status()
             return response.json().get("items", [])
 
     async def get_institution(self, institution_id: str) -> dict:
         """Full dossier (contact points, qualification rationale) for AI context."""
-        async with httpx.AsyncClient(base_url=self.base_url, headers=self._headers(), timeout=30.0) as client:
+        async with httpx.AsyncClient(
+            base_url=self.base_url, headers=self._headers(), timeout=30.0
+        ) as client:
             response = await client.get(f"/institutions/{institution_id}")
             response.raise_for_status()
             return response.json()
 
     async def list_approved_drafts(self) -> list[dict]:
         """Drafts Harvester's own review flow has approved for first-touch send."""
-        async with httpx.AsyncClient(base_url=self.base_url, headers=self._headers(), timeout=30.0) as client:
+        async with httpx.AsyncClient(
+            base_url=self.base_url, headers=self._headers(), timeout=30.0
+        ) as client:
             response = await client.get("/drafts", params={"status": "approved"})
             response.raise_for_status()
             return response.json()
@@ -75,7 +82,9 @@ class HarvesterClient:
             "positive_reply": positive_reply,
             "reply_text": reply_text,
         }
-        async with httpx.AsyncClient(base_url=self.base_url, headers=self._headers(), timeout=30.0) as client:
+        async with httpx.AsyncClient(
+            base_url=self.base_url, headers=self._headers(), timeout=30.0
+        ) as client:
             response = await client.post("/outreach-outcomes", json=payload)
             response.raise_for_status()
             return response.json()

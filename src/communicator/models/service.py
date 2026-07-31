@@ -15,6 +15,7 @@ class Service(Base):
     Anything not in here (pricing beyond pricing_notes, legal/contractual
     terms) must be escalated to a human, not guessed.
     """
+
     __tablename__ = "services"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -27,7 +28,9 @@ class Service(Base):
     faq: Mapped[list[dict]] = mapped_column(JSONB, default=list, nullable=False)
     pricing_notes: Mapped[str] = mapped_column(Text, default="", nullable=False)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),

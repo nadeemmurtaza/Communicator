@@ -22,7 +22,9 @@ class FakeProvider(ChannelProvider):
         if self.should_fail:
             raise RuntimeError("provider unavailable")
         self.sent.append((contact.value, body, subject))
-        return SendResult(provider="fake", provider_message_id="fake-123", raw_response={"ok": True})
+        return SendResult(
+            provider="fake", provider_message_id="fake-123", raw_response={"ok": True}
+        )
 
 
 async def _make_contact(db_session, opted_in: bool) -> Contact:
@@ -57,7 +59,9 @@ async def test_send_records_message_and_advances_conversation(db_session):
     contact = await _make_contact(db_session, opted_in=True)
     provider = FakeProvider()
 
-    message = await send_outbound_message(db_session, contact, provider, "Hello there", subject="Hi")
+    message = await send_outbound_message(
+        db_session, contact, provider, "Hello there", subject="Hi"
+    )
 
     assert message.status == MessageStatus.SENT
     assert message.provider == "fake"
@@ -65,7 +69,9 @@ async def test_send_records_message_and_advances_conversation(db_session):
     assert provider.sent == [("lead@example.com", "Hello there", "Hi")]
 
     conversation = (
-        await db_session.execute(select(Conversation).where(Conversation.id == message.conversation_id))
+        await db_session.execute(
+            select(Conversation).where(Conversation.id == message.conversation_id)
+        )
     ).scalar_one()
     assert conversation.state == ConversationState.AWAITING_REPLY
 
@@ -80,8 +86,14 @@ async def test_send_marks_message_failed_on_provider_error(db_session):
 
     conversation_ids = select(Conversation.id).where(Conversation.contact_id == contact.id)
     messages = (
-        await db_session.execute(select(Message).where(Message.conversation_id.in_(conversation_ids)))
-    ).scalars().all()
+        (
+            await db_session.execute(
+                select(Message).where(Message.conversation_id.in_(conversation_ids))
+            )
+        )
+        .scalars()
+        .all()
+    )
 
     assert len(messages) == 1
     assert messages[0].status == MessageStatus.FAILED

@@ -43,8 +43,12 @@ async def test_send_first_touch_sends_and_reports_outcome(db_session, monkeypatc
     harvester_client = FakeHarvesterClient()
 
     message = await send_first_touch(
-        db_session, lead, contact, "Hello! We help clinics like yours automate patient intake.",
-        harvester_client, subject="Quick question",
+        db_session,
+        lead,
+        contact,
+        "Hello! We help clinics like yours automate patient intake.",
+        harvester_client,
+        subject="Quick question",
     )
 
     assert message.status == MessageStatus.SENT

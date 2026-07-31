@@ -9,6 +9,7 @@ it, anyone who guesses the endpoint URL could forge an inbound message
 (e.g. a fake STOP to silently opt a lead out, or once Phase 3's reply
 engine exists, injected content aimed at it).
 """
+
 from __future__ import annotations
 
 import base64
@@ -25,6 +26,8 @@ def compute_twilio_signature(auth_token: str, url: str, params: dict[str, str]) 
     return base64.b64encode(digest).decode("utf-8")
 
 
-def validate_twilio_signature(auth_token: str, url: str, params: dict[str, str], signature: str) -> bool:
+def validate_twilio_signature(
+    auth_token: str, url: str, params: dict[str, str], signature: str
+) -> bool:
     expected = compute_twilio_signature(auth_token, url, params)
     return hmac.compare_digest(expected, signature)

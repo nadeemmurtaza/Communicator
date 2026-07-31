@@ -26,18 +26,23 @@ class Contact(Base):
     A single reachable channel for a person at a Lead -- e.g. one email
     address or one phone number. A Lead may have several.
     """
+
     __tablename__ = "contacts"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     lead_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("leads.id"), nullable=False, index=True)
-    harvester_contact_point_id: Mapped[str] = mapped_column(String(64), default="", nullable=False, index=True)
+    harvester_contact_point_id: Mapped[str] = mapped_column(
+        String(64), default="", nullable=False, index=True
+    )
 
     channel: Mapped[ChannelType] = mapped_column(Enum(ChannelType), nullable=False)
     value: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     person_name: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     role: Mapped[str] = mapped_column(String(255), default="", nullable=False)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
 
     lead: Mapped["Lead"] = relationship("Lead", back_populates="contacts")
     consent_records: Mapped[list["ConsentRecord"]] = relationship(

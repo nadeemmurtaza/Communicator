@@ -6,12 +6,12 @@ shared-secret query token instead. A message from a contact we don't
 recognize is acknowledged with 200 and dropped -- there's nothing in our
 data model to attach it to, and providers retry on non-2xx responses.
 """
+
 from __future__ import annotations
 
 import hmac
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.api.dependencies import get_db_session, get_harvester_client
@@ -24,10 +24,14 @@ from communicator.webhooks.twilio_signature import validate_twilio_signature
 router = APIRouter(prefix="/webhooks", tags=["Webhooks"])
 
 
-def _require_twilio_signature(request: Request, form: dict[str, str], signature: str | None) -> None:
+def _require_twilio_signature(
+    request: Request, form: dict[str, str], signature: str | None
+) -> None:
     if not settings.twilio_auth_token:
         raise HTTPException(status_code=503, detail="Twilio webhook not configured.")
-    if not signature or not validate_twilio_signature(settings.twilio_auth_token, str(request.url), form, signature):
+    if not signature or not validate_twilio_signature(
+        settings.twilio_auth_token, str(request.url), form, signature
+    ):
         raise HTTPException(status_code=403, detail="Invalid Twilio signature.")
 
 

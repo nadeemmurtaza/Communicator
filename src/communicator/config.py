@@ -3,7 +3,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://postgres:development-only@localhost:5432/communicator"
-    test_database_url: str = "postgresql+asyncpg://communicator_test:TEST_PASSWORD@127.0.0.1:5432/communicator_test"
+    test_database_url: str = (
+        "postgresql+asyncpg://communicator_test:TEST_PASSWORD@127.0.0.1:5432/communicator_test"
+    )
     app_env: str = "development"
 
     # Harvester integration -- Communicator only ever talks to Harvester's

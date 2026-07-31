@@ -52,16 +52,21 @@ async def _seed_contact(db_session, channel: ChannelType, value: str) -> Contact
 
 
 @pytest.mark.asyncio
-async def test_twilio_sms_webhook_rejects_missing_signature(test_client, fake_harvester_client, db_session):
+async def test_twilio_sms_webhook_rejects_missing_signature(
+    test_client, fake_harvester_client, db_session
+):
     response = await test_client.post(
-        "/api/v1/webhooks/twilio/sms", data={"From": "+15550000000", "Body": "hi", "MessageSid": "SM1"}
+        "/api/v1/webhooks/twilio/sms",
+        data={"From": "+15550000000", "Body": "hi", "MessageSid": "SM1"},
     )
     assert response.status_code == 403
     assert fake_harvester_client.pushed == []
 
 
 @pytest.mark.asyncio
-async def test_twilio_sms_webhook_rejects_bad_signature(test_client, fake_harvester_client, db_session):
+async def test_twilio_sms_webhook_rejects_bad_signature(
+    test_client, fake_harvester_client, db_session
+):
     response = await test_client.post(
         "/api/v1/webhooks/twilio/sms",
         data={"From": "+15550000000", "Body": "hi", "MessageSid": "SM1"},
@@ -87,12 +92,18 @@ async def test_twilio_sms_webhook_accepts_valid_signature_and_records_message(
 
     assert response.status_code == 200
     messages = (
-        await db_session.execute(select(Message).where(Message.provider_message_id == "SM100"))
-    ).scalars().all()
+        (await db_session.execute(select(Message).where(Message.provider_message_id == "SM100")))
+        .scalars()
+        .all()
+    )
     assert len(messages) == 1
 
     assert fake_harvester_client.pushed == [
-        {"institution_id": lead.harvester_institution_id, "replied": True, "reply_text": "Interested, tell me more."}
+        {
+            "institution_id": lead.harvester_institution_id,
+            "replied": True,
+            "reply_text": "Interested, tell me more.",
+        }
     ]
 
 
@@ -130,7 +141,9 @@ async def test_unknown_contact_still_acks_200(test_client, fake_harvester_client
 
 
 @pytest.mark.asyncio
-async def test_postmark_webhook_requires_valid_token(test_client, fake_harvester_client, monkeypatch, db_session):
+async def test_postmark_webhook_requires_valid_token(
+    test_client, fake_harvester_client, monkeypatch, db_session
+):
     monkeypatch.setattr(webhooks_module.settings, "postmark_inbound_webhook_secret", "shh-secret")
 
     response = await test_client.post(
@@ -149,14 +162,24 @@ async def test_postmark_webhook_accepts_valid_token_and_records_message(
 
     response = await test_client.post(
         "/api/v1/webhooks/postmark/inbound?token=shh-secret",
-        json={"FromFull": {"Email": contact.value}, "TextBody": "What's the pricing?", "MessageID": "pm-2"},
+        json={
+            "FromFull": {"Email": contact.value},
+            "TextBody": "What's the pricing?",
+            "MessageID": "pm-2",
+        },
     )
 
     assert response.status_code == 200
-    messages = (await db_session.execute(select(Message).where(Message.provider_message_id == "pm-2"))).scalars().all()
+    messages = (
+        (await db_session.execute(select(Message).where(Message.provider_message_id == "pm-2")))
+        .scalars()
+        .all()
+    )
     assert len(messages) == 1
 
     conversation = (
-        await db_session.execute(select(Conversation).where(Conversation.id == messages[0].conversation_id))
+        await db_session.execute(
+            select(Conversation).where(Conversation.id == messages[0].conversation_id)
+        )
     ).scalar_one()
     assert conversation.state == ConversationState.ENGAGED

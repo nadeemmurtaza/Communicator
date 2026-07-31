@@ -8,6 +8,7 @@ lead_harvester/schemas/institutions.py): id, canonical_name,
 institution_type, branches[].address, contact_points[].{contact_type,
 contact_value, person_name, role}.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import select
@@ -83,6 +84,8 @@ async def upsert_lead_from_institution(session: AsyncSession, institution: dict)
 
         if is_new_contact:
             await session.flush()  # assign contact.id for the ConsentRecord FK
-            await record_consent(session, contact.id, ConsentStatus.OPTED_IN, source="harvester_sync")
+            await record_consent(
+                session, contact.id, ConsentStatus.OPTED_IN, source="harvester_sync"
+            )
 
     return lead
