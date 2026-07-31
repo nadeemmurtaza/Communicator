@@ -21,6 +21,7 @@ cp .env.example .env  # fill in DATABASE_URL at minimum
 
 alembic upgrade head        # create schema
 uvicorn communicator.api.app:app --reload  # http://localhost:8000/docs
+python -m communicator.worker              # follow-up scheduler poll loop (optional)
 
 pytest                      # runs without a live DB (compliance-gate + health tests)
 ```
@@ -54,12 +55,19 @@ timeline for all three channels, and a Claude-backed reply engine (intent
 classification, service-catalog grounding, confidence-scored drafts) with
 a human approval queue.
 
-Not yet built (Phase 4-5): drafts marked `AUTO_APPROVED` still require a
-human to hit `/drafts/{id}/approve` — nothing actually auto-sends yet; no
-follow-up scheduler exists to advance `FollowUpSequence` steps or evaluate
-`next_followup_at` (no Celery/APScheduler dependency at all); no quiet-hours,
-working-hours, or per-lead rate caps; no WhatsApp 24h session/template-window
-enforcement; the outcome push to Harvester is a hardcoded stub, and the
-Harvester endpoints it targets (`qualified` filter, `/outreach-outcomes`)
-don't exist yet on that side. See the roadmap in `docs/ARCHITECTURE.md` for
-what's next.
+**Phase 4 in progress:** a follow-up scheduler now exists
+(`communicator.services.followup_scheduler`, `POST /sequences` to define
+cadences, `communicator.worker` as a poll-loop process, `POST
+/followups/run` to fire a tick manually). It advances `Conversation`s
+enrolled in a `FollowUpSequence` past their `next_followup_at`, drafting
+(not sending) the next templated step through the same `Draft`/approval
+queue as reactive replies, and re-checks opt-out/reply state at run time
+so an in-flight reply always wins the race.
+
+Not yet built: drafts marked `AUTO_APPROVED` still require a human to hit
+`/drafts/{id}/approve` — nothing actually auto-sends yet; no quiet-hours,
+working-hours, or per-lead rate caps on the scheduler; no WhatsApp 24h
+session/template-window enforcement; the outcome push to Harvester is a
+hardcoded stub, and the Harvester endpoints it targets (`qualified`
+filter, `/outreach-outcomes`) don't exist yet on that side. See the
+roadmap in `docs/ARCHITECTURE.md` for what's next.
