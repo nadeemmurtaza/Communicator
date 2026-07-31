@@ -41,3 +41,12 @@ asyncio_mode = "auto"
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.ruff.lint]
+ignore = [
+  # `Depends(...)` as a parameter default is FastAPI's documented
+  # dependency-injection pattern (see api/routes/webhooks.py,
+  # api/dependencies.py) -- not the mutable-default-argument bug B008
+  # otherwise correctly guards against.
+  "B008",
+]
