@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     email_provider_api_key: str = ""
     email_from_address: str = ""
 
+    # Shared secret Postmark's inbound-webhook URL must include as
+    # ?token=... -- Postmark doesn't sign inbound webhook requests, unlike
+    # Twilio, so this is the only thing standing between the endpoint and
+    # anyone who finds the URL.
+    postmark_inbound_webhook_secret: str = ""
+
     dev_auth_enabled: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")

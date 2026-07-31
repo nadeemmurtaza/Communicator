@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 
+from communicator.api.routes import webhooks
+
 app = FastAPI(
     title="Communicator API",
     description="Multi-channel outreach and conversation engine for NEWAX leads.",
@@ -16,3 +18,9 @@ async def root():
 @app.get("/api/v1/health")
 async def health_check():
     return {"status": "ok"}
+
+
+# Webhooks authenticate themselves (Twilio signature / Postmark shared
+# secret) rather than via user bearer auth, so they're not behind any
+# get_current_user-style dependency.
+app.include_router(webhooks.router, prefix="/api/v1")
