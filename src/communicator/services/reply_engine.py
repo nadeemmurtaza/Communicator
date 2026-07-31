@@ -7,12 +7,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.ai.claude_client import call_claude, parse_json_reply
 from communicator.config import settings
+from communicator.harvester_client import HarvesterClient
 from communicator.models.audit import AuditLog
 from communicator.models.contact import Contact
 from communicator.models.conversation import Conversation, ConversationState
 from communicator.models.draft import Draft, DraftStatus
 from communicator.models.lead import Lead
 from communicator.models.message import Message
+from communicator.services.draft_actions import approve_and_send
 from communicator.services.service_catalog import get_matching_services, render_service_context
 
 SYSTEM_PROMPT = """You are a sales assistant for NEWAX Technologies, replying to a lead on behalf of the sales team.
@@ -51,7 +53,11 @@ async def _build_context(session: AsyncSession, conversation: Conversation) -> t
     return user_prompt, lead.harvester_institution_id
 
 
-async def generate_reply(session: AsyncSession, conversation_id: uuid.UUID) -> Draft | None:
+async def generate_reply(
+    session: AsyncSession,
+    conversation_id: uuid.UUID,
+    harvester_client: HarvesterClient | None = None,
+) -> Draft | None:
     conversation = await session.get(Conversation, conversation_id)
     if conversation is None or conversation.state in (
         ConversationState.OPTED_OUT,
@@ -97,4 +103,8 @@ async def generate_reply(session: AsyncSession, conversation_id: uuid.UUID) -> D
     )
 
     await session.flush()
+
+    if draft.status == DraftStatus.AUTO_APPROVED and harvester_client is not None:
+        draft = await approve_and_send(session, draft, harvester_client, actor="ai")
+
     return draft

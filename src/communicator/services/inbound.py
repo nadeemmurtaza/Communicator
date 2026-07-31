@@ -89,7 +89,7 @@ async def process_inbound_message(
 
     if conversation.state not in _TERMINAL_STATES:
         try:
-            await generate_reply(session, conversation.id)
+            await generate_reply(session, conversation.id, harvester_client)
         except Exception:
             pass
 

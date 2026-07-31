@@ -12,7 +12,9 @@ from communicator.models.lead import Lead
 from communicator.services.messaging import send_outbound_message
 
 
-async def approve_and_send(session: AsyncSession, draft: Draft, harvester_client: HarvesterClient) -> Draft:
+async def approve_and_send(
+    session: AsyncSession, draft: Draft, harvester_client: HarvesterClient, actor: str = "human"
+) -> Draft:
     conversation = await session.get(Conversation, draft.conversation_id)
     contact = await session.get(Contact, conversation.contact_id)
     lead = await session.get(Lead, contact.lead_id)
@@ -23,7 +25,8 @@ async def approve_and_send(session: AsyncSession, draft: Draft, harvester_client
     )
 
     draft.status = DraftStatus.SENT
-    session.add(AuditLog(entity_type="draft", entity_id=draft.id, action="approved_and_sent", actor="human"))
+    action = "approved_and_sent" if actor == "human" else "auto_sent"
+    session.add(AuditLog(entity_type="draft", entity_id=draft.id, action=action, actor=actor))
 
     await harvester_client.push_outreach_outcome(
         institution_id=lead.harvester_institution_id, replied=True, positive_reply=True
