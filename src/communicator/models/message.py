@@ -49,6 +49,7 @@ class Message(Base):
         Enum(MessageStatus), default=MessageStatus.QUEUED, nullable=False
     )
     provider_metadata: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    intent: Mapped[str] = mapped_column(String(50), default="", nullable=False)
 
     sent_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)

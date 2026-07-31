@@ -15,6 +15,8 @@ class Settings(BaseSettings):
 
     # Reply drafting
     anthropic_api_key: str = ""
+    anthropic_model: str = "claude-sonnet-5"
+    reply_auto_send_confidence: float = 0.85
 
     # Channel providers
     twilio_account_sid: str = ""
