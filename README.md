@@ -45,9 +45,21 @@ for the endpoints Harvester needs to expose.
 
 ## Status
 
-**Phase 0 (Foundations) in progress.** In place: project scaffold, the full
-data model (leads/contacts/consent/conversations/messages/services/
-follow-up sequences/drafts/audit log), Alembic migrations, a Harvester API
-client, and the opt-out/consent compliance gate. Not yet built: actually
-sending anything, inbound webhooks, and the AI reply engine — see the
-roadmap in `docs/ARCHITECTURE.md` for what's next.
+**Phases 0-3 merged.** In place: project scaffold, the full data model
+(leads/contacts/consent/conversations/messages/services/follow-up
+sequences/drafts/audit log), Alembic migrations, a Harvester API client,
+the opt-out/consent compliance gate, channel adapters (email/SMS/
+WhatsApp) with outbound send, inbound webhooks and a unified conversation
+timeline for all three channels, and a Claude-backed reply engine (intent
+classification, service-catalog grounding, confidence-scored drafts) with
+a human approval queue.
+
+Not yet built (Phase 4-5): drafts marked `AUTO_APPROVED` still require a
+human to hit `/drafts/{id}/approve` — nothing actually auto-sends yet; no
+follow-up scheduler exists to advance `FollowUpSequence` steps or evaluate
+`next_followup_at` (no Celery/APScheduler dependency at all); no quiet-hours,
+working-hours, or per-lead rate caps; no WhatsApp 24h session/template-window
+enforcement; the outcome push to Harvester is a hardcoded stub, and the
+Harvester endpoints it targets (`qualified` filter, `/outreach-outcomes`)
+don't exist yet on that side. See the roadmap in `docs/ARCHITECTURE.md` for
+what's next.
