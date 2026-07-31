@@ -22,7 +22,13 @@ class PostmarkEmailProvider(ChannelProvider):
                 "EMAIL_PROVIDER_API_KEY and EMAIL_FROM_ADDRESS must be set to send email."
             )
 
-    async def send(self, contact: Contact, body: str, subject: str | None = None) -> SendResult:
+    async def send(
+        self,
+        contact: Contact,
+        body: str,
+        subject: str | None = None,
+        content_sid: str | None = None,
+    ) -> SendResult:
         payload = {
             "From": self.from_address,
             "To": contact.value,

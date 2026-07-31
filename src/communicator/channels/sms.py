@@ -26,7 +26,13 @@ class TwilioSMSProvider(ChannelProvider):
                 "TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_SMS_FROM must be set to send SMS."
             )
 
-    async def send(self, contact: Contact, body: str, subject: str | None = None) -> SendResult:
+    async def send(
+        self,
+        contact: Contact,
+        body: str,
+        subject: str | None = None,
+        content_sid: str | None = None,
+    ) -> SendResult:
         data = {"From": self.from_number, "To": contact.value, "Body": body}
 
         async with httpx.AsyncClient(

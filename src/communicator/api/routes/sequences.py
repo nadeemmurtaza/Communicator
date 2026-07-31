@@ -19,6 +19,10 @@ class SequenceStepIn(BaseModel):
     delay_days: int
     channel: ChannelType
     template: str = ""
+    # Twilio Content API SID -- required for a WHATSAPP step that may fire
+    # outside the contact's 24h session window (nearly all follow-up
+    # steps do). See communicator.services.messaging.whatsapp_session_open.
+    template_sid: str = ""
 
 
 class SequenceIn(BaseModel):
@@ -47,6 +51,7 @@ async def create_sequence(payload: SequenceIn, session: AsyncSession = Depends(g
                 delay_days=step.delay_days,
                 channel=step.channel,
                 template=step.template,
+                template_sid=step.template_sid,
             )
         )
     await session.flush()
@@ -78,6 +83,7 @@ async def get_sequence(sequence_id: uuid.UUID, session: AsyncSession = Depends(g
                 "delayDays": st.delay_days,
                 "channel": st.channel.value,
                 "template": st.template,
+                "templateSid": st.template_sid,
             }
             for st in steps
         ],

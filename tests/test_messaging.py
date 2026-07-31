@@ -18,7 +18,7 @@ class FakeProvider(ChannelProvider):
         self.should_fail = should_fail
         self.sent: list[tuple[str, str, str | None]] = []
 
-    async def send(self, contact, body, subject=None):
+    async def send(self, contact, body, subject=None, content_sid=None):
         if self.should_fail:
             raise RuntimeError("provider unavailable")
         self.sent.append((contact.value, body, subject))

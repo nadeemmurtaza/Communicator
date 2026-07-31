@@ -19,11 +19,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.compliance.optout import is_sendable
 from communicator.models.audit import AuditLog
-from communicator.models.contact import Contact
+from communicator.models.contact import ChannelType, Contact
 from communicator.models.conversation import Conversation, ConversationState
 from communicator.models.draft import Draft, DraftStatus
 from communicator.models.lead import Lead
 from communicator.models.sequence import FollowUpSequence, SequenceStep
+from communicator.services.messaging import whatsapp_session_open
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +95,21 @@ async def run_due_followups(session: AsyncSession, now: datetime | None = None) 
             continue
 
         step = steps[step_index]
+
+        if (
+            step.channel == ChannelType.WHATSAPP
+            and not step.template_sid
+            and not await whatsapp_session_open(session, conversation.id)
+        ):
+            logger.warning(
+                "conversation %s step %d is a WhatsApp send outside the 24h session window "
+                "with no template_sid configured on the sequence step; skipping until one is "
+                "attached or the contact replies",
+                conversation.id,
+                step.step_number,
+            )
+            continue
+
         try:
             lead = await session.get(Lead, contact.lead_id)
             body = _render(step.template, lead, contact)
@@ -111,6 +127,7 @@ async def run_due_followups(session: AsyncSession, now: datetime | None = None) 
             confidence=0.0,
             citations=[],
             status=DraftStatus.PENDING_REVIEW,
+            content_sid=step.template_sid,
         )
         session.add(draft)
         drafts.append(draft)

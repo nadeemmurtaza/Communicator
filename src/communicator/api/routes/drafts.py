@@ -26,6 +26,7 @@ async def list_drafts(status: str = "pending_review", session: AsyncSession = De
             "body": d.body,
             "confidence": d.confidence,
             "citations": d.citations,
+            "contentSid": d.content_sid,
             "status": d.status.value,
             "createdAt": d.created_at.isoformat(),
         }

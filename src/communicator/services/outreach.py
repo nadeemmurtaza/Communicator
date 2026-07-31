@@ -28,9 +28,17 @@ async def send_first_touch(
     harvester_client: HarvesterClient,
     subject: str | None = None,
     sequence: FollowUpSequence | None = None,
+    content_sid: str | None = None,
 ) -> Message:
+    """
+    ``content_sid`` (a Twilio Content API template SID) is required for a
+    WhatsApp first touch -- there's never an open 24h session before the
+    lead has messaged us first. See communicator.services.messaging.
+    """
     provider = get_provider(contact.channel)
-    message = await send_outbound_message(session, contact, provider, body, subject=subject)
+    message = await send_outbound_message(
+        session, contact, provider, body, subject=subject, content_sid=content_sid
+    )
 
     if sequence is not None:
         conversation = await session.get(Conversation, message.conversation_id)

@@ -48,5 +48,9 @@ class SequenceStep(Base):
     delay_days: Mapped[int] = mapped_column(Integer, nullable=False)
     channel: Mapped[ChannelType] = mapped_column(Enum(ChannelType), nullable=False)
     template: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    # Twilio Content API SID -- required for WHATSAPP steps that may fire
+    # outside the contact's 24h session window (nearly all follow-up steps
+    # do). See communicator.services.messaging.whatsapp_session_open.
+    template_sid: Mapped[str] = mapped_column(String(255), default="", nullable=False)
 
     sequence: Mapped["FollowUpSequence"] = relationship("FollowUpSequence", back_populates="steps")

@@ -14,7 +14,7 @@ from communicator.services.outreach import send_first_touch
 
 
 class FakeProvider(ChannelProvider):
-    async def send(self, contact, body, subject=None):
+    async def send(self, contact, body, subject=None, content_sid=None):
         return SendResult(provider="fake", provider_message_id="fake-1", raw_response={})
 
 
