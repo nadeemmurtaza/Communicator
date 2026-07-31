@@ -26,7 +26,7 @@ depends_on: str | Sequence[str] | None = None
 # channeltype` when the type is later referenced verbatim, which fails
 # outside of Alembic's own checkfirst-guarded execution.
 channel_type_enum = postgresql.ENUM(
-    "email", "sms", "whatsapp", name="channeltype", create_type=False
+    "EMAIL", "SMS", "WHATSAPP", name="channeltype", create_type=False
 )
 
 
