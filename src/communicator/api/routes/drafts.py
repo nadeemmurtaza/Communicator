@@ -16,7 +16,9 @@ router = APIRouter(prefix="/drafts", tags=["Drafts"])
 
 
 @router.get("")
-async def list_drafts(status: str = "pending_review", session: AsyncSession = Depends(get_db_session)):
+async def list_drafts(
+    status: str = "pending_review", session: AsyncSession = Depends(get_db_session)
+):
     stmt = select(Draft).where(Draft.status == DraftStatus(status))
     drafts = (await session.execute(stmt)).scalars().all()
     return [
@@ -58,7 +60,9 @@ async def reject_draft_endpoint(
 
 
 @router.post("/generate/{conversation_id}")
-async def generate_draft(conversation_id: uuid.UUID, session: AsyncSession = Depends(get_db_session)):
+async def generate_draft(
+    conversation_id: uuid.UUID, session: AsyncSession = Depends(get_db_session)
+):
     draft = await generate_reply(session, conversation_id)
     if draft is None:
         raise HTTPException(status_code=400, detail="Conversation not eligible for a reply")

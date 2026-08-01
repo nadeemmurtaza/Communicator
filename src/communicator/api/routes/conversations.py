@@ -30,16 +30,24 @@ async def list_conversations(session: AsyncSession = Depends(get_db_session)):
 
 
 @router.get("/{conversation_id}")
-async def get_conversation(conversation_id: uuid.UUID, session: AsyncSession = Depends(get_db_session)):
+async def get_conversation(
+    conversation_id: uuid.UUID, session: AsyncSession = Depends(get_db_session)
+):
     conversation = await session.get(Conversation, conversation_id)
     if conversation is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
     messages = (
-        await session.execute(
-            select(Message).where(Message.conversation_id == conversation_id).order_by(Message.sent_at)
+        (
+            await session.execute(
+                select(Message)
+                .where(Message.conversation_id == conversation_id)
+                .order_by(Message.sent_at)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     return {
         "id": str(conversation.id),
@@ -61,7 +69,9 @@ async def get_conversation(conversation_id: uuid.UUID, session: AsyncSession = D
 
 @router.post("/{conversation_id}/enroll-sequence")
 async def enroll_sequence(
-    conversation_id: uuid.UUID, sequence_id: uuid.UUID, session: AsyncSession = Depends(get_db_session)
+    conversation_id: uuid.UUID,
+    sequence_id: uuid.UUID,
+    session: AsyncSession = Depends(get_db_session),
 ):
     conversation = await session.get(Conversation, conversation_id)
     if conversation is None:

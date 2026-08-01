@@ -67,7 +67,9 @@ def enroll_conversation(
         key=lambda s: s.step_number,
         default=None,
     )
-    conversation.next_followup_at = now + timedelta(days=first_step.delay_days) if first_step else None
+    conversation.next_followup_at = (
+        now + timedelta(days=first_step.delay_days) if first_step else None
+    )
 
 
 async def _weekly_send_count(session: AsyncSession, contact_id: uuid.UUID, now: datetime) -> int:
@@ -108,7 +110,10 @@ async def _due_conversations(session: AsyncSession, now: datetime) -> list[Conve
 
 
 async def _advance_conversation(
-    session: AsyncSession, conversation: Conversation, harvester_client: HarvesterClient, now: datetime
+    session: AsyncSession,
+    conversation: Conversation,
+    harvester_client: HarvesterClient,
+    now: datetime,
 ) -> Message | None:
     if not within_working_hours(now):
         conversation.next_followup_at = now.replace(
@@ -179,14 +184,18 @@ async def _advance_conversation(
     lead = await session.get(Lead, contact.lead_id)
     if lead is not None:
         try:
-            await harvester_client.push_outreach_outcome(institution_id=lead.harvester_institution_id)
+            await harvester_client.push_outreach_outcome(
+                institution_id=lead.harvester_institution_id
+            )
         except httpx.HTTPError:
             pass
 
     return message
 
 
-async def run_followup_scheduler(session: AsyncSession, harvester_client: HarvesterClient) -> list[Message]:
+async def run_followup_scheduler(
+    session: AsyncSession, harvester_client: HarvesterClient
+) -> list[Message]:
     now = datetime.now(UTC)
     sent: list[Message] = []
     for conversation in await _due_conversations(session, now):

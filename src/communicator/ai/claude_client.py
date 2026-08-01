@@ -32,6 +32,5 @@ def parse_json_reply(text: str) -> dict:
     text = text.strip()
     if text.startswith("```"):
         text = text.strip("`")
-        if text.startswith("json"):
-            text = text[4:]
+        text = text.removeprefix("json")
     return json.loads(text)

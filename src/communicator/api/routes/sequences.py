@@ -24,10 +24,7 @@ _REPLIED_STATES = (
 @router.get("")
 async def list_sequences(session: AsyncSession = Depends(get_db_session)):
     sequences = (await session.execute(select(FollowUpSequence))).scalars().all()
-    return [
-        {"id": str(s.id), "name": s.name, "isActive": s.is_active}
-        for s in sequences
-    ]
+    return [{"id": str(s.id), "name": s.name, "isActive": s.is_active} for s in sequences]
 
 
 @router.get("/{sequence_id}/variant-stats")

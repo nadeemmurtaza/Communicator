@@ -58,7 +58,9 @@ async def dispatch_auto_approved_drafts(
     """
     stmt = select(Draft).where(Draft.status == DraftStatus.AUTO_APPROVED)
     drafts = (await session.execute(stmt)).scalars().all()
-    return [await approve_and_send(session, draft, harvester_client, actor="ai") for draft in drafts]
+    return [
+        await approve_and_send(session, draft, harvester_client, actor="ai") for draft in drafts
+    ]
 
 
 async def reject_draft(session: AsyncSession, draft: Draft, feedback: str) -> Draft:

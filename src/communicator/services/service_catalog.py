@@ -11,7 +11,11 @@ async def get_matching_services(session: AsyncSession, institution_type: str) ->
     services = list((await session.execute(stmt)).scalars().all())
     if not institution_type:
         return services
-    matched = [s for s in services if not s.target_institution_types or institution_type in s.target_institution_types]
+    matched = [
+        s
+        for s in services
+        if not s.target_institution_types or institution_type in s.target_institution_types
+    ]
     return matched or services
 
 
