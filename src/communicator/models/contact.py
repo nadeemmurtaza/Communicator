@@ -39,6 +39,10 @@ class Contact(Base):
     value: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     person_name: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     role: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    # BCP-47-ish short code (e.g. "en", "es"). Updated from whatever
+    # language the reply engine detects in the lead's own messages; used to
+    # reply in kind and to translate follow-up sequence templates.
+    language: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)

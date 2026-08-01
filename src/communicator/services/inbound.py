@@ -90,7 +90,7 @@ async def process_inbound_message(
     if conversation.state not in _TERMINAL_STATES:
         try:
             await generate_reply(session, conversation.id)
-        except Exception:
-            pass
+        except Exception:  # noqa: BLE001, S110 -- a drafting failure (LLM/network/parse)
+            pass  # must never lose the inbound message already recorded above.
 
     return message

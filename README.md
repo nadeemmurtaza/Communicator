@@ -45,9 +45,27 @@ for the endpoints Harvester needs to expose.
 
 ## Status
 
-**Phase 0 (Foundations) in progress.** In place: project scaffold, the full
-data model (leads/contacts/consent/conversations/messages/services/
-follow-up sequences/drafts/audit log), Alembic migrations, a Harvester API
-client, and the opt-out/consent compliance gate. Not yet built: actually
-sending anything, inbound webhooks, and the AI reply engine — see the
-roadmap in `docs/ARCHITECTURE.md` for what's next.
+**Phases 0–5 in place.** See the roadmap in `docs/ARCHITECTURE.md` for
+full phase descriptions.
+
+- **Phase 0 (Foundations)** — done. Project scaffold, full data model
+  (leads/contacts/consent/conversations/messages/services/follow-up
+  sequences/drafts/audit log), Alembic migrations, Harvester API client,
+  opt-out/consent compliance gate.
+- **Phase 1 (Outbound MVP)** — done. Email/SMS/WhatsApp channel adapters,
+  lead sync worker, first-touch send pipeline, outcome push to Harvester.
+- **Phase 2 (Omnichannel inbound)** — done. Inbound webhooks for all three
+  channels, unified conversation/message timeline.
+- **Phase 3 (AI reply engine)** — done. Service catalog, Claude-based
+  intent classification + draft generation, human approval queue
+  (`/drafts`).
+- **Phase 4 (Automated follow-up + auto-send)** — done. Follow-up
+  sequence scheduler (quiet hours, weekly caps, WhatsApp 24h session-window
+  awareness), auto-send dispatch for high-confidence drafts. Exposed as
+  `/scheduler/*` endpoints for now — swap in a Celery/APScheduler beat once
+  this needs to run unattended rather than via cron/manual trigger.
+- **Phase 5 (Optimization)** — done. `SequenceStep` variants + `GET
+  /sequences/{id}/variant-stats` for A/B testing; sentiment-based hot-lead
+  alerts posted to a configurable Slack-compatible webhook
+  (`SALES_ALERT_WEBHOOK_URL`); language detection + in-kind replies and
+  translated follow-up templates (`Contact.language`).

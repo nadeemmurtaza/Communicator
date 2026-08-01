@@ -18,6 +18,16 @@ class Settings(BaseSettings):
     anthropic_model: str = "claude-sonnet-5"
     reply_auto_send_confidence: float = 0.85
 
+    # Follow-up scheduler (Phase 4)
+    follow_up_quiet_hours_start: int = 9
+    follow_up_quiet_hours_end: int = 18
+    follow_up_weekly_message_cap: int = 3
+    whatsapp_session_window_hours: int = 24
+
+    # Hot-lead alerts (Phase 5). Slack-compatible incoming webhook URL --
+    # left blank, alerts are skipped (still recorded in AuditLog either way).
+    sales_alert_webhook_url: str = ""
+
     # Channel providers
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""
