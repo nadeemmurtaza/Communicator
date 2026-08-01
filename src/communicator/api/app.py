@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 
-from communicator.api.routes import conversations, drafts, services, webhooks
+from communicator.api.routes import conversations, drafts, scheduler, services, webhooks
 
 app = FastAPI(
     title="Communicator API",
@@ -27,3 +27,4 @@ app.include_router(webhooks.router, prefix="/api/v1")
 app.include_router(drafts.router, prefix="/api/v1")
 app.include_router(services.router, prefix="/api/v1")
 app.include_router(conversations.router, prefix="/api/v1")
+app.include_router(scheduler.router, prefix="/api/v1")

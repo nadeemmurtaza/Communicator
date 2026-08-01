@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from communicator.api.dependencies import get_db_session
 from communicator.models.conversation import Conversation
 from communicator.models.message import Message
+from communicator.models.sequence import FollowUpSequence
+from communicator.services.followup_scheduler import enroll_conversation
 
 router = APIRouter(prefix="/conversations", tags=["Conversations"])
 
@@ -54,4 +56,29 @@ async def get_conversation(conversation_id: uuid.UUID, session: AsyncSession = D
             }
             for m in messages
         ],
+    }
+
+
+@router.post("/{conversation_id}/enroll-sequence")
+async def enroll_sequence(
+    conversation_id: uuid.UUID, sequence_id: uuid.UUID, session: AsyncSession = Depends(get_db_session)
+):
+    conversation = await session.get(Conversation, conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    sequence = await session.get(FollowUpSequence, sequence_id)
+    if sequence is None:
+        raise HTTPException(status_code=404, detail="FollowUpSequence not found")
+
+    await session.refresh(sequence, attribute_names=["steps"])
+    enroll_conversation(conversation, sequence)
+    await session.flush()
+
+    return {
+        "id": str(conversation.id),
+        "sequenceId": str(sequence.id),
+        "nextFollowupAt": conversation.next_followup_at.isoformat()
+        if conversation.next_followup_at
+        else None,
     }
