@@ -10,6 +10,7 @@ worker later, without callers needing to change.
 
 from __future__ import annotations
 
+import random
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -27,6 +28,7 @@ from communicator.models.lead import Lead
 from communicator.models.message import Message, MessageDirection
 from communicator.models.sequence import FollowUpSequence, SequenceStep
 from communicator.services.messaging import send_outbound_message
+from communicator.services.translation import translate_text
 
 _ELIGIBLE_STATES = (ConversationState.NEW, ConversationState.AWAITING_REPLY)
 
@@ -46,11 +48,25 @@ def within_working_hours(now: datetime | None = None) -> bool:
 def enroll_conversation(
     conversation: Conversation, sequence: FollowUpSequence, now: datetime | None = None
 ) -> None:
-    """Attach a Conversation to a FollowUpSequence and schedule its first step."""
+    """
+    Attach a Conversation to a FollowUpSequence, randomly assign it to one
+    of the sequence's variants (equal weight across whatever distinct
+    `variant` labels exist -- "control" only, if the sequence isn't running
+    an A/B test), and schedule its first step.
+    """
     now = now or datetime.now(UTC)
-    first_step = min(sequence.steps, key=lambda s: s.step_number) if sequence.steps else None
+    variants = sorted({step.variant for step in sequence.steps}) or ["control"]
+    variant = random.choice(variants)
+
     conversation.sequence_id = sequence.id
+    conversation.sequence_variant = variant
     conversation.sequence_step = 0
+
+    first_step = min(
+        (s for s in sequence.steps if s.variant == variant),
+        key=lambda s: s.step_number,
+        default=None,
+    )
     conversation.next_followup_at = now + timedelta(days=first_step.delay_days) if first_step else None
 
 
@@ -109,6 +125,7 @@ async def _advance_conversation(
     stmt = select(SequenceStep).where(
         SequenceStep.sequence_id == conversation.sequence_id,
         SequenceStep.step_number == next_step_number,
+        SequenceStep.variant == conversation.sequence_variant,
     )
     step = (await session.execute(stmt)).scalar_one_or_none()
     if step is None:
@@ -134,13 +151,15 @@ async def _advance_conversation(
             conversation.next_followup_at = now + timedelta(days=1)
             return None
 
+    body = await translate_text(step.template, contact.language)
     provider = get_provider(step.channel)
-    message = await send_outbound_message(session, contact, provider, step.template)
+    message = await send_outbound_message(session, contact, provider, body)
 
     conversation.sequence_step = next_step_number
     next_stmt = select(SequenceStep).where(
         SequenceStep.sequence_id == conversation.sequence_id,
         SequenceStep.step_number == next_step_number + 1,
+        SequenceStep.variant == conversation.sequence_variant,
     )
     following = (await session.execute(next_stmt)).scalar_one_or_none()
     conversation.next_followup_at = (

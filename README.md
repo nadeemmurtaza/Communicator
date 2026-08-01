@@ -45,8 +45,8 @@ for the endpoints Harvester needs to expose.
 
 ## Status
 
-**Phases 0–4 in place, Phase 5 not started.** See the roadmap in
-`docs/ARCHITECTURE.md` for full phase descriptions.
+**Phases 0–5 in place.** See the roadmap in `docs/ARCHITECTURE.md` for
+full phase descriptions.
 
 - **Phase 0 (Foundations)** — done. Project scaffold, full data model
   (leads/contacts/consent/conversations/messages/services/follow-up
@@ -64,5 +64,8 @@ for the endpoints Harvester needs to expose.
   awareness), auto-send dispatch for high-confidence drafts. Exposed as
   `/scheduler/*` endpoints for now — swap in a Celery/APScheduler beat once
   this needs to run unattended rather than via cron/manual trigger.
-- **Phase 5 (Optimization)** — not started: sequence A/B testing,
-  sentiment-based hot-lead alerts, multi-language support.
+- **Phase 5 (Optimization)** — done. `SequenceStep` variants + `GET
+  /sequences/{id}/variant-stats` for A/B testing; sentiment-based hot-lead
+  alerts posted to a configurable Slack-compatible webhook
+  (`SALES_ALERT_WEBHOOK_URL`); language detection + in-kind replies and
+  translated follow-up templates (`Contact.language`).

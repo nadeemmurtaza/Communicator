@@ -3,7 +3,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -45,6 +45,10 @@ class Conversation(Base):
         ForeignKey("follow_up_sequences.id"), nullable=True
     )
     sequence_step: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    # Which SequenceStep.variant this Conversation is locked into for the
+    # lifetime of its enrollment -- assigned once at enroll_conversation()
+    # time, never re-rolled, so A/B results aren't contaminated mid-sequence.
+    sequence_variant: Mapped[str | None] = mapped_column(String(50), nullable=True)
     next_followup_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
