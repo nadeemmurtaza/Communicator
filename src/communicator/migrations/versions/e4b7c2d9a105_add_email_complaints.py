@@ -1,7 +1,7 @@
 """Add append-only email complaint evidence
 
 Revision ID: e4b7c2d9a105
-Revises: dbf02de26b3f
+Revises: dbf02de26b3f, f3a9c1d7e2b4
 Create Date: 2026-08-04 01:20:00.000000
 
 """
@@ -13,7 +13,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "e4b7c2d9a105"
-down_revision: str | Sequence[str] | None = "dbf02de26b3f"
+down_revision: str | Sequence[str] | None = ("dbf02de26b3f", "f3a9c1d7e2b4")
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -44,9 +44,7 @@ def upgrade() -> None:
         sa.Column("spf_aligned", sa.Boolean(), nullable=True),
         sa.Column("dkim_aligned", sa.Boolean(), nullable=True),
         sa.Column("source_ip", sa.String(length=64), nullable=False),
-        sa.Column(
-            "evidence_metadata", postgresql.JSONB(astext_type=sa.Text()), nullable=False
-        ),
+        sa.Column("evidence_metadata", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column("suppression_applied", sa.Boolean(), nullable=False),
         sa.Column("reported_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("received_at", sa.DateTime(timezone=True), nullable=False),
