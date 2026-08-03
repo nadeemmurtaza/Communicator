@@ -3,6 +3,7 @@ from .consent import ConsentRecord, ConsentStatus
 from .contact import ChannelType, Contact
 from .conversation import Conversation, ConversationState
 from .draft import Draft, DraftStatus
+from .email_complaint import EmailComplaint, EmailComplaintType
 from .lead import Lead
 from .message import Message, MessageDirection, MessageStatus
 from .sequence import FollowUpSequence, SequenceStep
@@ -18,6 +19,8 @@ __all__ = [
     "ConversationState",
     "Draft",
     "DraftStatus",
+    "EmailComplaint",
+    "EmailComplaintType",
     "FollowUpSequence",
     "Lead",
     "Message",
