@@ -54,3 +54,52 @@ class TwilioWhatsAppProvider(ChannelProvider):
         return SendResult(
             provider="twilio", provider_message_id=payload.get("sid", ""), raw_response=payload
         )
+
+
+class MetaWhatsAppProvider(ChannelProvider):
+    """
+    WhatsApp via Meta's Graph/Cloud API directly (no Twilio in between).
+
+    Ported from the standalone Node auto-reply bot (`reply/`), which talked
+    to the Cloud API directly to get interactive quick-reply buttons and
+    looser send rules than Twilio's WhatsApp wrapper. Same 24h session-window
+    policy applies on Meta's side; this provider doesn't enforce it itself.
+    """
+
+    def __init__(
+        self,
+        access_token: str | None = None,
+        phone_number_id: str | None = None,
+        api_version: str | None = None,
+    ) -> None:
+        self.access_token = access_token if access_token is not None else settings.meta_whatsapp_access_token
+        self.phone_number_id = (
+            phone_number_id if phone_number_id is not None else settings.meta_whatsapp_phone_number_id
+        )
+        self.api_version = api_version if api_version is not None else settings.meta_whatsapp_api_version
+        if not (self.access_token and self.phone_number_id):
+            raise RuntimeError(
+                "META_WHATSAPP_ACCESS_TOKEN and META_WHATSAPP_PHONE_NUMBER_ID must be set to send WhatsApp via Meta."
+            )
+
+    async def send(self, contact: Contact, body: str, subject: str | None = None) -> SendResult:
+        url = f"https://graph.facebook.com/{self.api_version}/{self.phone_number_id}/messages"
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": contact.value,
+            "type": "text",
+            "text": {"preview_url": False, "body": body},
+        }
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                url,
+                json=payload,
+                headers={"Authorization": f"Bearer {self.access_token}"},
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        message_id = (data.get("messages") or [{}])[0].get("id", "")
+        return SendResult(provider="meta", provider_message_id=message_id, raw_response=data)

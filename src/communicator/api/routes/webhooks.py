@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import hmac
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.api.dependencies import get_db_session, get_harvester_client
@@ -89,6 +89,71 @@ async def twilio_whatsapp_inbound(
         pass
 
     return {"status": "ok"}
+
+
+@router.get("/meta/whatsapp")
+async def meta_whatsapp_verify(
+    hub_mode: str | None = None,
+    hub_verify_token: str | None = None,
+    hub_challenge: str | None = None,
+) -> Response:
+    """Meta's webhook handshake -- it GETs this URL once when you subscribe it."""
+    if hub_mode == "subscribe" and hub_verify_token == settings.meta_webhook_verify_token:
+        return Response(content=hub_challenge or "", media_type="text/plain")
+    raise HTTPException(status_code=403, detail="Verification token mismatch")
+
+
+@router.post("/meta/whatsapp")
+async def meta_whatsapp_inbound(
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+    harvester_client: HarvesterClient = Depends(get_harvester_client),
+) -> dict[str, str]:
+    """
+    Cloud API inbound events. Ported from the standalone reply bot's
+    `parseWhatsAppWebhook` -- same entry/changes/value.messages shape, only
+    text and button/interactive replies are handled.
+    """
+    body = await request.json()
+    if body.get("object") != "whatsapp_business_account":
+        return {"status": "ignored"}
+
+    for entry in body.get("entry", []):
+        for change in entry.get("changes", []):
+            value = change.get("value") or {}
+            for msg in value.get("messages", []):
+                text = _extract_meta_message_text(msg)
+                if not text:
+                    continue
+                try:
+                    await process_inbound_message(
+                        session,
+                        channel=ChannelType.WHATSAPP,
+                        from_value=msg.get("from", ""),
+                        body=text,
+                        provider="meta",
+                        provider_message_id=msg.get("id", ""),
+                        harvester_client=harvester_client,
+                    )
+                except UnknownContactError:
+                    pass
+
+    return {"status": "ok"}
+
+
+def _extract_meta_message_text(msg: dict) -> str:
+    msg_type = msg.get("type")
+    if msg_type == "text":
+        return (msg.get("text") or {}).get("body", "")
+    if msg_type == "interactive":
+        interactive = msg.get("interactive") or {}
+        if interactive.get("type") == "button_reply":
+            return (interactive.get("button_reply") or {}).get("title", "")
+        if interactive.get("type") == "list_reply":
+            return (interactive.get("list_reply") or {}).get("title", "")
+    if msg_type == "button":
+        return (msg.get("button") or {}).get("text", "")
+    return ""
 
 
 @router.post("/postmark/inbound")
