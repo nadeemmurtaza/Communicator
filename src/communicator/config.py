@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     meta_whatsapp_phone_number_id: str = ""
     meta_whatsapp_api_version: str = "v21.0"
     meta_webhook_verify_token: str = ""
+    meta_app_secret: str = ""
 
     # Shared secret Postmark's inbound-webhook URL must include as
     # ?token=... -- Postmark doesn't sign inbound webhook requests, unlike

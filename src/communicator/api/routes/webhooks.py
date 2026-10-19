@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import hmac
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.api.dependencies import get_db_session, get_harvester_client
@@ -19,6 +19,7 @@ from communicator.config import settings
 from communicator.harvester_client import HarvesterClient
 from communicator.models.contact import ChannelType
 from communicator.services.inbound import UnknownContactError, process_inbound_message
+from communicator.webhooks.meta_signature import validate_meta_signature
 from communicator.webhooks.twilio_signature import validate_twilio_signature
 
 router = APIRouter(prefix="/webhooks", tags=["Webhooks"])
@@ -93,9 +94,9 @@ async def twilio_whatsapp_inbound(
 
 @router.get("/meta/whatsapp")
 async def meta_whatsapp_verify(
-    hub_mode: str | None = None,
-    hub_verify_token: str | None = None,
-    hub_challenge: str | None = None,
+    hub_mode: str | None = Query(default=None, alias="hub.mode"),
+    hub_verify_token: str | None = Query(default=None, alias="hub.verify_token"),
+    hub_challenge: str | None = Query(default=None, alias="hub.challenge"),
 ) -> Response:
     """Meta's webhook handshake -- it GETs this URL once when you subscribe it."""
     if hub_mode == "subscribe" and hub_verify_token == settings.meta_webhook_verify_token:
@@ -103,17 +104,33 @@ async def meta_whatsapp_verify(
     raise HTTPException(status_code=403, detail="Verification token mismatch")
 
 
+def _require_meta_signature(raw_body: bytes, signature: str | None) -> None:
+    if not settings.meta_app_secret:
+        raise HTTPException(status_code=503, detail="Meta webhook not configured.")
+    if not validate_meta_signature(settings.meta_app_secret, raw_body, signature):
+        raise HTTPException(status_code=403, detail="Invalid Meta webhook signature.")
+
+
+def _normalize_meta_sender(sender_id: str) -> str:
+    # Contacts are stored E.164-style ("+92..."); Meta's `from` is digits-only.
+    return "+" + sender_id.lstrip("+") if sender_id else sender_id
+
+
 @router.post("/meta/whatsapp")
 async def meta_whatsapp_inbound(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
     harvester_client: HarvesterClient = Depends(get_harvester_client),
+    x_hub_signature_256: str | None = Header(default=None),
 ) -> dict[str, str]:
     """
     Cloud API inbound events. Ported from the standalone reply bot's
     `parseWhatsAppWebhook` -- same entry/changes/value.messages shape, only
     text and button/interactive replies are handled.
     """
+    raw_body = await request.body()
+    _require_meta_signature(raw_body, x_hub_signature_256)
+
     body = await request.json()
     if body.get("object") != "whatsapp_business_account":
         return {"status": "ignored"}
@@ -129,7 +146,7 @@ async def meta_whatsapp_inbound(
                     await process_inbound_message(
                         session,
                         channel=ChannelType.WHATSAPP,
-                        from_value=msg.get("from", ""),
+                        from_value=_normalize_meta_sender(msg.get("from", "")),
                         body=text,
                         provider="meta",
                         provider_message_id=msg.get("id", ""),

@@ -72,11 +72,17 @@ class MetaWhatsAppProvider(ChannelProvider):
         phone_number_id: str | None = None,
         api_version: str | None = None,
     ) -> None:
-        self.access_token = access_token if access_token is not None else settings.meta_whatsapp_access_token
-        self.phone_number_id = (
-            phone_number_id if phone_number_id is not None else settings.meta_whatsapp_phone_number_id
+        self.access_token = (
+            access_token if access_token is not None else settings.meta_whatsapp_access_token
         )
-        self.api_version = api_version if api_version is not None else settings.meta_whatsapp_api_version
+        self.phone_number_id = (
+            phone_number_id
+            if phone_number_id is not None
+            else settings.meta_whatsapp_phone_number_id
+        )
+        self.api_version = (
+            api_version if api_version is not None else settings.meta_whatsapp_api_version
+        )
         if not (self.access_token and self.phone_number_id):
             raise RuntimeError(
                 "META_WHATSAPP_ACCESS_TOKEN and META_WHATSAPP_PHONE_NUMBER_ID must be set to send WhatsApp via Meta."

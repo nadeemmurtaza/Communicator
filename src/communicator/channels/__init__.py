@@ -22,7 +22,9 @@ def get_provider(channel: ChannelType) -> ChannelProvider:
         try:
             provider_cls = _WHATSAPP_PROVIDERS[settings.whatsapp_provider]
         except KeyError:
-            raise ValueError(f"Unknown whatsapp_provider setting: {settings.whatsapp_provider!r}") from None
+            raise ValueError(
+                f"Unknown whatsapp_provider setting: {settings.whatsapp_provider!r}"
+            ) from None
         return provider_cls()
 
     try:
