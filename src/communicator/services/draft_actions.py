@@ -20,7 +20,7 @@ async def approve_and_send(
     contact = await session.get(Contact, conversation.contact_id)
     lead = await session.get(Lead, contact.lead_id)
 
-    provider = get_provider(contact.channel)
+    provider = await get_provider(contact.channel, session)
     result = await provider.send(contact, draft.body)
 
     message = Message(

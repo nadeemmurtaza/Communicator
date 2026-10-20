@@ -157,7 +157,7 @@ async def _advance_conversation(
             return None
 
     body = await translate_text(step.template, contact.language)
-    provider = get_provider(step.channel)
+    provider = await get_provider(step.channel, session)
     message = await send_outbound_message(session, contact, provider, body)
 
     conversation.sequence_step = next_step_number

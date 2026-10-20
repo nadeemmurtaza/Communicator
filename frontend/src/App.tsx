@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
+import { Connections } from './pages/Connections'
 import { ConversationDetail } from './pages/ConversationDetail'
 import { Conversations } from './pages/Conversations'
 import { Dashboard } from './pages/Dashboard'
@@ -17,6 +18,7 @@ function App() {
         <Route path="/conversations/:id" element={<ConversationDetail />} />
         <Route path="/services" element={<Services />} />
         <Route path="/sequences" element={<Sequences />} />
+        <Route path="/connections" element={<Connections />} />
       </Route>
     </Routes>
   )

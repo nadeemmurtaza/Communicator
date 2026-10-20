@@ -3,6 +3,7 @@ from .consent import ConsentRecord, ConsentStatus
 from .contact import ChannelType, Contact
 from .conversation import Conversation, ConversationState
 from .draft import Draft, DraftStatus
+from .integration_settings import IntegrationSettings
 from .lead import Lead
 from .message import Message, MessageDirection, MessageStatus
 from .sequence import FollowUpSequence, SequenceStep
@@ -19,6 +20,7 @@ __all__ = [
     "Draft",
     "DraftStatus",
     "FollowUpSequence",
+    "IntegrationSettings",
     "Lead",
     "Message",
     "MessageDirection",

@@ -6,6 +6,7 @@ const NAV = [
   { to: '/conversations', label: 'Conversations' },
   { to: '/services', label: 'Service catalog' },
   { to: '/sequences', label: 'Sequences' },
+  { to: '/connections', label: 'Connections' },
 ]
 
 export function Layout() {

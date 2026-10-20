@@ -67,6 +67,58 @@ export interface VariantStats {
   variants: { variant: string; enrolled: number; replied: number; closedWon: number }[]
 }
 
+export interface IntegrationSettings {
+  whatsapp: {
+    provider: string
+    phoneNumberId: string
+    wabaId: string
+    accessTokenMasked: string | null
+    appSecretMasked: string | null
+    webhookVerifyTokenMasked: string | null
+    webhookCallbackPath: string
+    verifiedAt: string | null
+    verifiedName: string
+    displayNumber: string
+  }
+  business: {
+    name: string
+    description: string
+    agentGuidelines: string
+    autoReplyEnabled: boolean
+  }
+}
+
+export interface WhatsAppSettingsInput {
+  provider?: string
+  access_token?: string
+  phone_number_id?: string
+  waba_id?: string
+  app_secret?: string
+  webhook_verify_token?: string
+}
+
+export interface BusinessSettingsInput {
+  name?: string
+  description?: string
+  agent_guidelines?: string
+  auto_reply_enabled?: boolean
+}
+
+export interface Template {
+  id: string
+  name: string
+  status: string
+  category: string
+  language: string
+}
+
+export interface VerifyResult {
+  status: string
+  verifiedName: string
+  displayNumber: string
+  qualityRating: string | null
+}
+
 export const api = {
   listDrafts: (status = 'pending_review') => request<Draft[]>(`/drafts?status=${status}`),
   approveDraft: (id: string) =>
@@ -100,4 +152,19 @@ export const api = {
 
   runFollowups: () => request('/scheduler/run-followups', { method: 'POST' }),
   dispatchAutoApproved: () => request('/scheduler/dispatch-auto-approved', { method: 'POST' }),
+
+  getIntegrationSettings: () => request<IntegrationSettings>('/settings'),
+  updateIntegrationSettings: (payload: {
+    whatsapp?: WhatsAppSettingsInput
+    business?: BusinessSettingsInput
+  }) => request<{ status: string }>('/settings', { method: 'PUT', body: JSON.stringify(payload) }),
+  verifyWhatsApp: () => request<VerifyResult>('/settings/whatsapp/verify', { method: 'POST' }),
+  listTemplates: () => request<Template[]>('/settings/whatsapp/templates'),
+  createTemplate: (data: {
+    name: string
+    category: string
+    language: string
+    body_text: string
+  }) =>
+    request('/settings/whatsapp/templates', { method: 'POST', body: JSON.stringify(data) }),
 }

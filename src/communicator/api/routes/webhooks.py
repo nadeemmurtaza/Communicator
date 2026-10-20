@@ -19,6 +19,7 @@ from communicator.config import settings
 from communicator.harvester_client import HarvesterClient
 from communicator.models.contact import ChannelType
 from communicator.services.inbound import UnknownContactError, process_inbound_message
+from communicator.services.integration_settings import get_whatsapp_config
 from communicator.webhooks.meta_signature import validate_meta_signature
 from communicator.webhooks.twilio_signature import validate_twilio_signature
 
@@ -97,17 +98,22 @@ async def meta_whatsapp_verify(
     hub_mode: str | None = Query(default=None, alias="hub.mode"),
     hub_verify_token: str | None = Query(default=None, alias="hub.verify_token"),
     hub_challenge: str | None = Query(default=None, alias="hub.challenge"),
+    session: AsyncSession = Depends(get_db_session),
 ) -> Response:
     """Meta's webhook handshake -- it GETs this URL once when you subscribe it."""
-    if hub_mode == "subscribe" and hub_verify_token == settings.meta_webhook_verify_token:
+    config = await get_whatsapp_config(session)
+    if hub_mode == "subscribe" and hub_verify_token == config.webhook_verify_token:
         return Response(content=hub_challenge or "", media_type="text/plain")
     raise HTTPException(status_code=403, detail="Verification token mismatch")
 
 
-def _require_meta_signature(raw_body: bytes, signature: str | None) -> None:
-    if not settings.meta_app_secret:
+async def _require_meta_signature(
+    session: AsyncSession, raw_body: bytes, signature: str | None
+) -> None:
+    config = await get_whatsapp_config(session)
+    if not config.app_secret:
         raise HTTPException(status_code=503, detail="Meta webhook not configured.")
-    if not validate_meta_signature(settings.meta_app_secret, raw_body, signature):
+    if not validate_meta_signature(config.app_secret, raw_body, signature):
         raise HTTPException(status_code=403, detail="Invalid Meta webhook signature.")
 
 
@@ -129,7 +135,7 @@ async def meta_whatsapp_inbound(
     text and button/interactive replies are handled.
     """
     raw_body = await request.body()
-    _require_meta_signature(raw_body, x_hub_signature_256)
+    await _require_meta_signature(session, raw_body, x_hub_signature_256)
 
     body = await request.json()
     if body.get("object") != "whatsapp_business_account":

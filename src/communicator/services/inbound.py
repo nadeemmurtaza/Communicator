@@ -19,6 +19,7 @@ from communicator.models.contact import ChannelType, Contact
 from communicator.models.conversation import ConversationState
 from communicator.models.lead import Lead
 from communicator.models.message import Message, MessageDirection, MessageStatus
+from communicator.services.integration_settings import get_settings_row
 from communicator.services.messaging import get_or_create_conversation
 from communicator.services.reply_engine import generate_reply
 
@@ -88,9 +89,11 @@ async def process_inbound_message(
             pass
 
     if conversation.state not in _TERMINAL_STATES:
-        try:
-            await generate_reply(session, conversation.id)
-        except Exception:  # noqa: BLE001, S110 -- a drafting failure (LLM/network/parse)
-            pass  # must never lose the inbound message already recorded above.
+        integration_settings = await get_settings_row(session)
+        if integration_settings.auto_reply_enabled:
+            try:
+                await generate_reply(session, conversation.id)
+            except Exception:  # noqa: BLE001, S110 -- a drafting failure (LLM/network/parse)
+                pass  # must never lose the inbound message already recorded above.
 
     return message
