@@ -2,12 +2,17 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 
 from communicator.api.routes import (
+    automation,
+    broadcasts,
+    contacts,
     conversations,
     drafts,
+    knowledge_base,
     scheduler,
     sequences,
     services,
     settings,
+    team,
     webhooks,
 )
 
@@ -38,3 +43,8 @@ app.include_router(conversations.router, prefix="/api/v1")
 app.include_router(scheduler.router, prefix="/api/v1")
 app.include_router(sequences.router, prefix="/api/v1")
 app.include_router(settings.router, prefix="/api/v1")
+app.include_router(knowledge_base.router, prefix="/api/v1")
+app.include_router(team.router, prefix="/api/v1")
+app.include_router(automation.router, prefix="/api/v1")
+app.include_router(contacts.router, prefix="/api/v1")
+app.include_router(broadcasts.router, prefix="/api/v1")

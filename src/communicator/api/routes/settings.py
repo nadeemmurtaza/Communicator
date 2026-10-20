@@ -56,6 +56,11 @@ async def get_settings(session: AsyncSession = Depends(get_db_session)):
             "description": row.business_description,
             "agentGuidelines": row.agent_guidelines,
             "autoReplyEnabled": row.auto_reply_enabled,
+            "businessHoursEnabled": row.business_hours_enabled,
+            "businessHoursStart": row.business_hours_start,
+            "businessHoursEnd": row.business_hours_end,
+            "businessTimezone": row.business_timezone,
+            "awayMessage": row.away_message,
         },
     }
 
@@ -74,6 +79,11 @@ class BusinessSettingsIn(BaseModel):
     description: str | None = None
     agent_guidelines: str | None = None
     auto_reply_enabled: bool | None = None
+    business_hours_enabled: bool | None = None
+    business_hours_start: int | None = None
+    business_hours_end: int | None = None
+    business_timezone: str | None = None
+    away_message: str | None = None
 
 
 class SettingsIn(BaseModel):
@@ -110,6 +120,16 @@ async def update_settings(payload: SettingsIn, session: AsyncSession = Depends(g
             row.agent_guidelines = b.agent_guidelines
         if b.auto_reply_enabled is not None:
             row.auto_reply_enabled = b.auto_reply_enabled
+        if b.business_hours_enabled is not None:
+            row.business_hours_enabled = b.business_hours_enabled
+        if b.business_hours_start is not None:
+            row.business_hours_start = b.business_hours_start
+        if b.business_hours_end is not None:
+            row.business_hours_end = b.business_hours_end
+        if b.business_timezone is not None:
+            row.business_timezone = b.business_timezone
+        if b.away_message is not None:
+            row.away_message = b.away_message
 
     await session.flush()
     return {"status": "saved"}
@@ -167,7 +187,9 @@ async def list_templates(session: AsyncSession = Depends(get_db_session)):
     url = f"{GRAPH_BASE}/{row.meta_waba_id}/message_templates"
     async with httpx.AsyncClient(timeout=15.0) as client:
         response = await client.get(
-            url, headers={"Authorization": f"Bearer {row.meta_access_token}"}
+            url,
+            params={"fields": "id,name,status,category,language,components,quality_score"},
+            headers={"Authorization": f"Bearer {row.meta_access_token}"},
         )
 
     if response.status_code != 200:
@@ -182,9 +204,33 @@ async def list_templates(session: AsyncSession = Depends(get_db_session)):
             "status": t.get("status"),
             "category": t.get("category"),
             "language": t.get("language"),
+            "bodyText": next(
+                (c.get("text", "") for c in t.get("components", []) if c.get("type") == "BODY"), ""
+            ),
         }
         for t in data
     ]
+
+
+@router.delete("/whatsapp/templates/{name}")
+async def delete_template(name: str, session: AsyncSession = Depends(get_db_session)):
+    row = await get_settings_row(session)
+    if not (row.meta_access_token and row.meta_waba_id):
+        raise HTTPException(
+            status_code=400, detail="Access token and WhatsApp Business Account ID are required."
+        )
+
+    url = f"{GRAPH_BASE}/{row.meta_waba_id}/message_templates"
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        response = await client.delete(
+            url, params={"name": name}, headers={"Authorization": f"Bearer {row.meta_access_token}"}
+        )
+
+    if response.status_code != 200:
+        detail = response.json().get("error", {}).get("message", response.text)
+        raise HTTPException(status_code=502, detail=f"Meta rejected the deletion: {detail}")
+
+    return {"status": "deleted"}
 
 
 class TemplateIn(BaseModel):

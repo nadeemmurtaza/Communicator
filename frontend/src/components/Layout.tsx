@@ -4,8 +4,13 @@ const NAV = [
   { to: '/', label: 'Dashboard', end: true },
   { to: '/drafts', label: 'Draft review' },
   { to: '/conversations', label: 'Conversations' },
+  { to: '/contacts', label: 'Contacts' },
+  { to: '/broadcasts', label: 'Broadcasts' },
+  { to: '/automation', label: 'Automation' },
+  { to: '/knowledge-base', label: 'Knowledge base' },
   { to: '/services', label: 'Service catalog' },
   { to: '/sequences', label: 'Sequences' },
+  { to: '/team', label: 'Team' },
   { to: '/connections', label: 'Connections' },
 ]
 

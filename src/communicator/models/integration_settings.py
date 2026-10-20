@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, String, Text
+from sqlalchemy import Boolean, DateTime, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -47,6 +47,16 @@ class IntegrationSettings(Base):
     business_description: Mapped[str] = mapped_column(Text, default="", nullable=False)
     agent_guidelines: Mapped[str] = mapped_column(Text, default="", nullable=False)
     auto_reply_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # Business hours -- outside this window, inbound messages get the away
+    # message sent directly instead of an AI-drafted reply. Hours are plain
+    # local-time integers (0-23) in business_timezone; good enough for "we
+    # reply 9-6" without pulling in a full per-day schedule.
+    business_hours_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    business_hours_start: Mapped[int] = mapped_column(Integer, default=9, nullable=False)
+    business_hours_end: Mapped[int] = mapped_column(Integer, default=18, nullable=False)
+    business_timezone: Mapped[str] = mapped_column(String(50), default="UTC", nullable=False)
+    away_message: Mapped[str] = mapped_column(Text, default="", nullable=False)
 
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

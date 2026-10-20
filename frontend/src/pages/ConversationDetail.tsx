@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api, type ConversationDetail as ConversationDetailType } from '../lib/api'
+import { api, type ConversationDetail as ConversationDetailType, type TeamMember } from '../lib/api'
 import { stateBadgeClass, stateLabel, timeAgo } from '../lib/format'
 
 export function ConversationDetail() {
   const { id } = useParams<{ id: string }>()
   const [conversation, setConversation] = useState<ConversationDetailType | null>(null)
+  const [team, setTeam] = useState<TeamMember[]>([])
   const [error, setError] = useState<string | null>(null)
   const [generating, setGenerating] = useState(false)
+  const [togglingHandoff, setTogglingHandoff] = useState(false)
 
   function load() {
     if (!id) return
@@ -18,6 +20,9 @@ export function ConversationDetail() {
   }
 
   useEffect(load, [id])
+  useEffect(() => {
+    api.listTeam().then(setTeam).catch(() => {})
+  }, [])
 
   async function generateDraft() {
     if (!id) return
@@ -32,13 +37,36 @@ export function ConversationDetail() {
     }
   }
 
+  async function toggleHandoff() {
+    if (!id || !conversation) return
+    setTogglingHandoff(true)
+    try {
+      await api.setHumanTakeover(id, !conversation.humanTakeover)
+      load()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setTogglingHandoff(false)
+    }
+  }
+
+  async function assign(memberId: string) {
+    if (!id) return
+    try {
+      await api.assignConversation(id, memberId || null)
+      load()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <Link to="/conversations" className="text-sm text-slate-500 hover:underline">
           ← Conversations
         </Link>
-        <div className="mt-2 flex items-center gap-3">
+        <div className="mt-2 flex flex-wrap items-center gap-3">
           <h1 className="text-xl font-semibold text-slate-900">
             Conversation {id?.slice(0, 8)}
           </h1>
@@ -46,6 +74,9 @@ export function ConversationDetail() {
             <span className={`badge ${stateBadgeClass(conversation.state)}`}>
               {stateLabel(conversation.state)}
             </span>
+          )}
+          {conversation?.humanTakeover && (
+            <span className="badge badge-warning">Human handling</span>
           )}
         </div>
       </div>
@@ -60,6 +91,31 @@ export function ConversationDetail() {
         <p className="text-sm text-slate-500">Loading…</p>
       ) : (
         <>
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
+            <button
+              onClick={toggleHandoff}
+              disabled={togglingHandoff}
+              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              {conversation.humanTakeover ? 'Resume bot' : 'Take over from bot'}
+            </button>
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-slate-500">Assigned to</label>
+              <select
+                value={conversation.assignedToId ?? ''}
+                onChange={(e) => assign(e.target.value)}
+                className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+              >
+                <option value="">Unassigned</option>
+                {team.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <ol className="space-y-3">
             {conversation.messages.map((m) => (
               <li

@@ -12,16 +12,21 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from communicator.channels import get_provider
 from communicator.compliance.optout import process_inbound_consent_signal
 from communicator.harvester_client import HarvesterClient
+from communicator.models.automation_rule import RuleActionType
 from communicator.models.consent import ConsentStatus
 from communicator.models.contact import ChannelType, Contact
-from communicator.models.conversation import ConversationState
+from communicator.models.conversation import Conversation, ConversationState
 from communicator.models.lead import Lead
 from communicator.models.message import Message, MessageDirection, MessageStatus
+from communicator.services.automation import match_rule
+from communicator.services.business_hours import is_within_business_hours
 from communicator.services.integration_settings import get_settings_row
-from communicator.services.messaging import get_or_create_conversation
+from communicator.services.messaging import get_or_create_conversation, send_outbound_message
 from communicator.services.reply_engine import generate_reply
+from communicator.services.tags import add_tag_to_contact
 
 _TERMINAL_STATES = (
     ConversationState.OPTED_OUT,
@@ -89,11 +94,51 @@ async def process_inbound_message(
             pass
 
     if conversation.state not in _TERMINAL_STATES:
-        integration_settings = await get_settings_row(session)
-        if integration_settings.auto_reply_enabled:
-            try:
-                await generate_reply(session, conversation.id)
-            except Exception:  # noqa: BLE001, S110 -- a drafting failure (LLM/network/parse)
-                pass  # must never lose the inbound message already recorded above.
+        await _route_reply(session, conversation, contact, body)
 
     return message
+
+
+async def _route_reply(
+    session: AsyncSession, conversation: Conversation, contact: Contact, body: str
+) -> None:
+    """
+    Decides what, if anything, answers this inbound message: a human
+    takeover or disabled auto-reply means nothing; outside business hours
+    sends the away message; a matching AutomationRule short-circuits the
+    AI; otherwise the AI reply engine drafts a response as before.
+    """
+    integration_settings = await get_settings_row(session)
+
+    if conversation.human_takeover or not integration_settings.auto_reply_enabled:
+        return
+
+    if not is_within_business_hours(integration_settings) and integration_settings.away_message:
+        try:
+            channel_provider = await get_provider(contact.channel, session)
+            await send_outbound_message(
+                session, contact, channel_provider, integration_settings.away_message
+            )
+        except Exception:  # noqa: BLE001, S110 -- best-effort; never lose the inbound message
+            pass
+        return
+
+    rule = await match_rule(session, body)
+    if rule is not None:
+        if rule.action_type == RuleActionType.AUTO_REPLY and rule.action_value:
+            try:
+                channel_provider = await get_provider(contact.channel, session)
+                await send_outbound_message(session, contact, channel_provider, rule.action_value)
+            except Exception:  # noqa: BLE001, S110
+                pass
+        elif rule.action_type == RuleActionType.HANDOFF:
+            conversation.human_takeover = True
+            await session.flush()
+        elif rule.action_type == RuleActionType.ADD_TAG and rule.action_value:
+            await add_tag_to_contact(session, contact, rule.action_value)
+        return
+
+    try:
+        await generate_reply(session, conversation.id)
+    except Exception:  # noqa: BLE001, S110 -- a drafting failure (LLM/network/parse)
+        pass  # must never lose the inbound message already recorded above.

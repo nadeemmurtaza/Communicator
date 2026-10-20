@@ -23,6 +23,8 @@ async def list_conversations(session: AsyncSession = Depends(get_db_session)):
             "id": str(c.id),
             "contactId": str(c.contact_id),
             "state": c.state.value,
+            "humanTakeover": c.human_takeover,
+            "assignedToId": str(c.assigned_to_id) if c.assigned_to_id else None,
             "updatedAt": c.updated_at.isoformat(),
         }
         for c in conversations
@@ -52,6 +54,8 @@ async def get_conversation(
     return {
         "id": str(conversation.id),
         "state": conversation.state.value,
+        "humanTakeover": conversation.human_takeover,
+        "assignedToId": str(conversation.assigned_to_id) if conversation.assigned_to_id else None,
         "messages": [
             {
                 "id": str(m.id),

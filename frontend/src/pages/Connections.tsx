@@ -255,6 +255,11 @@ function BusinessProfileSection({
   const [description, setDescription] = useState(data.business.description)
   const [guidelines, setGuidelines] = useState(data.business.agentGuidelines)
   const [autoReply, setAutoReply] = useState(data.business.autoReplyEnabled)
+  const [hoursEnabled, setHoursEnabled] = useState(data.business.businessHoursEnabled)
+  const [hoursStart, setHoursStart] = useState(data.business.businessHoursStart)
+  const [hoursEnd, setHoursEnd] = useState(data.business.businessHoursEnd)
+  const [timezone, setTimezone] = useState(data.business.businessTimezone)
+  const [awayMessage, setAwayMessage] = useState(data.business.awayMessage)
   const [saving, setSaving] = useState(false)
 
   async function save() {
@@ -266,6 +271,11 @@ function BusinessProfileSection({
           description,
           agent_guidelines: guidelines,
           auto_reply_enabled: autoReply,
+          business_hours_enabled: hoursEnabled,
+          business_hours_start: hoursStart,
+          business_hours_end: hoursEnd,
+          business_timezone: timezone,
+          away_message: awayMessage,
         },
       })
       onSaved('Business profile saved.')
@@ -312,6 +322,66 @@ function BusinessProfileSection({
           />
           Auto-reply enabled
         </label>
+
+        <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+            <input
+              type="checkbox"
+              checked={hoursEnabled}
+              onChange={(e) => setHoursEnabled(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300"
+            />
+            Only auto-reply during business hours
+          </label>
+          {hoursEnabled && (
+            <div className="mt-3 space-y-3">
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-500">Start (24h)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={23}
+                    value={hoursStart}
+                    onChange={(e) => setHoursStart(Number(e.target.value))}
+                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500">End (24h)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={23}
+                    value={hoursEnd}
+                    onChange={(e) => setHoursEnd(Number(e.target.value))}
+                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500">Timezone</label>
+                  <input
+                    value={timezone}
+                    onChange={(e) => setTimezone(e.target.value)}
+                    placeholder="Asia/Karachi"
+                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500">
+                  Away message (sent outside hours instead of an AI reply)
+                </label>
+                <textarea
+                  value={awayMessage}
+                  onChange={(e) => setAwayMessage(e.target.value)}
+                  rows={2}
+                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
       <button
         onClick={save}
@@ -362,6 +432,15 @@ function TemplatesSection({
       onError((e as Error).message)
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function deleteTemplate(templateName: string) {
+    try {
+      await api.deleteTemplate(templateName)
+      load()
+    } catch (e) {
+      onError((e as Error).message)
     }
   }
 
@@ -427,11 +506,30 @@ function TemplatesSection({
           ) : (
             <ul className="divide-y divide-slate-100 rounded-md border border-slate-200">
               {templates.map((t) => (
-                <li key={t.id} className="flex items-center justify-between px-3 py-2 text-sm">
-                  <span className="font-medium text-slate-800">{t.name}</span>
-                  <span className="text-xs text-slate-500">
-                    {t.category} · {t.language} · {t.status}
-                  </span>
+                <li key={t.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                  <div className="min-w-0">
+                    <span className="font-medium text-slate-800">{t.name}</span>
+                    <span className="ml-2 text-xs text-slate-500">
+                      {t.category} · {t.language} ·{' '}
+                      <span
+                        className={
+                          t.status === 'APPROVED'
+                            ? 'text-emerald-600'
+                            : t.status === 'REJECTED'
+                              ? 'text-red-600'
+                              : 'text-amber-600'
+                        }
+                      >
+                        {t.status}
+                      </span>
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => deleteTemplate(t.name)}
+                    className="shrink-0 text-xs font-medium text-slate-400 hover:text-red-600"
+                  >
+                    Delete
+                  </button>
                 </li>
               ))}
             </ul>

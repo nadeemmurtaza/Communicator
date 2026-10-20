@@ -8,7 +8,7 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from communicator.database import Base
-from communicator.models.contact import ChannelType
+from communicator.models.contact import ChannelType, ChannelTypeEnum
 
 if TYPE_CHECKING:
     from communicator.models.conversation import Conversation
@@ -38,7 +38,7 @@ class Message(Base):
     )
 
     direction: Mapped[MessageDirection] = mapped_column(Enum(MessageDirection), nullable=False)
-    channel: Mapped[ChannelType] = mapped_column(Enum(ChannelType), nullable=False)
+    channel: Mapped[ChannelType] = mapped_column(ChannelTypeEnum, nullable=False)
     body: Mapped[str] = mapped_column(Text, default="", nullable=False)
 
     provider: Mapped[str] = mapped_column(String(50), default="", nullable=False)

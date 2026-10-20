@@ -109,3 +109,49 @@ class MetaWhatsAppProvider(ChannelProvider):
 
         message_id = (data.get("messages") or [{}])[0].get("id", "")
         return SendResult(provider="meta", provider_message_id=message_id, raw_response=data)
+
+    async def send_template(
+        self,
+        to: str,
+        template_name: str,
+        language: str = "en_US",
+        body_params: list[str] | None = None,
+    ) -> SendResult:
+        """
+        Sends an approved template message -- the only kind Meta allows
+        outside a contact's 24h session window, so this is what broadcasts
+        use instead of `send`.
+        """
+        url = f"https://graph.facebook.com/{self.api_version}/{self.phone_number_id}/messages"
+        components = []
+        if body_params:
+            components.append(
+                {
+                    "type": "body",
+                    "parameters": [{"type": "text", "text": p} for p in body_params],
+                }
+            )
+
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": to,
+            "type": "template",
+            "template": {
+                "name": template_name,
+                "language": {"code": language},
+                **({"components": components} if components else {}),
+            },
+        }
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                url,
+                json=payload,
+                headers={"Authorization": f"Bearer {self.access_token}"},
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        message_id = (data.get("messages") or [{}])[0].get("id", "")
+        return SendResult(provider="meta", provider_message_id=message_id, raw_response=data)

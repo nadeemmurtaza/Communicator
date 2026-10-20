@@ -12,12 +12,15 @@ from __future__ import annotations
 import hmac
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.api.dependencies import get_db_session, get_harvester_client
 from communicator.config import settings
 from communicator.harvester_client import HarvesterClient
+from communicator.models.broadcast import Broadcast, BroadcastRecipient, RecipientStatus
 from communicator.models.contact import ChannelType
+from communicator.models.message import Message, MessageStatus
 from communicator.services.inbound import UnknownContactError, process_inbound_message
 from communicator.services.integration_settings import get_whatsapp_config
 from communicator.webhooks.meta_signature import validate_meta_signature
@@ -161,7 +164,58 @@ async def meta_whatsapp_inbound(
                 except UnknownContactError:
                     pass
 
+            for status_event in value.get("statuses", []):
+                await _apply_meta_status(session, status_event)
+
     return {"status": "ok"}
+
+
+_META_STATUS_TO_MESSAGE_STATUS = {
+    "sent": MessageStatus.SENT,
+    "delivered": MessageStatus.DELIVERED,
+    "read": MessageStatus.DELIVERED,  # no READ value on Message; DELIVERED is the closest we track
+    "failed": MessageStatus.FAILED,
+}
+_META_STATUS_TO_RECIPIENT_STATUS = {
+    "sent": RecipientStatus.SENT,
+    "delivered": RecipientStatus.DELIVERED,
+    "read": RecipientStatus.READ,
+    "failed": RecipientStatus.FAILED,
+}
+
+
+async def _apply_meta_status(session: AsyncSession, status_event: dict) -> None:
+    """
+    Delivery/read receipts for messages we sent -- updates both the
+    Message row (1:1 conversations) and any BroadcastRecipient row
+    (campaign sends), matched by Meta's provider_message_id.
+    """
+    provider_message_id = status_event.get("id", "")
+    meta_status = status_event.get("status", "")
+    if not provider_message_id or meta_status not in _META_STATUS_TO_MESSAGE_STATUS:
+        return
+
+    message_stmt = select(Message).where(Message.provider_message_id == provider_message_id)
+    message = (await session.execute(message_stmt)).scalar_one_or_none()
+    if message is not None:
+        message.status = _META_STATUS_TO_MESSAGE_STATUS[meta_status]
+
+    recipient_stmt = select(BroadcastRecipient).where(
+        BroadcastRecipient.provider_message_id == provider_message_id
+    )
+    recipient = (await session.execute(recipient_stmt)).scalar_one_or_none()
+    if recipient is not None and recipient.status != _META_STATUS_TO_RECIPIENT_STATUS[meta_status]:
+        recipient.status = _META_STATUS_TO_RECIPIENT_STATUS[meta_status]
+        broadcast = await session.get(Broadcast, recipient.broadcast_id)
+        if broadcast is not None:
+            if meta_status == "delivered":
+                broadcast.delivered_count += 1
+            elif meta_status == "read":
+                broadcast.read_count += 1
+            elif meta_status == "failed":
+                broadcast.failed_count += 1
+
+    await session.flush()
 
 
 def _extract_meta_message_text(msg: dict) -> str:

@@ -11,6 +11,7 @@ from communicator.models.audit import AuditLog
 from communicator.models.contact import Contact
 from communicator.models.conversation import Conversation, ConversationState
 from communicator.models.draft import Draft, DraftStatus
+from communicator.models.knowledge_base import KnowledgeBaseEntry
 from communicator.models.lead import Lead
 from communicator.models.message import Message
 from communicator.services.alerts import send_hot_lead_alert
@@ -57,6 +58,14 @@ _ALERT_INTENTS = ("buying_signal", "complaint", "escalate")
 _ALERT_SENTIMENTS = ("negative", "urgent")
 
 
+async def _render_knowledge_base(session: AsyncSession) -> str:
+    entries = (await session.execute(select(KnowledgeBaseEntry))).scalars().all()
+    if not entries:
+        return ""
+    body = "\n\n".join(f"### {e.title}\n{e.content}" for e in entries)
+    return f"BUSINESS KNOWLEDGE BASE:\n{body}\n\n"
+
+
 async def _build_context(
     session: AsyncSession, conversation: Conversation
 ) -> tuple[str, Contact, Lead, str]:
@@ -74,11 +83,13 @@ async def _build_context(
 
     services = await get_matching_services(session, lead.institution_type)
     service_context = render_service_context(services)
+    knowledge_context = await _render_knowledge_base(session)
 
     user_prompt = (
         f"LEAD: {lead.name} ({lead.institution_type}, {lead.city})\n"
         f"QUALIFICATION: {lead.qualification_rationale}\n\n"
         f"SERVICES:\n{service_context}\n\n"
+        f"{knowledge_context}"
         f"CONVERSATION HISTORY:\n{history}\n\n"
         "Draft the next reply to send to this lead."
     )

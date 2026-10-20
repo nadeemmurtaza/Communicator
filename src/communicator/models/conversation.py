@@ -3,7 +3,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from communicator.models.draft import Draft
     from communicator.models.message import Message
     from communicator.models.sequence import FollowUpSequence
+    from communicator.models.team_member import TeamMember
 
 
 class ConversationState(str, enum.Enum):
@@ -53,6 +54,15 @@ class Conversation(Base):
         DateTime(timezone=True), nullable=True
     )
 
+    # Human-takeover: when true, the AI reply engine stays out of this
+    # conversation entirely regardless of auto_reply_enabled, until an
+    # agent flips it back off. Independent of `state` -- a HOT_LEAD can
+    # still be bot-handled, a NEW conversation can be manually taken over.
+    human_takeover: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    assigned_to_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("team_members.id"), nullable=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
@@ -64,6 +74,7 @@ class Conversation(Base):
 
     contact: Mapped["Contact"] = relationship("Contact", back_populates="conversations")
     sequence: Mapped["FollowUpSequence | None"] = relationship("FollowUpSequence")
+    assigned_to: Mapped["TeamMember | None"] = relationship("TeamMember")
     messages: Mapped[list["Message"]] = relationship(
         "Message",
         back_populates="conversation",
