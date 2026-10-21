@@ -1,32 +1,49 @@
 """
-Turns a parsed inbound message (already extracted from a provider's
-webhook payload -- see communicator.api.routes.webhooks) into a recorded
-Message, running the compliance gate first. Intent classification and
-AI-drafted replies are Phase 3 (see docs/ARCHITECTURE.md section 7); this
-module only gets as far as recording the message and updating state.
+Inbound message processor for all channels with enterprise WhatsApp automation.
+
+Handles:
+1. Contact resolution & Conversation creation
+2. Mandatory compliance gate (opt-in / opt-out / STOP / START)
+3. 24-hour WhatsApp session window timestamp tracking
+4. In-chat agent commands (#bot, #resolve, #csat, #tag)
+5. CSAT feedback rating responses
+6. Interactive WhatsApp navigation tree & catalog menus
+7. Business hours / after-hours away messaging
+8. Advanced keyword, regex, button click, and intent automations (13 action types)
+9. Welcome greeting with interactive quick replies
+10. AI reply engine fallback
 """
 
 from __future__ import annotations
+
+from datetime import UTC, datetime
 
 import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.channels import get_provider
+from communicator.channels.whatsapp import MetaWhatsAppProvider
 from communicator.compliance.optout import process_inbound_consent_signal
 from communicator.harvester_client import HarvesterClient
-from communicator.models.automation_rule import RuleActionType
 from communicator.models.consent import ConsentStatus
 from communicator.models.contact import ChannelType, Contact
 from communicator.models.conversation import Conversation, ConversationState
 from communicator.models.lead import Lead
 from communicator.models.message import Message, MessageDirection, MessageStatus
-from communicator.services.automation import match_rule
 from communicator.services.business_hours import is_within_business_hours
 from communicator.services.integration_settings import get_settings_row
 from communicator.services.messaging import get_or_create_conversation, send_outbound_message
 from communicator.services.reply_engine import generate_reply
-from communicator.services.tags import add_tag_to_contact
+from communicator.services.whatsapp_automations import (
+    execute_rule_action,
+    handle_agent_commands,
+    handle_csat_response,
+    handle_navigation_menu,
+    match_advanced_rule,
+    send_welcome_greeting,
+    should_send_welcome_greeting,
+)
 
 _TERMINAL_STATES = (
     ConversationState.OPTED_OUT,
@@ -56,9 +73,14 @@ async def process_inbound_message(
     provider: str,
     provider_message_id: str,
     harvester_client: HarvesterClient,
+    interactive_payload_id: str | None = None,
 ) -> Message:
     contact = await _find_contact(session, channel, from_value)
     conversation = await get_or_create_conversation(session, contact)
+
+    now = datetime.now(UTC)
+    is_welcome_candidate = await should_send_welcome_greeting(session, conversation, now)
+    conversation.last_inbound_at = now
 
     consent_change = await process_inbound_consent_signal(session, contact.id, body)
 
@@ -80,6 +102,15 @@ async def process_inbound_message(
 
     await session.flush()
 
+    # Automatically mark message as read on WhatsApp if Meta Cloud API is used
+    if channel == ChannelType.WHATSAPP and provider == "meta" and provider_message_id:
+        try:
+            channel_provider = await get_provider(channel, session)
+            if isinstance(channel_provider, MetaWhatsAppProvider):
+                await channel_provider.mark_as_read(provider_message_id)
+        except Exception:
+            pass
+
     lead = await session.get(Lead, contact.lead_id)
     if lead is not None:
         try:
@@ -89,56 +120,91 @@ async def process_inbound_message(
                 reply_text=body,
             )
         except httpx.HTTPError:
-            # Best-effort: an unreachable Harvester must never cost us the
-            # inbound message we already have safely recorded.
             pass
 
     if conversation.state not in _TERMINAL_STATES:
-        await _route_reply(session, conversation, contact, body)
+        await _route_reply(
+            session,
+            conversation,
+            contact,
+            body,
+            interactive_payload_id=interactive_payload_id,
+            is_welcome_candidate=is_welcome_candidate,
+        )
 
     return message
 
 
 async def _route_reply(
-    session: AsyncSession, conversation: Conversation, contact: Contact, body: str
+    session: AsyncSession,
+    conversation: Conversation,
+    contact: Contact,
+    body: str,
+    interactive_payload_id: str | None = None,
+    is_welcome_candidate: bool = False,
 ) -> None:
     """
-    Decides what, if anything, answers this inbound message: a human
-    takeover or disabled auto-reply means nothing; outside business hours
-    sends the away message; a matching AutomationRule short-circuits the
-    AI; otherwise the AI reply engine drafts a response as before.
+    Evaluates in order:
+    1. Agent commands (#bot, #resolve, #csat, #tag)
+    2. CSAT rating response
+    3. WhatsApp interactive menu navigation
+    4. Human takeover check
+    5. After-hours / Business hours away message
+    6. Advanced automation rules (keywords, regex, button click, list select, 13 action types)
+    7. Welcome greeting automation (first touch or >24h idle)
+    8. AI reply engine fallback
     """
+    # 1. In-chat agent control commands
+    if await handle_agent_commands(session, conversation, contact, body):
+        return
+
+    # 2. CSAT rating survey responses
+    if await handle_csat_response(session, conversation, contact, body, interactive_payload_id):
+        return
+
+    # 3. WhatsApp Interactive Navigation Menus (services catalog, pricing, location)
+    if contact.channel == ChannelType.WHATSAPP:
+        if await handle_navigation_menu(
+            session, conversation, contact, interactive_payload_id, body
+        ):
+            return
+
     integration_settings = await get_settings_row(session)
 
+    # 4. Human takeover / Auto-reply disabled check
     if conversation.human_takeover or not integration_settings.auto_reply_enabled:
         return
 
+    # 5. After-Hours / Business Hours away message
     if not is_within_business_hours(integration_settings) and integration_settings.away_message:
         try:
             channel_provider = await get_provider(contact.channel, session)
             await send_outbound_message(
                 session, contact, channel_provider, integration_settings.away_message
             )
-        except Exception:  # noqa: BLE001, S110 -- best-effort; never lose the inbound message
+        except Exception:
             pass
         return
 
-    rule = await match_rule(session, body)
+    # 6. Advanced Automation Rules Engine
+    rule = await match_advanced_rule(session, body, payload_id=interactive_payload_id)
     if rule is not None:
-        if rule.action_type == RuleActionType.AUTO_REPLY and rule.action_value:
-            try:
-                channel_provider = await get_provider(contact.channel, session)
-                await send_outbound_message(session, contact, channel_provider, rule.action_value)
-            except Exception:  # noqa: BLE001, S110
-                pass
-        elif rule.action_type == RuleActionType.HANDOFF:
-            conversation.human_takeover = True
-            await session.flush()
-        elif rule.action_type == RuleActionType.ADD_TAG and rule.action_value:
-            await add_tag_to_contact(session, contact, rule.action_value)
-        return
+        try:
+            if await execute_rule_action(session, rule, conversation, contact):
+                return
+        except Exception:
+            pass
 
+    # 7. Welcome / Greeting Automation for WhatsApp
+    if contact.channel == ChannelType.WHATSAPP and is_welcome_candidate:
+        try:
+            await send_welcome_greeting(session, conversation, contact)
+            return
+        except Exception:
+            pass
+
+    # 8. AI reply engine fallback
     try:
         await generate_reply(session, conversation.id)
-    except Exception:  # noqa: BLE001, S110 -- a drafting failure (LLM/network/parse)
-        pass  # must never lose the inbound message already recorded above.
+    except Exception:
+        pass

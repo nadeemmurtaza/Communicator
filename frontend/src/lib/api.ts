@@ -29,6 +29,8 @@ export interface Conversation {
   state: string
   humanTakeover: boolean
   assignedToId: string | null
+  csatScore?: number | null
+  csatComment?: string | null
   updatedAt: string
 }
 
@@ -47,7 +49,31 @@ export interface ConversationDetail {
   state: string
   humanTakeover: boolean
   assignedToId: string | null
+  csatScore?: number | null
+  csatComment?: string | null
   messages: Message[]
+}
+
+export interface Service {
+  id: string
+  name: string
+  summary: string
+  targetInstitutionTypes: string[]
+}
+
+export interface Sequence {
+  id: string
+  name: string
+  isActive: boolean
+}
+
+export interface VariantStats {
+  variants: Array<{
+    variant: string
+    enrolled: number
+    replied: number
+    closedWon: number
+  }>
 }
 
 export interface TeamMember {
@@ -67,12 +93,33 @@ export interface KnowledgeBaseEntry {
 export interface AutomationRule {
   id: string
   name: string
+  description?: string
   triggerKeyword: string
-  matchType: 'contains' | 'exact'
-  actionType: 'auto_reply' | 'handoff' | 'add_tag'
+  matchType: string
+  actionType: string
   actionValue: string
   priority: number
   isActive: boolean
+  executionCount?: number
+  lastTriggeredAt?: string | null
+  createdAt?: string
+}
+
+export interface AutomationStats {
+  totalRules: number
+  activeRules: number
+  totalExecutions: number
+  csatAverage: number | null
+  csatResponsesCount: number
+}
+
+export interface RuleTestResult {
+  matched: boolean
+  message?: string
+  rule?: AutomationRule
+  actionType?: string
+  actionValue?: string
+  preview?: Record<string, unknown>
 }
 
 export interface ContactRecord {
@@ -107,25 +154,17 @@ export interface BroadcastRecipient {
   error: string
 }
 
-export interface Service {
-  id: string
+export interface Template {
+  id?: string
   name: string
-  summary: string
-  details?: string
-  targetInstitutionTypes: string[]
-  faq?: { question: string; answer: string }[]
-  pricingNotes?: string
-}
-
-export interface Sequence {
-  id: string
-  name: string
-  isActive: boolean
-}
-
-export interface VariantStats {
-  sequenceId: string
-  variants: { variant: string; enrolled: number; replied: number; closedWon: number }[]
+  status: string
+  category: string
+  language: string
+  components: Array<{
+    type: string
+    text?: string
+    format?: string
+  }>
 }
 
 export interface IntegrationSettings {
@@ -175,55 +214,45 @@ export interface BusinessSettingsInput {
   away_message?: string
 }
 
-export interface Template {
-  id: string
-  name: string
-  status: string
-  category: string
-  language: string
-  bodyText: string
-}
-
 export interface VerifyResult {
-  status: string
-  verifiedName: string
-  displayNumber: string
-  qualityRating: string | null
+  valid: boolean
+  displayPhoneNumber?: string
+  displayNumber?: string
+  verifiedName?: string
+  qualityRating?: string
+  error?: string
 }
 
 export const api = {
-  listDrafts: (status = 'pending_review') => request<Draft[]>(`/drafts?status=${status}`),
-  approveDraft: (id: string) =>
-    request<{ id: string; status: string }>(`/drafts/${id}/approve`, { method: 'POST' }),
-  rejectDraft: (id: string, feedback = '') =>
-    request<{ id: string; status: string }>(
-      `/drafts/${id}/reject${feedback ? `?feedback=${encodeURIComponent(feedback)}` : ''}`,
-      { method: 'POST' },
-    ),
-  generateDraft: (conversationId: string) =>
-    request<{ id: string; status: string; body: string }>(`/drafts/generate/${conversationId}`, {
+  listDrafts: () => request<Draft[]>('/drafts?status=pending_review'),
+  approveDraft: (id: string) => request<Draft>(`/drafts/${id}/approve`, { method: 'POST' }),
+  rejectDraft: (id: string, reason?: string) =>
+    request<Draft>(`/drafts/${id}/reject`, {
       method: 'POST',
+      body: JSON.stringify({ reason: reason ?? '' }),
     }),
+  editDraft: (id: string, body: string) =>
+    request<Draft>(`/drafts/${id}/edit`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    }),
+  generateDraft: (conversationId: string) =>
+    request<Draft>(`/drafts/generate/${conversationId}`, { method: 'POST' }),
 
   listConversations: () => request<Conversation[]>('/conversations'),
   getConversation: (id: string) => request<ConversationDetail>(`/conversations/${id}`),
-  enrollSequence: (id: string, sequenceId: string) =>
-    request(`/conversations/${id}/enroll-sequence?sequence_id=${sequenceId}`, { method: 'POST' }),
+  sendManualMessage: (conversationId: string, body: string) =>
+    request<Message>(`/conversations/${conversationId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    }),
 
   listServices: () => request<Service[]>('/services'),
-  getService: (id: string) => request<Service>(`/services/${id}`),
-  createService: (data: {
-    name: string
-    summary?: string
-    details?: string
-    target_institution_types?: string[]
-  }) => request<{ id: string }>('/services', { method: 'POST', body: JSON.stringify(data) }),
+  createService: (data: { name: string; summary: string }) =>
+    request<Service>('/services', { method: 'POST', body: JSON.stringify(data) }),
 
   listSequences: () => request<Sequence[]>('/sequences'),
   sequenceVariantStats: (id: string) => request<VariantStats>(`/sequences/${id}/variant-stats`),
-
-  runFollowups: () => request('/scheduler/run-followups', { method: 'POST' }),
-  dispatchAutoApproved: () => request('/scheduler/dispatch-auto-approved', { method: 'POST' }),
 
   getIntegrationSettings: () => request<IntegrationSettings>('/settings'),
   updateIntegrationSettings: (payload: {
@@ -266,6 +295,7 @@ export const api = {
   listAutomationRules: () => request<AutomationRule[]>('/automation-rules'),
   createAutomationRule: (data: {
     name: string
+    description?: string
     trigger_keyword: string
     match_type: string
     action_type: string
@@ -276,6 +306,21 @@ export const api = {
   updateAutomationRule: (id: string, data: Record<string, unknown>) =>
     request<AutomationRule>(`/automation-rules/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteAutomationRule: (id: string) => request(`/automation-rules/${id}`, { method: 'DELETE' }),
+  seedDefaultAutomations: () =>
+    request<{ status: string; installedCount: number; message: string }>(
+      '/automation-rules/seed-defaults',
+      { method: 'POST' }
+    ),
+  testAutomationRule: (data: { text: string; payload_id?: string }) =>
+    request<RuleTestResult>('/automation-rules/test', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getAutomationStats: () => request<AutomationStats>('/automation-rules/stats'),
+  runInactivityNudges: () =>
+    request<{ status: string; nudgedCount: number }>('/automation-rules/run-nudges', {
+      method: 'POST',
+    }),
 
   listContacts: (tag?: string) => request<ContactRecord[]>(`/contacts${tag ? `?tag=${tag}` : ''}`),
   listContactTags: () => request<{ id: string; name: string }[]>('/contacts/tags'),

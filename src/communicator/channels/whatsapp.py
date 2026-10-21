@@ -60,10 +60,16 @@ class MetaWhatsAppProvider(ChannelProvider):
     """
     WhatsApp via Meta's Graph/Cloud API directly (no Twilio in between).
 
-    Ported from the standalone Node auto-reply bot (`reply/`), which talked
-    to the Cloud API directly to get interactive quick-reply buttons and
-    looser send rules than Twilio's WhatsApp wrapper. Same 24h session-window
-    policy applies on Meta's side; this provider doesn't enforce it itself.
+    Full enterprise automation capabilities:
+    - Text messages with preview URLs
+    - Interactive Quick Reply buttons (up to 3 buttons)
+    - Interactive List menus (sections and rows, up to 10 choices)
+    - Interactive Call-To-Action (CTA) URL buttons
+    - Rich media (images, documents/PDFs, audio, video)
+    - Location sharing
+    - Emoji reactions
+    - Message read receipts (mark_as_read)
+    - Meta pre-approved template messages (re-engaging outside 24h window)
     """
 
     def __init__(
@@ -89,13 +95,16 @@ class MetaWhatsAppProvider(ChannelProvider):
             )
 
     async def send(self, contact: Contact, body: str, subject: str | None = None) -> SendResult:
+        return await self.send_text(contact.value, body)
+
+    async def send_text(self, to: str, body: str, preview_url: bool = False) -> SendResult:
         url = f"https://graph.facebook.com/{self.api_version}/{self.phone_number_id}/messages"
         payload = {
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
-            "to": contact.value,
+            "to": to.lstrip("+"),
             "type": "text",
-            "text": {"preview_url": False, "body": body},
+            "text": {"preview_url": preview_url, "body": body},
         }
 
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -109,6 +118,300 @@ class MetaWhatsAppProvider(ChannelProvider):
 
         message_id = (data.get("messages") or [{}])[0].get("id", "")
         return SendResult(provider="meta", provider_message_id=message_id, raw_response=data)
+
+    async def send_interactive_buttons(
+        self,
+        to: str,
+        body_text: str,
+        buttons: list[dict[str, str]],
+        header_text: str | None = None,
+        footer_text: str | None = None,
+    ) -> SendResult:
+        """
+        Sends interactive quick-reply buttons (up to 3 buttons).
+        Each button in `buttons` has:
+          - id: str (payload returned on click, e.g. "pricing_catalog")
+          - title: str (button label, max 20 chars)
+        """
+        url = f"https://graph.facebook.com/{self.api_version}/{self.phone_number_id}/messages"
+        formatted_buttons = [
+            {
+                "type": "reply",
+                "reply": {
+                    "id": str(btn.get("id", f"btn_{i}"))[:256],
+                    "title": str(btn.get("title", ""))[:20],
+                },
+            }
+            for i, btn in enumerate(buttons[:3])
+        ]
+
+        interactive_payload: dict = {
+            "type": "button",
+            "body": {"text": body_text},
+            "action": {"buttons": formatted_buttons},
+        }
+        if header_text:
+            interactive_payload["header"] = {"type": "text", "text": header_text[:60]}
+        if footer_text:
+            interactive_payload["footer"] = {"text": footer_text[:60]}
+
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": to.lstrip("+"),
+            "type": "interactive",
+            "interactive": interactive_payload,
+        }
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                url,
+                json=payload,
+                headers={"Authorization": f"Bearer {self.access_token}"},
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        message_id = (data.get("messages") or [{}])[0].get("id", "")
+        return SendResult(provider="meta", provider_message_id=message_id, raw_response=data)
+
+    async def send_interactive_list(
+        self,
+        to: str,
+        body_text: str,
+        button_title: str,
+        sections: list[dict],
+        header_text: str | None = None,
+        footer_text: str | None = None,
+    ) -> SendResult:
+        """
+        Sends an interactive list menu (up to 10 rows total across sections).
+        `sections`: [
+          {
+            "title": "Section Title",
+            "rows": [
+              {"id": "svc_1", "title": "Service 1", "description": "Details..."}
+            ]
+          }
+        ]
+        """
+        url = f"https://graph.facebook.com/{self.api_version}/{self.phone_number_id}/messages"
+        formatted_sections = []
+        for sec in sections:
+            rows = [
+                {
+                    "id": str(r.get("id", ""))[:200],
+                    "title": str(r.get("title", ""))[:24],
+                    **({"description": str(r.get("description", ""))[:72]} if r.get("description") else {}),
+                }
+                for r in sec.get("rows", [])
+            ]
+            formatted_sections.append({
+                "title": str(sec.get("title", ""))[:24],
+                "rows": rows,
+            })
+
+        interactive_payload: dict = {
+            "type": "list",
+            "body": {"text": body_text},
+            "action": {
+                "button": (button_title or "Options")[:20],
+                "sections": formatted_sections,
+            },
+        }
+        if header_text:
+            interactive_payload["header"] = {"type": "text", "text": header_text[:60]}
+        if footer_text:
+            interactive_payload["footer"] = {"text": footer_text[:60]}
+
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": to.lstrip("+"),
+            "type": "interactive",
+            "interactive": interactive_payload,
+        }
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                url,
+                json=payload,
+                headers={"Authorization": f"Bearer {self.access_token}"},
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        message_id = (data.get("messages") or [{}])[0].get("id", "")
+        return SendResult(provider="meta", provider_message_id=message_id, raw_response=data)
+
+    async def send_interactive_cta_url(
+        self,
+        to: str,
+        body_text: str,
+        display_text: str,
+        url: str,
+        header_text: str | None = None,
+        footer_text: str | None = None,
+    ) -> SendResult:
+        """Sends an interactive Call-to-Action button with a clickable web link."""
+        graph_url = f"https://graph.facebook.com/{self.api_version}/{self.phone_number_id}/messages"
+        interactive_payload: dict = {
+            "type": "cta_url",
+            "body": {"text": body_text},
+            "action": {
+                "name": "cta_url",
+                "parameters": {
+                    "display_text": display_text[:20],
+                    "url": url,
+                },
+            },
+        }
+        if header_text:
+            interactive_payload["header"] = {"type": "text", "text": header_text[:60]}
+        if footer_text:
+            interactive_payload["footer"] = {"text": footer_text[:60]}
+
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": to.lstrip("+"),
+            "type": "interactive",
+            "interactive": interactive_payload,
+        }
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                graph_url,
+                json=payload,
+                headers={"Authorization": f"Bearer {self.access_token}"},
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        message_id = (data.get("messages") or [{}])[0].get("id", "")
+        return SendResult(provider="meta", provider_message_id=message_id, raw_response=data)
+
+    async def send_media(
+        self,
+        to: str,
+        media_type: str,
+        media_url_or_id: str,
+        caption: str | None = None,
+        filename: str | None = None,
+    ) -> SendResult:
+        """Sends media: 'image', 'document', 'audio', 'video'."""
+        url = f"https://graph.facebook.com/{self.api_version}/{self.phone_number_id}/messages"
+        is_link = media_url_or_id.startswith("http://") or media_url_or_id.startswith("https://")
+        media_payload: dict = {"link" if is_link else "id": media_url_or_id}
+        if caption and media_type in ("image", "document", "video"):
+            media_payload["caption"] = caption
+        if filename and media_type == "document":
+            media_payload["filename"] = filename
+
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": to.lstrip("+"),
+            "type": media_type,
+            media_type: media_payload,
+        }
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                url,
+                json=payload,
+                headers={"Authorization": f"Bearer {self.access_token}"},
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        message_id = (data.get("messages") or [{}])[0].get("id", "")
+        return SendResult(provider="meta", provider_message_id=message_id, raw_response=data)
+
+    async def send_location(
+        self,
+        to: str,
+        latitude: float,
+        longitude: float,
+        name: str | None = None,
+        address: str | None = None,
+    ) -> SendResult:
+        """Sends GPS / office / store location coordinates."""
+        url = f"https://graph.facebook.com/{self.api_version}/{self.phone_number_id}/messages"
+        loc_payload: dict = {
+            "latitude": latitude,
+            "longitude": longitude,
+        }
+        if name:
+            loc_payload["name"] = name
+        if address:
+            loc_payload["address"] = address
+
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": to.lstrip("+"),
+            "type": "location",
+            "location": loc_payload,
+        }
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                url,
+                json=payload,
+                headers={"Authorization": f"Bearer {self.access_token}"},
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        message_id = (data.get("messages") or [{}])[0].get("id", "")
+        return SendResult(provider="meta", provider_message_id=message_id, raw_response=data)
+
+    async def send_reaction(self, to: str, message_id: str, emoji: str) -> SendResult:
+        """Reacts to a user's message with an emoji (e.g. '👍', '❤️')."""
+        url = f"https://graph.facebook.com/{self.api_version}/{self.phone_number_id}/messages"
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": to.lstrip("+"),
+            "type": "reaction",
+            "reaction": {
+                "message_id": message_id,
+                "emoji": emoji,
+            },
+        }
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                url,
+                json=payload,
+                headers={"Authorization": f"Bearer {self.access_token}"},
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        return SendResult(provider="meta", provider_message_id=message_id, raw_response=data)
+
+    async def mark_as_read(self, message_id: str) -> bool:
+        """Marks user's incoming message as read (blue double check marks on WhatsApp)."""
+        if not message_id:
+            return False
+        url = f"https://graph.facebook.com/{self.api_version}/{self.phone_number_id}/messages"
+        payload = {
+            "messaging_product": "whatsapp",
+            "status": "read",
+            "message_id": message_id,
+        }
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                res = await client.post(
+                    url,
+                    json=payload,
+                    headers={"Authorization": f"Bearer {self.access_token}"},
+                )
+                return res.status_code in (200, 201)
+        except Exception:
+            return False
 
     async def send_template(
         self,
@@ -135,7 +438,7 @@ class MetaWhatsAppProvider(ChannelProvider):
         payload = {
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
-            "to": to,
+            "to": to.lstrip("+"),
             "type": "template",
             "template": {
                 "name": template_name,

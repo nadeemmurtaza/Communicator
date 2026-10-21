@@ -23,3 +23,9 @@ async def add_tag_to_contact(session: AsyncSession, contact: Contact, tag_name: 
     if tag not in contact.tags:
         contact.tags.append(tag)
         await session.flush()
+
+
+async def remove_tag_from_contact(session: AsyncSession, contact: Contact, tag_name: str) -> None:
+    await session.refresh(contact, attribute_names=["tags"])
+    contact.tags = [t for t in contact.tags if t.name != tag_name]
+    await session.flush()

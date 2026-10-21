@@ -133,9 +133,13 @@ async def meta_whatsapp_inbound(
     x_hub_signature_256: str | None = Header(default=None),
 ) -> dict[str, str]:
     """
-    Cloud API inbound events. Ported from the standalone reply bot's
-    `parseWhatsAppWebhook` -- same entry/changes/value.messages shape, only
-    text and button/interactive replies are handled.
+    Cloud API inbound events. Handles:
+    - Text messages
+    - Interactive quick-reply buttons (id + title)
+    - Interactive list menu selections (id + title)
+    - Media attachments (image, document, audio, video)
+    - Location pins
+    - Delivery and read status receipts
     """
     raw_body = await request.body()
     await _require_meta_signature(session, raw_body, x_hub_signature_256)
@@ -149,8 +153,12 @@ async def meta_whatsapp_inbound(
             value = change.get("value") or {}
             for msg in value.get("messages", []):
                 text = _extract_meta_message_text(msg)
-                if not text:
+                payload_id = _extract_meta_payload_id(msg)
+                if not text and not payload_id:
                     continue
+                if not text and payload_id:
+                    text = payload_id
+
                 try:
                     await process_inbound_message(
                         session,
@@ -160,6 +168,7 @@ async def meta_whatsapp_inbound(
                         provider="meta",
                         provider_message_id=msg.get("id", ""),
                         harvester_client=harvester_client,
+                        interactive_payload_id=payload_id,
                     )
                 except UnknownContactError:
                     pass
@@ -230,7 +239,36 @@ def _extract_meta_message_text(msg: dict) -> str:
             return (interactive.get("list_reply") or {}).get("title", "")
     if msg_type == "button":
         return (msg.get("button") or {}).get("text", "")
+    if msg_type == "image":
+        caption = (msg.get("image") or {}).get("caption", "")
+        return caption if caption else "[User sent an image]"
+    if msg_type == "document":
+        caption = (msg.get("document") or {}).get("caption", "")
+        filename = (msg.get("document") or {}).get("filename", "document")
+        return caption if caption else f"[User sent document: {filename}]"
+    if msg_type == "audio":
+        return "[User sent an audio message]"
+    if msg_type == "video":
+        caption = (msg.get("video") or {}).get("caption", "")
+        return caption if caption else "[User sent a video]"
+    if msg_type == "location":
+        loc = msg.get("location") or {}
+        name = loc.get("name") or loc.get("address") or ""
+        return f"[User shared location: {name}]" if name else "[User shared location]"
     return ""
+
+
+def _extract_meta_payload_id(msg: dict) -> str | None:
+    msg_type = msg.get("type")
+    if msg_type == "interactive":
+        interactive = msg.get("interactive") or {}
+        if interactive.get("type") == "button_reply":
+            return (interactive.get("button_reply") or {}).get("id")
+        if interactive.get("type") == "list_reply":
+            return (interactive.get("list_reply") or {}).get("id")
+    if msg_type == "button":
+        return (msg.get("button") or {}).get("payload")
+    return None
 
 
 @router.post("/postmark/inbound")
