@@ -1,55 +1,126 @@
 import { useEffect, useState } from 'react'
-import { api, type Broadcast, type BroadcastRecipient } from '../lib/api'
-import { timeAgo } from '../lib/format'
+import { Link } from 'react-router-dom'
+import {
+  api,
+  type AudiencePreview,
+  type Broadcast,
+  type CampaignAnalytics,
+  type PricingEstimate,
+} from '../lib/api'
 
 export function Broadcasts() {
-  const [broadcasts, setBroadcasts] = useState<Broadcast[] | null>(null)
+  const [campaigns, setCampaigns] = useState<Broadcast[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [showForm, setShowForm] = useState(false)
-  const [name, setName] = useState('')
-  const [templateName, setTemplateName] = useState('')
-  const [tagName, setTagName] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [dispatchingId, setDispatchingId] = useState<string | null>(null)
-  const [openId, setOpenId] = useState<string | null>(null)
-  const [recipients, setRecipients] = useState<BroadcastRecipient[] | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
 
-  function load() {
+  // Creation Wizard Modal
+  const [showWizard, setShowWizard] = useState(false)
+  const [name, setName] = useState('Spring sale early access')
+  const [selectedTags, setSelectedTags] = useState<string[]>(['vip-customers'])
+  const [tagInput, setTagInput] = useState('')
+  const [audiencePreview, setAudiencePreview] = useState<AudiencePreview | null>(null)
+  const [templateName, setTemplateName] = useState('spring_sale_offer')
+  const [customerNameSample, setCustomerNameSample] = useState('Maya')
+  const [discountParam, setDiscountParam] = useState('20%')
+  const [scheduleTime, setScheduleTime] = useState('2026-03-12T10:00')
+  const [sendImmediately, setSendImmediately] = useState(false)
+  const [creating, setCreating] = useState(false)
+
+  // Analytics View Modal
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null)
+  const [analytics, setAnalytics] = useState<CampaignAnalytics | null>(null)
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false)
+
+  // Pricing Calculator Modal
+  const [showPricingCalculator, setShowPricingCalculator] = useState(false)
+  const [calcRegion, setCalcRegion] = useState('US')
+  const [calcCategory, setCalcCategory] = useState('marketing')
+  const [calcVolume, setCalcVolume] = useState(1000)
+  const [pricingEstimate, setPricingEstimate] = useState<PricingEstimate | null>(null)
+
+  // Dispatching state
+  const [dispatchingId, setDispatchingId] = useState<string | null>(null)
+
+  function loadCampaigns() {
     api
       .listBroadcasts()
-      .then(setBroadcasts)
+      .then(setCampaigns)
       .catch((e) => setError(e.message))
   }
 
-  useEffect(load, [])
+  useEffect(loadCampaigns, [])
 
-  async function submit(e: React.FormEvent) {
+  // Auto-fetch audience preview when tags change in wizard
+  useEffect(() => {
+    if (!showWizard || selectedTags.length === 0) return
+    api
+      .getAudiencePreview(selectedTags.join(','))
+      .then(setAudiencePreview)
+      .catch(() => {})
+  }, [showWizard, selectedTags])
+
+  // Recalculate WhatsApp pricing estimate
+  useEffect(() => {
+    if (!showPricingCalculator) return
+    api
+      .getWhatsAppPricing(calcRegion, calcCategory, calcVolume)
+      .then(setPricingEstimate)
+      .catch(() => {})
+  }, [showPricingCalculator, calcRegion, calcCategory, calcVolume])
+
+  async function handleCreateCampaign(e: React.FormEvent) {
     e.preventDefault()
-    setSaving(true)
+    setCreating(true)
+    setError(null)
+
+    const previewText = `Hi ${customerNameSample}, our spring sale starts Friday. As a VIP customer you get early access and ${discountParam} off until Sunday.`
+
     try {
       await api.createBroadcast({
         name,
         template_name: templateName,
         template_language: 'en_US',
-        tag_name: tagName,
+        body_preview: previewText,
+        template_params: {
+          customer_name: customerNameSample,
+          discount: discountParam,
+        },
+        tag_name: selectedTags.join(','),
+        scheduled_at: sendImmediately ? null : new Date(scheduleTime).toISOString(),
       })
-      setName('')
-      setTemplateName('')
-      setTagName('')
-      setShowForm(false)
-      load()
+      setShowWizard(false)
+      setSuccess(`Campaign "${name}" scheduled successfully!`)
+      loadCampaigns()
     } catch (e) {
       setError((e as Error).message)
     } finally {
-      setSaving(false)
+      setCreating(false)
     }
   }
 
-  async function dispatch(id: string) {
+  async function openAnalytics(id: string) {
+    setSelectedCampaignId(id)
+    setLoadingAnalytics(true)
+    try {
+      const data = await api.getCampaignAnalytics(id)
+      setAnalytics(data)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setLoadingAnalytics(false)
+    }
+  }
+
+  async function handleDispatch(id: string) {
     setDispatchingId(id)
+    setError(null)
     try {
       await api.dispatchBroadcast(id)
-      load()
+      setSuccess('Campaign dispatched successfully!')
+      loadCampaigns()
+      if (selectedCampaignId === id) {
+        openAnalytics(id)
+      }
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -57,163 +128,865 @@ export function Broadcasts() {
     }
   }
 
-  async function toggleRecipients(id: string) {
-    if (openId === id) {
-      setOpenId(null)
-      return
-    }
-    setOpenId(id)
-    setRecipients(null)
+  async function handleSeedDefaults() {
+    setError(null)
     try {
-      setRecipients(await api.listBroadcastRecipients(id))
+      const res = await api.seedDefaultCampaigns()
+      if (res.status === 'seeded') {
+        setSuccess('Pre-built Chatwoot WhatsApp example campaigns installed!')
+      } else {
+        setSuccess('Example campaigns already active.')
+      }
+      loadCampaigns()
     } catch (e) {
       setError((e as Error).message)
     }
   }
 
+  function addTag() {
+    const val = tagInput.trim().toLowerCase()
+    if (val && !selectedTags.includes(val)) {
+      setSelectedTags([...selectedTags, val])
+      setTagInput('')
+    }
+  }
+
+  function removeTag(tag: string) {
+    setSelectedTags(selectedTags.filter((t) => t !== tag))
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      {/* Top Banner & Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Broadcasts</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-slate-900">WhatsApp campaigns</h1>
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+              Meta Cloud API
+            </span>
+          </div>
           <p className="mt-1 text-sm text-slate-500">
-            Send an approved template message to every contact with a tag — the way to re-engage
-            outside the 24h session window.
+            Send WhatsApp campaigns from your shared inbox. Choose who gets the message, pick a time,
+            and answer everyone who writes back with your team and Captain.
           </p>
         </div>
-        <button
-          onClick={() => setShowForm((v) => !v)}
-          className="shrink-0 rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
-        >
-          {showForm ? 'Cancel' : 'New broadcast'}
-        </button>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setShowPricingCalculator(true)}
+            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs"
+          >
+            💰 Pricing Calculator
+          </button>
+
+          <button
+            onClick={handleSeedDefaults}
+            className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 shadow-xs"
+          >
+            ⚡ Load Example Data
+          </button>
+
+          <button
+            onClick={() => setShowWizard(true)}
+            className="rounded-md bg-slate-900 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 shadow-xs"
+          >
+            + Create campaign
+          </button>
+        </div>
       </div>
 
+      {/* Notifications */}
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-
-      {showForm && (
-        <form onSubmit={submit} className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-          <div>
-            <label className="block text-xs font-medium text-slate-500">Name</label>
-            <input
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="October re-engagement"
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-500">
-              Approved template name
-            </label>
-            <input
-              required
-              value={templateName}
-              onChange={(e) => setTemplateName(e.target.value)}
-              placeholder="order_update"
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-500">Target tag</label>
-            <input
-              required
-              value={tagName}
-              onChange={(e) => setTagName(e.target.value)}
-              placeholder="vip"
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-          >
-            {saving ? 'Saving…' : 'Create'}
+        <div className="flex items-center justify-between rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="font-bold">
+            ×
           </button>
-        </form>
+        </div>
+      )}
+      {success && (
+        <div className="flex items-center justify-between rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <span>{success}</span>
+          <button onClick={() => setSuccess(null)} className="font-bold">
+            ×
+          </button>
+        </div>
       )}
 
-      {broadcasts === null ? (
-        <p className="text-sm text-slate-500">Loading…</p>
-      ) : broadcasts.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-10 text-center text-sm text-slate-500">
-          No broadcasts yet.
+      {/* Campaigns List */}
+      <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+        <div className="border-b border-slate-200 bg-slate-50/50 px-5 py-3 flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Active & Past Campaigns
+          </span>
+          <span className="text-xs text-slate-400">
+            Works with your Meta WhatsApp Business number
+          </span>
         </div>
-      ) : (
-        <ul className="space-y-2">
-          {broadcasts.map((b) => (
-            <li key={b.id} className="rounded-lg border border-slate-200 bg-white">
-              <div className="flex items-center justify-between gap-4 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-slate-900">{b.name}</p>
-                  <p className="text-xs text-slate-500">
-                    {b.templateName} → #{b.tagName} · {timeAgo(b.createdAt)}
+
+        {campaigns === null ? (
+          <div className="py-12 text-center text-sm text-slate-500">Loading campaigns...</div>
+        ) : campaigns.length === 0 ? (
+          <div className="py-12 text-center">
+            <span className="text-3xl">📢</span>
+            <h3 className="mt-2 text-sm font-semibold text-slate-900">No campaigns yet</h3>
+            <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
+              Create your first WhatsApp campaign in 3 easy steps: audience, message, and schedule.
+            </p>
+            <div className="mt-4 flex justify-center gap-2">
+              <button
+                onClick={handleSeedDefaults}
+                className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Load Chatwoot Demo Campaigns
+              </button>
+              <button
+                onClick={() => setShowWizard(true)}
+                className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+              >
+                Create campaign
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {campaigns.map((c) => (
+              <div
+                key={c.id}
+                className="p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4 hover:bg-slate-50/60 transition-colors"
+              >
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <h3 className="font-bold text-slate-900 text-sm">{c.name}</h3>
+                    {c.status === 'scheduled' && (
+                      <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[11px] font-semibold text-blue-800">
+                        Scheduled
+                      </span>
+                    )}
+                    {c.status === 'sending' && (
+                      <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800 animate-pulse">
+                        Processing
+                      </span>
+                    )}
+                    {c.status === 'completed' && (
+                      <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-800">
+                        Completed
+                      </span>
+                    )}
+                    {c.status === 'draft' && (
+                      <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700">
+                        Draft
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="mt-1 text-xs text-slate-500 flex items-center gap-2">
+                    <span>WhatsApp Support</span>
+                    <span>·</span>
+                    <span>
+                      {c.scheduledAt
+                        ? new Date(c.scheduledAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                          })
+                        : new Date(c.createdAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                    </span>
+                    <span>·</span>
+                    <span className="font-medium text-slate-600">Tags: {c.tagName}</span>
                   </p>
+
+                  {/* Delivery Stats Bar */}
+                  <div className="mt-2.5 flex items-center gap-4 text-xs text-slate-600">
+                    <span>
+                      Audience: <strong>{c.audienceCount || c.sentCount}</strong>
+                    </span>
+                    <span>
+                      Delivered: <strong>{c.deliveredCount}</strong>
+                    </span>
+                    <span>
+                      Read: <strong>{c.readCount}</strong>
+                    </span>
+                    {c.failedCount > 0 && (
+                      <span className="text-rose-600">
+                        Failed: <strong>{c.failedCount}</strong>
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-3">
-                  <span className="text-xs text-slate-500">
-                    {b.sentCount} sent · {b.deliveredCount} delivered · {b.readCount} read ·{' '}
-                    {b.failedCount} failed
-                  </span>
+
+                <div className="flex items-center gap-2 self-start md:self-center">
                   <button
-                    onClick={() => toggleRecipients(b.id)}
-                    className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                    onClick={() => openAnalytics(c.id)}
+                    className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs"
                   >
-                    Recipients
+                    View analytics
                   </button>
-                  {b.status === 'draft' && (
+
+                  {c.status !== 'completed' && c.status !== 'sending' && (
                     <button
-                      onClick={() => dispatch(b.id)}
-                      disabled={dispatchingId === b.id}
-                      className="rounded-md bg-slate-900 px-2.5 py-1 text-xs font-medium text-white disabled:opacity-50"
+                      onClick={() => handleDispatch(c.id)}
+                      disabled={dispatchingId === c.id}
+                      className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 shadow-xs"
                     >
-                      {dispatchingId === b.id ? 'Sending…' : 'Send now'}
+                      {dispatchingId === c.id ? 'Sending...' : 'Send Now'}
                     </button>
-                  )}
-                  {b.status !== 'draft' && (
-                    <span className="badge badge-ghost badge-sm">{b.status}</span>
                   )}
                 </div>
               </div>
-              {openId === b.id && (
-                <div className="border-t border-slate-100 px-4 py-3">
-                  {recipients === null ? (
-                    <p className="text-sm text-slate-500">Loading…</p>
-                  ) : recipients.length === 0 ? (
-                    <p className="text-sm text-slate-500">No recipients yet.</p>
-                  ) : (
-                    <ul className="space-y-1 text-sm">
-                      {recipients.map((r) => (
-                        <li key={r.id} className="flex items-center justify-between">
-                          <span className="text-slate-600">{r.contactId.slice(0, 8)}</span>
-                          <span
-                            className={
-                              r.status === 'failed'
-                                ? 'text-red-600'
-                                : r.status === 'read'
-                                  ? 'text-emerald-600'
-                                  : 'text-slate-500'
-                            }
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 3-Step Campaign Creation Wizard ("Choose who, what, and when on one page") */}
+      {showWizard && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs overflow-y-auto">
+          <div className="w-full max-w-3xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden my-8">
+            <div className="border-b border-slate-200 bg-slate-50/70 px-6 py-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">Send a campaign in three steps</h2>
+                <p className="text-xs text-slate-500">Choose who, what, and when on one page.</p>
+              </div>
+              <button
+                onClick={() => setShowWizard(false)}
+                className="text-slate-400 hover:text-slate-700 text-xl font-bold"
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateCampaign} className="p-6 space-y-6">
+              {/* Campaign Name */}
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+                  Campaign Name
+                </label>
+                <input
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Spring sale early access"
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-xs focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Step 1: Audience */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white">
+                      1
+                    </span>
+                    <h3 className="text-sm font-bold text-slate-900">Audience: Choose who gets it</h3>
+                  </div>
+                  <span className="text-xs font-semibold text-slate-500">
+                    Daily limit: 1,000 customers
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Pick one or more labels, such as VIP customers or newsletter subscribers. You see
+                  how many people will get the message before you send it, and nobody gets it twice.
+                </p>
+
+                {/* Tags Picker */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {selectedTags.map((t) => (
+                    <span
+                      key={t}
+                      className="inline-flex items-center gap-1 rounded bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-800"
+                    >
+                      <span>🏷️ {t}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeTag(t)}
+                        className="ml-1 text-blue-600 hover:text-blue-900 font-bold"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      placeholder="Add tag (e.g. newsletter)"
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          addTag()
+                        }
+                      }}
+                      className="rounded border border-slate-300 px-2 py-1 text-xs shadow-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={addTag}
+                      className="rounded bg-slate-200 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-300"
+                    >
+                      + Add
+                    </button>
+                  </div>
+                </div>
+
+                {/* Audience Count Live Badge */}
+                <div className="mt-2 flex items-center justify-between rounded-lg bg-white p-3 border border-slate-200 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    <span className="font-bold text-slate-900">
+                      {audiencePreview ? `${audiencePreview.totalSelected} contacts selected` : 'Calculating audience...'}
+                    </span>
+                  </div>
+                  <span className="text-slate-500">Deduplicated across all tags</span>
+                </div>
+              </div>
+
+              {/* Step 2: Message */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white">
+                    2
+                  </span>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Message: Write it once, make it personal
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Start from a message WhatsApp has already approved for your business. Each
+                  customer's name and other details are filled in for you, and you see the message the
+                  way they will.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">
+                        Approved Template
+                      </label>
+                      <select
+                        value={templateName}
+                        onChange={(e) => setTemplateName(e.target.value)}
+                        className="w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium"
+                      >
+                        <option value="spring_sale_offer">Spring sale offer (Approved)</option>
+                        <option value="store_launch_announcement">New store opening (Approved)</option>
+                        <option value="loyalty_rewards_update">Loyalty points reminder (Approved)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">
+                        Variable {'{{1}}'}: Customer Name
+                      </label>
+                      <input
+                        value={customerNameSample}
+                        onChange={(e) => setCustomerNameSample(e.target.value)}
+                        placeholder="Maya"
+                        className="w-full rounded-md border border-slate-300 px-3 py-1 text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">
+                        Variable {'{{2}}'}: Discount Percentage
+                      </label>
+                      <input
+                        value={discountParam}
+                        onChange={(e) => setDiscountParam(e.target.value)}
+                        placeholder="20%"
+                        className="w-full rounded-md border border-slate-300 px-3 py-1 text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  {/* WhatsApp Mobile Balloon Preview */}
+                  <div className="rounded-lg bg-[#efeae2] p-4 flex flex-col justify-end border border-[#d1d7db]">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                      WhatsApp Live Customer Preview
+                    </span>
+                    <div className="rounded-lg bg-white p-3 shadow-xs max-w-[90%] text-xs text-slate-900 relative">
+                      <p className="leading-relaxed">
+                        Hi <strong>{customerNameSample}</strong>, our spring sale starts Friday. As a
+                        VIP customer you get early access and <strong>{discountParam}</strong> off
+                        until Sunday.
+                      </p>
+                      <div className="mt-2 flex items-center justify-end gap-1 text-[10px] text-slate-400">
+                        <span>10:00 AM</span>
+                        <span className="text-blue-500 font-bold">✓✓</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 3: Schedule */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50/40 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white">
+                    3
+                  </span>
+                  <h3 className="text-sm font-bold text-slate-900">Schedule: Pick the time</h3>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Send at the moment that suits your customers. You can change the audience, the
+                  message, or the time until sending starts.
+                </p>
+
+                <div className="flex flex-wrap items-center gap-4">
+                  <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="schedule_mode"
+                      checked={!sendImmediately}
+                      onChange={() => setSendImmediately(false)}
+                      className="text-blue-600"
+                    />
+                    <span>Schedule for specific date & time</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="schedule_mode"
+                      checked={sendImmediately}
+                      onChange={() => setSendImmediately(true)}
+                      className="text-blue-600"
+                    />
+                    <span>Send immediately</span>
+                  </label>
+                </div>
+
+                {!sendImmediately && (
+                  <div className="pt-2">
+                    <input
+                      type="datetime-local"
+                      value={scheduleTime}
+                      onChange={(e) => setScheduleTime(e.target.value)}
+                      className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium shadow-xs"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Form Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setShowWizard(false)}
+                  className="rounded-md border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creating}
+                  className="rounded-md bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50 shadow-xs"
+                >
+                  {creating ? 'Saving...' : sendImmediately ? 'Send Campaign Now' : 'Schedule campaign'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Campaign Analytics View Modal */}
+      {selectedCampaignId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs overflow-y-auto">
+          <div className="w-full max-w-4xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden my-8">
+            <div className="border-b border-slate-200 bg-slate-50/70 px-6 py-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <span>Campaign Analytics: {analytics?.campaign.name || 'Campaign'}</span>
+                  <span className="rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-xs font-semibold">
+                    Live Data
+                  </span>
+                </h2>
+                <p className="text-xs text-slate-500">
+                  See who got your message and who read it. Watch numbers live while the campaign is
+                  sending.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedCampaignId(null)
+                  setAnalytics(null)
+                }}
+                className="text-slate-400 hover:text-slate-700 text-xl font-bold"
+              >
+                ×
+              </button>
+            </div>
+
+            {loadingAnalytics ? (
+              <div className="py-20 text-center text-sm text-slate-500">Loading live analytics...</div>
+            ) : analytics ? (
+              <div className="p-6 space-y-6">
+                {/* 6 Top Metric Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+                  <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-xs">
+                    <span className="text-[11px] font-semibold text-slate-400 uppercase">Audience</span>
+                    <div className="mt-1 text-xl font-bold text-slate-900">
+                      {analytics.metrics.audience}
+                    </div>
+                    <span className="text-[10px] text-slate-500">Target contacts</span>
+                  </div>
+
+                  <div className="rounded-xl border border-blue-200 bg-blue-50/40 p-3 shadow-xs">
+                    <span className="text-[11px] font-semibold text-blue-700 uppercase">Submitted</span>
+                    <div className="mt-1 text-xl font-bold text-blue-900">
+                      {analytics.metrics.submitted}
+                    </div>
+                    <span className="text-[10px] text-blue-600 font-medium">
+                      {analytics.metrics.submittedPct}% of audience
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-3 shadow-xs">
+                    <span className="text-[11px] font-semibold text-emerald-700 uppercase">Delivered</span>
+                    <div className="mt-1 text-xl font-bold text-emerald-900">
+                      {analytics.metrics.delivered}
+                    </div>
+                    <span className="text-[10px] text-emerald-600 font-medium">
+                      {analytics.metrics.deliveredPct}% of audience
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl border border-indigo-200 bg-indigo-50/40 p-3 shadow-xs">
+                    <span className="text-[11px] font-semibold text-indigo-700 uppercase">Read</span>
+                    <div className="mt-1 text-xl font-bold text-indigo-900">
+                      {analytics.metrics.read}
+                    </div>
+                    <span className="text-[10px] text-indigo-600 font-medium">
+                      {analytics.metrics.readPct}% of audience
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl border border-rose-200 bg-rose-50/40 p-3 shadow-xs">
+                    <span className="text-[11px] font-semibold text-rose-700 uppercase">Failed</span>
+                    <div className="mt-1 text-xl font-bold text-rose-900">
+                      {analytics.metrics.failed}
+                    </div>
+                    <span className="text-[10px] text-rose-600 font-medium">
+                      {analytics.metrics.failedPct}% of audience
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 shadow-xs">
+                    <span className="text-[11px] font-semibold text-slate-500 uppercase">Skipped</span>
+                    <div className="mt-1 text-xl font-bold text-slate-800">
+                      {analytics.metrics.skipped}
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      {analytics.metrics.skippedPct}% of audience
+                    </span>
+                  </div>
+                </div>
+
+                {/* Delivery Breakdown Visual Progress Bar */}
+                <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700 mb-2">
+                    <span>Delivery breakdown</span>
+                    <span className="text-emerald-700 font-bold">
+                      {analytics.metrics.deliveredPct}% delivered
+                    </span>
+                  </div>
+                  <div className="h-3 w-full rounded-full bg-slate-200 overflow-hidden flex">
+                    <div
+                      style={{ width: `${analytics.metrics.readPct}%` }}
+                      className="bg-indigo-600 h-full"
+                      title={`Read: ${analytics.metrics.readPct}%`}
+                    />
+                    <div
+                      style={{
+                        width: `${Math.max(0, analytics.metrics.deliveredPct - analytics.metrics.readPct)}%`,
+                      }}
+                      className="bg-emerald-500 h-full"
+                      title={`Delivered (unread): ${analytics.metrics.deliveredPct - analytics.metrics.readPct}%`}
+                    />
+                    <div
+                      style={{ width: `${analytics.metrics.failedPct}%` }}
+                      className="bg-rose-500 h-full"
+                      title={`Failed: ${analytics.metrics.failedPct}%`}
+                    />
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
+                    <div className="flex items-center gap-3">
+                      <span className="flex items-center gap-1">
+                        <span className="h-2 w-2 rounded-full bg-indigo-600" /> Read (
+                        {analytics.metrics.readPct}%)
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500" /> Delivered (
+                        {analytics.metrics.deliveredPct}%)
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="h-2 w-2 rounded-full bg-rose-500" /> Failed (
+                        {analytics.metrics.failedPct}%)
+                      </span>
+                    </div>
+                    <span>Total audience: {analytics.metrics.audience} contacts</span>
+                  </div>
+                </div>
+
+                {/* Per-Recipient Breakdown Table */}
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                    Recipient Activity & Delivery Status
+                  </h3>
+                  <div className="rounded-xl border border-slate-200 overflow-hidden bg-white">
+                    <div className="max-h-64 overflow-y-auto divide-y divide-slate-100">
+                      {analytics.recipients.length === 0 ? (
+                        <div className="p-6 text-center text-xs text-slate-400">
+                          {analytics.campaign.status === 'scheduled'
+                            ? 'Campaign scheduled to send. Recipient logs will populate when dispatch starts.'
+                            : 'No recipient logs recorded.'}
+                        </div>
+                      ) : (
+                        analytics.recipients.map((r) => (
+                          <div
+                            key={r.id}
+                            className="p-3.5 flex items-center justify-between text-xs hover:bg-slate-50"
                           >
-                            {r.status}
-                            {r.error ? ` — ${r.error}` : ''}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                            <div className="flex items-center gap-3">
+                              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 font-bold text-slate-600">
+                                {r.contactName?.charAt(0) || 'C'}
+                              </span>
+                              <div>
+                                <span className="font-semibold text-slate-900">{r.contactName}</span>
+                                <span className="ml-2 text-slate-400">{r.contactPhone}</span>
+                                {r.error && (
+                                  <p className="text-[11px] text-rose-600 font-medium mt-0.5">
+                                    ⚠️ {r.error}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              {r.status === 'read' && (
+                                <span className="rounded bg-indigo-100 px-2 py-0.5 font-semibold text-indigo-800">
+                                  Read ✓✓
+                                </span>
+                              )}
+                              {r.status === 'delivered' && (
+                                <span className="rounded bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-800">
+                                  Delivered ✓✓
+                                </span>
+                              )}
+                              {r.status === 'sent' && (
+                                <span className="rounded bg-blue-100 px-2 py-0.5 font-semibold text-blue-800">
+                                  Sent ✓
+                                </span>
+                              )}
+                              {r.status === 'failed' && (
+                                <span className="rounded bg-rose-100 px-2 py-0.5 font-semibold text-rose-800">
+                                  Failed
+                                </span>
+                              )}
+                              {r.status === 'skipped' && (
+                                <span className="rounded bg-slate-100 px-2 py-0.5 font-semibold text-slate-600">
+                                  Skipped
+                                </span>
+                              )}
+
+                              <Link
+                                to={`/`}
+                                className="rounded border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-100"
+                              >
+                                Follow up in chat ↗
+                              </Link>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {/* Meta WhatsApp Pricing Calculator Modal */}
+      {showPricingCalculator && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="border-b border-slate-200 bg-slate-50/70 px-6 py-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">WhatsApp Pricing Calculator</h2>
+                <p className="text-xs text-slate-500">
+                  Estimate Meta's per-conversation message costs across categories.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowPricingCalculator(false)}
+                className="text-slate-400 hover:text-slate-700 text-xl font-bold"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    Country / Market
+                  </label>
+                  <select
+                    value={calcRegion}
+                    onChange={(e) => setCalcRegion(e.target.value)}
+                    className="w-full rounded-md border border-slate-300 p-2 text-xs font-medium"
+                  >
+                    <option value="US">United States 🇺🇸</option>
+                    <option value="UK">United Kingdom 🇬🇧</option>
+                    <option value="EU">European Union 🇪🇺</option>
+                    <option value="IN">India 🇮🇳</option>
+                    <option value="BR">Brazil 🇧🇷</option>
+                    <option value="MX">Mexico 🇲🇽</option>
+                    <option value="UAE">United Arab Emirates 🇦🇪</option>
+                    <option value="ROW">Rest of World 🌐</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    Conversation Category
+                  </label>
+                  <select
+                    value={calcCategory}
+                    onChange={(e) => setCalcCategory(e.target.value)}
+                    className="w-full rounded-md border border-slate-300 p-2 text-xs font-medium"
+                  >
+                    <option value="marketing">Marketing (Promotions, Offers)</option>
+                    <option value="utility">Utility (Confirmations, Alerts)</option>
+                    <option value="auth">Authentication (OTPs, Security)</option>
+                    <option value="service">Service (User-initiated Support)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-slate-600">
+                    Campaign Volume: {calcVolume.toLocaleString()} conversations
+                  </label>
+                  <span className="text-xs text-slate-400">Slider: 250 - 50,000</span>
+                </div>
+                <input
+                  type="range"
+                  min="250"
+                  max="50000"
+                  step="250"
+                  value={calcVolume}
+                  onChange={(e) => setCalcVolume(Number(e.target.value))}
+                  className="w-full"
+                />
+              </div>
+
+              {pricingEstimate && (
+                <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-600">Rate per conversation:</span>
+                    <span className="font-bold text-slate-900">
+                      ${pricingEstimate.ratePerConversation.toFixed(4)} USD
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-bold text-slate-800">Total Estimated Meta Cost:</span>
+                    <span className="text-lg font-extrabold text-blue-700">
+                      ${pricingEstimate.estimatedCostUsd.toLocaleString()} USD
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-emerald-700 pt-1 border-t border-blue-200/60 font-semibold">
+                    <span>Projected ROI (8.5x Industry Average):</span>
+                    <span>~${pricingEstimate.estimatedRoiUsd.toLocaleString()} USD</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 pt-1">
+                    💡 {pricingEstimate.freeServiceTierIncluded}
+                  </p>
                 </div>
               )}
-            </li>
-          ))}
-        </ul>
+            </div>
+          </div>
+        </div>
       )}
+
+      {/* WhatsApp Campaigns FAQ Accordion ("WhatsApp campaigns, answered") */}
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
+        <div>
+          <h2 className="text-base font-bold text-slate-900">WhatsApp campaigns, answered</h2>
+          <p className="text-xs text-slate-500">What teams ask before they send their first campaign.</p>
+        </div>
+
+        <div className="space-y-3 text-xs divide-y divide-slate-100">
+          <details className="pt-2 group cursor-pointer">
+            <summary className="font-semibold text-slate-800 flex items-center justify-between list-none">
+              <span>What do I need to send WhatsApp campaigns?</span>
+              <span className="text-slate-400 group-open:rotate-180 transition-transform">⌄</span>
+            </summary>
+            <p className="mt-2 text-slate-600 leading-relaxed pl-2">
+              You need a verified WhatsApp Business account connected through the Meta Cloud API. In
+              Settings → Connections, connect your WhatsApp Phone Number ID and Access Token.
+            </p>
+          </details>
+
+          <details className="pt-3 group cursor-pointer">
+            <summary className="font-semibold text-slate-800 flex items-center justify-between list-none">
+              <span>Can I write any message I want in a WhatsApp campaign?</span>
+              <span className="text-slate-400 group-open:rotate-180 transition-transform">⌄</span>
+            </summary>
+            <p className="mt-2 text-slate-600 leading-relaxed pl-2">
+              WhatsApp requires bulk marketing messages sent outside the 24-hour service window to use
+              pre-approved Message Templates. You can create templates in Settings and populate them
+              with custom dynamic customer variables.
+            </p>
+          </details>
+
+          <details className="pt-3 group cursor-pointer">
+            <summary className="font-semibold text-slate-800 flex items-center justify-between list-none">
+              <span>How do I choose who receives a WhatsApp campaign?</span>
+              <span className="text-slate-400 group-open:rotate-180 transition-transform">⌄</span>
+            </summary>
+            <p className="mt-2 text-slate-600 leading-relaxed pl-2">
+              Select one or multiple contact tags (e.g. <code>vip-customers</code>, <code>newsletter</code>).
+              The system automatically calculates the deduplicated recipient list so nobody receives the
+              same campaign twice.
+            </p>
+          </details>
+
+          <details className="pt-3 group cursor-pointer">
+            <summary className="font-semibold text-slate-800 flex items-center justify-between list-none">
+              <span>Can I edit or reschedule a WhatsApp campaign?</span>
+              <span className="text-slate-400 group-open:rotate-180 transition-transform">⌄</span>
+            </summary>
+            <p className="mt-2 text-slate-600 leading-relaxed pl-2">
+              Yes. Until dispatch processing begins, you can update the audience, template parameters,
+              or scheduled dispatch time directly from the campaign view.
+            </p>
+          </details>
+
+          <details className="pt-3 group cursor-pointer">
+            <summary className="font-semibold text-slate-800 flex items-center justify-between list-none">
+              <span>What happens when a customer replies to a campaign?</span>
+              <span className="text-slate-400 group-open:rotate-180 transition-transform">⌄</span>
+            </summary>
+            <p className="mt-2 text-slate-600 leading-relaxed pl-2">
+              The reply lands directly in your shared omnichannel inbox. The conversation shows the
+              originating campaign banner, delivery status, and our AI agent ("Captain") generates grounded
+              draft replies to answer questions immediately.
+            </p>
+          </details>
+        </div>
+      </div>
     </div>
   )
 }

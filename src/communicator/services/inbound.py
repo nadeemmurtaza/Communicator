@@ -11,7 +11,8 @@ Handles:
 7. Business hours / after-hours away messaging
 8. Advanced keyword, regex, button click, and intent automations (13 action types)
 9. Welcome greeting with interactive quick replies
-10. AI reply engine fallback
+10. Contact Memory & preference extraction ("Remembers")
+11. AI reply engine fallback with autonomous resolution ("Responds")
 """
 
 from __future__ import annotations
@@ -33,6 +34,7 @@ from communicator.models.lead import Lead
 from communicator.models.message import Message, MessageDirection, MessageStatus
 from communicator.services.business_hours import is_within_business_hours
 from communicator.services.integration_settings import get_settings_row
+from communicator.services.memory import extract_contact_memories
 from communicator.services.messaging import get_or_create_conversation, send_outbound_message
 from communicator.services.reply_engine import generate_reply
 from communicator.services.whatsapp_automations import (
@@ -102,6 +104,14 @@ async def process_inbound_message(
 
     await session.flush()
 
+    # Automatically extract durable contact preferences / memories ("Remembers")
+    try:
+        await extract_contact_memories(
+            session, contact, conversation, body, message_id=message.id
+        )
+    except Exception:
+        pass
+
     # Automatically mark message as read on WhatsApp if Meta Cloud API is used
     if channel == ChannelType.WHATSAPP and provider == "meta" and provider_message_id:
         try:
@@ -152,7 +162,7 @@ async def _route_reply(
     5. After-hours / Business hours away message
     6. Advanced automation rules (keywords, regex, button click, list select, 13 action types)
     7. Welcome greeting automation (first touch or >24h idle)
-    8. AI reply engine fallback
+    8. AI reply engine fallback with autonomous resolution ("Responds")
     """
     # 1. In-chat agent control commands
     if await handle_agent_commands(session, conversation, contact, body):

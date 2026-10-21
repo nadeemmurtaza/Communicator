@@ -16,6 +16,7 @@ from communicator.models.lead import Lead
 from communicator.models.message import Message
 from communicator.services.alerts import send_hot_lead_alert
 from communicator.services.integration_settings import get_settings_row
+from communicator.services.memory import get_contact_memories, render_contact_memories_context
 from communicator.services.service_catalog import get_matching_services, render_service_context
 
 _DEFAULT_BUSINESS_NAME = "NEWAX Technologies"
@@ -85,11 +86,16 @@ async def _build_context(
     service_context = render_service_context(services)
     knowledge_context = await _render_knowledge_base(session)
 
+    # Ingest contact memories (Remembers) into prompt
+    memories = await get_contact_memories(session, contact.id)
+    memory_context = render_contact_memories_context(memories)
+
     user_prompt = (
         f"LEAD: {lead.name} ({lead.institution_type}, {lead.city})\n"
         f"QUALIFICATION: {lead.qualification_rationale}\n\n"
         f"SERVICES:\n{service_context}\n\n"
         f"{knowledge_context}"
+        f"{memory_context}"
         f"CONVERSATION HISTORY:\n{history}\n\n"
         "Draft the next reply to send to this lead."
     )
@@ -125,6 +131,12 @@ async def generate_reply(session: AsyncSession, conversation_id: uuid.UUID) -> D
     if not escalate and confidence >= settings.reply_auto_send_confidence:
         status = DraftStatus.AUTO_APPROVED
 
+    # Flag autonomous resolution (Resolved, no handoff) when AI answers with high confidence
+    if status == DraftStatus.AUTO_APPROVED and not escalate and confidence >= 0.85:
+        conversation.resolution_type = "autonomous_no_handoff"
+    elif escalate:
+        conversation.resolution_type = "escalated"
+
     draft = Draft(
         conversation_id=conversation.id,
         body=reply_body,
@@ -144,7 +156,12 @@ async def generate_reply(session: AsyncSession, conversation_id: uuid.UUID) -> D
             entity_id=draft.id if draft.id else uuid.uuid4(),
             action="draft_generated",
             actor="ai",
-            details={"intent": intent, "sentiment": sentiment, "confidence": confidence},
+            details={
+                "intent": intent,
+                "sentiment": sentiment,
+                "confidence": confidence,
+                "resolution_type": conversation.resolution_type,
+            },
         )
     )
 

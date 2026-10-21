@@ -1,9 +1,6 @@
 """
-Contact & list management: CSV import, tags/segments, custom fields --
-the CRM-ish surface a Wati/Brevo user expects on top of the Harvester-fed
-Lead/Contact rows. Imported contacts don't come from Harvester, so each
-gets its own locally-sourced Lead row (harvester_institution_id prefixed
-"local-import:") rather than forcing a fake Harvester id.
+Contact & list management: CSV import, tags/segments, custom fields,
+and contact memories / remembered preferences ("Remembers").
 """
 
 from __future__ import annotations
@@ -24,6 +21,11 @@ from communicator.models.consent import ConsentStatus
 from communicator.models.contact import ChannelType, Contact
 from communicator.models.lead import Lead
 from communicator.models.tag import Tag
+from communicator.services.memory import (
+    add_manual_memory,
+    delete_contact_memory,
+    get_contact_memories,
+)
 from communicator.services.tags import add_tag_to_contact, get_or_create_tag
 
 router = APIRouter(prefix="/contacts", tags=["Contacts"])
@@ -85,6 +87,67 @@ async def list_tags(session: AsyncSession = Depends(get_db_session)):
     return [{"id": str(t.id), "name": t.name} for t in tags]
 
 
+# --- Contact Memories & Preferences ("Remembers") ---
+
+
+class MemoryIn(BaseModel):
+    fact: str
+    category: str = "preference"
+
+
+@router.get("/{contact_id}/memories")
+async def list_memories(
+    contact_id: uuid.UUID, session: AsyncSession = Depends(get_db_session)
+):
+    contact = await session.get(Contact, contact_id)
+    if contact is None:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    memories = await get_contact_memories(session, contact_id)
+    return [
+        {
+            "id": str(m.id),
+            "contactId": str(m.contact_id),
+            "fact": m.fact,
+            "category": m.category,
+            "confidence": m.confidence,
+            "notedAt": m.noted_at.isoformat(),
+            "createdAt": m.created_at.isoformat(),
+        }
+        for m in memories
+    ]
+
+
+@router.post("/{contact_id}/memories")
+async def create_memory(
+    contact_id: uuid.UUID, payload: MemoryIn, session: AsyncSession = Depends(get_db_session)
+):
+    contact = await session.get(Contact, contact_id)
+    if contact is None:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    mem = await add_manual_memory(session, contact_id, payload.fact, payload.category)
+    return {
+        "id": str(mem.id),
+        "contactId": str(mem.contact_id),
+        "fact": mem.fact,
+        "category": mem.category,
+        "confidence": mem.confidence,
+        "notedAt": mem.noted_at.isoformat(),
+    }
+
+
+@router.delete("/{contact_id}/memories/{memory_id}")
+async def delete_memory(
+    contact_id: uuid.UUID, memory_id: uuid.UUID, session: AsyncSession = Depends(get_db_session)
+):
+    success = await delete_contact_memory(session, contact_id, memory_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Memory not found")
+    return {"status": "deleted"}
+
+
+# --- CSV Import ---
+
+
 @router.post("/import")
 async def import_contacts(file: UploadFile, session: AsyncSession = Depends(get_db_session)):
     """
@@ -129,9 +192,6 @@ async def import_contacts(file: UploadFile, session: AsyncSession = Depends(get_
         session.add(contact)
         await session.flush()
 
-        # Imported from the business's own list -- treated as already
-        # opted in, the same assumption lead_sync makes for Harvester
-        # leads clearing qualification.
         await record_consent(session, contact.id, ConsentStatus.OPTED_IN, source="csv_import")
 
         tag_field = (row.get("tags") or "").strip()

@@ -26,7 +26,13 @@ export interface Draft {
 export interface Conversation {
   id: string
   contactId: string
+  contactName?: string
+  contactPhone?: string
+  channel?: string
   state: string
+  resolutionType?: string | null
+  broadcastId?: string | null
+  broadcastName?: string | null
   humanTakeover: boolean
   assignedToId: string | null
   csatScore?: number | null
@@ -49,8 +55,20 @@ export interface ConversationDetail {
   state: string
   humanTakeover: boolean
   assignedToId: string | null
+  contactId?: string
+  contactName?: string
+  contactPhone?: string
+  channel?: string
+  resolutionType?: string | null
   csatScore?: number | null
   csatComment?: string | null
+  campaign?: {
+    id: string
+    name: string
+    templateName: string
+    sentAt: string
+    status: string
+  } | null
   messages: Message[]
 }
 
@@ -87,7 +105,29 @@ export interface KnowledgeBaseEntry {
   title: string
   content: string
   sourceType: string
+  sourceUrl?: string | null
+  fileName?: string | null
   createdAt: string
+}
+
+export interface KnowledgeGap {
+  id: string
+  question: string
+  suggestedAnswer: string
+  sourceQuery: string
+  frequency: number
+  status: 'suggested' | 'approved' | 'dismissed'
+  createdAt: string
+}
+
+export interface ContactMemory {
+  id: string
+  contactId: string
+  fact: string
+  category: string
+  confidence: number
+  notedAt: string
+  createdAt?: string
 }
 
 export interface AutomationRule {
@@ -137,21 +177,77 @@ export interface Broadcast {
   name: string
   templateName: string
   templateLanguage: string
+  bodyPreview?: string
+  templateParams?: Record<string, string>
   tagName: string
   status: 'draft' | 'scheduled' | 'sending' | 'completed' | 'failed'
   scheduledAt: string | null
+  audienceCount?: number
   sentCount: number
   deliveredCount: number
   readCount: number
   failedCount: number
+  skippedCount?: number
   createdAt: string
 }
 
 export interface BroadcastRecipient {
   id: string
   contactId: string
+  contactName?: string
+  contactPhone?: string
   status: string
   error: string
+  sentAt?: string | null
+  deliveredAt?: string | null
+  readAt?: string | null
+}
+
+export interface CampaignAnalytics {
+  campaign: Broadcast
+  metrics: {
+    audience: number
+    submitted: number
+    submittedPct: number
+    delivered: number
+    deliveredPct: number
+    read: number
+    readPct: number
+    failed: number
+    failedPct: number
+    skipped: number
+    skippedPct: number
+  }
+  deliveryBreakdown: {
+    deliveredRate: number
+    readRate: number
+    failureRate: number
+  }
+  recipients: BroadcastRecipient[]
+}
+
+export interface AudiencePreview {
+  tags: string[]
+  totalSelected: number
+  dailyLimit: number
+  sampleContacts: Array<{
+    id: string
+    name: string
+    phone: string
+    tags: string[]
+  }>
+}
+
+export interface PricingEstimate {
+  region: string
+  regionName: string
+  category: string
+  volume: number
+  ratePerConversation: number
+  estimatedCostUsd: number
+  estimatedRoiUsd: number
+  freeServiceTierIncluded: string
+  supportedRegions: Array<{ code: string; name: string }>
 }
 
 export interface Template {
@@ -232,19 +328,24 @@ export const api = {
       body: JSON.stringify({ reason: reason ?? '' }),
     }),
   editDraft: (id: string, body: string) =>
-    request<Draft>(`/drafts/${id}/edit`, {
-      method: 'POST',
-      body: JSON.stringify({ body }),
-    }),
+    request<Draft>(`/drafts/${id}/edit`, { method: 'POST', body: JSON.stringify({ body }) }),
   generateDraft: (conversationId: string) =>
-    request<Draft>(`/drafts/generate/${conversationId}`, { method: 'POST' }),
+    request<Draft>(`/drafts/generate?conversation_id=${conversationId}`, { method: 'POST' }),
 
   listConversations: () => request<Conversation[]>('/conversations'),
   getConversation: (id: string) => request<ConversationDetail>(`/conversations/${id}`),
-  sendManualMessage: (conversationId: string, body: string) =>
+  sendMessage: (conversationId: string, body: string) =>
     request<Message>(`/conversations/${conversationId}/messages`, {
       method: 'POST',
       body: JSON.stringify({ body }),
+    }),
+  resolveConversation: (id: string) =>
+    request<{ id: string; state: string; resolutionType: string }>(`/conversations/${id}/resolve`, {
+      method: 'POST',
+    }),
+  enrollSequence: (conversationId: string, sequenceId: string) =>
+    request(`/conversations/${conversationId}/enroll-sequence?sequence_id=${sequenceId}`, {
+      method: 'POST',
     }),
 
   listServices: () => request<Service[]>('/services'),
@@ -271,11 +372,53 @@ export const api = {
   deleteTemplate: (name: string) =>
     request(`/settings/whatsapp/templates/${encodeURIComponent(name)}`, { method: 'DELETE' }),
 
+  // Knowledge Base & Omni-Source Learning ("Learns")
   listKnowledgeBase: () => request<KnowledgeBaseEntry[]>('/knowledge-base'),
   createKnowledgeBaseEntry: (data: { title: string; content: string; source_type?: string }) =>
-    request<{ id: string }>('/knowledge-base', { method: 'POST', body: JSON.stringify(data) }),
+    request<KnowledgeBaseEntry>('/knowledge-base', { method: 'POST', body: JSON.stringify(data) }),
+  ingestUrl: (url: string) =>
+    request<KnowledgeBaseEntry>('/knowledge-base/ingest-url', {
+      method: 'POST',
+      body: JSON.stringify({ url }),
+    }),
+  uploadKnowledgeDocument: async (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await fetch(`${BASE}/knowledge-base/upload`, { method: 'POST', body: formData })
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}: ${await res.text()}`)
+    return res.json() as Promise<KnowledgeBaseEntry>
+  },
   deleteKnowledgeBaseEntry: (id: string) =>
     request(`/knowledge-base/${id}`, { method: 'DELETE' }),
+
+  // Knowledge Gaps & Suggested FAQs ("Fills gaps")
+  listKnowledgeGaps: (status?: string) =>
+    request<KnowledgeGap[]>(`/knowledge-base/gaps${status ? `?status=${status}` : ''}`),
+  scanKnowledgeGaps: () =>
+    request<{ status: string; detectedCount: number; gaps: KnowledgeGap[] }>(
+      '/knowledge-base/gaps/scan',
+      { method: 'POST' }
+    ),
+  approveKnowledgeGap: (gapId: string, customAnswer?: string) =>
+    request<KnowledgeBaseEntry>(`/knowledge-base/gaps/${gapId}/approve`, {
+      method: 'POST',
+      body: JSON.stringify(customAnswer ? { custom_answer: customAnswer } : {}),
+    }),
+  dismissKnowledgeGap: (gapId: string) =>
+    request<{ status: string }>(`/knowledge-base/gaps/${gapId}/dismiss`, { method: 'POST' }),
+
+  // Contact Memories & Preferences ("Remembers")
+  listContactMemories: (contactId: string) =>
+    request<ContactMemory[]>(`/contacts/${contactId}/memories`),
+  createContactMemory: (contactId: string, data: { fact: string; category?: string }) =>
+    request<ContactMemory>(`/contacts/${contactId}/memories`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  deleteContactMemory: (contactId: string, memoryId: string) =>
+    request<{ status: string }>(`/contacts/${contactId}/memories/${memoryId}`, {
+      method: 'DELETE',
+    }),
 
   listTeam: () => request<TeamMember[]>('/team'),
   createTeamMember: (data: { name: string; email?: string }) =>
@@ -336,16 +479,34 @@ export const api = {
     return res.json() as Promise<{ created: number; skipped: number }>
   },
 
+  // WhatsApp Campaigns Suite
   listBroadcasts: () => request<Broadcast[]>('/broadcasts'),
   createBroadcast: (data: {
     name: string
     template_name: string
-    template_language: string
+    template_language?: string
     body_preview?: string
+    template_params?: Record<string, string>
     tag_name: string
+    scheduled_at?: string | null
   }) => request<Broadcast>('/broadcasts', { method: 'POST', body: JSON.stringify(data) }),
+  getAudiencePreview: (tags: string) =>
+    request<AudiencePreview>(`/broadcasts/audience-preview?tags=${encodeURIComponent(tags)}`),
+  getCampaignAnalytics: (campaignId: string) =>
+    request<CampaignAnalytics>(`/broadcasts/${campaignId}/analytics`),
+  rescheduleCampaign: (campaignId: string, scheduledAt: string | null) =>
+    request<Broadcast>(`/broadcasts/${campaignId}/reschedule`, {
+      method: 'POST',
+      body: JSON.stringify({ scheduled_at: scheduledAt }),
+    }),
   dispatchBroadcast: (id: string) =>
     request<Broadcast>(`/broadcasts/${id}/dispatch`, { method: 'POST' }),
   listBroadcastRecipients: (id: string) =>
     request<BroadcastRecipient[]>(`/broadcasts/${id}/recipients`),
+  getWhatsAppPricing: (region: string, category: string, volume: number) =>
+    request<PricingEstimate>(
+      `/broadcasts/pricing-calculator?region=${encodeURIComponent(region)}&category=${encodeURIComponent(category)}&volume=${volume}`
+    ),
+  seedDefaultCampaigns: () =>
+    request<{ status: string; count?: number }>('/broadcasts/seed-defaults', { method: 'POST' }),
 }

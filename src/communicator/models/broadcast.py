@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from communicator.database import Base
@@ -27,16 +27,15 @@ class RecipientStatus(str, enum.Enum):
     DELIVERED = "delivered"
     READ = "read"
     FAILED = "failed"
+    SKIPPED = "skipped"
 
 
 class Broadcast(Base):
     """
-    A bulk send of one approved WhatsApp template message to every Contact
-    carrying a given Tag -- Brevo/Wati-style "campaign". Freeform AI drafts
-    are one-to-one only; broadcasts exist specifically because template
-    messages are the only thing Meta allows outside a contact's 24h session
-    window, which is exactly the outside-the-window, re-engage-many-at-once
-    case a campaign is for.
+    A bulk send of one approved WhatsApp template message to contacts
+    filtered by audience tags (e.g. VIP customers, newsletter).
+    Supports scheduled sends, dynamic variable mapping, delivery analytics,
+    and direct shared inbox follow-up.
     """
 
     __tablename__ = "broadcasts"
@@ -47,17 +46,20 @@ class Broadcast(Base):
     template_name: Mapped[str] = mapped_column(String(255), nullable=False)
     template_language: Mapped[str] = mapped_column(String(20), default="en_US", nullable=False)
     body_preview: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    template_params: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
 
-    tag_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    tag_name: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[BroadcastStatus] = mapped_column(
         Enum(BroadcastStatus), default=BroadcastStatus.DRAFT, nullable=False
     )
     scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    audience_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     sent_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     delivered_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     read_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     failed_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    skipped_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
@@ -84,6 +86,10 @@ class BroadcastRecipient(Base):
         String(255), default="", nullable=False, index=True
     )
     error: Mapped[str] = mapped_column(Text, default="", nullable=False)
+
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     broadcast: Mapped["Broadcast"] = relationship("Broadcast", back_populates="recipients")
     contact: Mapped["Contact"] = relationship("Contact")

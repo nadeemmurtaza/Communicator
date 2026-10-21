@@ -12,6 +12,7 @@ from communicator.models.tag import contact_tags
 
 if TYPE_CHECKING:
     from communicator.models.consent import ConsentRecord
+    from communicator.models.contact_memory import ContactMemory
     from communicator.models.conversation import Conversation
     from communicator.models.lead import Lead
     from communicator.models.tag import Tag
@@ -69,3 +70,9 @@ class Contact(Base):
         "Conversation", back_populates="contact", cascade="all, delete-orphan"
     )
     tags: Mapped[list["Tag"]] = relationship("Tag", secondary=contact_tags)
+    memories: Mapped[list["ContactMemory"]] = relationship(
+        "ContactMemory",
+        back_populates="contact",
+        cascade="all, delete-orphan",
+        order_by="ContactMemory.noted_at.desc()",
+    )

@@ -5,9 +5,12 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from communicator.api.dependencies import get_db_session
-from communicator.models.conversation import Conversation
+from communicator.models.broadcast import Broadcast
+from communicator.models.contact import Contact
+from communicator.models.conversation import Conversation, ConversationState
 from communicator.models.message import Message
 from communicator.models.sequence import FollowUpSequence
 from communicator.services.followup_scheduler import enroll_conversation
@@ -17,12 +20,24 @@ router = APIRouter(prefix="/conversations", tags=["Conversations"])
 
 @router.get("")
 async def list_conversations(session: AsyncSession = Depends(get_db_session)):
-    conversations = (await session.execute(select(Conversation))).scalars().all()
+    stmt = (
+        select(Conversation)
+        .options(selectinload(Conversation.contact), selectinload(Conversation.broadcast))
+        .order_by(Conversation.updated_at.desc())
+    )
+    conversations = (await session.execute(stmt)).scalars().all()
     return [
         {
             "id": str(c.id),
             "contactId": str(c.contact_id),
+            "contactName": c.contact.person_name if c.contact and c.contact.person_name else "Contact",
+            "contactPhone": c.contact.value if c.contact else "",
+            "channel": c.contact.channel.value if c.contact else "whatsapp",
             "state": c.state.value,
+            "resolutionType": c.resolution_type,
+            "broadcastId": str(c.broadcast_id) if c.broadcast_id else None,
+            "broadcastName": c.broadcast.name if c.broadcast else None,
+            "csatScore": c.csat_score,
             "humanTakeover": c.human_takeover,
             "assignedToId": str(c.assigned_to_id) if c.assigned_to_id else None,
             "updatedAt": c.updated_at.isoformat(),
@@ -35,7 +50,12 @@ async def list_conversations(session: AsyncSession = Depends(get_db_session)):
 async def get_conversation(
     conversation_id: uuid.UUID, session: AsyncSession = Depends(get_db_session)
 ):
-    conversation = await session.get(Conversation, conversation_id)
+    stmt = (
+        select(Conversation)
+        .options(selectinload(Conversation.contact), selectinload(Conversation.broadcast))
+        .where(Conversation.id == conversation_id)
+    )
+    conversation = (await session.execute(stmt)).scalar_one_or_none()
     if conversation is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
@@ -51,9 +71,26 @@ async def get_conversation(
         .all()
     )
 
+    campaign_info = None
+    if conversation.broadcast:
+        campaign_info = {
+            "id": str(conversation.broadcast.id),
+            "name": conversation.broadcast.name,
+            "templateName": conversation.broadcast.template_name,
+            "sentAt": conversation.broadcast.created_at.isoformat(),
+            "status": conversation.broadcast.status.value,
+        }
+
     return {
         "id": str(conversation.id),
+        "contactId": str(conversation.contact_id),
+        "contactName": conversation.contact.person_name if conversation.contact and conversation.contact.person_name else "Contact",
+        "contactPhone": conversation.contact.value if conversation.contact else "",
+        "channel": conversation.contact.channel.value if conversation.contact else "whatsapp",
         "state": conversation.state.value,
+        "resolutionType": conversation.resolution_type,
+        "campaign": campaign_info,
+        "csatScore": conversation.csat_score,
         "humanTakeover": conversation.human_takeover,
         "assignedToId": str(conversation.assigned_to_id) if conversation.assigned_to_id else None,
         "messages": [
@@ -69,6 +106,22 @@ async def get_conversation(
             for m in messages
         ],
     }
+
+
+@router.post("/{conversation_id}/resolve")
+async def resolve_conversation(
+    conversation_id: uuid.UUID,
+    session: AsyncSession = Depends(get_db_session),
+):
+    """Marks a conversation resolved."""
+    conversation = await session.get(Conversation, conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    conversation.state = ConversationState.CLOSED_WON
+    if not conversation.resolution_type:
+        conversation.resolution_type = "human_assisted"
+    await session.flush()
+    return {"id": str(conversation.id), "state": conversation.state.value, "resolutionType": conversation.resolution_type}
 
 
 @router.post("/{conversation_id}/enroll-sequence")

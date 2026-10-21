@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from communicator.database import Base
 
 if TYPE_CHECKING:
+    from communicator.models.broadcast import Broadcast
     from communicator.models.contact import Contact
     from communicator.models.draft import Draft
     from communicator.models.message import Message
@@ -54,6 +55,11 @@ class Conversation(Base):
         DateTime(timezone=True), nullable=True
     )
 
+    # Link to Campaign / Broadcast if this conversation was triggered by a campaign
+    broadcast_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("broadcasts.id", ondelete="SET NULL"), nullable=True
+    )
+
     # Human-takeover: when true, the AI reply engine stays out of this
     # conversation entirely regardless of auto_reply_enabled, until an
     # agent flips it back off. Independent of `state` -- a HOT_LEAD can
@@ -66,6 +72,9 @@ class Conversation(Base):
     # CSAT Feedback Collection (1 to 5 stars or sentiment rating)
     csat_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     csat_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Resolution outcome: autonomous_no_handoff | human_assisted | unresolved
+    resolution_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     # WhatsApp 24-hour Session Window tracking
     last_inbound_at: Mapped[datetime | None] = mapped_column(
@@ -86,6 +95,7 @@ class Conversation(Base):
 
     contact: Mapped["Contact"] = relationship("Contact", back_populates="conversations")
     sequence: Mapped["FollowUpSequence | None"] = relationship("FollowUpSequence")
+    broadcast: Mapped["Broadcast | None"] = relationship("Broadcast")
     assigned_to: Mapped["TeamMember | None"] = relationship("TeamMember")
     messages: Mapped[list["Message"]] = relationship(
         "Message",
