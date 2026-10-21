@@ -17,6 +17,9 @@ import {
   type SLAData,
   type SLAMetrics,
   type SLAPolicy,
+  type StripeBillingLog,
+  type StripeBillingProfile,
+  type StripeInvoice,
 } from '../lib/api'
 
 interface MessageItem {
@@ -713,7 +716,19 @@ export function Dashboard() {
   const [activePresences, setActivePresences] = useState<AgentPresenceItem[]>([])
   const [collisionWarningDismissed, setCollisionWarningDismissed] = useState(false)
   const [showCollisionInterlock, setShowCollisionInterlock] = useState(false)
-  const [contactSidebarTab, setContactSidebarTab] = useState<'overview' | 'notes' | 'attributes' | 'history'>('overview')
+  const [contactSidebarTab, setContactSidebarTab] = useState<'overview' | 'notes' | 'attributes' | 'history' | 'billing'>('overview')
+  // Stripe Billing & Sidebar Integration State
+  const [stripeBilling, setStripeBilling] = useState<StripeBillingProfile | null>(null)
+  const [stripeInvoices, setStripeInvoices] = useState<StripeInvoice[]>([])
+  const [stripeLogs, setStripeLogs] = useState<StripeBillingLog[]>([])
+  const [stripeLoading, setStripeLoading] = useState(false)
+  const [refundModalOpen, setRefundModalOpen] = useState(false)
+  const [selectedInvoiceForRefund, setSelectedInvoiceForRefund] = useState<StripeInvoice | null>(null)
+  const [refundAmountInput, setRefundAmountInput] = useState<string>('')
+  const [refundReason, setRefundReason] = useState<string>('requested_by_customer')
+  const [refundSubmitting, setRefundSubmitting] = useState(false)
+  const [refundFeedback, setRefundFeedback] = useState<string | null>(null)
+  const [portalCopied, setPortalCopied] = useState(false)
   const [newNoteText, setNewNoteText] = useState('')
   const [contactNotes, setContactNotes] = useState<Record<string, Array<{ id: string; author: string; body: string; time: string }>>>({
     'conv-maya': [
@@ -835,6 +850,70 @@ export function Dashboard() {
       api.leaveConversationPresence(activeConv.id, 'Riley Brooks').catch(() => {})
     }
   }, [activeConv?.id])
+
+  // Fetch Stripe Billing Profile, Invoices, and Action Logs for Active Contact
+  useEffect(() => {
+    if (!activeConv) return
+    const identifier = activeConv.email || activeConv.phone || activeConv.id
+    setStripeLoading(true)
+    setRefundFeedback(null)
+
+    Promise.all([
+      api.getStripeBilling(identifier).catch(() => null),
+      api.getStripeInvoices(identifier, 10).catch(() => []),
+      api.getStripeBillingLogs(identifier, 20).catch(() => []),
+    ]).then(([billing, invoices, logs]) => {
+      setStripeBilling(billing)
+      setStripeInvoices(invoices || [])
+      setStripeLogs(logs || [])
+      setStripeLoading(false)
+    })
+  }, [activeConv?.id, activeConv?.email, activeConv?.phone])
+
+  async function handleCreatePortalLink() {
+    if (!activeConv) return
+    const identifier = activeConv.email || activeConv.phone || activeConv.id
+    try {
+      const res = await api.createStripePortalSession({
+        identifier,
+        actor_email: 'riley.brooks@newax.com',
+      })
+      await navigator.clipboard.writeText(res.url)
+      setPortalCopied(true)
+      setTimeout(() => setPortalCopied(false), 3000)
+      api.getStripeBillingLogs(identifier, 20).then(setStripeLogs).catch(() => {})
+    } catch (e: any) {
+      alert(`Could not generate portal link: ${e.message}`)
+    }
+  }
+
+  async function handleExecuteRefund() {
+    if (!selectedInvoiceForRefund || !activeConv) return
+    setRefundSubmitting(true)
+    setRefundFeedback(null)
+    const identifier = activeConv.email || activeConv.phone || activeConv.id
+
+    try {
+      const parsedAmount = refundAmountInput ? Math.round(parseFloat(refundAmountInput) * 100) : selectedInvoiceForRefund.amount_paid_cents
+      const res = await api.processStripeRefund({
+        charge_or_invoice_id: selectedInvoiceForRefund.id,
+        amount_cents: parsedAmount,
+        reason: refundReason,
+        actor_email: 'riley.brooks@newax.com',
+        customer_identifier: identifier,
+      })
+
+      setRefundFeedback(`Refund ${res.amount_formatted} processed successfully (Ref: ${res.id})`)
+      setRefundSubmitting(false)
+      setRefundModalOpen(false)
+
+      api.getStripeInvoices(identifier, 10).then(setStripeInvoices).catch(() => {})
+      api.getStripeBillingLogs(identifier, 20).then(setStripeLogs).catch(() => {})
+    } catch (e: any) {
+      setRefundSubmitting(false)
+      setRefundFeedback(`Error issuing refund: ${e.message}`)
+    }
+  }
 
   async function simulateTeammate(action: 'viewing' | 'typing' | 'left', name: string = 'Jamie Cole') {
     if (!activeConv?.id) return
@@ -3361,6 +3440,21 @@ export function Dashboard() {
             >
               History
             </button>
+            <button
+              onClick={() => setContactSidebarTab('billing')}
+              className={`pb-2 border-b-2 transition-colors flex items-center gap-1 ${
+                contactSidebarTab === 'billing'
+                  ? 'border-indigo-600 font-semibold text-indigo-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <span>💳 Billing</span>
+              {stripeBilling?.subscription?.status === 'active' && (
+                <span className="rounded-full bg-emerald-100 text-emerald-800 font-bold px-1 text-[9px]">
+                  MRR
+                </span>
+              )}
+            </button>
           </div>
 
           <div className="p-5 space-y-6">
@@ -3459,6 +3553,64 @@ export function Dashboard() {
                   <button title="Delete" className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#eaecf0] hover:bg-rose-50 text-rose-500">
                     🗑️
                   </button>
+                </div>
+
+                {/* Stripe Billing Quick Overview Card */}
+                <div className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 via-white to-slate-50 p-3 shadow-2xs">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm">💳</span>
+                      <span className="font-bold text-xs text-slate-900">Stripe Billing</span>
+                      {stripeBilling?.subscription?.status === 'active' && (
+                        <span className="rounded-full bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 text-[9px]">
+                          Active
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => setContactSidebarTab('billing')}
+                      className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-0.5"
+                    >
+                      Invoices & Actions →
+                    </button>
+                  </div>
+
+                  {stripeLoading ? (
+                    <div className="py-2 text-center text-xs text-slate-400 animate-pulse">
+                      Loading customer billing...
+                    </div>
+                  ) : stripeBilling ? (
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500 font-medium">Plan</span>
+                        <span className="font-semibold text-slate-900">{stripeBilling.subscription?.plan_name || 'Enterprise Scale'}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500 font-medium">MRR / Spend</span>
+                        <div className="flex items-center gap-1">
+                          <span className="font-bold text-emerald-600">{stripeBilling.mrr_formatted}</span>
+                          <span className="text-[10px] text-slate-400">({stripeBilling.ltv_formatted} LTV)</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500 font-medium">Payment Method</span>
+                        <span className="font-medium text-slate-700 flex items-center gap-1">
+                          <span className="uppercase text-[9px] bg-slate-100 px-1 rounded font-bold text-slate-600">{stripeBilling.payment_method?.brand || 'VISA'}</span>
+                          •••• {stripeBilling.payment_method?.last4 || '4242'}
+                        </span>
+                      </div>
+                      <div className="pt-2 border-t border-indigo-100/60 flex items-center justify-between text-[11px]">
+                        <span className="text-slate-500">Renews</span>
+                        <span className="text-slate-700 font-medium">
+                          {stripeBilling.subscription?.current_period_end ? new Date(stripeBilling.subscription.current_period_end).toLocaleDateString() : 'Next Month'}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-1 text-xs text-slate-400">
+                      No Stripe subscription data available.
+                    </div>
+                  )}
                 </div>
 
                 {/* Contact Memory & Preferences ("Remembers") */}
@@ -3617,6 +3769,242 @@ export function Dashboard() {
                     <p className="text-slate-500 text-[11px]">Feb 26, 4:00 PM · Inquired about catalog items</p>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* SUBTAB 5: STRIPE BILLING & PAYMENTS */}
+            {contactSidebarTab === 'billing' && (
+              <div className="space-y-4">
+                {refundFeedback && (
+                  <div
+                    className={`rounded-lg p-2.5 text-xs font-medium flex items-center justify-between ${
+                      refundFeedback.includes('Error')
+                        ? 'bg-rose-50 text-rose-800 border border-rose-200'
+                        : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                    }`}
+                  >
+                    <span>{refundFeedback}</span>
+                    <button
+                      onClick={() => setRefundFeedback(null)}
+                      className="text-xs font-bold hover:opacity-75"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
+                {stripeLoading ? (
+                  <div className="p-8 text-center text-xs text-slate-400 space-y-2">
+                    <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
+                    <p>Loading Stripe customer billing...</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Subscription & Customer Profile Card */}
+                    <div className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/60 via-white to-slate-50 p-4 shadow-2xs space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-base">💳</span>
+                          <span className="font-bold text-xs text-slate-900">
+                            {stripeBilling?.subscription?.plan_name || 'Enterprise Scale'}
+                          </span>
+                        </div>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            stripeBilling?.subscription?.status === 'active'
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                              : 'bg-amber-100 text-amber-800 border border-amber-200'
+                          }`}
+                        >
+                          {stripeBilling?.subscription?.status?.toUpperCase() || 'ACTIVE'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
+                        <div className="rounded-lg bg-white/80 p-2.5 border border-slate-100">
+                          <div className="text-[10px] text-slate-500 font-medium">Monthly MRR</div>
+                          <div className="text-sm font-bold text-emerald-600 mt-0.5">
+                            {stripeBilling?.mrr_formatted || '$299.00/mo'}
+                          </div>
+                        </div>
+                        <div className="rounded-lg bg-white/80 p-2.5 border border-slate-100">
+                          <div className="text-[10px] text-slate-500 font-medium">Lifetime Spend</div>
+                          <div className="text-sm font-bold text-slate-800 mt-0.5">
+                            {stripeBilling?.ltv_formatted || '$2,392.00'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5 pt-2 border-t border-slate-100 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500">Payment Card</span>
+                          <span className="font-medium text-slate-700 flex items-center gap-1">
+                            <span className="uppercase text-[9px] bg-slate-100 px-1 rounded font-bold text-slate-600">
+                              {stripeBilling?.payment_method?.brand || 'VISA'}
+                            </span>
+                            •••• {stripeBilling?.payment_method?.last4 || '4242'}
+                            <span className="text-[10px] text-slate-400">
+                              (Exp {stripeBilling?.payment_method?.exp_month || 12}/
+                              {stripeBilling?.payment_method?.exp_year || 2028})
+                            </span>
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500">Next Renewal</span>
+                          <span className="font-medium text-slate-800">
+                            {stripeBilling?.subscription?.current_period_end
+                              ? new Date(stripeBilling.subscription.current_period_end).toLocaleDateString()
+                              : 'In 24 days'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1 text-[11px]">
+                          <span className="text-slate-400">Customer ID</span>
+                          <button
+                            onClick={() => {
+                              if (stripeBilling?.customer_id) {
+                                navigator.clipboard.writeText(stripeBilling.customer_id)
+                                alert(`Copied Stripe ID: ${stripeBilling.customer_id}`)
+                              }
+                            }}
+                            className="font-mono text-indigo-600 hover:underline flex items-center gap-1"
+                            title="Click to copy Stripe Customer ID"
+                          >
+                            <span>{stripeBilling?.customer_id || 'cus_sandbox_001'}</span>
+                            <span className="text-[10px]">📋</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="pt-2 flex items-center gap-2">
+                        <button
+                          onClick={handleCreatePortalLink}
+                          className="flex-1 rounded-lg bg-indigo-50 border border-indigo-200 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors flex items-center justify-center gap-1 shadow-2xs cursor-pointer"
+                        >
+                          <span>🔗</span>
+                          <span>{portalCopied ? 'Link Copied!' : 'Billing Portal'}</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedInvoiceForRefund(stripeInvoices[0] || null)
+                            setRefundAmountInput('')
+                            setRefundModalOpen(true)
+                          }}
+                          className="flex-1 rounded-lg bg-rose-50 border border-rose-200 px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition-colors flex items-center justify-center gap-1 shadow-2xs cursor-pointer"
+                        >
+                          <span>⚡</span>
+                          <span>Issue Refund</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Invoices List */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-slate-900 flex items-center gap-1">
+                          <span>🧾</span>
+                          <span>Invoices & Receipts</span>
+                          <span className="text-[10px] text-slate-400 font-normal">
+                            ({stripeInvoices.length})
+                          </span>
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        {stripeInvoices.map((inv) => (
+                          <div
+                            key={inv.id}
+                            className="rounded-lg border border-slate-200 bg-white p-3 text-xs shadow-2xs hover:border-slate-300 transition-colors"
+                          >
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="font-bold text-slate-900">{inv.number}</span>
+                              <span className="rounded bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.2 text-[10px] font-bold">
+                                {inv.status.toUpperCase()}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between text-slate-500 text-[11px] mb-2">
+                              <span>{new Date(inv.created_at).toLocaleDateString()}</span>
+                              <span className="font-bold text-slate-900 text-xs">
+                                {inv.amount_paid_formatted}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                              <div className="flex items-center gap-2">
+                                <a
+                                  href={inv.hosted_invoice_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[11px] font-semibold text-indigo-600 hover:underline flex items-center gap-0.5"
+                                >
+                                  <span>Receipt</span>
+                                  <span>↗</span>
+                                </a>
+                                <a
+                                  href={inv.invoice_pdf_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-0.5"
+                                >
+                                  <span>PDF</span>
+                                  <span>⬇</span>
+                                </a>
+                              </div>
+
+                              <button
+                                onClick={() => {
+                                  setSelectedInvoiceForRefund(inv)
+                                  setRefundAmountInput('')
+                                  setRefundModalOpen(true)
+                                }}
+                                className="text-[10px] font-bold text-rose-600 hover:text-rose-800 hover:underline cursor-pointer"
+                              >
+                                Refund
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+
+                        {stripeInvoices.length === 0 && (
+                          <div className="rounded-lg border border-dashed border-slate-200 p-4 text-center text-xs text-slate-400">
+                            No billing invoices found.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Billing Audit Trail */}
+                    {stripeLogs.length > 0 && (
+                      <div className="space-y-2 pt-2 border-t border-slate-100">
+                        <span className="font-bold text-xs text-slate-900">
+                          Billing Action Audit Trail
+                        </span>
+                        <div className="space-y-1.5">
+                          {stripeLogs.slice(0, 5).map((log) => (
+                            <div
+                              key={log.id}
+                              className="rounded-md border border-slate-100 bg-slate-50 p-2 text-[11px]"
+                            >
+                              <div className="flex items-center justify-between font-semibold text-slate-800">
+                                <span className="capitalize">{log.action_type.replace('_', ' ')}</span>
+                                <span className="text-emerald-600 font-bold">
+                                  {log.amount_cents > 0 ? log.amount_formatted : 'Success'}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between text-slate-400 text-[10px] mt-0.5">
+                                <span>By {log.actor_email}</span>
+                                <span>{new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             )}
 
@@ -5110,6 +5498,126 @@ export function Dashboard() {
                 className="px-4 py-1.5 text-xs bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-semibold shadow-xs transition-colors cursor-pointer"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 1-Click Stripe Refund Modal */}
+      {refundModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">⚡</span>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900">Issue Stripe Customer Refund</h3>
+                  <p className="text-[11px] text-slate-500">
+                    Target: {activeConv?.name || 'Customer'} ({activeConv?.email || 'email'})
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setRefundModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  Select Target Invoice / Charge
+                </label>
+                <select
+                  value={selectedInvoiceForRefund?.id || ''}
+                  onChange={(e) => {
+                    const inv = stripeInvoices.find((i) => i.id === e.target.value)
+                    setSelectedInvoiceForRefund(inv || null)
+                  }}
+                  className="w-full rounded-lg border border-slate-200 p-2 text-xs text-slate-800 focus:border-indigo-500 focus:outline-hidden"
+                >
+                  {stripeInvoices.map((inv) => (
+                    <option key={inv.id} value={inv.id}>
+                      {inv.number} · {inv.amount_paid_formatted} (Paid on {new Date(inv.created_at).toLocaleDateString()})
+                    </option>
+                  ))}
+                  {stripeInvoices.length === 0 && (
+                    <option value="sim_default">Default Recent Charge ($299.00)</option>
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-bold text-slate-700">Refund Amount ($)</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedInvoiceForRefund) {
+                        setRefundAmountInput((selectedInvoiceForRefund.amount_paid_cents / 100.0).toFixed(2))
+                      }
+                    }}
+                    className="text-[10px] font-semibold text-indigo-600 hover:underline cursor-pointer"
+                  >
+                    Full Amount ({selectedInvoiceForRefund?.amount_paid_formatted || '$299.00'})
+                  </button>
+                </div>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder={
+                    selectedInvoiceForRefund
+                      ? (selectedInvoiceForRefund.amount_paid_cents / 100.0).toFixed(2)
+                      : '299.00'
+                  }
+                  value={refundAmountInput}
+                  onChange={(e) => setRefundAmountInput(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 p-2 text-xs text-slate-800 focus:border-indigo-500 focus:outline-hidden"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Leave blank to refund the full paid amount.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  Refund Reason
+                </label>
+                <select
+                  value={refundReason}
+                  onChange={(e) => setRefundReason(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 p-2 text-xs text-slate-800 focus:border-indigo-500 focus:outline-hidden"
+                >
+                  <option value="requested_by_customer">Customer Request / Satisfaction Guarantee</option>
+                  <option value="duplicate">Accidental Duplicate Charge</option>
+                  <option value="fraudulent">Suspected Fraudulent Activity</option>
+                  <option value="goodwill_credit">Service Disruption / Goodwill Credit</option>
+                </select>
+              </div>
+
+              <div className="rounded-lg bg-amber-50 p-2.5 border border-amber-200 text-[11px] text-amber-800 leading-snug">
+                ⚠️ Refunds are recorded immediately in Stripe and an immutable audit log is generated.
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setRefundModalOpen(false)}
+                className="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-800 font-semibold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteRefund}
+                disabled={refundSubmitting}
+                className="px-4 py-1.5 text-xs bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold shadow-xs transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+              >
+                {refundSubmitting ? 'Processing...' : 'Confirm & Execute Refund'}
               </button>
             </div>
           </div>

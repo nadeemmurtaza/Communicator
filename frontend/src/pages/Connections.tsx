@@ -4,12 +4,13 @@ import {
   api,
   type ChannelGateway,
   type IntegrationSettings,
+  type StripeConfig,
   type SupportedProvidersCatalog,
   type Template,
 } from '../lib/api'
 
 export function Connections() {
-  const [activeTab, setActiveTab] = useState<'gateways' | 'whatsapp' | 'business' | 'templates'>('gateways')
+  const [activeTab, setActiveTab] = useState<'gateways' | 'stripe' | 'whatsapp' | 'business' | 'templates'>('gateways')
   const [data, setData] = useState<IntegrationSettings | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -59,6 +60,17 @@ export function Connections() {
           🌐 Universal Gateways (Any SMS, Email, VoIP/SIP)
         </button>
         <button
+          onClick={() => setActiveTab('stripe')}
+          className={`py-2 px-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+            activeTab === 'stripe'
+              ? 'border-indigo-600 text-indigo-600 font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <span>💳</span>
+          <span>Stripe Billing & Payments</span>
+        </button>
+        <button
           onClick={() => setActiveTab('whatsapp')}
           className={`py-2 px-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
             activeTab === 'whatsapp'
@@ -92,6 +104,10 @@ export function Connections() {
 
       {activeTab === 'gateways' && (
         <UniversalGatewaysSection onNotice={setNotice} onError={setError} />
+      )}
+
+      {activeTab === 'stripe' && (
+        <StripeBillingSection onNotice={setNotice} onError={setError} />
       )}
 
       {activeTab === 'whatsapp' && (
@@ -1395,5 +1411,261 @@ function TemplatesSection({
         </>
       )}
     </SectionCard>
+  )
+}
+
+function StripeBillingSection({
+  onNotice,
+  onError,
+}: {
+  onNotice: (m: string) => void
+  onError: (m: string) => void
+}) {
+  const [config, setConfig] = useState<StripeConfig | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<{ status: string; mode: string; message: string; tested_at: string } | null>(null)
+
+  const [accountName, setAccountName] = useState('')
+  const [apiKey, setApiKey] = useState('')
+  const [publishableKey, setPublishableKey] = useState('')
+  const [webhookSecret, setWebhookSecret] = useState('')
+  const [testMode, setTestMode] = useState(true)
+  const [isEnabled, setIsEnabled] = useState(true)
+  const [currency, setCurrency] = useState('usd')
+
+  function loadConfig() {
+    setLoading(true)
+    api.getStripeConfig()
+      .then((cfg) => {
+        setConfig(cfg)
+        setAccountName(cfg.account_name)
+        setPublishableKey(cfg.publishable_key)
+        setTestMode(cfg.test_mode)
+        setIsEnabled(cfg.is_enabled)
+        setCurrency(cfg.default_currency)
+        setLoading(false)
+      })
+      .catch((err) => {
+        onError(`Failed to load Stripe config: ${err.message}`)
+        setLoading(false)
+      })
+  }
+
+  useEffect(() => {
+    loadConfig()
+  }, [])
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      const updates: any = {
+        account_name: accountName,
+        publishable_key: publishableKey,
+        test_mode: testMode,
+        is_enabled: isEnabled,
+        default_currency: currency,
+      }
+      if (apiKey.trim()) updates.api_key = apiKey.trim()
+      if (webhookSecret.trim()) updates.webhook_secret = webhookSecret.trim()
+
+      const res = await api.updateStripeConfig(updates)
+      setConfig(res)
+      setApiKey('')
+      setWebhookSecret('')
+      onNotice('Stripe billing integration configuration saved successfully.')
+    } catch (e: any) {
+      onError(`Failed to save Stripe config: ${e.message}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleTest() {
+    setTesting(true)
+    setTestResult(null)
+    try {
+      const res = await api.testStripeConnection()
+      setTestResult(res)
+      if (res.status === 'connected' || res.status === 'connected_simulated') {
+        onNotice(res.message)
+      } else {
+        onError(res.message)
+      }
+    } catch (e: any) {
+      onError(`Connection test error: ${e.message}`)
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-500">
+        <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
+        <p className="mt-2 text-sm">Loading Stripe configuration...</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-100 pb-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 border border-indigo-100 text-2xl">
+              💳
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                Stripe Billing & Sidebar Integration
+                <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                  config?.last_test_status === 'connected' || config?.last_test_status === 'connected_simulated'
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : 'bg-slate-100 text-slate-600'
+                }`}>
+                  {config?.last_test_status === 'connected' ? 'Live Connected' : (config?.last_test_status === 'connected_simulated' ? 'Sandbox Active' : 'Untested')}
+                </span>
+              </h2>
+              <p className="text-xs text-slate-500">
+                Powers real-time subscription badges, MRR & LTV metrics, customer invoices, and 1-click refunds in the conversation drawer.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleTest}
+              disabled={testing}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 shadow-2xs cursor-pointer transition-colors"
+            >
+              <span>{testing ? 'Testing...' : '⚡ Test Connection'}</span>
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-50 shadow-xs cursor-pointer transition-colors"
+            >
+              <span>{saving ? 'Saving...' : 'Save Configuration'}</span>
+            </button>
+          </div>
+        </div>
+
+        {testResult && (
+          <div className={`rounded-lg p-3 text-xs flex items-center justify-between border ${
+            testResult.status === 'connected' || testResult.status === 'connected_simulated'
+              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+              : 'bg-rose-50 text-rose-800 border-rose-200'
+          }`}>
+            <div className="flex items-center gap-2">
+              <span>{testResult.status === 'connected' || testResult.status === 'connected_simulated' ? '✅' : '❌'}</span>
+              <span className="font-medium">{testResult.message}</span>
+            </div>
+            <span className="text-[10px] opacity-75 font-mono">Mode: {testResult.mode}</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Stripe Account Name</label>
+            <input
+              type="text"
+              value={accountName}
+              onChange={(e) => setAccountName(e.target.value)}
+              placeholder="e.g. Primary Production Billing"
+              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-indigo-500 focus:outline-hidden"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Default Workspace Currency</label>
+            <select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-indigo-500 focus:outline-hidden"
+            >
+              <option value="usd">USD ($)</option>
+              <option value="eur">EUR (€)</option>
+              <option value="gbp">GBP (£)</option>
+              <option value="cad">CAD ($)</option>
+              <option value="aud">AUD ($)</option>
+            </select>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-bold text-slate-700">Stripe Secret Key (sk_...)</label>
+              {config?.has_api_key && (
+                <span className="text-[10px] text-slate-400 font-mono">Current: {config.api_key_masked}</span>
+              )}
+            </div>
+            <input
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder={config?.has_api_key ? '•••••••••••••••• (Leave blank to keep)' : 'sk_test_... or sk_live_...'}
+              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-indigo-500 focus:outline-hidden font-mono"
+            />
+            <p className="text-[11px] text-slate-400 mt-1">
+              Leave blank to use the built-in Sandbox Simulator with high-fidelity customer mock subscriptions.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Stripe Publishable Key (pk_...)</label>
+            <input
+              type="text"
+              value={publishableKey}
+              onChange={(e) => setPublishableKey(e.target.value)}
+              placeholder="pk_test_... or pk_live_..."
+              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-indigo-500 focus:outline-hidden font-mono"
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-bold text-slate-700">Stripe Webhook Signing Secret (whsec_...)</label>
+              {config?.has_webhook_secret && (
+                <span className="text-[10px] text-slate-400 font-mono">Current: {config.webhook_secret_masked}</span>
+              )}
+            </div>
+            <input
+              type="password"
+              value={webhookSecret}
+              onChange={(e) => setWebhookSecret(e.target.value)}
+              placeholder={config?.has_webhook_secret ? '•••••••••••••••• (Leave blank to keep)' : 'whsec_...'}
+              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-indigo-500 focus:outline-hidden font-mono"
+            />
+          </div>
+
+          <div className="flex flex-col justify-center space-y-3 pt-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={testMode}
+                onChange={(e) => setTestMode(e.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="text-xs font-semibold text-slate-700">
+                Enable Sandbox / Test Mode Simulator
+              </span>
+            </label>
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isEnabled}
+                onChange={(e) => setIsEnabled(e.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="text-xs font-semibold text-slate-700">
+                Stripe Integration Enabled in Conversation Sidebar
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }

@@ -27,6 +27,7 @@ from communicator.api.routes import (
     settings,
     simulations,
     sla,
+    stripe_integration,
     team,
     teams,
     tickets,
@@ -82,3 +83,4 @@ app.include_router(self_improving.router, prefix="/api/v1")
 app.include_router(ai_connections.router, prefix="/api/v1")
 app.include_router(gateways.router, prefix="/api/v1")
 app.include_router(outgoing_webhooks.router, prefix="/api/v1")
+app.include_router(stripe_integration.router, prefix="/api/v1")

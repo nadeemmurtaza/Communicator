@@ -833,6 +833,94 @@ export interface WebhookEventCatalogItem {
   category: string
 }
 
+export interface StripeSubscription {
+  id: string
+  status: 'active' | 'past_due' | 'trialing' | 'canceled' | 'unpaid'
+  plan_name: string
+  amount_cents: number
+  amount_formatted: string
+  interval: string
+  current_period_end: string
+  cancel_at_period_end: boolean
+  created_at?: string
+}
+
+export interface StripePaymentMethod {
+  brand: string
+  last4: string
+  exp_month: number
+  exp_year: number
+}
+
+export interface StripeBillingProfile {
+  contact_id?: string | null
+  customer_id: string
+  name: string
+  email: string
+  currency: string
+  delinquent: boolean
+  has_active_subscription: boolean
+  subscription: StripeSubscription
+  mrr: number
+  mrr_formatted: string
+  ltv: number
+  ltv_formatted: string
+  payment_method: StripePaymentMethod
+  billing_portal_enabled: boolean
+  test_mode: boolean
+}
+
+export interface StripeInvoice {
+  id: string
+  number: string
+  amount_paid_cents: number
+  amount_paid_formatted: string
+  amount_due_cents: number
+  currency: string
+  status: 'paid' | 'open' | 'void' | 'uncollectible'
+  created_at: string
+  period_start: string
+  period_end: string
+  hosted_invoice_url: string
+  invoice_pdf_url: string
+  refundable_amount_cents: number
+  refunded: boolean
+  charge_id?: string
+}
+
+export interface StripeBillingLog {
+  id: string
+  contact_id?: string | null
+  customer_identifier: string
+  action_type: string
+  amount_cents: number
+  amount_formatted: string
+  currency: string
+  status: string
+  stripe_id: string
+  actor_email: string
+  reason: string
+  details: Record<string, any>
+  created_at: string
+}
+
+export interface StripeConfig {
+  id: string
+  account_name: string
+  api_key_masked: string
+  publishable_key: string
+  webhook_secret_masked: string
+  has_api_key: boolean
+  has_webhook_secret: boolean
+  is_enabled: boolean
+  test_mode: boolean
+  default_currency: string
+  last_tested_at?: string | null
+  last_test_status: string
+  created_at?: string
+  updated_at?: string
+}
+
 export interface SMSTestMessagePayload {
   recipient_phone: string
   message: string
@@ -2963,6 +3051,70 @@ export const api = {
       duration_ms: number
       attempt: number
     }>(`/outgoing-webhooks/deliveries/${deliveryId}/resend`, {
+      method: 'POST',
+    }),
+
+  // Stripe Billing Integration
+  getStripeBilling: (identifier: string) =>
+    request<StripeBillingProfile>(`/integrations/stripe/billing/${encodeURIComponent(identifier)}`),
+  getStripeInvoices: (identifier: string, limit: number = 10) =>
+    request<StripeInvoice[]>(
+      `/integrations/stripe/invoices/${encodeURIComponent(identifier)}?limit=${limit}`
+    ),
+  processStripeRefund: (data: {
+    charge_or_invoice_id: string
+    amount_cents?: number
+    reason?: string
+    actor_email?: string
+    contact_id?: string
+    customer_identifier?: string
+  }) =>
+    request<{
+      id: string
+      charge_id: string
+      amount_cents: number
+      amount_formatted: string
+      currency: string
+      status: string
+      reason: string
+      actor_email: string
+      created_at: string
+      log_id: string
+    }>('/integrations/stripe/refund', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  createStripePortalSession: (data: {
+    identifier: string
+    return_url?: string
+    actor_email?: string
+  }) =>
+    request<{
+      session_id: string
+      url: string
+      customer_identifier: string
+      created_at: string
+    }>('/integrations/stripe/portal-session', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getStripeBillingLogs: (identifier: string, limit: number = 25) =>
+    request<StripeBillingLog[]>(
+      `/integrations/stripe/logs/${encodeURIComponent(identifier)}?limit=${limit}`
+    ),
+  getStripeConfig: () => request<StripeConfig>('/integrations/stripe/config'),
+  updateStripeConfig: (data: Partial<StripeConfig>) =>
+    request<StripeConfig>('/integrations/stripe/config', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  testStripeConnection: () =>
+    request<{
+      status: string
+      mode: string
+      message: string
+      tested_at: string
+    }>('/integrations/stripe/test', {
       method: 'POST',
     }),
 }
