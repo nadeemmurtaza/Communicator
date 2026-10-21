@@ -793,6 +793,46 @@ export interface SupportedProvidersCatalog {
   voice_sip: SupportedProviderItem[]
 }
 
+export interface WebhookEndpoint {
+  id: string
+  name: string
+  url: string
+  secret_masked: string
+  has_secret: boolean
+  events: string[]
+  headers: Record<string, string>
+  is_active: boolean
+  retry_count: number
+  timeout_seconds: number
+  total_delivered: number
+  total_failed: number
+  last_status_code: number | null
+  last_delivered_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface WebhookDeliveryLog {
+  id: string
+  endpoint_id: string
+  event: string
+  payload: Record<string, any>
+  status_code: number
+  response_headers: Record<string, string>
+  response_body: string
+  duration_ms: number
+  attempt: number
+  success: boolean
+  error_message: string | null
+  created_at: string
+}
+
+export interface WebhookEventCatalogItem {
+  event: string
+  description: string
+  category: string
+}
+
 export interface SMSTestMessagePayload {
   recipient_phone: string
   message: string
@@ -2854,5 +2894,75 @@ export const api = {
     }>(`/gateways/${id}/ping`, {
       method: 'POST',
       body: JSON.stringify({ target, message: message || 'Test transmission' }),
+    }),
+
+  // Outgoing Webhooks Engine & Event Dispatcher
+  listWebhookEndpoints: () => request<WebhookEndpoint[]>('/outgoing-webhooks'),
+  getWebhookCatalog: () => request<WebhookEventCatalogItem[]>('/outgoing-webhooks/events/catalog'),
+  getWebhookDeliveries: (endpointId?: string, limit?: number) =>
+    request<WebhookDeliveryLog[]>(
+      endpointId
+        ? `/outgoing-webhooks/${endpointId}/deliveries?limit=${limit || 50}`
+        : `/outgoing-webhooks/deliveries?limit=${limit || 50}`
+    ),
+  createWebhookEndpoint: (data: {
+    name: string
+    url: string
+    events: string[]
+    secret?: string
+    headers?: Record<string, string>
+    is_active?: boolean
+    retry_count?: number
+    timeout_seconds?: number
+  }) =>
+    request<WebhookEndpoint>('/outgoing-webhooks', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateWebhookEndpoint: (
+    id: string,
+    data: {
+      name?: string
+      url?: string
+      events?: string[]
+      headers?: Record<string, string>
+      is_active?: boolean
+      retry_count?: number
+      timeout_seconds?: number
+      rotate_secret?: boolean
+    }
+  ) =>
+    request<WebhookEndpoint>(`/outgoing-webhooks/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deleteWebhookEndpoint: (id: string) =>
+    request<{ success: boolean; deleted_id: string }>(`/outgoing-webhooks/${id}`, {
+      method: 'DELETE',
+    }),
+  testWebhookPing: (id: string) =>
+    request<{
+      success: boolean
+      delivery_id: string
+      endpoint_id: string
+      url: string
+      status_code: number
+      duration_ms: number
+      response_body: string
+      error?: string | null
+      tested_at: string
+    }>(`/outgoing-webhooks/${id}/test`, {
+      method: 'POST',
+    }),
+  resendWebhookDelivery: (deliveryId: string) =>
+    request<{
+      success: boolean
+      original_delivery_id: string
+      new_delivery_id: string
+      status_code: number
+      duration_ms: number
+      attempt: number
+    }>(`/outgoing-webhooks/deliveries/${deliveryId}/resend`, {
+      method: 'POST',
     }),
 }

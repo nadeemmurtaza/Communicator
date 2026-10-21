@@ -17,6 +17,7 @@ import { SelfImproving } from './pages/SelfImproving'
 import { Simulations } from './pages/Simulations'
 import { Team } from './pages/Team'
 import { Tickets } from './pages/Tickets'
+import { Webhooks } from './pages/Webhooks'
 import { WhatsAppIntegration } from './pages/WhatsAppIntegration'
 import { LiveChatIntegration } from './pages/LiveChatIntegration'
 import { SMSIntegration } from './pages/SMSIntegration'
@@ -59,6 +60,7 @@ function App() {
         <Route path="/self-improving" element={<SelfImproving />} />
         <Route path="/team" element={<Team />} />
         <Route path="/connections" element={<Connections />} />
+        <Route path="/webhooks" element={<Webhooks />} />
       </Route>
     </Routes>
   )

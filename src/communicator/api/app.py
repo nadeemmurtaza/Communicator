@@ -15,6 +15,7 @@ from communicator.api.routes import (
     inboxes,
     knowledge_base,
     macros,
+    outgoing_webhooks,
     presence,
     reports,
     routing,
@@ -80,3 +81,4 @@ app.include_router(simulations.router, prefix="/api/v1")
 app.include_router(self_improving.router, prefix="/api/v1")
 app.include_router(ai_connections.router, prefix="/api/v1")
 app.include_router(gateways.router, prefix="/api/v1")
+app.include_router(outgoing_webhooks.router, prefix="/api/v1")

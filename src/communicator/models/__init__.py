@@ -57,6 +57,11 @@ from .ticket import (
     TicketStatus,
     TicketType,
 )
+from .webhook import (
+    WebhookDeliveryLog,
+    WebhookEndpoint,
+    WebhookEvent,
+)
 
 __all__ = [
     "ActivityType",
@@ -125,4 +130,7 @@ __all__ = [
     "TicketPriority",
     "TicketStatus",
     "TicketType",
+    "WebhookDeliveryLog",
+    "WebhookEndpoint",
+    "WebhookEvent",
 ]
