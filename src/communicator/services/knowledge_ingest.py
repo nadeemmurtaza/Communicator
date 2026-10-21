@@ -17,7 +17,8 @@ class IngestionError(Exception):
 
 
 def _clean_text(raw: str) -> str:
-    """Collapses excess blank lines and whitespace."""
+    """Collapses excess blank lines, escapes, and whitespace."""
+    raw = re.sub(r"[\r\t\f\v ]+", " ", raw)
     lines = [line.strip() for line in raw.splitlines()]
     non_empty = [line for line in lines if line]
     return "\n\n".join(non_empty)
@@ -54,9 +55,12 @@ async def ingest_url(session: AsyncSession, url: str) -> KnowledgeBaseEntry:
 
     soup = BeautifulSoup(html, "html.parser")
 
-    # Remove script, style, nav, footer, ads, header tags to keep clean text
-    for tag in soup(["script", "style", "noscript", "svg", "nav", "footer", "aside", "header"]):
+    # Remove scripts, styles, navbars, footers, forms, cookie banners, ads to keep crisp text
+    for tag in soup(["script", "style", "noscript", "svg", "nav", "footer", "aside", "header", "form", "iframe", "button"]):
         tag.decompose()
+
+    for el in soup.find_all(class_=re.compile(r"(cookie|consent|banner|newsletter|popup|modal|ad-)", re.I)):
+        el.decompose()
 
     # Extract title
     title = ""

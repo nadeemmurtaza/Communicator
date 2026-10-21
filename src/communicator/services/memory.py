@@ -20,9 +20,25 @@ _PREFERENCE_PATTERNS = [
         lambda m: f"Prefers {m.group(1).lower()} over other channels",
     ),
     (
+        r"(?:never call|no phone calls|don't call me|do not call me|text or email only|whatsapp only)",
+        "channel_preference",
+        lambda m: "Strict channel rule: Text/WhatsApp/Email only, never phone call",
+    ),
+    (
         r"(?:their team prefers|our team prefers|we prefer|i prefer)\s+([a-zA-Z0-9\s]{3,40}\s+over\s+[a-zA-Z0-9\s]{3,40})",
         "channel_preference",
         lambda m: f"Their team prefers {m.group(1).strip()}",
+    ),
+    # Language preferences
+    (
+        r"(?:prefer|only speak|please write in|respond in|hablo|hablamos|parlo|parle)\s+(english|spanish|español|french|français|german|deutsch|arabic|hindi|portuguese|português)",
+        "language",
+        lambda m: f"Language preference: {m.group(1).title()}",
+    ),
+    (
+        r"(?:por favor responder en|favor de escribir en|responda en)\s+([a-zA-Záéíóúñ]+)",
+        "language",
+        lambda m: f"Language preference: {m.group(1).title()}",
     ),
     # Timing / Scheduling constraints
     (
@@ -35,11 +51,27 @@ _PREFERENCE_PATTERNS = [
         "schedule",
         lambda m: "Available on weekdays only; no weekends",
     ),
+    (
+        r"(?:never message on|don't message on|do not contact on|no calls on)\s+(weekends?|saturdays?|sundays?|fridays?|holidays?)",
+        "schedule",
+        lambda m: f"Restricted days: Do not contact on {m.group(1).lower()}",
+    ),
     # Timezone
     (
         r"(?:timezone is|in timezone|based in)\s+([A-Z]{2,4}|[A-Za-z]+(?:\s+time)?)",
         "schedule",
         lambda m: f"Timezone: {m.group(1).strip()}",
+    ),
+    # Roles & Decision authority
+    (
+        r"(?:i am the|i'm the|as the)\s+(founder|ceo|cto|cfo|coo|vp of engineering|procurement manager|decision maker|owner|head of product)",
+        "organization",
+        lambda m: f"Contact role: {m.group(1).upper() if len(m.group(1)) <= 4 else m.group(1).title()}",
+    ),
+    (
+        r"(?:need approval from|need to check with|have to consult)\s+(?:our|my)?\s*([a-zA-Z\s]{3,30}\s+(?:team|board|director|partner|manager))",
+        "constraint",
+        lambda m: f"Decision constraint: Requires approval from {m.group(1).strip()}",
     ),
     # Constraints & Requirements
     (
@@ -51,6 +83,17 @@ _PREFERENCE_PATTERNS = [
         r"(?:budget is|maximum budget of|budget capped at)\s+([\$€£]?\s*\d+[,\d]*(?:\s*(?:k|kilo|thousand|usd|eur|gbp))?)",
         "constraint",
         lambda m: f"Budget parameter: {m.group(1).strip()}",
+    ),
+    (
+        r"(?:we pay by|pay via|payment terms are|require)\s+((?:net\s*\d+|invoice|wire transfer|ach|purchase order|credit card))",
+        "billing",
+        lambda m: f"Payment terms/method: {m.group(1).upper()}",
+    ),
+    # Timeline & Urgency
+    (
+        r"(?:target launch|deadline is|need this by|launching by|go live by)\s+([a-zA-Z0-9\s]{3,30})",
+        "timeline",
+        lambda m: f"Project target/deadline: {m.group(1).strip()}",
     ),
     # Explicit "note that / remember that / keep in mind"
     (

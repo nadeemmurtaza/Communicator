@@ -143,6 +143,17 @@ export function Broadcasts() {
     }
   }
 
+  async function handleProcessScheduled() {
+    try {
+      setError(null)
+      const res = await api.processScheduledCampaigns()
+      setSuccess(`Checked scheduled campaigns: ${res.processed} dispatched.`)
+      loadCampaigns()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
   function addTag() {
     const val = tagInput.trim().toLowerCase()
     if (val && !selectedTags.includes(val)) {
@@ -185,6 +196,14 @@ export function Broadcasts() {
             className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 shadow-xs"
           >
             ⚡ Load Example Data
+          </button>
+
+          <button
+            onClick={handleProcessScheduled}
+            className="rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-800 hover:bg-blue-100 shadow-xs"
+            title="Checks and sends any campaigns whose scheduled time has arrived"
+          >
+            🕒 Process Due
           </button>
 
           <button

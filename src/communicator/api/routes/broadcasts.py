@@ -302,8 +302,23 @@ async def dispatch_broadcast(
         conversation.broadcast_id = broadcast.id
 
         message_body = broadcast.body_preview or f"WhatsApp Campaign: {broadcast.template_name}"
-        if "{{1}}" in message_body and contact.person_name:
-            message_body = message_body.replace("{{1}}", contact.person_name)
+        params_dict = broadcast.template_params or {}
+        name_val = contact.person_name or params_dict.get("1") or "Customer"
+        param_2 = str(params_dict.get("2", ""))
+        param_3 = str(params_dict.get("3", ""))
+
+        if "{{1}}" in message_body:
+            message_body = message_body.replace("{{1}}", name_val)
+        if "{{2}}" in message_body and param_2:
+            message_body = message_body.replace("{{2}}", param_2)
+        if "{{3}}" in message_body and param_3:
+            message_body = message_body.replace("{{3}}", param_3)
+
+        body_params = [name_val]
+        if param_2:
+            body_params.append(param_2)
+        if param_3:
+            body_params.append(param_3)
 
         if provider is not None:
             try:
@@ -311,6 +326,7 @@ async def dispatch_broadcast(
                     to=contact.value,
                     template_name=broadcast.template_name,
                     language=broadcast.template_language,
+                    body_params=body_params,
                 )
                 recipient.status = RecipientStatus.SENT
                 recipient.provider_message_id = res.provider_message_id
@@ -357,6 +373,26 @@ async def dispatch_broadcast(
     broadcast.status = BroadcastStatus.COMPLETED
     await session.flush()
     return _serialize(broadcast)
+
+
+@router.post("/process-scheduled")
+async def process_scheduled_campaigns(session: AsyncSession = Depends(get_db_session)):
+    """
+    Scans for scheduled campaigns whose scheduled_at is past/due and automatically dispatches them.
+    """
+    now = datetime.now(UTC)
+    stmt = (
+        select(Broadcast)
+        .where(Broadcast.status == BroadcastStatus.SCHEDULED)
+        .where(Broadcast.scheduled_at.is_not(None))
+        .where(Broadcast.scheduled_at <= now)
+    )
+    due_campaigns = (await session.execute(stmt)).scalars().all()
+    dispatched = []
+    for camp in due_campaigns:
+        res = await dispatch_broadcast(camp.id, session)
+        dispatched.append(res)
+    return {"processed": len(dispatched), "campaigns": dispatched}
 
 
 # --- Meta WhatsApp Pricing Calculator ---

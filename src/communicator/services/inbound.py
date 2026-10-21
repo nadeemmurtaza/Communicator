@@ -30,9 +30,11 @@ from communicator.harvester_client import HarvesterClient
 from communicator.models.consent import ConsentStatus
 from communicator.models.contact import ChannelType, Contact
 from communicator.models.conversation import Conversation, ConversationState
+from communicator.models.draft import DraftStatus
 from communicator.models.lead import Lead
 from communicator.models.message import Message, MessageDirection, MessageStatus
 from communicator.services.business_hours import is_within_business_hours
+from communicator.services.draft_actions import approve_and_send
 from communicator.services.integration_settings import get_settings_row
 from communicator.services.memory import extract_contact_memories
 from communicator.services.messaging import get_or_create_conversation, send_outbound_message
@@ -77,6 +79,12 @@ async def process_inbound_message(
     harvester_client: HarvesterClient,
     interactive_payload_id: str | None = None,
 ) -> Message:
+    if provider_message_id:
+        existing_stmt = select(Message).where(Message.provider_message_id == provider_message_id)
+        existing_msg = (await session.execute(existing_stmt)).scalar_one_or_none()
+        if existing_msg is not None:
+            return existing_msg
+
     contact = await _find_contact(session, channel, from_value)
     conversation = await get_or_create_conversation(session, contact)
 
@@ -140,6 +148,7 @@ async def process_inbound_message(
             body,
             interactive_payload_id=interactive_payload_id,
             is_welcome_candidate=is_welcome_candidate,
+            harvester_client=harvester_client,
         )
 
     return message
@@ -152,6 +161,7 @@ async def _route_reply(
     body: str,
     interactive_payload_id: str | None = None,
     is_welcome_candidate: bool = False,
+    harvester_client: HarvesterClient | None = None,
 ) -> None:
     """
     Evaluates in order:
@@ -215,6 +225,12 @@ async def _route_reply(
 
     # 8. AI reply engine fallback
     try:
-        await generate_reply(session, conversation.id)
+        draft = await generate_reply(session, conversation.id)
+        if (
+            draft is not None
+            and draft.status == DraftStatus.AUTO_APPROVED
+            and harvester_client is not None
+        ):
+            await approve_and_send(session, draft, harvester_client, actor="ai")
     except Exception:
         pass

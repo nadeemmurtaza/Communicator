@@ -9,6 +9,7 @@ data model to attach it to, and providers retry on non-2xx responses.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 import hmac
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
@@ -152,6 +153,17 @@ async def meta_whatsapp_inbound(
         for change in entry.get("changes", []):
             value = change.get("value") or {}
             for msg in value.get("messages", []):
+                msg_id = msg.get("id", "")
+                # Webhook idempotency: skip already-processed messages
+                if msg_id:
+                    existing_msg = (
+                        await session.execute(
+                            select(Message.id).where(Message.provider_message_id == msg_id)
+                        )
+                    ).scalar_one_or_none()
+                    if existing_msg is not None:
+                        continue
+
                 text = _extract_meta_message_text(msg)
                 payload_id = _extract_meta_payload_id(msg)
                 if not text and not payload_id:
@@ -166,7 +178,7 @@ async def meta_whatsapp_inbound(
                         from_value=_normalize_meta_sender(msg.get("from", "")),
                         body=text,
                         provider="meta",
-                        provider_message_id=msg.get("id", ""),
+                        provider_message_id=msg_id,
                         harvester_client=harvester_client,
                         interactive_payload_id=payload_id,
                     )
@@ -204,6 +216,33 @@ async def _apply_meta_status(session: AsyncSession, status_event: dict) -> None:
     if not provider_message_id or meta_status not in _META_STATUS_TO_MESSAGE_STATUS:
         return
 
+    # Extract event timestamp if provided
+    event_dt = datetime.now(UTC)
+    raw_ts = status_event.get("timestamp")
+    if raw_ts:
+        try:
+            event_dt = datetime.fromtimestamp(int(raw_ts), tz=UTC)
+        except Exception:
+            pass
+
+    # Extract detailed error message if failed
+    failure_reason: str | None = None
+    if meta_status == "failed":
+        errors = status_event.get("errors", [])
+        if errors and isinstance(errors, list):
+            err = errors[0]
+            err_code = err.get("code")
+            err_title = err.get("title", "")
+            err_details = (err.get("error_data") or {}).get("details") or err.get("message", "")
+            if err_code == 131026 or "not on whatsapp" in err_title.lower() or "not on whatsapp" in err_details.lower():
+                failure_reason = "Number is not on WhatsApp"
+            elif err_details:
+                failure_reason = f"{err_title}: {err_details}"
+            else:
+                failure_reason = err_title or f"Meta error {err_code}"
+        else:
+            failure_reason = "Message delivery failed"
+
     message_stmt = select(Message).where(Message.provider_message_id == provider_message_id)
     message = (await session.execute(message_stmt)).scalar_one_or_none()
     if message is not None:
@@ -213,15 +252,29 @@ async def _apply_meta_status(session: AsyncSession, status_event: dict) -> None:
         BroadcastRecipient.provider_message_id == provider_message_id
     )
     recipient = (await session.execute(recipient_stmt)).scalar_one_or_none()
-    if recipient is not None and recipient.status != _META_STATUS_TO_RECIPIENT_STATUS[meta_status]:
-        recipient.status = _META_STATUS_TO_RECIPIENT_STATUS[meta_status]
+    if recipient is not None:
+        new_status = _META_STATUS_TO_RECIPIENT_STATUS[meta_status]
+        old_status = recipient.status
+        recipient.status = new_status
+
+        if meta_status == "sent" and not recipient.sent_at:
+            recipient.sent_at = event_dt
+        elif meta_status == "delivered" and not recipient.delivered_at:
+            recipient.delivered_at = event_dt
+        elif meta_status == "read" and not recipient.read_at:
+            recipient.read_at = event_dt
+        elif meta_status == "failed":
+            recipient.error = failure_reason
+
         broadcast = await session.get(Broadcast, recipient.broadcast_id)
-        if broadcast is not None:
-            if meta_status == "delivered":
+        if broadcast is not None and old_status != new_status:
+            if meta_status == "delivered" and old_status not in (RecipientStatus.DELIVERED, RecipientStatus.READ):
                 broadcast.delivered_count += 1
             elif meta_status == "read":
                 broadcast.read_count += 1
-            elif meta_status == "failed":
+                if old_status not in (RecipientStatus.DELIVERED, RecipientStatus.READ):
+                    broadcast.delivered_count += 1
+            elif meta_status == "failed" and old_status != RecipientStatus.FAILED:
                 broadcast.failed_count += 1
 
     await session.flush()

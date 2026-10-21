@@ -501,6 +501,17 @@ export const api = {
     }),
   dispatchBroadcast: (id: string) =>
     request<Broadcast>(`/broadcasts/${id}/dispatch`, { method: 'POST' }),
+  processScheduledCampaigns: () =>
+    request<{ processed: number; campaigns: Broadcast[] }>('/broadcasts/process-scheduled', {
+      method: 'POST',
+    }),
+  runAllSchedulers: () =>
+    request<{
+      followupsSent: number
+      draftsAutoSent: number
+      inactivityNudges: number
+      campaignsDispatched: number
+    }>('/scheduler/run-all', { method: 'POST' }),
   listBroadcastRecipients: (id: string) =>
     request<BroadcastRecipient[]>(`/broadcasts/${id}/recipients`),
   getWhatsAppPricing: (region: string, category: string, volume: number) =>
