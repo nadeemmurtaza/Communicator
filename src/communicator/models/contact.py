@@ -13,15 +13,24 @@ from communicator.models.tag import contact_tags
 if TYPE_CHECKING:
     from communicator.models.consent import ConsentRecord
     from communicator.models.contact_memory import ContactMemory
+    from communicator.models.contact_note import ContactNote
     from communicator.models.conversation import Conversation
     from communicator.models.lead import Lead
     from communicator.models.tag import Tag
+    from communicator.models.ticket import Ticket
 
 
 class ChannelType(str, enum.Enum):
     EMAIL = "email"
     SMS = "sms"
     WHATSAPP = "whatsapp"
+    WEBSITE = "website"
+    FACEBOOK = "facebook"
+    INSTAGRAM = "instagram"
+    TELEGRAM = "telegram"
+    LINE = "line"
+    VOICE = "voice"
+    TIKTOK = "tiktok"
 
 
 # Shared column type for every ChannelType column (contacts, messages,
@@ -75,4 +84,13 @@ class Contact(Base):
         back_populates="contact",
         cascade="all, delete-orphan",
         order_by="ContactMemory.noted_at.desc()",
+    )
+    notes: Mapped[list["ContactNote"]] = relationship(
+        "ContactNote",
+        back_populates="contact",
+        cascade="all, delete-orphan",
+        order_by="ContactNote.created_at.desc()",
+    )
+    tickets: Mapped[list["Ticket"]] = relationship(
+        "Ticket", back_populates="contact", cascade="all, delete-orphan"
     )

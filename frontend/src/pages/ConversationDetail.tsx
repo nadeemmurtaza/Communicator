@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api, type ConversationDetail as ConversationDetailType, type TeamMember } from '../lib/api'
+import { api, type CannedResponse, type ConversationDetail as ConversationDetailType, type TeamMember, type Ticket } from '../lib/api'
 import { stateBadgeClass, stateLabel, timeAgo } from '../lib/format'
 
 export function ConversationDetail() {
@@ -10,6 +10,13 @@ export function ConversationDetail() {
   const [error, setError] = useState<string | null>(null)
   const [generating, setGenerating] = useState(false)
   const [togglingHandoff, setTogglingHandoff] = useState(false)
+  const [replyText, setReplyText] = useState('')
+  const [isSending, setIsSending] = useState(false)
+  const [cannedResponses, setCannedResponses] = useState<CannedResponse[]>([])
+  const [showCannedPicker, setShowCannedPicker] = useState(false)
+  const [cannedCategory, setCannedCategory] = useState('all')
+  const [cannedSelectedIndex, setCannedSelectedIndex] = useState(0)
+  const [conversationTickets, setConversationTickets] = useState<Ticket[]>([])
 
   function load() {
     if (!id) return
@@ -17,12 +24,90 @@ export function ConversationDetail() {
       .getConversation(id)
       .then(setConversation)
       .catch((e) => setError(e.message))
+    api
+      .listTickets({ conversation_id: id })
+      .then(setConversationTickets)
+      .catch(() => {})
   }
 
   useEffect(load, [id])
   useEffect(() => {
     api.listTeam().then(setTeam).catch(() => {})
+    api.listCannedResponses().then((res) => {
+      if (res && res.length > 0) setCannedResponses(res)
+    }).catch(() => {})
   }, [])
+
+  // Slash command autocomplete detection
+  const slashMatch = replyText.match(/(?:^|\s)\/([a-zA-Z0-9_-]*)$/)
+  const isTypingSlash = Boolean(slashMatch)
+  const slashQuery = slashMatch ? slashMatch[1].toLowerCase() : ''
+  const cannedCategories = ['all', ...Array.from(new Set(cannedResponses.map((c) => (c.category || 'general').toLowerCase())))]
+
+  const filteredCanned = cannedResponses.filter((c) => {
+    const code = (c.shortCode || c.short_code || '').toLowerCase()
+    const content = c.content.toLowerCase()
+    const matchesQuery = !slashQuery || code.includes(slashQuery) || content.includes(slashQuery)
+    const matchesCategory =
+      cannedCategory === 'all' || (c.category || 'general').toLowerCase() === cannedCategory.toLowerCase()
+    return matchesQuery && matchesCategory
+  })
+
+  useEffect(() => {
+    if (cannedSelectedIndex >= filteredCanned.length) {
+      setCannedSelectedIndex(0)
+    }
+  }, [filteredCanned.length, cannedSelectedIndex])
+
+  function resolveCannedVariables(template: string): string {
+    const custName = conversation?.contactName || 'Customer'
+    const custFirstName = custName.split(' ')[0] || 'there'
+    const agent = team.find((m) => m.id === conversation?.assignedToId)
+    const agentName = agent?.name || 'Support Agent'
+    const channelName = conversation?.channel ? conversation.channel.charAt(0).toUpperCase() + conversation.channel.slice(1) : 'Support'
+    const ticketId = conversation?.id ? conversation.id.slice(0, 8) : 'TICKET'
+
+    return template
+      .replace(/\{\{\s*customer\.name\s*\}\}/gi, custName)
+      .replace(/\{\{\s*customer_name\s*\}\}/gi, custName)
+      .replace(/\{\{\s*customer\.first_name\s*\}\}/gi, custFirstName)
+      .replace(/\{\{\s*customer\.firstName\s*\}\}/gi, custFirstName)
+      .replace(/\{\{\s*first_name\s*\}\}/gi, custFirstName)
+      .replace(/\{\{\s*agent\.name\s*\}\}/gi, agentName)
+      .replace(/\{\{\s*agent_name\s*\}\}/gi, agentName)
+      .replace(/\{\{\s*channel\s*\}\}/gi, channelName)
+      .replace(/\{\{\s*ticket\.id\s*\}\}/gi, ticketId)
+      .replace(/\{\{\s*ticket_id\s*\}\}/gi, ticketId)
+      .replace(/\{\{\s*conversation_id\s*\}\}/gi, conversation?.id || ticketId)
+  }
+
+  function insertCanned(canned: CannedResponse) {
+    const resolved = resolveCannedVariables(canned.content)
+    if (slashMatch) {
+      const idx = replyText.lastIndexOf('/')
+      const prefix = replyText.slice(0, idx)
+      setReplyText(prefix + resolved + ' ')
+    } else {
+      setReplyText((prev) => (prev ? prev + ' ' : '') + resolved + ' ')
+    }
+    setShowCannedPicker(false)
+    setCannedSelectedIndex(0)
+  }
+
+  async function handleSendReply() {
+    if (!id || !replyText.trim() || isSending) return
+    setIsSending(true)
+    setError(null)
+    try {
+      await api.sendConversationMessage(id, replyText.trim())
+      setReplyText('')
+      load()
+    } catch (e: any) {
+      setError(e.message || 'Failed to send reply')
+    } finally {
+      setIsSending(false)
+    }
+  }
 
   async function generateDraft() {
     if (!id) return
@@ -114,6 +199,33 @@ export function ConversationDetail() {
                 ))}
               </select>
             </div>
+
+            <div className="ml-auto flex items-center gap-2">
+              {conversationTickets.length > 0 ? (
+                <div className="flex items-center gap-2">
+                  {conversationTickets.map((tk) => (
+                    <Link
+                      key={tk.id}
+                      to="/tickets"
+                      className="inline-flex items-center gap-1.5 rounded-md bg-indigo-50 border border-indigo-200 px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors"
+                      title={tk.title}
+                    >
+                      <span>🎫 {tk.ticket_number}</span>
+                      <span className="text-[10px] uppercase font-normal text-indigo-500">
+                        ({tk.status})
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <Link
+                  to="/tickets"
+                  className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  + Open Ticket
+                </Link>
+              )}
+            </div>
           </div>
 
           <ol className="space-y-3">
@@ -138,14 +250,158 @@ export function ConversationDetail() {
             ))}
           </ol>
 
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
             <button
               onClick={generateDraft}
               disabled={generating}
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+              className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-colors shadow-xs"
             >
-              {generating ? 'Generating…' : 'Generate a reply draft'}
+              {generating ? 'Generating…' : '✨ Generate AI draft'}
             </button>
+          </div>
+
+          {/* Reply Composer with Live Slash Command Picker */}
+          <div className="relative mt-4">
+            {/* Canned Autocomplete Dropdown */}
+            {(isTypingSlash || showCannedPicker) && (
+              <div className="absolute bottom-full mb-2 left-0 right-0 z-30 max-h-72 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl flex flex-col">
+                <div className="bg-slate-50 border-b border-slate-200 px-3 py-2 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                    <span className="w-4 h-4 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px]">
+                      /
+                    </span>
+                    <span>Canned Replies ({filteredCanned.length})</span>
+                  </div>
+                  <div className="flex items-center gap-1 overflow-x-auto">
+                    {cannedCategories.map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => {
+                          setCannedCategory(cat)
+                          setCannedSelectedIndex(0)
+                        }}
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${
+                          cannedCategory === cat
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="max-h-48 overflow-y-auto divide-y divide-slate-100 p-1">
+                  {filteredCanned.length === 0 ? (
+                    <div className="py-4 text-center text-xs text-slate-500">
+                      No canned replies matching "/{slashQuery}"
+                    </div>
+                  ) : (
+                    filteredCanned.map((c, idx) => {
+                      const isSelected = idx === cannedSelectedIndex
+                      const preview = resolveCannedVariables(c.content)
+                      return (
+                        <button
+                          key={c.id || c.shortCode || c.short_code}
+                          type="button"
+                          onClick={() => insertCanned(c)}
+                          onMouseEnter={() => setCannedSelectedIndex(idx)}
+                          className={`w-full text-left p-2 rounded-lg transition-colors cursor-pointer flex flex-col gap-1 ${
+                            isSelected
+                              ? 'bg-blue-50/90 border-l-4 border-blue-600 shadow-2xs'
+                              : 'hover:bg-slate-50 border-l-4 border-transparent'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono text-xs font-bold text-blue-700 bg-blue-100/70 px-1.5 py-0.5 rounded">
+                              /{c.shortCode || c.short_code}
+                            </span>
+                            <span className="text-[10px] uppercase font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">
+                              {c.category}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-700 line-clamp-2">{preview}</p>
+                        </button>
+                      )
+                    })
+                  )}
+                </div>
+
+                <div className="bg-slate-50 px-3 py-1 text-[10.5px] text-slate-400 border-t border-slate-200 flex items-center justify-between">
+                  <span>💡 Type <code className="bg-slate-200 px-1 rounded text-slate-700 font-mono">/</code> to trigger replies</span>
+                  <span>↑↓ navigate • ↵ insert • esc dismiss</span>
+                </div>
+              </div>
+            )}
+
+            <div className="rounded-xl border border-slate-300 bg-white shadow-xs focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
+              <textarea
+                rows={3}
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                onKeyDown={(e) => {
+                  const isPickerOpen = (isTypingSlash || showCannedPicker) && filteredCanned.length > 0
+                  if (isPickerOpen) {
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault()
+                      setCannedSelectedIndex((prev) => (prev + 1) % filteredCanned.length)
+                      return
+                    }
+                    if (e.key === 'ArrowUp') {
+                      e.preventDefault()
+                      setCannedSelectedIndex((prev) => (prev - 1 + filteredCanned.length) % filteredCanned.length)
+                      return
+                    }
+                    if (e.key === 'Enter' || e.key === 'Tab') {
+                      if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
+                        e.preventDefault()
+                        if (filteredCanned[cannedSelectedIndex]) {
+                          insertCanned(filteredCanned[cannedSelectedIndex])
+                        }
+                        return
+                      }
+                    }
+                    if (e.key === 'Escape') {
+                      e.preventDefault()
+                      setShowCannedPicker(false)
+                      return
+                    }
+                  }
+                  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                    e.preventDefault()
+                    handleSendReply()
+                  }
+                }}
+                placeholder="Type a message to the customer... Start with '/' for canned responses, or press Ctrl+Enter to send"
+                className="w-full resize-none px-3.5 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden"
+              />
+
+              <div className="flex items-center justify-between border-t border-slate-100 px-3 py-2 bg-slate-50/50 rounded-b-xl">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCannedPicker((v) => !v)}
+                    className={`text-xs px-2 py-1 rounded font-medium transition-colors ${
+                      showCannedPicker ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-200/60'
+                    }`}
+                  >
+                    ⚡ Saved Replies (/)
+                  </button>
+                  <span className="text-[11px] text-slate-400">Ctrl + Enter to send</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleSendReply}
+                  disabled={!replyText.trim() || isSending}
+                  className="rounded-lg bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50 shadow-xs transition-colors cursor-pointer"
+                >
+                  {isSending ? 'Sending…' : 'Send Message'}
+                </button>
+              </div>
+            </div>
           </div>
         </>
       )}

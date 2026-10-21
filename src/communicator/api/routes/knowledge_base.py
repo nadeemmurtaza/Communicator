@@ -15,39 +15,107 @@ from communicator.services.knowledge_gaps import (
     dismiss_knowledge_gap,
     list_knowledge_gaps,
 )
+from communicator.services.knowledge_hub_service import (
+    apply_recommendation,
+    dismiss_recommendation,
+    ensure_default_hub_content,
+    get_knowledge_hub_overview,
+    list_recommendations,
+    serialize_hub_entry,
+)
 from communicator.services.knowledge_ingest import IngestionError, ingest_document_bytes, ingest_url
 
 router = APIRouter(prefix="/knowledge-base", tags=["Knowledge Base"])
 
 
 def _serialize_entry(e: KnowledgeBaseEntry) -> dict:
-    return {
-        "id": str(e.id),
-        "title": e.title,
-        "content": e.content,
-        "sourceType": e.source_type,
-        "sourceUrl": e.source_url,
-        "fileName": e.file_name,
-        "createdAt": e.created_at.isoformat(),
-    }
+    return serialize_hub_entry(e)
 
 
 class EntryIn(BaseModel):
     title: str
     content: str
+    topic: str = "General"
     source_type: str = "note"
+    target_touchpoints: list[str] = ["agent", "copilot", "help_center"]
 
 
 class IngestUrlIn(BaseModel):
     url: str
+    topic: str = "General"
 
 
 class ApproveGapIn(BaseModel):
     custom_answer: str | None = None
 
 
+class ApplyRecommendationIn(BaseModel):
+    custom_content: str | None = None
+
+
+@router.get("/hub")
+async def get_hub_overview(
+    q: str | None = None,
+    topic: str | None = None,
+    touchpoint: str | None = None,
+    session: AsyncSession = Depends(get_db_session),
+):
+    """
+    Centralized Knowledge Hub endpoint: Returns sources grouped by topic,
+    cross-touchpoint deployment tracking (Agent, Copilot, Help Center), and resolution metrics.
+    """
+    return await get_knowledge_hub_overview(
+        session=session,
+        search_query=q,
+        topic_filter=topic,
+        touchpoint_filter=touchpoint,
+    )
+
+
+@router.get("/recommendations")
+async def get_content_recommendations(
+    status: str = "open",
+    gap_type: str | None = None,
+    session: AsyncSession = Depends(get_db_session),
+):
+    """
+    Returns AI recommendations highlighting content, customer data, and action gaps
+    to improve Agent Fin's automated resolution rate.
+    """
+    return await list_recommendations(session=session, status=status, gap_type=gap_type)
+
+
+@router.post("/recommendations/{rec_id}/apply")
+async def apply_content_recommendation(
+    rec_id: uuid.UUID,
+    payload: ApplyRecommendationIn | None = None,
+    session: AsyncSession = Depends(get_db_session),
+):
+    """
+    1-Click Action: Converts an AI gap recommendation directly into a published
+    knowledge base article to improve the resolution rate.
+    """
+    custom = payload.custom_content if payload else None
+    try:
+        return await apply_recommendation(session=session, recommendation_id=rec_id, custom_content=custom)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/recommendations/{rec_id}/dismiss")
+async def dismiss_content_recommendation(
+    rec_id: uuid.UUID, session: AsyncSession = Depends(get_db_session)
+):
+    """Dismisses an AI gap recommendation."""
+    try:
+        return await dismiss_recommendation(session=session, recommendation_id=rec_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
 @router.get("")
 async def list_entries(session: AsyncSession = Depends(get_db_session)):
+    await ensure_default_hub_content(session)
     entries = (
         (
             await session.execute(
@@ -63,7 +131,11 @@ async def list_entries(session: AsyncSession = Depends(get_db_session)):
 @router.post("")
 async def create_entry(payload: EntryIn, session: AsyncSession = Depends(get_db_session)):
     entry = KnowledgeBaseEntry(
-        title=payload.title, content=payload.content, source_type=payload.source_type
+        title=payload.title,
+        content=payload.content,
+        topic=payload.topic or "General",
+        source_type=payload.source_type,
+        target_touchpoints=payload.target_touchpoints or ["agent", "copilot", "help_center"],
     )
     session.add(entry)
     await session.flush()

@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react'
-import { api, type IntegrationSettings, type Template } from '../lib/api'
+import { Link } from 'react-router-dom'
+import {
+  api,
+  type ChannelGateway,
+  type IntegrationSettings,
+  type SupportedProvidersCatalog,
+  type Template,
+} from '../lib/api'
 
 export function Connections() {
+  const [activeTab, setActiveTab] = useState<'gateways' | 'whatsapp' | 'business' | 'templates'>('gateways')
   const [data, setData] = useState<IntegrationSettings | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -16,21 +24,78 @@ export function Connections() {
   useEffect(load, [])
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">Connections</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Connect WhatsApp, tell the agent about your business, and manage templates.
-        </p>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-900">Connections & Universal Gateways</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Connect any SMS provider, any Email provider, any VoIP/SIP trunk, and manage multi-channel credentials.
+          </p>
+        </div>
+
+        <Link
+          to="/self-improving"
+          className="inline-flex items-center gap-1.5 self-start rounded-md bg-indigo-50 border border-indigo-200 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition-colors"
+        >
+          <span>🤖</span>
+          <span>Configure AI Model Hub</span>
+          <span className="text-indigo-400">→</span>
+        </Link>
       </div>
 
       {error && <Banner tone="error">{error}</Banner>}
       {notice && <Banner tone="success">{notice}</Banner>}
 
-      {data === null ? (
-        <p className="text-sm text-slate-500">Loading…</p>
-      ) : (
-        <>
+      {/* Primary Tabs */}
+      <div className="flex border-b border-slate-200 overflow-x-auto gap-2">
+        <button
+          onClick={() => setActiveTab('gateways')}
+          className={`py-2 px-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
+            activeTab === 'gateways'
+              ? 'border-indigo-600 text-indigo-600 font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          🌐 Universal Gateways (Any SMS, Email, VoIP/SIP)
+        </button>
+        <button
+          onClick={() => setActiveTab('whatsapp')}
+          className={`py-2 px-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
+            activeTab === 'whatsapp'
+              ? 'border-indigo-600 text-indigo-600 font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          💬 WhatsApp Cloud API
+        </button>
+        <button
+          onClick={() => setActiveTab('business')}
+          className={`py-2 px-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
+            activeTab === 'business'
+              ? 'border-indigo-600 text-indigo-600 font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          🏢 Business Profile & Hours
+        </button>
+        <button
+          onClick={() => setActiveTab('templates')}
+          className={`py-2 px-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
+            activeTab === 'templates'
+              ? 'border-indigo-600 text-indigo-600 font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          📋 Meta HSM Templates
+        </button>
+      </div>
+
+      {activeTab === 'gateways' && (
+        <UniversalGatewaysSection onNotice={setNotice} onError={setError} />
+      )}
+
+      {activeTab === 'whatsapp' && (
+        data ? (
           <WhatsAppSection
             data={data}
             onSaved={(msg) => {
@@ -39,6 +104,13 @@ export function Connections() {
             }}
             onError={setError}
           />
+        ) : (
+          <p className="text-sm text-slate-500">Loading…</p>
+        )
+      )}
+
+      {activeTab === 'business' && (
+        data ? (
           <BusinessProfileSection
             data={data}
             onSaved={(msg) => {
@@ -47,9 +119,795 @@ export function Connections() {
             }}
             onError={setError}
           />
-          <TemplatesSection onError={setError} wabaConfigured={!!data.whatsapp.wabaId} />
-        </>
+        ) : (
+          <p className="text-sm text-slate-500">Loading…</p>
+        )
       )}
+
+      {activeTab === 'templates' && (
+        data ? (
+          <TemplatesSection onError={setError} wabaConfigured={!!data.whatsapp.wabaId} />
+        ) : (
+          <p className="text-sm text-slate-500">Loading…</p>
+        )
+      )}
+    </div>
+  )
+}
+
+function UniversalGatewaysSection({
+  onNotice,
+  onError,
+}: {
+  onNotice: (msg: string) => void
+  onError: (msg: string) => void
+}) {
+  const [gateways, setGateways] = useState<ChannelGateway[]>([])
+  const [catalog, setCatalog] = useState<SupportedProvidersCatalog | null>(null)
+  const [filterType, setFilterType] = useState<string>('all')
+  const [loading, setLoading] = useState(false)
+  const [testingId, setTestingId] = useState<string | null>(null)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [pingModalGateway, setPingModalGateway] = useState<ChannelGateway | null>(null)
+
+  function loadGateways() {
+    setLoading(true)
+    api
+      .listGateways(filterType === 'all' ? undefined : filterType)
+      .then(setGateways)
+      .catch((e) => onError(e.message))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    loadGateways()
+  }, [filterType])
+
+  useEffect(() => {
+    api.getSupportedGatewayProviders().then(setCatalog).catch(console.error)
+  }, [])
+
+  async function handleTestConnection(id: string) {
+    setTestingId(id)
+    try {
+      const res = await api.testGatewayConnection(id)
+      if (res.success) {
+        onNotice(`Connection test successful! Ping latency: ${res.latency_ms}ms`)
+      } else {
+        onError(`Connection test failed: ${res.error || 'Unknown error'}`)
+      }
+      loadGateways()
+    } catch (e) {
+      onError((e as Error).message)
+    } finally {
+      setTestingId(null)
+    }
+  }
+
+  async function handleSetDefault(id: string) {
+    try {
+      await api.setDefaultGateway(id)
+      onNotice('Default gateway updated successfully.')
+      loadGateways()
+    } catch (e) {
+      onError((e as Error).message)
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('Are you sure you want to delete this gateway connection?')) return
+    try {
+      await api.deleteGateway(id)
+      onNotice('Gateway removed.')
+      loadGateways()
+    } catch (e) {
+      onError((e as Error).message)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Overview & Action Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4 rounded-lg border border-slate-200">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mr-2">Filter:</span>
+          {[
+            { id: 'all', label: 'All Gateways' },
+            { id: 'sms', label: '📱 SMS Gateways' },
+            { id: 'email', label: '📧 Email Transports' },
+            { id: 'voice_sip', label: '📞 VoIP & SIP Trunks' },
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setFilterType(item.id)}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                filterType === item.id
+                  ? 'bg-slate-900 text-white'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 px-3.5 py-1.5 text-xs font-medium text-white shadow-sm transition-colors"
+        >
+          <span>+</span>
+          <span>Connect Any Provider</span>
+        </button>
+      </div>
+
+      {/* Gateway Cards Grid */}
+      {loading ? (
+        <p className="text-sm text-slate-500 py-6 text-center">Loading gateways…</p>
+      ) : gateways.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center bg-white">
+          <p className="text-sm text-slate-500">No gateways configured for this filter.</p>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="mt-3 text-xs font-medium text-indigo-600 hover:underline"
+          >
+            + Connect your first provider
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {gateways.map((gw) => (
+            <div
+              key={gw.id}
+              className={`flex flex-col justify-between rounded-lg border bg-white p-4 shadow-xs transition-shadow hover:shadow-sm ${
+                gw.is_default ? 'border-indigo-300 ring-1 ring-indigo-200' : 'border-slate-200'
+              }`}
+            >
+              <div>
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-base font-semibold text-slate-900 truncate">{gw.name}</span>
+                      {gw.is_default && (
+                        <span className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-3xs font-semibold text-indigo-700 border border-indigo-200">
+                          ★ Default
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-500">
+                      <span className="font-mono text-2xs uppercase px-1.5 py-0.5 bg-slate-100 rounded text-slate-600">
+                        {gw.provider}
+                      </span>
+                      <span>·</span>
+                      <span className="capitalize">{gw.gateway_type.replace('_', ' ')}</span>
+                    </div>
+                  </div>
+
+                  {/* Status Indicator */}
+                  <span
+                    className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-medium ${
+                      gw.test_status === 'connected'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : gw.test_status === 'error'
+                          ? 'bg-red-50 text-red-700 border border-red-200'
+                          : 'bg-slate-100 text-slate-600 border border-slate-200'
+                    }`}
+                  >
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        gw.test_status === 'connected'
+                          ? 'bg-emerald-500'
+                          : gw.test_status === 'error'
+                            ? 'bg-red-500'
+                            : 'bg-slate-400'
+                      }`}
+                    />
+                    {gw.test_status === 'connected'
+                      ? `${gw.latency_ms}ms`
+                      : gw.test_status === 'error'
+                        ? 'Error'
+                        : 'Untested'}
+                  </span>
+                </div>
+
+                {/* Configuration Specs Preview */}
+                <div className="my-3 rounded-md bg-slate-50 p-2.5 text-xs text-slate-600 space-y-1 font-mono">
+                  {gw.gateway_type === 'sms' && (
+                    <>
+                      {gw.config?.from_number && <div>From: {gw.config.from_number}</div>}
+                      {gw.config?.endpoint_url && <div className="truncate">URL: {gw.config.endpoint_url}</div>}
+                    </>
+                  )}
+                  {gw.gateway_type === 'email' && (
+                    <>
+                      {gw.config?.smtp_host && <div>Host: {gw.config.smtp_host}:{gw.config.smtp_port || 587}</div>}
+                      {gw.config?.from_address && <div>From: {gw.config.from_address}</div>}
+                    </>
+                  )}
+                  {gw.gateway_type === 'voice_sip' && (
+                    <>
+                      {gw.config?.sip_server && <div>SIP: {gw.config.sip_server}:{gw.config.sip_port || 5060}</div>}
+                      {gw.config?.caller_id && <div>Caller ID: {gw.config.caller_id}</div>}
+                    </>
+                  )}
+                  {Object.entries(gw.credentials || {}).map(([k, v]) => (
+                    <div key={k} className="text-2xs text-slate-500">
+                      {k}: <span className="text-slate-700">{v || 'configured'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Toolbar */}
+              <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs gap-2">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => handleTestConnection(gw.id)}
+                    disabled={testingId === gw.id}
+                    className="rounded border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    {testingId === gw.id ? 'Pinging…' : '⚡ Test'}
+                  </button>
+                  <button
+                    onClick={() => setPingModalGateway(gw)}
+                    className="rounded border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    ✉ Ping
+                  </button>
+                  {!gw.is_default && (
+                    <button
+                      onClick={() => handleSetDefault(gw.id)}
+                      className="rounded border border-slate-200 bg-white px-2 py-1 font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                    >
+                      ★ Default
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => handleDelete(gw.id)}
+                  className="text-slate-400 hover:text-red-600 transition-colors p-1"
+                  title="Delete Gateway"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Connect Any Provider Modal */}
+      {showAddModal && (
+        <AddGatewayModal
+          catalog={catalog}
+          onClose={() => setShowAddModal(false)}
+          onCreated={() => {
+            setShowAddModal(false)
+            onNotice('New gateway connected successfully!')
+            loadGateways()
+          }}
+          onError={onError}
+        />
+      )}
+
+      {/* Send Test Ping Modal */}
+      {pingModalGateway && (
+        <SendPingModal
+          gateway={pingModalGateway}
+          onClose={() => setPingModalGateway(null)}
+          onNotice={onNotice}
+          onError={onError}
+        />
+      )}
+    </div>
+  )
+}
+
+function AddGatewayModal({
+  catalog,
+  onClose,
+  onCreated,
+  onError,
+}: {
+  catalog: SupportedProvidersCatalog | null
+  onClose: () => void
+  onCreated: () => void
+  onError: (msg: string) => void
+}) {
+  const [gatewayType, setGatewayType] = useState<'sms' | 'email' | 'voice_sip'>('sms')
+  const [provider, setProvider] = useState<string>('twilio')
+  const [name, setName] = useState('')
+  const [isDefault, setIsDefault] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  // Dynamic field states
+  const [accountSid, setAccountSid] = useState('')
+  const [authToken, setAuthToken] = useState('')
+  const [fromNumber, setFromNumber] = useState('')
+  const [endpointUrl, setEndpointUrl] = useState('')
+  const [bearerToken, setBearerToken] = useState('')
+  const [smtpHost, setSmtpHost] = useState('')
+  const [smtpPort, setSmtpPort] = useState(587)
+  const [smtpUsername, setSmtpUsername] = useState('')
+  const [smtpPassword, setSmtpPassword] = useState('')
+  const [fromAddress, setFromAddress] = useState('')
+  const [fromName, setFromName] = useState('')
+  const [apiKey, setApiKey] = useState('')
+  const [sipServer, setSipServer] = useState('')
+  const [sipPort, setSipPort] = useState(5060)
+  const [sipUser, setSipUser] = useState('')
+  const [sipPass, setSipPass] = useState('')
+
+  // Set default provider on type switch
+  useEffect(() => {
+    if (gatewayType === 'sms') {
+      setProvider('vonage')
+      setName('Vonage SMS Global')
+    } else if (gatewayType === 'email') {
+      setProvider('sendgrid')
+      setName('SendGrid Production Mailer')
+    } else {
+      setProvider('telnyx')
+      setName('Telnyx SIP & Voice')
+    }
+  }, [gatewayType])
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setSaving(true)
+
+    const credentials: Record<string, any> = {}
+    const config: Record<string, any> = {}
+
+    if (gatewayType === 'sms') {
+      if (provider === 'custom_http') {
+        config.endpoint_url = endpointUrl
+        credentials.bearer_token = bearerToken
+        config.payload_template = '{"to": "{{to}}", "message": "{{body}}"}'
+      } else if (provider === 'vonage') {
+        credentials.api_key = apiKey
+        credentials.api_secret = authToken
+        config.from = fromNumber || 'BayWorks'
+      } else if (provider === 'messagebird') {
+        credentials.access_key = apiKey
+        config.originator = fromNumber || 'BayWorks'
+      } else {
+        credentials.account_sid = accountSid
+        credentials.auth_token = authToken
+        config.from_number = fromNumber
+      }
+    } else if (gatewayType === 'email') {
+      if (provider === 'smtp') {
+        config.smtp_host = smtpHost
+        config.smtp_port = Number(smtpPort)
+        credentials.smtp_username = smtpUsername
+        credentials.smtp_password = smtpPassword
+        config.from_address = fromAddress
+        config.from_name = fromName
+      } else {
+        credentials.api_key = apiKey
+        config.from_address = fromAddress
+        config.from_name = fromName
+      }
+    } else if (gatewayType === 'voice_sip') {
+      if (provider === 'sip_trunk') {
+        config.sip_server = sipServer
+        config.sip_port = Number(sipPort)
+        credentials.sip_username = sipUser
+        credentials.sip_password = sipPass
+        config.caller_id = fromNumber
+      } else {
+        credentials.account_sid = accountSid
+        credentials.auth_token = authToken
+        credentials.api_key = apiKey
+        config.caller_id = fromNumber
+      }
+    }
+
+    try {
+      await api.createGateway({
+        gateway_type: gatewayType,
+        provider,
+        name: name || `${provider.toUpperCase()} Gateway`,
+        credentials,
+        config,
+        is_default: isDefault,
+      })
+      onCreated()
+    } catch (err) {
+      onError((err as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const providerList = catalog ? catalog[gatewayType] || [] : []
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
+      <div className="w-full max-w-lg rounded-xl bg-white shadow-xl border border-slate-200 overflow-hidden max-h-[90vh] flex flex-col">
+        <div className="border-b border-slate-200 px-5 py-3.5 flex items-center justify-between bg-slate-50">
+          <h2 className="text-sm font-semibold text-slate-900">+ Connect Any Provider</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-sm">✕</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+          {/* Gateway Type Selection */}
+          <div>
+            <label className="block font-medium text-slate-700 mb-1">Gateway Type</label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'sms', label: '📱 SMS' },
+                { id: 'email', label: '📧 Email' },
+                { id: 'voice_sip', label: '📞 VoIP / SIP' },
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setGatewayType(t.id as any)}
+                  className={`py-1.5 px-3 rounded-md border text-center font-medium ${
+                    gatewayType === t.id
+                      ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                      : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Provider Selection */}
+          <div>
+            <label className="block font-medium text-slate-700 mb-1">Select Provider</label>
+            <select
+              value={provider}
+              onChange={(e) => setProvider(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs text-slate-800"
+            >
+              {providerList.map((p) => (
+                <option key={p.provider} value={p.provider}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block font-medium text-slate-700 mb-1">Gateway Name</label>
+            <input
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs"
+              placeholder="e.g. Production Vonage Gateway"
+            />
+          </div>
+
+          {/* Dynamic Provider Input Fields */}
+          {provider === 'custom_http' && (
+            <div className="space-y-3 p-3 bg-slate-50 rounded-md border border-slate-200">
+              <p className="font-semibold text-slate-700">Custom HTTP REST Gateway Settings</p>
+              <div>
+                <label className="block text-2xs text-slate-500 mb-0.5">Endpoint URL</label>
+                <input
+                  type="url"
+                  required
+                  value={endpointUrl}
+                  onChange={(e) => setEndpointUrl(e.target.value)}
+                  className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                  placeholder="https://sms-gw.internal.company.com/v1/send"
+                />
+              </div>
+              <div>
+                <label className="block text-2xs text-slate-500 mb-0.5">Bearer Token / Secret Key</label>
+                <input
+                  type="password"
+                  value={bearerToken}
+                  onChange={(e) => setBearerToken(e.target.value)}
+                  className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                  placeholder="Bearer token"
+                />
+              </div>
+            </div>
+          )}
+
+          {provider === 'smtp' && (
+            <div className="space-y-3 p-3 bg-slate-50 rounded-md border border-slate-200">
+              <p className="font-semibold text-slate-700">SMTP Server Configuration</p>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="col-span-2">
+                  <label className="block text-2xs text-slate-500 mb-0.5">SMTP Host</label>
+                  <input
+                    type="text"
+                    required
+                    value={smtpHost}
+                    onChange={(e) => setSmtpHost(e.target.value)}
+                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                    placeholder="smtp.example.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-2xs text-slate-500 mb-0.5">Port</label>
+                  <input
+                    type="number"
+                    value={smtpPort}
+                    onChange={(e) => setSmtpPort(Number(e.target.value))}
+                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-2xs text-slate-500 mb-0.5">Username</label>
+                  <input
+                    type="text"
+                    value={smtpUsername}
+                    onChange={(e) => setSmtpUsername(e.target.value)}
+                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-2xs text-slate-500 mb-0.5">Password</label>
+                  <input
+                    type="password"
+                    value={smtpPassword}
+                    onChange={(e) => setSmtpPassword(e.target.value)}
+                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-2xs text-slate-500 mb-0.5">From Address</label>
+                  <input
+                    type="email"
+                    value={fromAddress}
+                    onChange={(e) => setFromAddress(e.target.value)}
+                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                    placeholder="support@company.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-2xs text-slate-500 mb-0.5">From Name</label>
+                  <input
+                    type="text"
+                    value={fromName}
+                    onChange={(e) => setFromName(e.target.value)}
+                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                    placeholder="Support Team"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {provider === 'sip_trunk' && (
+            <div className="space-y-3 p-3 bg-slate-50 rounded-md border border-slate-200">
+              <p className="font-semibold text-slate-700">Generic SIP Trunk / PBX Settings</p>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="col-span-2">
+                  <label className="block text-2xs text-slate-500 mb-0.5">SIP Server IP / Host</label>
+                  <input
+                    type="text"
+                    required
+                    value={sipServer}
+                    onChange={(e) => setSipServer(e.target.value)}
+                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                    placeholder="pbx.company.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-2xs text-slate-500 mb-0.5">SIP Port</label>
+                  <input
+                    type="number"
+                    value={sipPort}
+                    onChange={(e) => setSipPort(Number(e.target.value))}
+                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-2xs text-slate-500 mb-0.5">SIP Auth User</label>
+                  <input
+                    type="text"
+                    value={sipUser}
+                    onChange={(e) => setSipUser(e.target.value)}
+                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                    placeholder="1001"
+                  />
+                </div>
+                <div>
+                  <label className="block text-2xs text-slate-500 mb-0.5">SIP Auth Secret</label>
+                  <input
+                    type="password"
+                    value={sipPass}
+                    onChange={(e) => setSipPass(e.target.value)}
+                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-2xs text-slate-500 mb-0.5">Outbound Caller ID</label>
+                <input
+                  type="text"
+                  value={fromNumber}
+                  onChange={(e) => setFromNumber(e.target.value)}
+                  className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                  placeholder="+14155550199 or extension"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Generic API Key / Secret Form for REST Providers */}
+          {provider !== 'custom_http' && provider !== 'smtp' && provider !== 'sip_trunk' && (
+            <div className="space-y-3 p-3 bg-slate-50 rounded-md border border-slate-200">
+              <p className="font-semibold text-slate-700">{provider.toUpperCase()} Credentials</p>
+              <div>
+                <label className="block text-2xs text-slate-500 mb-0.5">API Key / Token / Account SID</label>
+                <input
+                  type="password"
+                  required
+                  value={apiKey || accountSid}
+                  onChange={(e) => {
+                    setApiKey(e.target.value)
+                    setAccountSid(e.target.value)
+                  }}
+                  className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                  placeholder="Paste credentials"
+                />
+              </div>
+              <div>
+                <label className="block text-2xs text-slate-500 mb-0.5">Secret / Auth Token (if required)</label>
+                <input
+                  type="password"
+                  value={authToken}
+                  onChange={(e) => setAuthToken(e.target.value)}
+                  className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                  placeholder="Auth Token / Secret"
+                />
+              </div>
+              <div>
+                <label className="block text-2xs text-slate-500 mb-0.5">Sender ID / Phone / From Email</label>
+                <input
+                  type="text"
+                  value={fromNumber || fromAddress}
+                  onChange={(e) => {
+                    setFromNumber(e.target.value)
+                    setFromAddress(e.target.value)
+                  }}
+                  className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                  placeholder="+14155550100 or support@company.com"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Set as Default Checkbox */}
+          <label className="flex items-center gap-2 text-xs text-slate-700 pt-2">
+            <input
+              type="checkbox"
+              checked={isDefault}
+              onChange={(e) => setIsDefault(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-indigo-600"
+            />
+            <span>Set as active default gateway for {gatewayType.toUpperCase()}</span>
+          </label>
+
+          <div className="flex justify-end gap-2 pt-4 border-t border-slate-200">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-md bg-indigo-600 hover:bg-indigo-700 px-4 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+            >
+              {saving ? 'Connecting…' : 'Save & Connect Provider'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function SendPingModal({
+  gateway,
+  onClose,
+  onNotice,
+  onError,
+}: {
+  gateway: ChannelGateway
+  onClose: () => void
+  onNotice: (msg: string) => void
+  onError: (msg: string) => void
+}) {
+  const [target, setTarget] = useState(
+    gateway.gateway_type === 'email'
+      ? 'test@example.com'
+      : gateway.gateway_type === 'voice_sip'
+        ? '+14155550199'
+        : '+14155550100'
+  )
+  const [message, setMessage] = useState('Test transmission via Universal Gateway Hub')
+  const [sending, setSending] = useState(false)
+
+  async function handleSend(e: React.FormEvent) {
+    e.preventDefault()
+    setSending(true)
+    try {
+      const res = await api.sendGatewayPing(gateway.id, target, message)
+      if (res.success) {
+        onNotice(`Test transmission sent via ${res.provider}! Message ID: ${res.message_id} (${res.latency_ms}ms)`)
+        onClose()
+      } else {
+        onError('Failed to send test ping.')
+      }
+    } catch (err) {
+      onError((err as Error).message)
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
+      <div className="w-full max-w-md rounded-xl bg-white shadow-xl border border-slate-200 p-5 space-y-4 text-xs">
+        <div className="flex items-center justify-between border-b pb-3 border-slate-100">
+          <h3 className="font-semibold text-slate-900 text-sm">Send Test Ping · {gateway.name}</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>
+        </div>
+
+        <form onSubmit={handleSend} className="space-y-3">
+          <div>
+            <label className="block text-2xs text-slate-500 mb-1">
+              Destination ({gateway.gateway_type === 'email' ? 'Email Address' : 'Phone Number or SIP URI'})
+            </label>
+            <input
+              type="text"
+              required
+              value={target}
+              onChange={(e) => setTarget(e.target.value)}
+              className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+            />
+          </div>
+
+          <div>
+            <label className="block text-2xs text-slate-500 mb-1">Test Payload</label>
+            <textarea
+              rows={2}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded border border-slate-300 px-3 py-1.5 text-slate-600 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={sending}
+              className="rounded bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 text-white font-medium disabled:opacity-50"
+            >
+              {sending ? 'Sending…' : 'Transmit Test Ping'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }

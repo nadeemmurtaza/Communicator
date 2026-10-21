@@ -2,12 +2,17 @@ import { NavLink, Outlet } from 'react-router-dom'
 
 const NAV = [
   { to: '/', label: 'Dashboard', end: true },
+  { to: '/reports', label: 'Reports' },
+  { to: '/channels', label: 'Channels' },
   { to: '/drafts', label: 'Draft review' },
   { to: '/conversations', label: 'Conversations' },
+  { to: '/tickets', label: 'Tickets' },
   { to: '/contacts', label: 'Contacts' },
   { to: '/broadcasts', label: 'Broadcasts' },
   { to: '/automation', label: 'Automation' },
   { to: '/knowledge-base', label: 'Knowledge base' },
+  { to: '/simulations', label: 'AI Simulations' },
+  { to: '/self-improving', label: 'Self-Improving AI' },
   { to: '/services', label: 'Service catalog' },
   { to: '/sequences', label: 'Sequences' },
   { to: '/team', label: 'Team' },

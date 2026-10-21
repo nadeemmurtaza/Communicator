@@ -1,48 +1,128 @@
+from .ai_connection import (
+    AIConnection,
+    AICustomPolicy,
+    AIJobType,
+    AIProvider,
+)
+from .gateway_connection import (
+    ChannelGatewayConnection,
+    GatewayType,
+    SMSProvider,
+    EmailProvider,
+    VoiceSIPProvider,
+)
+from .approval import ApprovalStatus, ApprovalType, CopilotApprovalRequest
 from .audit import AuditLog
 from .automation_rule import AutomationRule, RuleActionType, RuleMatchType
 from .broadcast import Broadcast, BroadcastRecipient, BroadcastStatus, RecipientStatus
+from .canned_response import CannedResponse
 from .consent import ConsentRecord, ConsentStatus
 from .contact import ChannelType, Contact
 from .contact_memory import ContactMemory
+from .contact_note import ContactNote
 from .conversation import Conversation, ConversationState
 from .draft import Draft, DraftStatus
+from .inbox import Inbox
 from .integration_settings import IntegrationSettings
-from .knowledge_base import KnowledgeBaseEntry, KnowledgeGap
+from .knowledge_base import KnowledgeBaseEntry, KnowledgeGap, KnowledgeRecommendation
 from .lead import Lead
+from .macro import Macro
 from .message import Message, MessageDirection, MessageStatus
+from .segment import ContactSegment
+from .self_improving import (
+    AgentInsight,
+    AgentRetrainingEvent,
+    InsightCategory,
+    InsightStatus,
+)
 from .sequence import FollowUpSequence, SequenceStep
 from .service import Service
+from .sla import SLAPolicy
 from .tag import Tag
+from .simulation import (
+    AgentPolicy,
+    PolicyStatus,
+    SimulationRun,
+    SimulationScenario,
+    SimulationVerdict,
+)
+from .team import Team, team_memberships
 from .team_member import TeamMember
+from .ticket import (
+    ActivityType,
+    Ticket,
+    TicketActivity,
+    TicketDepartment,
+    TicketPriority,
+    TicketStatus,
+    TicketType,
+)
 
 __all__ = [
+    "ActivityType",
+    "AgentInsight",
+    "AgentPolicy",
+    "AgentRetrainingEvent",
+    "AIConnection",
+    "AICustomPolicy",
+    "AIJobType",
+    "AIProvider",
+    "ApprovalStatus",
+    "ApprovalType",
     "AuditLog",
     "AutomationRule",
     "Broadcast",
     "BroadcastRecipient",
     "BroadcastStatus",
+    "CannedResponse",
     "ChannelType",
+    "ChannelGatewayConnection",
+    "GatewayType",
+    "SMSProvider",
+    "EmailProvider",
+    "VoiceSIPProvider",
     "ConsentRecord",
     "ConsentStatus",
     "Contact",
     "ContactMemory",
+    "ContactNote",
+    "ContactSegment",
     "Conversation",
     "ConversationState",
+    "CopilotApprovalRequest",
     "Draft",
     "DraftStatus",
     "FollowUpSequence",
+    "Inbox",
+    "InsightCategory",
+    "InsightStatus",
     "IntegrationSettings",
     "KnowledgeBaseEntry",
     "KnowledgeGap",
+    "KnowledgeRecommendation",
     "Lead",
+    "Macro",
     "Message",
     "MessageDirection",
     "MessageStatus",
+    "PolicyStatus",
     "RecipientStatus",
     "RuleActionType",
     "RuleMatchType",
     "SequenceStep",
     "Service",
+    "SimulationRun",
+    "SimulationScenario",
+    "SimulationVerdict",
+    "SLAPolicy",
     "Tag",
+    "Team",
+    "team_memberships",
     "TeamMember",
+    "Ticket",
+    "TicketActivity",
+    "TicketDepartment",
+    "TicketPriority",
+    "TicketStatus",
+    "TicketType",
 ]
