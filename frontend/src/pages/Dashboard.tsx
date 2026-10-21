@@ -17,6 +17,8 @@ import {
   type SLAData,
   type SLAMetrics,
   type SLAPolicy,
+  type LinkedIssue,
+  type SlackSyncStatus,
   type StripeBillingLog,
   type StripeBillingProfile,
   type StripeInvoice,
@@ -729,6 +731,18 @@ export function Dashboard() {
   const [refundSubmitting, setRefundSubmitting] = useState(false)
   const [refundFeedback, setRefundFeedback] = useState<string | null>(null)
   const [portalCopied, setPortalCopied] = useState(false)
+  // Gap 3: Issue Trackers & Slack Sync State
+  const [linkedIssues, setLinkedIssues] = useState<LinkedIssue[]>([])
+  const [slackSync, setSlackSync] = useState<SlackSyncStatus | null>(null)
+  const [issueModalOpen, setIssueModalOpen] = useState(false)
+  const [issueProvider, setIssueProvider] = useState<'linear' | 'github' | 'jira'>('linear')
+  const [issueTitle, setIssueTitle] = useState('')
+  const [issueDescription, setIssueDescription] = useState('')
+  const [issuePriority, setIssuePriority] = useState<string>('high')
+  const [issueType, setIssueType] = useState<string>('bug')
+  const [issueSubmitting, setIssueSubmitting] = useState(false)
+  const [issueNotice, setIssueNotice] = useState<string | null>(null)
+  const [slackSyncing, setSlackSyncing] = useState(false)
   const [newNoteText, setNewNoteText] = useState('')
   const [contactNotes, setContactNotes] = useState<Record<string, Array<{ id: string; author: string; body: string; time: string }>>>({
     'conv-maya': [
@@ -912,6 +926,103 @@ export function Dashboard() {
     } catch (e: any) {
       setRefundSubmitting(false)
       setRefundFeedback(`Error issuing refund: ${e.message}`)
+    }
+  }
+
+  // Gap 3: Fetch Linked Issues & Slack Sync on Active Conversation Change
+  useEffect(() => {
+    if (!activeConv?.id) return
+    api.listLinkedIssues(activeConv.id)
+      .then(setLinkedIssues)
+      .catch(() => setLinkedIssues([]))
+
+    api.getSlackSyncStatus(activeConv.id)
+      .then(setSlackSync)
+      .catch(() => setSlackSync(null))
+  }, [activeConv?.id])
+
+  function handleOpenCreateIssueModal(provider: 'linear' | 'github' | 'jira' = 'linear') {
+    if (!activeConv) return
+    setIssueProvider(provider)
+    const lastMsg = activeConv.messages?.[activeConv.messages.length - 1]?.text || activeConv.preview
+    setIssueTitle(`[${activeConv.channel.toUpperCase()}] Technical issue reported by ${activeConv.name}`)
+    setIssueDescription(
+      `Customer: ${activeConv.name} (${activeConv.email || activeConv.phone})
+Channel: ${activeConv.channel}
+Reported snippet:
+"${lastMsg}"
+
+Ticket Context: Conversation ID ${activeConv.id}`
+    )
+    setIssueNotice(null)
+    setIssueModalOpen(true)
+  }
+
+  async function handleCreateLinkedIssue() {
+    if (!activeConv || !issueTitle.trim()) return
+    setIssueSubmitting(true)
+    setIssueNotice(null)
+    try {
+      const created = await api.createLinkedIssue({
+        provider: issueProvider,
+        title: issueTitle,
+        description: issueDescription,
+        priority: issuePriority,
+        issue_type: issueType,
+        conversation_id: activeConv.id,
+        actor_email: 'riley.brooks@newax.com',
+        assigned_to: 'Riley Brooks',
+      })
+      setLinkedIssues((prev) => [created, ...prev])
+      setIssueNotice(`Created and linked ${created.issue_key} in ${created.provider.toUpperCase()}!`)
+      setIssueSubmitting(false)
+      setIssueModalOpen(false)
+    } catch (e: any) {
+      setIssueSubmitting(false)
+      setIssueNotice(`Failed to create issue: ${e.message}`)
+    }
+  }
+
+  async function handleUnlinkIssue(issueId: string) {
+    try {
+      await api.unlinkIssue(issueId)
+      setLinkedIssues((prev) => prev.filter((i) => i.id !== issueId))
+    } catch (e: any) {
+      alert(`Could not unlink issue: ${e.message}`)
+    }
+  }
+
+  async function handleSyncIssueStatus(issueId: string) {
+    try {
+      const updated = await api.syncIssueStatus(issueId)
+      setLinkedIssues((prev) => prev.map((i) => (i.id === issueId ? updated : i)))
+    } catch (e: any) {
+      alert(`Could not sync issue: ${e.message}`)
+    }
+  }
+
+  async function handleSyncToSlack() {
+    if (!activeConv) return
+    setSlackSyncing(true)
+    try {
+      const res = await api.syncConversationToSlack({
+        conversation_id: activeConv.id,
+        channel_name: '#customer-escalations',
+        note: `Escalation requested for ${activeConv.name} (${activeConv.channel})`,
+        author: 'Riley Brooks',
+      })
+      setSlackSync({
+        conversation_id: activeConv.id,
+        slack_channel_name: res.slack_channel_name,
+        slack_thread_ts: res.slack_thread_ts,
+        thread_url: res.thread_url,
+        is_synced: true,
+      })
+      alert(`Conversation bridged to Slack in ${res.slack_channel_name}!`)
+    } catch (e: any) {
+      alert(`Failed to sync to Slack: ${e.message}`)
+    } finally {
+      setSlackSyncing(false)
     }
   }
 
@@ -3555,6 +3666,122 @@ export function Dashboard() {
                   </button>
                 </div>
 
+                {/* Gap 3: Issue Trackers (Linear / GitHub / Jira) Card */}
+                <div className="rounded-xl border border-purple-100 bg-gradient-to-br from-purple-50/60 via-white to-slate-50 p-3 shadow-2xs space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm">🎯</span>
+                      <span className="font-bold text-xs text-slate-900">Issue Trackers</span>
+                      <div className="flex items-center gap-1 ml-1 text-[11px]">
+                        <span title="Linear">🟣</span>
+                        <span title="GitHub">🐙</span>
+                        <span title="Jira">🔷</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleOpenCreateIssueModal('linear')}
+                      className="text-[11px] font-bold text-purple-700 bg-purple-100/70 hover:bg-purple-200 px-2 py-0.5 rounded shadow-2xs cursor-pointer transition-colors"
+                    >
+                      + 1-Click Issue
+                    </button>
+                  </div>
+
+                  {linkedIssues.length > 0 ? (
+                    <div className="space-y-1.5 pt-1">
+                      {linkedIssues.map((issue) => (
+                        <div
+                          key={issue.id}
+                          className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-2 text-xs shadow-2xs"
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <span>
+                              {issue.provider === 'linear' ? '🟣' : (issue.provider === 'github' ? '🐙' : '🔷')}
+                            </span>
+                            <a
+                              href={issue.issue_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-bold font-mono text-purple-700 hover:underline shrink-0"
+                            >
+                              {issue.issue_key}
+                            </a>
+                            <span className="text-slate-600 truncate text-[11px]" title={issue.title}>
+                              {issue.title}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                            <span className="rounded bg-slate-100 px-1.5 py-0.2 text-[9px] font-bold text-slate-700">
+                              {issue.status}
+                            </span>
+                            <button
+                              onClick={() => handleSyncIssueStatus(issue.id)}
+                              title="Sync status"
+                              className="text-slate-400 hover:text-slate-700 text-xs font-bold cursor-pointer"
+                            >
+                              ↻
+                            </button>
+                            <button
+                              onClick={() => handleUnlinkIssue(issue.id)}
+                              title="Unlink issue"
+                              className="text-slate-400 hover:text-rose-600 text-xs font-bold cursor-pointer"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-slate-500">
+                      No engineering bugs or feature requests linked. Push to Linear, GitHub, or Jira with 1 click.
+                    </p>
+                  )}
+                </div>
+
+                {/* Gap 3: Slack Conversation Sync Card */}
+                <div className="rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50/60 via-white to-slate-50 p-3 shadow-2xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm">💬</span>
+                      <span className="font-bold text-xs text-slate-900">Slack Team Sync</span>
+                      {slackSync?.is_synced && (
+                        <span className="rounded-full bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 text-[9px]">
+                          Live Synced
+                        </span>
+                      )}
+                    </div>
+                    {slackSync?.thread_url ? (
+                      <a
+                        href={slackSync.thread_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11px] font-semibold text-emerald-700 hover:underline flex items-center gap-0.5"
+                      >
+                        <span>Open Thread</span>
+                        <span>↗</span>
+                      </a>
+                    ) : (
+                      <button
+                        onClick={handleSyncToSlack}
+                        disabled={slackSyncing}
+                        className="text-[11px] font-bold text-emerald-700 bg-emerald-100/70 hover:bg-emerald-200 px-2 py-0.5 rounded shadow-2xs cursor-pointer transition-colors"
+                      >
+                        {slackSyncing ? 'Syncing...' : 'Sync to Slack'}
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-slate-500">
+                    <span>Channel: {slackSync?.slack_channel_name || '#customer-escalations'}</span>
+                    <button
+                      onClick={handleSyncToSlack}
+                      disabled={slackSyncing}
+                      className="text-emerald-600 hover:underline font-semibold"
+                    >
+                      {slackSync ? 'Post Note' : 'Bridge Thread'}
+                    </button>
+                  </div>
+                </div>
+
                 {/* Stripe Billing Quick Overview Card */}
                 <div className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 via-white to-slate-50 p-3 shadow-2xs">
                   <div className="flex items-center justify-between mb-2">
@@ -5498,6 +5725,154 @@ export function Dashboard() {
                 className="px-4 py-1.5 text-xs bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-semibold shadow-xs transition-colors cursor-pointer"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Gap 3: 1-Click Issue Creation Modal (Linear / GitHub / Jira) */}
+      {issueModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🎯</span>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900">Create & Link Issue</h3>
+                  <p className="text-[11px] text-slate-500">
+                    Target Conversation: {activeConv?.name} ({activeConv?.channel})
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIssueModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {issueNotice && (
+              <div
+                className={`rounded-lg p-2.5 text-xs font-medium ${
+                  issueNotice.includes('Failed')
+                    ? 'bg-rose-50 text-rose-800 border border-rose-200'
+                    : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                }`}
+              >
+                {issueNotice}
+              </div>
+            )}
+
+            {/* Provider Tabs */}
+            <div className="flex border-b border-slate-200 gap-2">
+              <button
+                type="button"
+                onClick={() => setIssueProvider('linear')}
+                className={`py-1.5 px-3 border-b-2 font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer ${
+                  issueProvider === 'linear'
+                    ? 'border-purple-600 text-purple-700 font-bold'
+                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <span>🟣</span>
+                <span>Linear</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIssueProvider('github')}
+                className={`py-1.5 px-3 border-b-2 font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer ${
+                  issueProvider === 'github'
+                    ? 'border-slate-800 text-slate-900 font-bold'
+                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <span>🐙</span>
+                <span>GitHub Issues</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIssueProvider('jira')}
+                className={`py-1.5 px-3 border-b-2 font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer ${
+                  issueProvider === 'jira'
+                    ? 'border-blue-600 text-blue-700 font-bold'
+                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <span>🔷</span>
+                <span>Jira Cloud</span>
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Issue Title</label>
+                <input
+                  type="text"
+                  value={issueTitle}
+                  onChange={(e) => setIssueTitle(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 p-2 text-xs text-slate-800 focus:border-purple-500 focus:outline-hidden font-medium"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Priority</label>
+                  <select
+                    value={issuePriority}
+                    onChange={(e) => setIssuePriority(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 p-2 text-xs text-slate-800 focus:border-purple-500 focus:outline-hidden"
+                  >
+                    <option value="urgent">🔴 Urgent</option>
+                    <option value="high">🟠 High</option>
+                    <option value="medium">🟡 Medium</option>
+                    <option value="low">⚪ Low</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Issue Type</label>
+                  <select
+                    value={issueType}
+                    onChange={(e) => setIssueType(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 p-2 text-xs text-slate-800 focus:border-purple-500 focus:outline-hidden"
+                  >
+                    <option value="bug">🐛 Bug</option>
+                    <option value="feature">✨ Feature Request</option>
+                    <option value="task">📋 Improvement / Task</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  Description &amp; Customer Context
+                </label>
+                <textarea
+                  rows={4}
+                  value={issueDescription}
+                  onChange={(e) => setIssueDescription(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 p-2 text-xs text-slate-800 focus:border-purple-500 focus:outline-hidden font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIssueModalOpen(false)}
+                className="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-800 font-semibold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateLinkedIssue}
+                disabled={issueSubmitting || !issueTitle.trim()}
+                className="px-4 py-1.5 text-xs bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold shadow-xs transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+              >
+                {issueSubmitting ? 'Creating...' : `Create in ${issueProvider.toUpperCase()}`}
               </button>
             </div>
           </div>

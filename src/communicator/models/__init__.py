@@ -24,6 +24,12 @@ from .conversation import Conversation, ConversationState
 from .draft import Draft, DraftStatus
 from .inbox import Inbox
 from .integration_settings import IntegrationSettings
+from .issue_tracker import (
+    IssueTrackerConfig,
+    IssueTrackerProvider,
+    LinkedIssue,
+    SlackConversationSync,
+)
 from .knowledge_base import KnowledgeBaseEntry, KnowledgeGap, KnowledgeRecommendation
 from .lead import Lead
 from .macro import Macro
@@ -107,10 +113,13 @@ __all__ = [
     "InsightCategory",
     "InsightStatus",
     "IntegrationSettings",
+    "IssueTrackerConfig",
+    "IssueTrackerProvider",
     "KnowledgeBaseEntry",
     "KnowledgeGap",
     "KnowledgeRecommendation",
     "Lead",
+    "LinkedIssue",
     "Macro",
     "Message",
     "MessageDirection",
@@ -125,6 +134,7 @@ __all__ = [
     "SimulationScenario",
     "SimulationVerdict",
     "SINGLETON_STRIPE_CONFIG_ID",
+    "SlackConversationSync",
     "SLAPolicy",
     "StripeBillingActionLog",
     "StripeConfig",

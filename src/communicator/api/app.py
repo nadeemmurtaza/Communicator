@@ -13,6 +13,7 @@ from communicator.api.routes import (
     drafts,
     gateways,
     inboxes,
+    issue_trackers,
     knowledge_base,
     macros,
     outgoing_webhooks,
@@ -84,3 +85,4 @@ app.include_router(ai_connections.router, prefix="/api/v1")
 app.include_router(gateways.router, prefix="/api/v1")
 app.include_router(outgoing_webhooks.router, prefix="/api/v1")
 app.include_router(stripe_integration.router, prefix="/api/v1")
+app.include_router(issue_trackers.router, prefix="/api/v1")

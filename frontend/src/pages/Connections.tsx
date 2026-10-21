@@ -4,13 +4,14 @@ import {
   api,
   type ChannelGateway,
   type IntegrationSettings,
+  type IssueTrackerConfig,
   type StripeConfig,
   type SupportedProvidersCatalog,
   type Template,
 } from '../lib/api'
 
 export function Connections() {
-  const [activeTab, setActiveTab] = useState<'gateways' | 'stripe' | 'whatsapp' | 'business' | 'templates'>('gateways')
+  const [activeTab, setActiveTab] = useState<'gateways' | 'stripe' | 'trackers' | 'whatsapp' | 'business' | 'templates'>('gateways')
   const [data, setData] = useState<IntegrationSettings | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -71,6 +72,17 @@ export function Connections() {
           <span>Stripe Billing & Payments</span>
         </button>
         <button
+          onClick={() => setActiveTab('trackers')}
+          className={`py-2 px-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+            activeTab === 'trackers'
+              ? 'border-indigo-600 text-indigo-600 font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <span>🎯</span>
+          <span>Issue Trackers & Slack (Linear / GitHub / Jira)</span>
+        </button>
+        <button
           onClick={() => setActiveTab('whatsapp')}
           className={`py-2 px-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
             activeTab === 'whatsapp'
@@ -108,6 +120,10 @@ export function Connections() {
 
       {activeTab === 'stripe' && (
         <StripeBillingSection onNotice={setNotice} onError={setError} />
+      )}
+
+      {activeTab === 'trackers' && (
+        <IssueTrackersSection onNotice={setNotice} onError={setError} />
       )}
 
       {activeTab === 'whatsapp' && (
@@ -1663,6 +1679,448 @@ function StripeBillingSection({
                 Stripe Integration Enabled in Conversation Sidebar
               </span>
             </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function IssueTrackersSection({
+  onNotice,
+  onError,
+}: {
+  onNotice: (m: string) => void
+  onError: (m: string) => void
+}) {
+  const [configs, setConfigs] = useState<IssueTrackerConfig[]>([])
+  const [loading, setLoading] = useState(true)
+  const [testingProvider, setTestingProvider] = useState<string | null>(null)
+  const [savingProvider, setSavingProvider] = useState<string | null>(null)
+
+  // Local form inputs
+  const [linearApiKey, setLinearApiKey] = useState('')
+  const [linearTeamKey, setLinearTeamKey] = useState('ENG')
+
+  const [ghToken, setGhToken] = useState('')
+  const [ghOwner, setGhOwner] = useState('newax-org')
+  const [ghRepo, setGhRepo] = useState('product-engine')
+
+  const [jiraDomain, setJiraDomain] = useState('newax.atlassian.net')
+  const [jiraEmail, setJiraEmail] = useState('')
+  const [jiraToken, setJiraToken] = useState('')
+  const [jiraProject, setJiraProject] = useState('SUP')
+
+  const [slackToken, setSlackToken] = useState('')
+  const [slackChannel, setSlackChannel] = useState('#customer-escalations')
+
+  function load() {
+    setLoading(true)
+    api.listTrackerConfigs()
+      .then((items) => {
+        setConfigs(items)
+        const lin = items.find((c) => c.provider === 'linear')
+        if (lin) setLinearTeamKey(lin.config?.team_key || 'ENG')
+
+        const gh = items.find((c) => c.provider === 'github')
+        if (gh) {
+          setGhOwner(gh.config?.owner || 'newax-org')
+          setGhRepo(gh.config?.repo || 'product-engine')
+        }
+
+        const jira = items.find((c) => c.provider === 'jira')
+        if (jira) {
+          setJiraDomain(jira.credentials?.domain || 'newax.atlassian.net')
+          setJiraEmail(jira.credentials?.email || '')
+          setJiraProject(jira.config?.project_key || 'SUP')
+        }
+
+        const slack = items.find((c) => c.provider === 'slack')
+        if (slack) setSlackChannel(slack.config?.channel_name || '#customer-escalations')
+
+        setLoading(false)
+      })
+      .catch((e) => {
+        onError(`Failed to load tracker configs: ${e.message}`)
+        setLoading(false)
+      })
+  }
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  async function handleTest(provider: string) {
+    setTestingProvider(provider)
+    try {
+      const res = await api.testTrackerConnection(provider)
+      if (res.status === 'connected' || res.status === 'connected_simulated') {
+        onNotice(res.message)
+      } else {
+        onError(res.message)
+      }
+      load()
+    } catch (e: any) {
+      onError(`Test error: ${e.message}`)
+    } finally {
+      setTestingProvider(null)
+    }
+  }
+
+  async function handleSaveLinear() {
+    setSavingProvider('linear')
+    try {
+      const updates: any = { config: { team_key: linearTeamKey } }
+      if (linearApiKey.trim()) updates.credentials = { api_key: linearApiKey.trim() }
+      await api.updateTrackerConfig('linear', updates)
+      setLinearApiKey('')
+      onNotice('Linear configuration saved successfully.')
+      load()
+    } catch (e: any) {
+      onError(`Failed to save Linear: ${e.message}`)
+    } finally {
+      setSavingProvider(null)
+    }
+  }
+
+  async function handleSaveGitHub() {
+    setSavingProvider('github')
+    try {
+      const updates: any = { config: { owner: ghOwner, repo: ghRepo } }
+      if (ghToken.trim()) updates.credentials = { access_token: ghToken.trim() }
+      await api.updateTrackerConfig('github', updates)
+      setGhToken('')
+      onNotice('GitHub Issues configuration saved successfully.')
+      load()
+    } catch (e: any) {
+      onError(`Failed to save GitHub: ${e.message}`)
+    } finally {
+      setSavingProvider(null)
+    }
+  }
+
+  async function handleSaveJira() {
+    setSavingProvider('jira')
+    try {
+      const creds: any = { domain: jiraDomain, email: jiraEmail }
+      if (jiraToken.trim()) creds.api_token = jiraToken.trim()
+      await api.updateTrackerConfig('jira', { credentials: creds, config: { project_key: jiraProject } })
+      setJiraToken('')
+      onNotice('Jira Cloud configuration saved successfully.')
+      load()
+    } catch (e: any) {
+      onError(`Failed to save Jira: ${e.message}`)
+    } finally {
+      setSavingProvider(null)
+    }
+  }
+
+  async function handleSaveSlack() {
+    setSavingProvider('slack')
+    try {
+      const updates: any = { config: { channel_name: slackChannel } }
+      if (slackToken.trim()) updates.credentials = { bot_token: slackToken.trim() }
+      await api.updateTrackerConfig('slack', updates)
+      setSlackToken('')
+      onNotice('Slack sync configuration saved successfully.')
+      load()
+    } catch (e: any) {
+      onError(`Failed to save Slack: ${e.message}`)
+    } finally {
+      setSavingProvider(null)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-500">
+        <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
+        <p className="mt-2 text-sm">Loading issue tracker &amp; Slack configurations...</p>
+      </div>
+    )
+  }
+
+  const linCfg = configs.find((c) => c.provider === 'linear')
+  const ghCfg = configs.find((c) => c.provider === 'github')
+  const jiraCfg = configs.find((c) => c.provider === 'jira')
+  const slackCfg = configs.find((c) => c.provider === 'slack')
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-2">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50 border border-purple-100 text-2xl">
+            🎯
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-slate-900">
+              1-Click Issue Trackers &amp; Slack Workspace Sync
+            </h2>
+            <p className="text-xs text-slate-500">
+              Connect Linear, GitHub Issues, Jira, and Slack so support agents can escalate bugs and sync conversation threads directly with engineering.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* 1. Linear */}
+        <div className="rounded-xl border border-purple-100 bg-white p-5 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🟣</span>
+              <div>
+                <h3 className="font-bold text-sm text-slate-900">Linear</h3>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  Status: {linCfg?.last_test_status || 'untested'}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleTest('linear')}
+                disabled={testingProvider === 'linear'}
+                className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+              >
+                {testingProvider === 'linear' ? 'Testing...' : '⚡ Test'}
+              </button>
+              <button
+                onClick={handleSaveLinear}
+                disabled={savingProvider === 'linear'}
+                className="rounded bg-purple-600 px-3 py-1 text-[11px] font-bold text-white hover:bg-purple-700 cursor-pointer"
+              >
+                {savingProvider === 'linear' ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-3 text-xs">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                API Key (lin_api_...)
+              </label>
+              <input
+                type="password"
+                placeholder={linCfg?.credentials?.has_api_key ? '•••••••••••••••• (Leave blank to keep)' : 'lin_api_...'}
+                value={linearApiKey}
+                onChange={(e) => setLinearApiKey(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 p-2 text-xs font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                Default Team Key
+              </label>
+              <input
+                type="text"
+                value={linearTeamKey}
+                onChange={(e) => setLinearTeamKey(e.target.value)}
+                placeholder="ENG"
+                className="w-full rounded-lg border border-slate-200 p-2 text-xs font-mono"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* 2. GitHub Issues */}
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🐙</span>
+              <div>
+                <h3 className="font-bold text-sm text-slate-900">GitHub Issues</h3>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  Status: {ghCfg?.last_test_status || 'untested'}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleTest('github')}
+                disabled={testingProvider === 'github'}
+                className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+              >
+                {testingProvider === 'github' ? 'Testing...' : '⚡ Test'}
+              </button>
+              <button
+                onClick={handleSaveGitHub}
+                disabled={savingProvider === 'github'}
+                className="rounded bg-slate-900 px-3 py-1 text-[11px] font-bold text-white hover:bg-slate-800 cursor-pointer"
+              >
+                {savingProvider === 'github' ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-3 text-xs">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                Personal Access Token (ghp_...)
+              </label>
+              <input
+                type="password"
+                placeholder={ghCfg?.credentials?.has_access_token ? '•••••••••••••••• (Leave blank to keep)' : 'ghp_...'}
+                value={ghToken}
+                onChange={(e) => setGhToken(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 p-2 text-xs font-mono"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Org / Owner</label>
+                <input
+                  type="text"
+                  value={ghOwner}
+                  onChange={(e) => setGhOwner(e.target.value)}
+                  placeholder="newax-org"
+                  className="w-full rounded-lg border border-slate-200 p-2 text-xs font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Repository</label>
+                <input
+                  type="text"
+                  value={ghRepo}
+                  onChange={(e) => setGhRepo(e.target.value)}
+                  placeholder="product-engine"
+                  className="w-full rounded-lg border border-slate-200 p-2 text-xs font-mono"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Jira Cloud */}
+        <div className="rounded-xl border border-blue-100 bg-white p-5 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🔷</span>
+              <div>
+                <h3 className="font-bold text-sm text-slate-900">Jira Cloud</h3>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  Status: {jiraCfg?.last_test_status || 'untested'}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleTest('jira')}
+                disabled={testingProvider === 'jira'}
+                className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+              >
+                {testingProvider === 'jira' ? 'Testing...' : '⚡ Test'}
+              </button>
+              <button
+                onClick={handleSaveJira}
+                disabled={savingProvider === 'jira'}
+                className="rounded bg-blue-600 px-3 py-1 text-[11px] font-bold text-white hover:bg-blue-700 cursor-pointer"
+              >
+                {savingProvider === 'jira' ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-3 text-xs">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Jira Domain</label>
+                <input
+                  type="text"
+                  value={jiraDomain}
+                  onChange={(e) => setJiraDomain(e.target.value)}
+                  placeholder="newax.atlassian.net"
+                  className="w-full rounded-lg border border-slate-200 p-2 text-xs font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">Project Key</label>
+                <input
+                  type="text"
+                  value={jiraProject}
+                  onChange={(e) => setJiraProject(e.target.value)}
+                  placeholder="SUP"
+                  className="w-full rounded-lg border border-slate-200 p-2 text-xs font-mono"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">User Email</label>
+              <input
+                type="text"
+                value={jiraEmail}
+                onChange={(e) => setJiraEmail(e.target.value)}
+                placeholder="agent@newax.com"
+                className="w-full rounded-lg border border-slate-200 p-2 text-xs"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">API Token</label>
+              <input
+                type="password"
+                placeholder={jiraCfg?.credentials?.has_api_token ? '•••••••••••••••• (Leave blank to keep)' : 'API token'}
+                value={jiraToken}
+                onChange={(e) => setJiraToken(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 p-2 text-xs font-mono"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* 4. Slack Workspace Sync */}
+        <div className="rounded-xl border border-emerald-100 bg-white p-5 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">💬</span>
+              <div>
+                <h3 className="font-bold text-sm text-slate-900">Slack Workspace Sync</h3>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  Status: {slackCfg?.last_test_status || 'untested'}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleTest('slack')}
+                disabled={testingProvider === 'slack'}
+                className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+              >
+                {testingProvider === 'slack' ? 'Testing...' : '⚡ Test'}
+              </button>
+              <button
+                onClick={handleSaveSlack}
+                disabled={savingProvider === 'slack'}
+                className="rounded bg-emerald-600 px-3 py-1 text-[11px] font-bold text-white hover:bg-emerald-700 cursor-pointer"
+              >
+                {savingProvider === 'slack' ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-3 text-xs">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                Bot Token (xoxb-...)
+              </label>
+              <input
+                type="password"
+                placeholder={slackCfg?.credentials?.has_bot_token ? '•••••••••••••••• (Leave blank to keep)' : 'xoxb-...'}
+                value={slackToken}
+                onChange={(e) => setSlackToken(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 p-2 text-xs font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                Default Notification Channel
+              </label>
+              <input
+                type="text"
+                value={slackChannel}
+                onChange={(e) => setSlackChannel(e.target.value)}
+                placeholder="#customer-escalations"
+                className="w-full rounded-lg border border-slate-200 p-2 text-xs font-mono"
+              />
+            </div>
           </div>
         </div>
       </div>

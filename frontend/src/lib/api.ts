@@ -921,6 +921,50 @@ export interface StripeConfig {
   updated_at?: string
 }
 
+export interface IssueTrackerConfig {
+  id: string
+  provider: 'linear' | 'github' | 'jira' | 'slack'
+  account_name: string
+  is_enabled: boolean
+  test_mode: boolean
+  credentials: Record<string, any>
+  config: Record<string, any>
+  last_tested_at?: string | null
+  last_test_status: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface LinkedIssue {
+  id: string
+  conversation_id?: string | null
+  ticket_id?: string | null
+  provider: 'linear' | 'github' | 'jira'
+  external_issue_id: string
+  issue_key: string
+  issue_url: string
+  title: string
+  status: string
+  priority: string
+  assigned_to: string
+  created_by_email: string
+  sync_status: string
+  metadata_json: Record<string, any>
+  created_at: string
+  updated_at?: string
+}
+
+export interface SlackSyncStatus {
+  id?: string
+  conversation_id: string
+  slack_channel_id?: string
+  slack_channel_name?: string
+  slack_thread_ts?: string
+  thread_url?: string
+  is_synced: boolean
+  last_synced_at?: string
+}
+
 export interface SMSTestMessagePayload {
   recipient_phone: string
   message: string
@@ -3117,4 +3161,73 @@ export const api = {
     }>('/integrations/stripe/test', {
       method: 'POST',
     }),
+
+  // Issue Trackers & Slack Sync (Gap 3)
+  listTrackerConfigs: () => request<IssueTrackerConfig[]>('/integrations/trackers/configs'),
+  getTrackerConfig: (provider: string) =>
+    request<IssueTrackerConfig>(`/integrations/trackers/configs/${provider}`),
+  updateTrackerConfig: (provider: string, data: Partial<IssueTrackerConfig>) =>
+    request<IssueTrackerConfig>(`/integrations/trackers/configs/${provider}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  testTrackerConnection: (provider: string) =>
+    request<{
+      status: string
+      mode: string
+      message: string
+    }>(`/integrations/trackers/test/${provider}`, {
+      method: 'POST',
+    }),
+  listLinkedIssues: (conversationId?: string, ticketId?: string) => {
+    const params = new URLSearchParams()
+    if (conversationId) params.append('conversation_id', conversationId)
+    if (ticketId) params.append('ticket_id', ticketId)
+    const qs = params.toString() ? `?${params.toString()}` : ''
+    return request<LinkedIssue[]>(`/integrations/trackers/linked${qs}`)
+  },
+  createLinkedIssue: (data: {
+    provider: 'linear' | 'github' | 'jira'
+    title: string
+    description?: string
+    priority?: string
+    issue_type?: string
+    conversation_id?: string
+    ticket_id?: string
+    actor_email?: string
+    assigned_to?: string
+  }) =>
+    request<LinkedIssue>('/integrations/trackers/create-issue', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  unlinkIssue: (issueId: string) =>
+    request<{ success: boolean; deleted_id: string }>(`/integrations/trackers/linked/${issueId}`, {
+      method: 'DELETE',
+    }),
+  syncIssueStatus: (issueId: string) =>
+    request<LinkedIssue>(`/integrations/trackers/linked/${issueId}/sync`, {
+      method: 'POST',
+    }),
+  syncConversationToSlack: (data: {
+    conversation_id: string
+    channel_name?: string
+    note?: string
+    author?: string
+  }) =>
+    request<{
+      id: string
+      conversation_id: string
+      slack_channel_name: string
+      slack_thread_ts: string
+      thread_url: string
+      is_synced: boolean
+      last_synced_at: string
+      dispatched_note?: string
+    }>('/integrations/trackers/slack/sync', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getSlackSyncStatus: (conversationId: string) =>
+    request<SlackSyncStatus>(`/integrations/trackers/slack/status/${conversationId}`),
 }
