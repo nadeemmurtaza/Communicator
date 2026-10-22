@@ -1,5 +1,17 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
+
+from communicator.vault_loader import load_secrets_from_nid_vault
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Pre-bootstrap: resolve dynamic secrets from nID Vault
+    await load_secrets_from_nid_vault()
+    yield
+
 
 from communicator.api.routes import (
     ai_connections,
@@ -11,13 +23,17 @@ from communicator.api.routes import (
     contacts,
     conversations,
     copilot_approvals,
+    crypto_mesh,
     custom_attributes,
     drafts,
     gateways,
     inboxes,
     issue_trackers,
     knowledge_base,
+    live_proof,
+    live_proof_ui,
     macros,
+    nid_auth,
     outgoing_webhooks,
     prechat,
     presence,
@@ -44,9 +60,10 @@ from communicator.api.routes import (
 )
 
 app = FastAPI(
+    lifespan=lifespan,
     title="Communicator API",
-    description="Multi-channel outreach and conversation engine for NEWAX leads.",
-    version="0.1.0",
+    description="Multi-channel outreach, customer AI live support, and Verilo-style LiveProof return verification.",
+    version="0.2.0",
 )
 
 
@@ -100,3 +117,11 @@ app.include_router(gateways.router, prefix="/api/v1")
 app.include_router(outgoing_webhooks.router, prefix="/api/v1")
 app.include_router(stripe_integration.router, prefix="/api/v1")
 app.include_router(issue_trackers.router, prefix="/api/v1")
+
+# LiveProof verification portal and endpoints (WO-Verilo live camera return verification)
+app.include_router(live_proof.router, prefix="/api/v1")
+app.include_router(live_proof_ui.router)
+
+# Zero-Trust Crypto Mesh Ingress & nID Identity Auth
+app.include_router(crypto_mesh.router, prefix="/api/v1")
+app.include_router(nid_auth.router, prefix="/api/v1")

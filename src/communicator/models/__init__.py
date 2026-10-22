@@ -33,6 +33,7 @@ from .issue_tracker import (
 )
 from .knowledge_base import KnowledgeBaseEntry, KnowledgeGap, KnowledgeRecommendation
 from .lead import Lead
+from .live_proof import LiveProofEvidence, LiveProofSession, LiveProofStatus, ProofMediaType
 from .macro import Macro
 from .message import Message, MessageDirection, MessageStatus
 from .rbac import RoleDefinition
@@ -132,11 +133,15 @@ __all__ = [
     "KnowledgeRecommendation",
     "Lead",
     "LinkedIssue",
+    "LiveProofEvidence",
+    "LiveProofSession",
+    "LiveProofStatus",
     "Macro",
     "Message",
     "MessageDirection",
     "MessageStatus",
     "PolicyStatus",
+    "ProofMediaType",
     "RecipientStatus",
     "RoleDefinition",
     "RuleActionType",

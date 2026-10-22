@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import uuid
 
 from sqlalchemy import select
@@ -16,21 +17,23 @@ from communicator.models.lead import Lead
 from communicator.models.message import Message
 from communicator.services.alerts import send_hot_lead_alert
 from communicator.services.integration_settings import get_settings_row
+from communicator.services.live_proof import create_live_proof_session
 from communicator.services.memory import get_contact_memories, render_contact_memories_context
 from communicator.services.service_catalog import get_matching_services, render_service_context
 
 _DEFAULT_BUSINESS_NAME = "NEWAX Technologies"
 
-_PROMPT_TEMPLATE = """You are a sales assistant for {business_name}, replying to a lead on behalf of the sales team.
+_PROMPT_TEMPLATE = """You are a sales and support assistant for {business_name}, replying to a lead or customer on behalf of the team.
 {business_description}
 Only make claims found in the SERVICES context below. Never invent pricing or contractual terms.
+If the customer asks for a return, refund, or reports damaged/defective merchandise, set intent to "refund_request" or "damaged_item".
 If the lead asks something outside the SERVICES context, or shows a strong buying signal, or is upset/complaining,
 set intent to "escalate" and keep confidence low.
 Detect the language of the lead's most recent message and write "reply" in that same language,
 regardless of what language the rest of this prompt is in.
 {agent_guidelines}
 Respond with strict JSON only, no markdown fences:
-{{"intent": "faq_question|objection|buying_signal|scheduling_request|complaint|unrelated|escalate",
+{{"intent": "faq_question|objection|buying_signal|scheduling_request|complaint|refund_request|damaged_item|unrelated|escalate",
  "sentiment": "positive|neutral|negative|urgent",
  "language": "BCP-47-ish short code of the lead's message, e.g. en, es, fr",
  "confidence": 0.0-1.0,
@@ -46,16 +49,18 @@ async def _build_system_prompt(session: AsyncSession) -> str:
     according to whichever business is actually connected.
     """
     row = await get_settings_row(session)
+    desc = f"\n{row.business_description}\n" if row.business_description else ""
+    guidelines = (
+        f"\nADDITIONAL GUIDELINES:\n{row.agent_guidelines}\n" if row.agent_guidelines else ""
+    )
     return _PROMPT_TEMPLATE.format(
         business_name=row.business_name or _DEFAULT_BUSINESS_NAME,
-        business_description=f"\n{row.business_description}\n" if row.business_description else "",
-        agent_guidelines=f"\nADDITIONAL GUIDELINES:\n{row.agent_guidelines}\n"
-        if row.agent_guidelines
-        else "",
+        business_description=desc,
+        agent_guidelines=guidelines,
     )
 
 
-_ALERT_INTENTS = ("buying_signal", "complaint", "escalate")
+_ALERT_INTENTS = ("buying_signal", "complaint", "escalate", "refund_request", "damaged_item")
 _ALERT_SENTIMENTS = ("negative", "urgent")
 
 
@@ -126,6 +131,65 @@ async def generate_reply(session: AsyncSession, conversation_id: uuid.UUID) -> D
     if language != contact.language and len(language) <= 10:
         contact.language = language
 
+    # Handle LiveProof return / refund verification
+    is_policy_query = "policy" in last_inbound_body.lower()
+    has_claim_keyword = bool(
+        re.search(r"\b(refund|damaged|broken|defective|faulty)\b", last_inbound_body, re.IGNORECASE)
+    ) or bool(
+        re.search(
+            r"\b(return item|return product|returning item|send back)\b",
+            last_inbound_body,
+            re.IGNORECASE,
+        )
+    )
+    is_refund_claim = not is_policy_query and (
+        intent in ("refund_request", "damaged_item") or has_claim_keyword
+    )
+
+    if is_refund_claim:
+        order_match = re.search(
+            r"(?:#|ORD-|order\s*#?)([A-Za-z0-9\-]{4,16})", last_inbound_body, re.IGNORECASE
+        )
+        order_id = order_match.group(1) if order_match else None
+
+        # Check if an active PENDING session already exists for this conversation
+        from communicator.models.live_proof import LiveProofSession, LiveProofStatus
+
+        stmt_existing = select(LiveProofSession).where(
+            LiveProofSession.conversation_id == conversation.id,
+            LiveProofSession.status == LiveProofStatus.PENDING,
+        )
+        existing_session = (await session.execute(stmt_existing)).scalars().first()
+
+        if existing_session:
+            root_url = settings.public_url.rstrip("/")
+            verification_url = f"{root_url}/verify/proof/{existing_session.id}?token={existing_session.session_token}"
+        else:
+            tenant_id = (
+                getattr(conversation, "tenant_id", None)
+                or getattr(contact, "tenant_id", None)
+                or getattr(lead, "tenant_id", None)
+                or "enterprise-default"
+            )
+            _, verification_url = await create_live_proof_session(
+                session=session,
+                tenant_id=tenant_id,
+                conversation_id=conversation.id,
+                contact_id=contact.id,
+                order_id=order_id,
+                customer_identifier=contact.value,
+                claim_type=intent if intent in ("refund_request", "damaged_item") else "refund",
+                auto_commit=False,
+            )
+
+        verification_notice = (
+            f"\n\nTo process your refund claim immediately, please verify your item using our secure live camera portal:\n"
+            f"{verification_url}\n\n"
+            f"⚠️ Note: For fraud prevention, our system only accepts real-time direct camera capture. Photo gallery uploads are strictly disabled."
+        )
+        if verification_url not in reply_body:
+            reply_body += verification_notice
+
     escalate = intent in ("escalate", "complaint", "buying_signal")
     status = DraftStatus.PENDING_REVIEW
     if not escalate and confidence >= settings.reply_auto_send_confidence:
@@ -147,7 +211,7 @@ async def generate_reply(session: AsyncSession, conversation_id: uuid.UUID) -> D
     session.add(draft)
 
     needs_alert = intent in _ALERT_INTENTS or sentiment in _ALERT_SENTIMENTS
-    if intent in ("buying_signal", "complaint"):
+    if intent in ("buying_signal", "complaint", "refund_request", "damaged_item"):
         conversation.state = ConversationState.HOT_LEAD
 
     session.add(

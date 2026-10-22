@@ -22,6 +22,7 @@ dependencies = [
   "python-dotenv>=1.0",
   "python-multipart>=0.0.20,<1",
   "pypdf>=5.0",
+  "cryptography>=43.0,<45",
   "beautifulsoup4>=4.12",
 ]
 

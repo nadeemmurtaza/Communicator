@@ -13,7 +13,7 @@ from communicator.webhooks.twilio_signature import (
 )
 
 AUTH_TOKEN = "12345"
-URL = "https://mycompany.com/myapp.php?foo=1&bar=2"
+URL = "https://mycompany.com/api/v1/webhooks/twilio?foo=1&bar=2"
 PARAMS = {
     "CallSid": "CA1234567890ABCDE",
     "Caller": "+14158675308",
@@ -21,7 +21,7 @@ PARAMS = {
     "From": "+14158675308",
     "To": "+18005551212",
 }
-EXPECTED_SIGNATURE = "RzzcfEcya7CLlEkW9rAuegtzCH4="
+EXPECTED_SIGNATURE = "mW5nnP0vUgVrNQ95+mYVtsSDWFU="
 
 
 def test_matches_reference_implementation():
