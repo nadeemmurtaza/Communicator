@@ -678,9 +678,9 @@ async def _get_or_create_whatsapp_inbox(session: AsyncSession) -> Inbox:
                 "wabaId": int_settings.meta_waba_id,
                 "accessToken": int_settings.meta_access_token
                 or settings.meta_whatsapp_access_token,
-                "appSecret": int_settings.meta_app_secret or settings.meta_whatsapp_app_secret,
+                "appSecret": int_settings.meta_app_secret or settings.meta_app_secret,
                 "webhookVerifyToken": int_settings.meta_webhook_verify_token
-                or settings.meta_whatsapp_webhook_verify_token,
+                or settings.meta_webhook_verify_token,
                 "catalogId": "",
             }
             phone_no = int_settings.whatsapp_display_number
