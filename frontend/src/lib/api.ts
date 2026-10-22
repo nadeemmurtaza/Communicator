@@ -2134,7 +2134,7 @@ export const api = {
   editDraft: (id: string, body: string) =>
     request<Draft>(`/drafts/${id}/edit`, { method: 'POST', body: JSON.stringify({ body }) }),
   generateDraft: (conversationId: string) =>
-    request<Draft>(`/drafts/generate?conversation_id=${conversationId}`, { method: 'POST' }),
+    request<Draft>(`/drafts/generate/${conversationId}`, { method: 'POST' }),
 
   listConversations: () => request<Conversation[]>('/conversations'),
   getConversation: (id: string) => request<ConversationDetail>(`/conversations/${id}`),

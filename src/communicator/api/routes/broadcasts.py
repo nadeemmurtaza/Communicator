@@ -227,6 +227,40 @@ async def get_broadcast_analytics(
     }
 
 
+@router.get("/{broadcast_id}/recipients")
+async def list_broadcast_recipients(
+    broadcast_id: uuid.UUID, session: AsyncSession = Depends(get_db_session)
+):
+    broadcast = await session.get(Broadcast, broadcast_id)
+    if broadcast is None:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    recipients_stmt = (
+        select(BroadcastRecipient)
+        .options(selectinload(BroadcastRecipient.contact))
+        .where(BroadcastRecipient.broadcast_id == broadcast_id)
+        .order_by(BroadcastRecipient.sent_at.desc().nullslast())
+    )
+    recipients = (await session.execute(recipients_stmt)).scalars().all()
+
+    return [
+        {
+            "id": str(r.id),
+            "contactId": str(r.contact_id),
+            "contactName": r.contact.person_name
+            if r.contact and r.contact.person_name
+            else "Customer",
+            "contactPhone": r.contact.value if r.contact else "",
+            "status": r.status.value,
+            "error": r.error,
+            "sentAt": r.sent_at.isoformat() if r.sent_at else None,
+            "deliveredAt": r.delivered_at.isoformat() if r.delivered_at else None,
+            "readAt": r.read_at.isoformat() if r.read_at else None,
+        }
+        for r in recipients
+    ]
+
+
 @router.post("/{broadcast_id}/reschedule")
 async def reschedule_broadcast(
     broadcast_id: uuid.UUID,
