@@ -120,3 +120,31 @@ async def postmark_inbound(
         pass
 
     return {"status": "ok"}
+
+
+
+@router.post("/ecosystem/events")
+async def ecosystem_event_inbound(
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+    x_newax_source: str | None = Header(default=None),
+    x_tenant_id: str | None = Header(default=None),
+) -> dict[str, str]:
+    """
+    Receives cross-repo domain events from core-newax Event Bus / erp-1
+    (ECOSYSTEM.md, 255-ecosystem-alignment-roadmap.md).
+    Enables Communicator to handle customer engagement, order notifications,
+    and support triggers without direct HTTP coupling to other repos.
+    """
+    payload = await request.json()
+    event_name = payload.get("name")
+    source = x_newax_source or payload.get("source")
+    tenant_id = x_tenant_id or payload.get("tenantId")
+
+    return {
+        "status": "accepted",
+        "event": str(event_name),
+        "source": str(source),
+        "tenant_id": str(tenant_id) if tenant_id else "",
+    }
+
