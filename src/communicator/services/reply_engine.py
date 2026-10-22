@@ -48,17 +48,12 @@ async def _build_system_prompt(session: AsyncSession) -> str:
     according to whichever business is actually connected.
     """
     row = await get_settings_row(session)
+    desc = f"\n{row.business_description}\n" if row.business_description else ""
+    guidelines = f"\nADDITIONAL GUIDELINES:\n{row.agent_guidelines}\n" if row.agent_guidelines else ""
     return _PROMPT_TEMPLATE.format(
         business_name=row.business_name or _DEFAULT_BUSINESS_NAME,
-        business_description=f"
-{row.business_description}
-" if row.business_description else "",
-        agent_guidelines=f"
-ADDITIONAL GUIDELINES:
-{row.agent_guidelines}
-"
-        if row.agent_guidelines
-        else "",
+        business_description=desc,
+        agent_guidelines=guidelines,
     )
 
 
