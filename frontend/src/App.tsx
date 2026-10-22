@@ -29,6 +29,7 @@ import { VoiceIntegration } from './pages/VoiceIntegration'
 import { EmailIntegration } from './pages/EmailIntegration'
 import { TikTokIntegration } from './pages/TikTokIntegration'
 import { AuditLogs } from './pages/AuditLogs'
+import { CustomAttributes } from './pages/CustomAttributes'
 
 function App() {
   return (
@@ -63,6 +64,7 @@ function App() {
         <Route path="/connections" element={<Connections />} />
         <Route path="/webhooks" element={<Webhooks />} />
         <Route path="/audit-logs" element={<AuditLogs />} />
+        <Route path="/custom-attributes" element={<CustomAttributes />} />
       </Route>
     </Routes>
   )

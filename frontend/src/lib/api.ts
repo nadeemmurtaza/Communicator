@@ -37,6 +37,7 @@ export interface Conversation {
   assignedToId: string | null
   csatScore?: number | null
   csatComment?: string | null
+  customAttributes?: Record<string, any>
   updatedAt: string
 }
 
@@ -62,6 +63,7 @@ export interface ConversationDetail {
   contactPhone?: string
   channel?: string
   language?: string
+  customAttributes?: Record<string, any>
   resolutionType?: string | null
   csatScore?: number | null
   csatComment?: string | null
@@ -2104,6 +2106,23 @@ export interface TranslationResult {
   translated_at?: string
 }
 
+
+export interface CustomAttributeDefinitionItem {
+  id: string
+  name: string
+  display_name: string
+  description: string
+  attribute_model: 'contact_attribute' | 'conversation_attribute'
+  attribute_type: 'text' | 'number' | 'currency' | 'boolean' | 'list' | 'date' | 'link'
+  options: string[]
+  default_value: string | null
+  is_required: boolean
+  regex_pattern: string | null
+  regex_cue: string | null
+  created_at: string
+  updated_at: string
+}
+
 export const api = {
   listDrafts: () => request<Draft[]>('/drafts?status=pending_review'),
   approveDraft: (id: string) => request<Draft>(`/drafts/${id}/approve`, { method: 'POST' }),
@@ -3614,4 +3633,57 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ text, target_language: targetLanguage }),
     }),
+  // Gap 10: Dynamic Custom Attributes & CRM Schema Builder
+  getCustomAttributes: (attributeModel?: string) =>
+    request<CustomAttributeDefinitionItem[]>(
+      attributeModel ? `/custom-attributes?attribute_model=${encodeURIComponent(attributeModel)}` : '/custom-attributes'
+    ),
+  createCustomAttribute: (data: {
+    name: string
+    display_name: string
+    description?: string
+    attribute_model: 'contact_attribute' | 'conversation_attribute'
+    attribute_type: 'text' | 'number' | 'currency' | 'boolean' | 'list' | 'date' | 'link'
+    options?: string[]
+    default_value?: string
+    is_required?: boolean
+  }) =>
+    request<CustomAttributeDefinitionItem>('/custom-attributes', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateCustomAttribute: (
+    idOrName: string,
+    data: {
+      display_name?: string
+      description?: string
+      options?: string[]
+      default_value?: string
+      is_required?: boolean
+    }
+  ) =>
+    request<CustomAttributeDefinitionItem>(`/custom-attributes/${idOrName}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deleteCustomAttribute: (idOrName: string) =>
+    request<{ success: boolean; deleted: string }>(`/custom-attributes/${idOrName}`, {
+      method: 'DELETE',
+    }),
+  updateContactAttributes: (contactId: string, attributes: Record<string, any>) =>
+    request<{ success: boolean; contact_id: string; custom_fields: Record<string, any> }>(
+      `/custom-attributes/contacts/${contactId}/values`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ attributes }),
+      }
+    ),
+  updateConversationAttributes: (conversationId: string, attributes: Record<string, any>) =>
+    request<{ success: boolean; conversation_id: string; custom_attributes: Record<string, any> }>(
+      `/custom-attributes/conversations/${conversationId}/values`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ attributes }),
+      }
+    ),
 }

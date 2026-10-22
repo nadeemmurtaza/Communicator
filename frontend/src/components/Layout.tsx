@@ -19,6 +19,7 @@ const NAV = [
   { to: '/connections', label: 'Connections' },
   { to: '/webhooks', label: 'Webhooks' },
   { to: '/audit-logs', label: 'Audit Logs' },
+  { to: '/custom-attributes', label: 'CRM Schema' },
 ]
 
 export function Layout() {

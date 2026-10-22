@@ -17,6 +17,7 @@ from .automation_rule import AutomationRule, RuleActionType, RuleMatchType
 from .broadcast import Broadcast, BroadcastRecipient, BroadcastStatus, RecipientStatus
 from .canned_response import CannedResponse
 from .consent import ConsentRecord, ConsentStatus
+from .custom_attribute import CustomAttributeDefinition
 from .contact import ChannelType, Contact
 from .contact_memory import ContactMemory
 from .contact_note import ContactNote
@@ -108,6 +109,7 @@ __all__ = [
     "VoiceSIPProvider",
     "ConsentRecord",
     "ConsentStatus",
+    "CustomAttributeDefinition",
     "Contact",
     "ContactMemory",
     "ContactNote",

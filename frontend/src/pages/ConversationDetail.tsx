@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api, type CannedResponse, type ConversationDetail as ConversationDetailType, type TeamMember, type Ticket } from '../lib/api'
+import { api, type CannedResponse, type ConversationDetail as ConversationDetailType, type CustomAttributeDefinitionItem, type TeamMember, type Ticket } from '../lib/api'
 import { stateBadgeClass, stateLabel, timeAgo } from '../lib/format'
 
 export function ConversationDetail() {
@@ -23,6 +23,13 @@ export function ConversationDetail() {
   const [showOriginalFor, setShowOriginalFor] = useState<Set<string>>(new Set())
   const [autoTranslateOutbound, setAutoTranslateOutbound] = useState(true)
 
+  // CRM Custom Attributes State
+  const [attrDefinitions, setAttrDefinitions] = useState<CustomAttributeDefinitionItem[]>([])
+  const [convAttributes, setConvAttributes] = useState<Record<string, any>>({})
+  const [showAttributesBar, setShowAttributesBar] = useState(false)
+  const [savingAttributes, setSavingAttributes] = useState(false)
+  const [attrSavedToast, setAttrSavedToast] = useState(false)
+
   function load() {
     if (!id) return
     api
@@ -41,7 +48,14 @@ export function ConversationDetail() {
     api.listCannedResponses().then((res) => {
       if (res && res.length > 0) setCannedResponses(res)
     }).catch(() => {})
+    api.getCustomAttributes('conversation_attribute').then(setAttrDefinitions).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (conversation?.customAttributes) {
+      setConvAttributes(conversation.customAttributes)
+    }
+  }, [conversation?.customAttributes])
 
   // Slash command autocomplete detection
   const slashMatch = replyText.match(/(?:^|\s)\/([a-zA-Z0-9_-]*)$/)
@@ -97,6 +111,21 @@ export function ConversationDetail() {
     }
     setShowCannedPicker(false)
     setCannedSelectedIndex(0)
+  }
+
+  async function handleSaveAttributes() {
+    if (!id) return
+    setSavingAttributes(true)
+    setError(null)
+    try {
+      await api.updateConversationAttributes(id, convAttributes)
+      setAttrSavedToast(true)
+      setTimeout(() => setAttrSavedToast(false), 2500)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setSavingAttributes(false)
+    }
   }
 
   function toggleOriginal(msgId: string) {
@@ -282,6 +311,129 @@ export function ConversationDetail() {
                 </Link>
               )}
             </div>
+          </div>
+
+          {/* DYNAMIC CRM CUSTOM ATTRIBUTES PANEL */}
+          <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+            <div className="flex items-center justify-between p-3.5 bg-slate-50/80 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <span className="text-base">🏷️</span>
+                <span className="text-xs font-bold text-slate-900">CRM Custom Attributes</span>
+                <span className="rounded-full bg-slate-200 px-2 py-0.2 text-[10px] font-semibold text-slate-700">
+                  {Object.keys(convAttributes).length} set
+                </span>
+                {attrSavedToast && (
+                  <span className="text-[11px] font-semibold text-emerald-600 animate-fade-in">
+                    ✓ Attributes Saved!
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/custom-attributes"
+                  className="text-[11px] font-semibold text-blue-600 hover:text-blue-800"
+                >
+                  Manage CRM Schema ↗
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setShowAttributesBar((v) => !v)}
+                  className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                >
+                  {showAttributesBar ? 'Collapse' : 'Expand Attributes'}
+                </button>
+              </div>
+            </div>
+
+            {showAttributesBar && (
+              <div className="p-4 space-y-3 bg-white">
+                {attrDefinitions.length === 0 ? (
+                  <p className="text-xs text-slate-500 py-2">
+                    No custom conversation attributes defined yet. <Link to="/custom-attributes" className="text-blue-600 underline">Add attributes in CRM Schema Builder</Link>.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {attrDefinitions.map((attr) => {
+                      const val = convAttributes[attr.name] ?? attr.default_value ?? ''
+                      return (
+                        <div key={attr.id} className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[11px] font-semibold text-slate-700 truncate" title={attr.description}>
+                              {attr.display_name}
+                            </label>
+                            <span className="text-[9px] font-mono text-slate-400 uppercase">{attr.attribute_type}</span>
+                          </div>
+
+                          {attr.attribute_type === 'list' ? (
+                            <select
+                              value={val}
+                              onChange={(e) =>
+                                setConvAttributes((prev) => ({ ...prev, [attr.name]: e.target.value }))
+                              }
+                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
+                            >
+                              <option value="">-- Select option --</option>
+                              {attr.options?.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                          ) : attr.attribute_type === 'boolean' ? (
+                            <div className="flex items-center gap-2 pt-1">
+                              <input
+                                type="checkbox"
+                                checked={Boolean(val === true || val === 'true')}
+                                onChange={(e) =>
+                                  setConvAttributes((prev) => ({ ...prev, [attr.name]: e.target.checked }))
+                                }
+                                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="text-xs text-slate-600">
+                                {Boolean(val === true || val === 'true') ? 'Enabled / Yes' : 'Disabled / No'}
+                              </span>
+                            </div>
+                          ) : attr.attribute_type === 'date' ? (
+                            <input
+                              type="date"
+                              value={val}
+                              onChange={(e) =>
+                                setConvAttributes((prev) => ({ ...prev, [attr.name]: e.target.value }))
+                              }
+                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
+                            />
+                          ) : (
+                            <input
+                              type={attr.attribute_type === 'number' || attr.attribute_type === 'currency' ? 'number' : 'text'}
+                              value={val}
+                              onChange={(e) =>
+                                setConvAttributes((prev) => ({ ...prev, [attr.name]: e.target.value }))
+                              }
+                              placeholder={attr.description || `Enter ${attr.display_name}`}
+                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
+                            />
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {attrDefinitions.length > 0 && (
+                  <div className="pt-3 border-t border-slate-100 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleSaveAttributes}
+                      disabled={savingAttributes}
+                      className="rounded-md bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-blue-700 disabled:opacity-50 cursor-pointer"
+                    >
+                      {savingAttributes ? 'Saving...' : 'Save CRM Attributes'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <ol className="space-y-3">
