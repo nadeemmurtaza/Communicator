@@ -16,7 +16,7 @@ import re
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -231,7 +231,7 @@ async def _apply_meta_status(session: AsyncSession, status_event: dict) -> None:
     if raw_ts:
         try:
             event_dt = datetime.fromtimestamp(int(raw_ts), tz=UTC)
-        except Exception:  # noqa: BLE001, S110
+        except ValueError:
             pass
 
     # Extract detailed error message if failed
@@ -371,8 +371,6 @@ async def postmark_inbound(
     return {"status": "ok"}
 
 
-
-
 @router.post("/ecosystem/events")
 async def ecosystem_event_inbound(
     request: Request,
@@ -388,15 +386,22 @@ async def ecosystem_event_inbound(
     """
     try:
         payload = await request.json()
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Malformed JSON payload.")
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Malformed JSON payload."
+        )
 
     if not isinstance(payload, dict):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payload must be a JSON object.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Payload must be a JSON object."
+        )
 
     event_name = payload.get("name")
     if not event_name:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing required 'name' in event payload.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing required 'name' in event payload.",
+        )
 
     source = x_newax_source or payload.get("source") or "ecosystem"
     tenant_id = x_tenant_id or payload.get("tenantId") or "default"
@@ -404,6 +409,7 @@ async def ecosystem_event_inbound(
 
     # Dispatch to Communicator's native workflows
     from communicator.api.routes.crypto_mesh import _route_ecosystem_event
+
     action = await _route_ecosystem_event(session, event_name, event_data, str(tenant_id))
 
     return {
@@ -818,7 +824,7 @@ async def voice_inbound_webhook(
     call_sid = str(
         data.get("CallSid")
         or data.get("call_sid")
-        or f"CA{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        or f"CA{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
     )
     from_number = str(data.get("From") or data.get("from") or "+14155550100")
     to_number = str(data.get("To") or data.get("to") or "+14155550199")
@@ -1114,7 +1120,7 @@ async def email_inbound_webhook(
         payload.get("MessageID")
         or payload.get("message_id")
         or payload.get("headers", {}).get(
-            "Message-ID", f"<{datetime.now().strftime('%Y%m%d%H%M%S')}@customer-email>"
+            "Message-ID", f"<{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}@customer-email>"
         )
     )
     in_reply_to = payload.get("InReplyTo") or payload.get("in_reply_to")

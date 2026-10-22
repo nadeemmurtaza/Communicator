@@ -41,6 +41,7 @@ Respond with strict JSON only, no markdown fences:
  "citations": ["service names referenced"]}}
 """
 
+
 async def _build_system_prompt(session: AsyncSession) -> str:
     """
     Grounds the prompt in the Connections page's business profile +
@@ -49,7 +50,9 @@ async def _build_system_prompt(session: AsyncSession) -> str:
     """
     row = await get_settings_row(session)
     desc = f"\n{row.business_description}\n" if row.business_description else ""
-    guidelines = f"\nADDITIONAL GUIDELINES:\n{row.agent_guidelines}\n" if row.agent_guidelines else ""
+    guidelines = (
+        f"\nADDITIONAL GUIDELINES:\n{row.agent_guidelines}\n" if row.agent_guidelines else ""
+    )
     return _PROMPT_TEMPLATE.format(
         business_name=row.business_name or _DEFAULT_BUSINESS_NAME,
         business_description=desc,
@@ -130,16 +133,28 @@ async def generate_reply(session: AsyncSession, conversation_id: uuid.UUID) -> D
 
     # Handle LiveProof return / refund verification
     is_policy_query = "policy" in last_inbound_body.lower()
-    has_claim_keyword = bool(re.search(r"\b(refund|damaged|broken|defective|faulty)\b", last_inbound_body, re.IGNORECASE)) or \
-                        bool(re.search(r"\b(return item|return product|returning item|send back)\b", last_inbound_body, re.IGNORECASE))
-    is_refund_claim = not is_policy_query and (intent in ("refund_request", "damaged_item") or has_claim_keyword)
+    has_claim_keyword = bool(
+        re.search(r"\b(refund|damaged|broken|defective|faulty)\b", last_inbound_body, re.IGNORECASE)
+    ) or bool(
+        re.search(
+            r"\b(return item|return product|returning item|send back)\b",
+            last_inbound_body,
+            re.IGNORECASE,
+        )
+    )
+    is_refund_claim = not is_policy_query and (
+        intent in ("refund_request", "damaged_item") or has_claim_keyword
+    )
 
     if is_refund_claim:
-        order_match = re.search(r"(?:#|ORD-|order\s*#?)([A-Za-z0-9\-]{4,16})", last_inbound_body, re.IGNORECASE)
+        order_match = re.search(
+            r"(?:#|ORD-|order\s*#?)([A-Za-z0-9\-]{4,16})", last_inbound_body, re.IGNORECASE
+        )
         order_id = order_match.group(1) if order_match else None
 
         # Check if an active PENDING session already exists for this conversation
         from communicator.models.live_proof import LiveProofSession, LiveProofStatus
+
         stmt_existing = select(LiveProofSession).where(
             LiveProofSession.conversation_id == conversation.id,
             LiveProofSession.status == LiveProofStatus.PENDING,
@@ -150,7 +165,12 @@ async def generate_reply(session: AsyncSession, conversation_id: uuid.UUID) -> D
             root_url = settings.public_url.rstrip("/")
             verification_url = f"{root_url}/verify/proof/{existing_session.id}?token={existing_session.session_token}"
         else:
-            tenant_id = getattr(conversation, "tenant_id", None) or getattr(contact, "tenant_id", None) or getattr(lead, "tenant_id", None) or "enterprise-default"
+            tenant_id = (
+                getattr(conversation, "tenant_id", None)
+                or getattr(contact, "tenant_id", None)
+                or getattr(lead, "tenant_id", None)
+                or "enterprise-default"
+            )
             _, verification_url = await create_live_proof_session(
                 session=session,
                 tenant_id=tenant_id,

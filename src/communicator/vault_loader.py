@@ -10,7 +10,8 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Dict
+from typing import Any
+
 import httpx
 
 from communicator.config import settings
@@ -20,10 +21,9 @@ logger = logging.getLogger(__name__)
 
 class VaultLoaderError(Exception):
     """Raised when critical secrets fail to load from nID Vault."""
-    pass
 
 
-async def load_secrets_from_nid_vault() -> Dict[str, Any]:
+async def load_secrets_from_nid_vault() -> dict[str, Any]:
     """
     Connects to nID Secrets Vault, authenticates via AppRole (or NID_VAULT_TOKEN),
     fetches Communicator's configuration secrets, and applies them to settings.
@@ -35,7 +35,9 @@ async def load_secrets_from_nid_vault() -> Dict[str, Any]:
 
     # If no vault credentials are provided, skip silently (standard development/offline fallback)
     if not vault_token and (not role_id or not secret_id):
-        logger.debug("nID Vault credentials not supplied; proceeding with environment configuration.")
+        logger.debug(
+            "nID Vault credentials not supplied; proceeding with environment configuration."
+        )
         return {}
 
     async with httpx.AsyncClient(timeout=5.0) as client:
@@ -49,9 +51,11 @@ async def load_secrets_from_nid_vault() -> Dict[str, Any]:
                 if auth_resp.status_code == 200:
                     vault_token = auth_resp.json().get("auth", {}).get("client_token")
                 else:
-                    logger.warning("nID Vault AppRole login rejected with status %d", auth_resp.status_code)
+                    logger.warning(
+                        "nID Vault AppRole login rejected with status %d", auth_resp.status_code
+                    )
                     return {}
-            except Exception as exc:
+            except (httpx.HTTPError, ValueError) as exc:
                 logger.warning("nID Vault unreachable: %s", exc)
                 return {}
 
@@ -69,12 +73,12 @@ async def load_secrets_from_nid_vault() -> Dict[str, Any]:
             else:
                 logger.warning("nID Vault secrets path returned status %d", sec_resp.status_code)
                 return {}
-        except Exception as exc:
+        except (httpx.HTTPError, ValueError) as exc:
             logger.warning("Failed to fetch secrets from nID Vault: %s", exc)
             return {}
 
 
-def _apply_vault_secrets(secrets_dict: Dict[str, Any]) -> None:
+def _apply_vault_secrets(secrets_dict: dict[str, Any]) -> None:
     """Applies resolved vault secrets to the settings singleton and environment."""
     for key, val in secrets_dict.items():
         lower_key = key.lower()
@@ -85,12 +89,14 @@ def _apply_vault_secrets(secrets_dict: Dict[str, Any]) -> None:
     # Reconfigure singletons with loaded vault secrets
     try:
         from communicator.services.ecosystem_client import ecosystem_client
+
         ecosystem_client.reconfigure()
-    except Exception as exc:
+    except (ImportError, AttributeError, RuntimeError) as exc:
         logger.debug("EcosystemClient reconfigure skipped: %s", exc)
 
     try:
         from communicator.services.nid_client import nid_client
+
         nid_client.reconfigure()
-    except Exception as exc:
+    except (ImportError, AttributeError, RuntimeError) as exc:
         logger.debug("NidClient reconfigure skipped: %s", exc)

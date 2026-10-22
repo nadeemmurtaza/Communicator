@@ -11,7 +11,7 @@ it dispatches the job through the Zero-Trust Crypto Mesh to newcom/esp.
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 from communicator.services.ecosystem_client import ecosystem_client
 
@@ -24,13 +24,13 @@ async def dispatch_email_via_newcom(
     html_body: str = "",
     text_body: str = "",
     action: str = "send_transactional_email",
-    template_id: Optional[str] = None,
-    template_data: Optional[Dict[str, Any]] = None,
-    order_id: Optional[str] = None,
-    customer_id: Optional[str] = None,
-    tenant_id: Optional[str] = None,
-    organization_id: Optional[str] = None,
-) -> Dict[str, Any]:
+    template_id: str | None = None,
+    template_data: dict[str, Any] | None = None,
+    order_id: str | None = None,
+    customer_id: str | None = None,
+    tenant_id: str | None = None,
+    organization_id: str | None = None,
+) -> dict[str, Any]:
     """
     Encrypts and dispatches outbound email instruction to newcom/esp via NeuraCore Relay.
     """

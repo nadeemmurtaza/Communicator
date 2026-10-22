@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 
@@ -11,6 +12,7 @@ async def lifespan(app: FastAPI):
     await load_secrets_from_nid_vault()
     yield
 
+
 from communicator.api.routes import (
     ai_connections,
     audit_logs,
@@ -20,9 +22,8 @@ from communicator.api.routes import (
     captain_ai,
     contacts,
     conversations,
-    crypto_mesh,
-    nid_auth,
     copilot_approvals,
+    crypto_mesh,
     custom_attributes,
     drafts,
     gateways,
@@ -32,6 +33,7 @@ from communicator.api.routes import (
     live_proof,
     live_proof_ui,
     macros,
+    nid_auth,
     outgoing_webhooks,
     prechat,
     presence,

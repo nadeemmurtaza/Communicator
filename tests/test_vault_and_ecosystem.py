@@ -1,10 +1,11 @@
 """Tests for nID Vault Loader and Ecosystem Cross-Repo Dispatches in Communicator."""
 
 import pytest
-from communicator.vault_loader import load_secrets_from_nid_vault
-from communicator.services.email_dispatch import dispatch_email_via_newcom
+
 from communicator.services.anax_telemetry import emit_anax_customer_telemetry
 from communicator.services.ecosystem_client import ecosystem_client
+from communicator.services.email_dispatch import dispatch_email_via_newcom
+from communicator.vault_loader import load_secrets_from_nid_vault
 
 
 @pytest.mark.asyncio

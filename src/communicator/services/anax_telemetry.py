@@ -10,7 +10,7 @@ to core-newax's Dragonfly ANAX Guidance Engine:
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 from communicator.services.ecosystem_client import ecosystem_client
 
@@ -24,8 +24,8 @@ async def emit_anax_customer_telemetry(
     refund_request_count: int = 0,
     fraud_anomaly_rate: float = 0.0,
     live_proof_active: bool = True,
-    organization_id: Optional[str] = None,
-) -> Dict[str, Any]:
+    organization_id: str | None = None,
+) -> dict[str, Any]:
     """
     Encrypts and streams real-time customer telemetry to the Dragonfly ANAX Guidance Engine.
     """

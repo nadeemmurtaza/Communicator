@@ -33,7 +33,15 @@ def upgrade() -> None:
         sa.Column("session_token", sa.String(length=128), nullable=False),
         sa.Column(
             "status",
-            sa.Enum("PENDING", "IN_PROGRESS", "CAPTURED", "VERIFIED", "REJECTED", "EXPIRED", name="liveproofstatus"),
+            sa.Enum(
+                "PENDING",
+                "IN_PROGRESS",
+                "CAPTURED",
+                "VERIFIED",
+                "REJECTED",
+                "EXPIRED",
+                name="liveproofstatus",
+            ),
             nullable=False,
             server_default="PENDING",
         ),
@@ -62,11 +70,19 @@ def upgrade() -> None:
         sa.UniqueConstraint("session_token"),
     )
     op.create_index(op.f("ix_live_proof_sessions_tenant_id"), "live_proof_sessions", ["tenant_id"])
-    op.create_index(op.f("ix_live_proof_sessions_organization_id"), "live_proof_sessions", ["organization_id"])
-    op.create_index(op.f("ix_live_proof_sessions_conversation_id"), "live_proof_sessions", ["conversation_id"])
-    op.create_index(op.f("ix_live_proof_sessions_contact_id"), "live_proof_sessions", ["contact_id"])
+    op.create_index(
+        op.f("ix_live_proof_sessions_organization_id"), "live_proof_sessions", ["organization_id"]
+    )
+    op.create_index(
+        op.f("ix_live_proof_sessions_conversation_id"), "live_proof_sessions", ["conversation_id"]
+    )
+    op.create_index(
+        op.f("ix_live_proof_sessions_contact_id"), "live_proof_sessions", ["contact_id"]
+    )
     op.create_index(op.f("ix_live_proof_sessions_order_id"), "live_proof_sessions", ["order_id"])
-    op.create_index(op.f("ix_live_proof_sessions_session_token"), "live_proof_sessions", ["session_token"])
+    op.create_index(
+        op.f("ix_live_proof_sessions_session_token"), "live_proof_sessions", ["session_token"]
+    )
     op.create_index(op.f("ix_live_proof_sessions_status"), "live_proof_sessions", ["status"])
 
     # 2. Create live_proof_evidences table
@@ -92,7 +108,9 @@ def upgrade() -> None:
             nullable=True,
             server_default=sa.text("'{}'::jsonb"),
         ),
-        sa.Column("watermark_verified", sa.Boolean(), nullable=False, server_default=sa.text("true")),
+        sa.Column(
+            "watermark_verified", sa.Boolean(), nullable=False, server_default=sa.text("true")
+        ),
         sa.Column("verification_score", sa.Float(), nullable=False, server_default="1.0"),
         sa.Column(
             "captured_at",
@@ -103,9 +121,15 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["session_id"], ["live_proof_sessions.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(op.f("ix_live_proof_evidences_session_id"), "live_proof_evidences", ["session_id"])
-    op.create_index(op.f("ix_live_proof_evidences_tenant_id"), "live_proof_evidences", ["tenant_id"])
-    op.create_index(op.f("ix_live_proof_evidences_sha256_hash"), "live_proof_evidences", ["sha256_hash"])
+    op.create_index(
+        op.f("ix_live_proof_evidences_session_id"), "live_proof_evidences", ["session_id"]
+    )
+    op.create_index(
+        op.f("ix_live_proof_evidences_tenant_id"), "live_proof_evidences", ["tenant_id"]
+    )
+    op.create_index(
+        op.f("ix_live_proof_evidences_sha256_hash"), "live_proof_evidences", ["sha256_hash"]
+    )
 
 
 def downgrade() -> None:

@@ -9,11 +9,12 @@ Provides endpoints for 'Login with nID' relying-party flow:
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from typing import Any
+
+from fastapi import APIRouter, Header, HTTPException, Query, status
 from pydantic import BaseModel
 
-from communicator.services.nid_client import nid_client, NidAuthError
+from communicator.services.nid_client import NidAuthError, nid_client
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +82,7 @@ async def login_with_nid_callback(
 @router.get("/me")
 async def get_current_user_profile(
     authorization: str | None = Header(default=None),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Returns identity claims of the currently authenticated nID account.
     """

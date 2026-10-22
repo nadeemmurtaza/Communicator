@@ -285,7 +285,9 @@ async def ingest_live_evidence(
         target_path.write_bytes(file_bytes)
     except OSError as io_err:
         logger.error("Failed to write evidence to disk: %s", io_err)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Storage write error.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Storage write error."
+        )
 
     resolution = telemetry_data.get("resolution") or "1920x1080"
 
@@ -320,7 +322,9 @@ async def ingest_live_evidence(
     all_media_types = {e.media_type for e in existing_evidences} | {media_type}
 
     needs_video = proof_session.require_video and (ProofMediaType.LIVE_VIDEO not in all_media_types)
-    needs_photos = proof_session.require_photos and (ProofMediaType.LIVE_PHOTO not in all_media_types)
+    needs_photos = proof_session.require_photos and (
+        ProofMediaType.LIVE_PHOTO not in all_media_types
+    )
 
     is_complete = not (needs_video or needs_photos)
 
@@ -395,6 +399,8 @@ async def _publish_proof_captured_event(
             tenant_id=session.tenant_id,
             organization_id=session.organization_id,
         )
-        logger.info("Published encrypted refund.proof_captured event for session %s to erp-1.", session.id)
-    except Exception as exc:
+        logger.info(
+            "Published encrypted refund.proof_captured event for session %s to erp-1.", session.id
+        )
+    except (httpx.HTTPError, ValueError, RuntimeError) as exc:
         logger.error("Failed to publish encrypted refund.proof_captured: %s", exc)

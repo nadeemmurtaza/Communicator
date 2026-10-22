@@ -11,12 +11,13 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime
+from typing import Any
+
 import httpx
 
 from communicator.config import settings
-from communicator.crypto_mesh import CryptoMeshClient, EncryptedTransitEnvelope
+from communicator.crypto_mesh import CryptoMeshClient
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ logger = logging.getLogger(__name__)
 class EcosystemClient:
     """Client for publishing encrypted domain events and making RPC calls across the NEWAX mesh."""
 
-    def __init__(self, mesh_client: Optional[CryptoMeshClient] = None) -> None:
+    def __init__(self, mesh_client: CryptoMeshClient | None = None) -> None:
         if mesh_client:
             self.mesh_client = mesh_client
         else:
@@ -55,18 +56,18 @@ class EcosystemClient:
     async def publish_event(
         self,
         event_name: str,
-        payload: Dict[str, Any],
+        payload: dict[str, Any],
         recipient_id: str = "core-newax",
-        tenant_id: Optional[str] = None,
-        organization_id: Optional[str] = None,
-        correlation_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        tenant_id: str | None = None,
+        organization_id: str | None = None,
+        correlation_id: str | None = None,
+    ) -> dict[str, Any]:
         """
         Encrypts an outbound domain event with Communicator's ingress key and dispatches
         to NeuraCore Relay Gateway for dual-key re-encryption and delivery.
         """
         event_id = str(uuid.uuid4())
-        occurred_at = datetime.now(timezone.utc).isoformat()
+        occurred_at = datetime.now(UTC).isoformat()
         t_id = tenant_id or self.mesh_client.tenant_id
 
         envelope_body = {
@@ -104,10 +105,14 @@ class EcosystemClient:
                     headers=headers,
                 )
                 if resp.status_code in (200, 201, 202):
-                    logger.info("Dispatched event %s (id: %s) via CryptoMesh.", event_name, event_id)
+                    logger.info(
+                        "Dispatched event %s (id: %s) via CryptoMesh.", event_name, event_id
+                    )
                     return {"status": "dispatched", "eventId": event_id, "recipient": recipient_id}
                 else:
-                    logger.error("Relay gateway returned error status %d: %s", resp.status_code, resp.text)
+                    logger.error(
+                        "Relay gateway returned error status %d: %s", resp.status_code, resp.text
+                    )
                     return {
                         "status": "failed",
                         "eventId": event_id,
@@ -127,10 +132,10 @@ class EcosystemClient:
         self,
         target_module: str,
         action: str,
-        payload: Dict[str, Any],
-        tenant_id: Optional[str] = None,
-        organization_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        payload: dict[str, Any],
+        tenant_id: str | None = None,
+        organization_id: str | None = None,
+    ) -> dict[str, Any]:
         """
         Performs synchronous cross-module RPC through NeuraCore Module Gateway.
         """
@@ -151,6 +156,7 @@ class EcosystemClient:
 
 
 ecosystem_client = EcosystemClient()
+
 
 def get_ecosystem_client() -> EcosystemClient:
     return ecosystem_client

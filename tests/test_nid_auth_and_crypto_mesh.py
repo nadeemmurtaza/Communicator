@@ -71,6 +71,7 @@ async def test_crypto_mesh_ingress_workflow(mesh_keys):
     )
 
     from communicator.services.ecosystem_client import ecosystem_client
+
     # Configure ecosystem_client with matching test keys
     ecosystem_client.mesh_client = CryptoMeshClient(
         tenant_id=mesh_keys["tenant_id"],

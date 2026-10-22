@@ -26,14 +26,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from communicator.api.dependencies import get_db_session
 from communicator.config import settings
 from communicator.models.live_proof import (
-    LiveProofSession,
     LiveProofEvidence,
+    LiveProofSession,
     ProofMediaType,
 )
 from communicator.services.live_proof import (
     MAX_MEDIA_BYTES,
-    get_and_validate_session,
     create_live_proof_session,
+    get_and_validate_session,
     ingest_live_evidence,
 )
 
@@ -43,11 +43,15 @@ router = APIRouter(prefix="/live-proof", tags=["live-proof"])
 class CreateProofSessionRequest(BaseModel):
     tenant_id: str = Field(..., description="Enterprise multi-tenant ID")
     organization_id: str | None = Field(default=None, description="Organization / branch ID")
-    conversation_id: uuid.UUID | None = Field(default=None, description="Communicator conversation ID")
+    conversation_id: uuid.UUID | None = Field(
+        default=None, description="Communicator conversation ID"
+    )
     contact_id: uuid.UUID | None = Field(default=None, description="Contact ID")
     order_id: str | None = Field(default=None, description="Order or RMA claim ID")
     customer_identifier: str = Field(default="", description="Customer email or phone")
-    claim_type: str = Field(default="refund", description="Reason for proof (refund, damaged_item, etc.)")
+    claim_type: str = Field(
+        default="refund", description="Reason for proof (refund, damaged_item, etc.)"
+    )
     max_video_seconds: int = Field(default=45, ge=5, le=120)
     ttl_minutes: int = Field(default=30, ge=5, le=1440)
 
@@ -84,7 +88,9 @@ class ProofSessionDetailResponse(BaseModel):
     evidences: list[EvidenceSummaryResponse]
 
 
-@router.post("/sessions", response_model=CreateProofSessionResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/sessions", response_model=CreateProofSessionResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_session_endpoint(
     req: CreateProofSessionRequest,
     request: Request,
@@ -260,11 +266,14 @@ async def get_evidence_media(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found.")
 
     authorized = False
-    if token and secrets.compare_digest(proof_session.session_token, token):
-        authorized = True
-    elif authorization and authorization.startswith("Bearer "):
-        authorized = True
-    elif os.getenv("PYTEST_CURRENT_TEST") or settings.environment == "development":
+    if (
+        token
+        and secrets.compare_digest(proof_session.session_token, token)
+        or authorization
+        and authorization.startswith("Bearer ")
+        or os.getenv("PYTEST_CURRENT_TEST")
+        or settings.environment == "development"
+    ):
         authorized = True
 
     if not authorized:
@@ -273,9 +282,8 @@ async def get_evidence_media(
             detail="Session token or authorization header required to view evidence media.",
         )
 
-    stmt = (
-        select(LiveProofEvidence)
-        .where(LiveProofEvidence.id == evidence_id, LiveProofEvidence.session_id == session_id)
+    stmt = select(LiveProofEvidence).where(
+        LiveProofEvidence.id == evidence_id, LiveProofEvidence.session_id == session_id
     )
     evidence = (await db.execute(stmt)).scalar_one_or_none()
 

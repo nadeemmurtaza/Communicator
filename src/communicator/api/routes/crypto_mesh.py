@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any, Dict
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.api.dependencies import get_db_session
 from communicator.crypto_mesh import (
-    CryptoMeshClient,
     CryptographicIntegrityError,
     EncryptedTransitEnvelope,
     ReplayAttackDetectedError,
@@ -24,7 +25,7 @@ router = APIRouter(prefix="/crypto-mesh", tags=["Zero-Trust Crypto Mesh"])
 async def crypto_mesh_ingress(
     envelope: EncryptedTransitEnvelope,
     session: AsyncSession = Depends(get_db_session),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Ingress endpoint for re-encrypted payloads delivered via NeuraCore Relay Gateway.
     Guarantees that sender and receiver keys never cross boundaries.
@@ -81,7 +82,7 @@ async def crypto_mesh_ingress(
 async def _route_ecosystem_event(
     session: AsyncSession,
     event_name: str | None,
-    payload: Dict[str, Any],
+    payload: dict[str, Any],
     tenant_id: str,
 ) -> str:
     """
@@ -93,7 +94,9 @@ async def _route_ecosystem_event(
     if event_name in ("order.placed", "order.created"):
         order_id = payload.get("orderId") or payload.get("id")
         customer_phone = payload.get("customerPhone") or payload.get("phone")
-        logger.info("Triggered order confirmation automation for order %s (%s)", order_id, customer_phone)
+        logger.info(
+            "Triggered order confirmation automation for order %s (%s)", order_id, customer_phone
+        )
         return "order_confirmation_scheduled"
 
     elif event_name in ("order.shipped", "order.fulfilled"):
@@ -107,8 +110,10 @@ async def _route_ecosystem_event(
         if session_id_raw:
             try:
                 sess_uuid = uuid.UUID(str(session_id_raw))
-                from communicator.models.live_proof import LiveProofSession, LiveProofStatus
                 from sqlalchemy import select
+
+                from communicator.models.live_proof import LiveProofSession, LiveProofStatus
+
                 stmt = select(LiveProofSession).where(
                     LiveProofSession.id == sess_uuid,
                     LiveProofSession.tenant_id == tenant_id,
@@ -120,8 +125,12 @@ async def _route_ecosystem_event(
                     elif decision_raw == "REJECTED":
                         proof_sess.status = LiveProofStatus.REJECTED
                     await session.commit()
-                    logger.info("Updated LiveProof refund session %s status to %s", sess_uuid, proof_sess.status)
-            except Exception as exc:
+                    logger.info(
+                        "Updated LiveProof refund session %s status to %s",
+                        sess_uuid,
+                        proof_sess.status,
+                    )
+            except (SQLAlchemyError, ValueError) as exc:
                 logger.warning("Could not update refund session %s: %s", session_id_raw, exc)
         return f"refund_session_{decision_raw.lower()}"
 

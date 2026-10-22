@@ -34,9 +34,7 @@ class LiveProofSession(Base):
 
     __tablename__ = "live_proof_sessions"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     organization_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
 
@@ -51,9 +49,7 @@ class LiveProofSession(Base):
     customer_identifier: Mapped[str] = mapped_column(String(255), nullable=False, default="")
     claim_type: Mapped[str] = mapped_column(String(64), nullable=False, default="refund")
 
-    session_token: Mapped[str] = mapped_column(
-        String(128), nullable=False, unique=True, index=True
-    )
+    session_token: Mapped[str] = mapped_column(String(128), nullable=False, unique=True, index=True)
     status: Mapped[LiveProofStatus] = mapped_column(
         Enum(LiveProofStatus), default=LiveProofStatus.PENDING, nullable=False, index=True
     )
@@ -93,9 +89,7 @@ class LiveProofEvidence(Base):
 
     __tablename__ = "live_proof_evidences"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("live_proof_sessions.id"), nullable=False, index=True
     )
@@ -123,4 +117,6 @@ class LiveProofEvidence(Base):
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
 
-    session: Mapped["LiveProofSession"] = relationship("LiveProofSession", back_populates="evidences")
+    session: Mapped["LiveProofSession"] = relationship(
+        "LiveProofSession", back_populates="evidences"
+    )

@@ -9,29 +9,29 @@ Provides Zero-Trust Multi-Hop Re-Encryption client for Communicator:
 from __future__ import annotations
 
 import base64
-import hmac
 import hashlib
+import hmac
 import json
 import os
 import time
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
-from pydantic import BaseModel, Field
+from datetime import UTC, datetime
+from typing import Any
+
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from pydantic import BaseModel, Field
 
 
 class CryptographicIntegrityError(Exception):
     """Raised when ciphertext authentication tag or signature verification fails."""
-    pass
 
 
 class ReplayAttackDetectedError(Exception):
     """Raised when an envelope timestamp or signature indicates a replayed transmission."""
-    pass
 
 
 class EncryptedTransitEnvelope(BaseModel):
     """Encrypted transit envelope matching @newax/crypto-mesh specification."""
+
     version: str = Field(default="1.0.0")
     tenantId: str
     senderId: str
@@ -85,7 +85,7 @@ class CryptoMeshClient:
             raise ValueError("Auth secret must be at least 32 bytes for HMAC-SHA-512 security.")
 
     @classmethod
-    def from_env(cls, prefix: str = "NEURA_CRYPTO_") -> "CryptoMeshClient":
+    def from_env(cls, prefix: str = "NEURA_CRYPTO_") -> CryptoMeshClient:
         """Instantiates client from environment variables with safe development fallbacks."""
         tenant_id = os.getenv(f"{prefix}TENANT_ID", "default")
         entity_id = os.getenv(f"{prefix}ENTITY_ID", "communicator")
@@ -93,15 +93,19 @@ class CryptoMeshClient:
         ingress = os.getenv(f"{prefix}INGRESS_SECRET_HEX")
         egress = os.getenv(f"{prefix}EGRESS_SECRET_HEX")
         auth = os.getenv(f"{prefix}AUTH_SECRET_HEX")
-        
+
         if not ingress or not egress or not auth:
             # Check if running in test environment
-            if os.getenv("TESTING", "").lower() in ("1", "true") or os.getenv("PYTEST_CURRENT_TEST"):
+            if os.getenv("TESTING", "").lower() in ("1", "true") or os.getenv(
+                "PYTEST_CURRENT_TEST"
+            ):
                 ingress = ingress or "11" * 32
                 egress = egress or "22" * 32
                 auth = auth or "33" * 32
             else:
-                raise ValueError("CryptoMesh environment variables (INGRESS, EGRESS, AUTH) are not configured.")
+                raise ValueError(
+                    "CryptoMesh environment variables (INGRESS, EGRESS, AUTH) are not configured."
+                )
         return cls(tenant_id, entity_id, key_id, ingress, egress, auth)
 
     @staticmethod
@@ -113,7 +117,7 @@ class CryptoMeshClient:
         key_id: str,
         timestamp: str,
     ) -> bytes:
-        return f"{version}:{tenant_id}:{sender_id}:{recipient_id}:{key_id}:{timestamp}".encode("utf-8")
+        return f"{version}:{tenant_id}:{sender_id}:{recipient_id}:{key_id}:{timestamp}".encode()
 
     def _compute_signature(
         self,
@@ -127,17 +131,10 @@ class CryptoMeshClient:
         auth_tag_b64: str,
         ciphertext_b64: str,
     ) -> str:
-        canonical_string = "|".join([
-            version,
-            tenant_id,
-            sender_id,
-            recipient_id,
-            key_id,
-            timestamp,
-            iv_b64,
-            auth_tag_b64,
-            ciphertext_b64,
-        ])
+        canonical_string = (
+            f"{version}|{tenant_id}|{sender_id}|{recipient_id}|"
+            f"{key_id}|{timestamp}|{iv_b64}|{auth_tag_b64}|{ciphertext_b64}"
+        )
         sig = hmac.new(self.auth_secret, canonical_string.encode("utf-8"), hashlib.sha512).digest()
         return base64.b64encode(sig).decode("utf-8")
 
@@ -145,11 +142,11 @@ class CryptoMeshClient:
         self,
         recipient_id: str,
         payload: Any,
-        tenant_id: Optional[str] = None,
+        tenant_id: str | None = None,
     ) -> EncryptedTransitEnvelope:
         """Encrypts a payload with this entity's ingress key, ready for NeuraCore transit."""
         version = "1.0.0"
-        timestamp = datetime.now(timezone.utc).isoformat()
+        timestamp = datetime.now(UTC).isoformat()
         iv = os.urandom(12)
         active_tenant = tenant_id or self.tenant_id
 
@@ -198,9 +195,13 @@ class CryptoMeshClient:
             signature=signature,
         )
 
-    def decrypt_from_relay(self, envelope: EncryptedTransitEnvelope | Dict[str, Any]) -> Any:
+    def decrypt_from_relay(self, envelope: EncryptedTransitEnvelope | dict[str, Any]) -> Any:
         """Decrypts an inbound transit envelope delivered from NeuraCore using egress key."""
-        env = envelope if isinstance(envelope, EncryptedTransitEnvelope) else EncryptedTransitEnvelope(**envelope)
+        env = (
+            envelope
+            if isinstance(envelope, EncryptedTransitEnvelope)
+            else EncryptedTransitEnvelope(**envelope)
+        )
 
         if env.tenantId != self.tenant_id:
             raise CryptographicIntegrityError(
@@ -214,8 +215,8 @@ class CryptoMeshClient:
 
         # Anti-replay timestamp check
         try:
-            env_time = datetime.fromisoformat(env.timestamp.replace("Z", "+00:00"))
-            delta_seconds = abs((datetime.now(timezone.utc) - env_time).total_seconds())
+            env_time = datetime.fromisoformat(env.timestamp)
+            delta_seconds = abs((datetime.now(UTC) - env_time).total_seconds())
             if delta_seconds > self.max_clock_skew_seconds:
                 raise ReplayAttackDetectedError(
                     f"Replay attack prevented: timestamp delta ({delta_seconds:.1f}s) exceeds max allowed ({self.max_clock_skew_seconds}s)."
