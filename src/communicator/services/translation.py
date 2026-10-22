@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-from communicator.ai.claude_client import call_claude
-
-_SYSTEM_PROMPT = (
-    "Translate the user's message into the target language. Respond with "
-    "only the translated text, no quotes, no commentary, no markdown."
-)
+from communicator.services.translation_service import translate_text as _service_translate_text
 
 
 async def translate_text(text: str, target_language: str) -> str:
+    """Translates text to target language, delegating to the unified translation service."""
     if not text or target_language in ("", "en"):
         return text
-    return await call_claude(_SYSTEM_PROMPT, f"Target language: {target_language}\n\n{text}")
+    res = await _service_translate_text(text=text, target_language=target_language)
+    return res.get("translated_text", text)

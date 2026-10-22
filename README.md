@@ -11,6 +11,13 @@ or opts out.
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full architecture
 and phased delivery plan.
 
+## Part of the NEWAX ecosystem
+
+This is one of several connected NEWAX repos. See [`ECOSYSTEM.md`](ECOSYSTEM.md)
+for what this repo owns, what it must never own, and the rules for how it
+talks to the others (short version: never directly — everything routes
+through core-newax's Module Gateway/event bus).
+
 ## Running locally
 
 ```bash

@@ -19,13 +19,14 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.channels import get_provider
+from communicator.channels.whatsapp import MetaWhatsAppProvider
 from communicator.config import settings
 from communicator.harvester_client import HarvesterClient
 from communicator.models.audit import AuditLog
 from communicator.models.contact import ChannelType, Contact
 from communicator.models.conversation import Conversation, ConversationState
 from communicator.models.lead import Lead
-from communicator.models.message import Message, MessageDirection
+from communicator.models.message import Message, MessageDirection, MessageStatus
 from communicator.models.sequence import FollowUpSequence, SequenceStep
 from communicator.services.messaging import send_outbound_message
 from communicator.services.translation import translate_text
@@ -141,10 +142,54 @@ async def _advance_conversation(
         last_inbound = await _last_inbound_at(session, conversation.id)
         window = timedelta(hours=settings.whatsapp_session_window_hours)
         if last_inbound is None or now - last_inbound > window:
-            # Outside Meta's 24h session window; freeform sends will be
-            # rejected and a template-message provider isn't built yet
-            # (see channels/whatsapp.py). Defer and retry rather than
-            # attempting a doomed send.
+            # Outside Meta's 24h session window.
+            # If the step defines a template name (e.g. starts with "template:"),
+            # send via MetaWhatsAppProvider.send_template to legally re-engage.
+            provider = await get_provider(step.channel, session)
+            if isinstance(provider, MetaWhatsAppProvider) and step.template.startswith("template:"):
+                template_name = step.template.removeprefix("template:").strip()
+                try:
+                    res = await provider.send_template(
+                        to=contact.value,
+                        template_name=template_name,
+                        language=contact.language or "en_US",
+                        body_params=[contact.person_name or "there"],
+                    )
+                    message = Message(
+                        conversation_id=conversation.id,
+                        direction=MessageDirection.OUTBOUND,
+                        channel=step.channel,
+                        body=f"[Template: {template_name}]",
+                        provider="meta",
+                        provider_message_id=res.provider_message_id,
+                        status=MessageStatus.SENT,
+                        intent="followup_template",
+                    )
+                    session.add(message)
+                    conversation.sequence_step = next_step_number
+                    next_stmt = select(SequenceStep).where(
+                        SequenceStep.sequence_id == conversation.sequence_id,
+                        SequenceStep.step_number == next_step_number + 1,
+                        SequenceStep.variant == conversation.sequence_variant,
+                    )
+                    following = (await session.execute(next_stmt)).scalar_one_or_none()
+                    conversation.next_followup_at = (
+                        now + timedelta(days=following.delay_days) if following else None
+                    )
+                    session.add(
+                        AuditLog(
+                            entity_type="conversation",
+                            entity_id=conversation.id,
+                            action="followup_template_sent",
+                            actor="system",
+                            details={"step_number": next_step_number, "template": template_name},
+                        )
+                    )
+                    return message
+                except Exception:  # noqa: BLE001, S110
+                    pass
+
+            # Otherwise defer and retry rather than attempting a doomed freeform send
             session.add(
                 AuditLog(
                     entity_type="conversation",
@@ -157,7 +202,7 @@ async def _advance_conversation(
             return None
 
     body = await translate_text(step.template, contact.language)
-    provider = get_provider(step.channel)
+    provider = await get_provider(step.channel, session)
     message = await send_outbound_message(session, contact, provider, body)
 
     conversation.sequence_step = next_step_number

@@ -3,17 +3,23 @@ import uuid
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from communicator.database import Base
 
 if TYPE_CHECKING:
+    from communicator.models.approval import CopilotApprovalRequest
+    from communicator.models.broadcast import Broadcast
     from communicator.models.contact import Contact
     from communicator.models.draft import Draft
+    from communicator.models.inbox import Inbox
     from communicator.models.message import Message
     from communicator.models.sequence import FollowUpSequence
+    from communicator.models.team import Team
+    from communicator.models.team_member import TeamMember
+    from communicator.models.ticket import Ticket
 
 
 class ConversationState(str, enum.Enum):
@@ -53,6 +59,52 @@ class Conversation(Base):
         DateTime(timezone=True), nullable=True
     )
 
+    # Link to Campaign / Broadcast if this conversation was triggered by a campaign
+    broadcast_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("broadcasts.id", ondelete="SET NULL"), nullable=True
+    )
+
+    # Link to Channel Inbox (e.g. WhatsApp, Email, Live Chat)
+    inbox_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("inboxes.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+
+    # Conversation Priority: urgent | high | medium | low
+    priority: Mapped[str] = mapped_column(String(20), default="medium", nullable=False)
+
+    # Team assignment
+    team_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("teams.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+
+    # Snooze until
+    snoozed_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Custom attributes / metadata (e.g. plan tier, account value)
+    custom_attributes: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+
+    # Human-takeover: when true, the AI reply engine stays out of this
+    # conversation entirely regardless of auto_reply_enabled, until an
+    # agent flips it back off. Independent of `state` -- a HOT_LEAD can
+    # still be bot-handled, a NEW conversation can be manually taken over.
+    human_takeover: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    assigned_to_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("team_members.id"), nullable=True
+    )
+
+    # CSAT Feedback Collection (1 to 5 stars or sentiment rating)
+    csat_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    csat_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Resolution outcome: autonomous_no_handoff | human_assisted | unresolved
+    resolution_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+
+    # WhatsApp 24-hour Session Window tracking
+    last_inbound_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_outbound_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
@@ -63,7 +115,11 @@ class Conversation(Base):
     )
 
     contact: Mapped["Contact"] = relationship("Contact", back_populates="conversations")
+    inbox: Mapped["Inbox | None"] = relationship("Inbox", back_populates="conversations")
+    team: Mapped["Team | None"] = relationship("Team", back_populates="conversations")
     sequence: Mapped["FollowUpSequence | None"] = relationship("FollowUpSequence")
+    broadcast: Mapped["Broadcast | None"] = relationship("Broadcast")
+    assigned_to: Mapped["TeamMember | None"] = relationship("TeamMember")
     messages: Mapped[list["Message"]] = relationship(
         "Message",
         back_populates="conversation",
@@ -72,4 +128,10 @@ class Conversation(Base):
     )
     drafts: Mapped[list["Draft"]] = relationship(
         "Draft", back_populates="conversation", cascade="all, delete-orphan"
+    )
+    approvals: Mapped[list["CopilotApprovalRequest"]] = relationship(
+        "CopilotApprovalRequest", back_populates="conversation", cascade="all, delete-orphan"
+    )
+    tickets: Mapped[list["Ticket"]] = relationship(
+        "Ticket", back_populates="conversation", cascade="all, delete-orphan"
     )
