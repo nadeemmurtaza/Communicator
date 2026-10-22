@@ -60,6 +60,25 @@ class Settings(BaseSettings):
     live_proof_storage_dir: str = "var/media/live_proof"
     ecosystem_event_bus_url: str = ""
     ecosystem_gateway_key: str = ""
+    # nID Single Identity Provider & Secrets Vault
+    nid_base_url: str = "http://localhost:4000"
+    nid_client_id: str = ""
+    nid_client_secret: str = ""
+    nid_redirect_uri: str = "http://localhost:8001/api/v1/auth/nid/callback"
+    nid_vault_addr: str = "http://localhost:4000"
+    nid_vault_role_id: str = ""
+    nid_vault_secret_id: str = ""
+
+    # Banking-Grade Zero-Trust Crypto Mesh Configuration
+    neura_crypto_tenant_id: str = "default"
+    neura_crypto_entity_id: str = "communicator"
+    neura_crypto_key_id: str = "kid_communicator_v1"
+    neura_crypto_ingress_secret_hex: str = "aa" * 32
+    neura_crypto_egress_secret_hex: str = "bb" * 32
+    neura_crypto_auth_secret_hex: str = "cc" * 32
+    neura_relay_gateway_url: str = "http://localhost:3000/api/v1/crypto-mesh/relay"
+    erp_api_base_url: str = "http://localhost:3001/api/v1"
+    newcom_esp_api_base_url: str = "http://localhost:8081/api/v1"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

@@ -322,53 +322,33 @@ async def _publish_proof_captured_event(
     evidence: LiveProofEvidence,
 ) -> None:
     """
-    Dispatches domain event 'refund.proof_captured' to core-newax Event Bus
-    so ERP-1 and other ecosystem services receive verified evidence.
+    Dispatches domain event 'refund.proof_captured' via Zero-Trust Crypto Mesh
+    to NeuraCore Relay and ERP-1 so enterprise refund automation receives verified proof.
     """
-    event_bus_url = settings.ecosystem_event_bus_url
-    if not event_bus_url:
-        logger.debug("Central event bus URL not configured; skipping event dispatch.")
-        return
+    from communicator.services.ecosystem_client import ecosystem_client
 
     payload = {
-        "name": "refund.proof_captured",
-        "occurredAt": datetime.now(UTC).isoformat(),
-        "source": "communicator",
-        "tenantId": session.tenant_id,
-        "organizationId": session.organization_id,
-        "payload": {
-            "sessionId": str(session.id),
-            "orderId": session.order_id,
-            "claimType": session.claim_type,
-            "mediaType": evidence.media_type.value,
-            "mediaUrl": f"{settings.public_url.rstrip('/')}/api/v1/live-proof/sessions/{session.id}/evidence/{evidence.id}/media",
-            "sha256Hash": evidence.sha256_hash,
-            "fileSizeBytes": evidence.file_size_bytes,
-            "durationSeconds": evidence.duration_seconds,
-            "verificationScore": evidence.verification_score,
-            "watermarkVerified": evidence.watermark_verified,
-            "capturedAt": evidence.captured_at.isoformat(),
-        },
+        "sessionId": str(session.id),
+        "orderId": session.order_id,
+        "claimType": session.claim_type,
+        "mediaType": evidence.media_type.value,
+        "mediaUrl": f"{settings.public_url.rstrip('/')}/api/v1/live-proof/sessions/{session.id}/evidence/{evidence.id}/media",
+        "sha256Hash": evidence.sha256_hash,
+        "fileSizeBytes": evidence.file_size_bytes,
+        "durationSeconds": evidence.duration_seconds,
+        "verificationScore": evidence.verification_score,
+        "watermarkVerified": evidence.watermark_verified,
+        "capturedAt": evidence.captured_at.isoformat(),
     }
-
-    headers = {
-        "Content-Type": "application/json",
-        "X-Newax-Source": "communicator",
-        "X-Tenant-Id": session.tenant_id,
-    }
-    if session.organization_id:
-        headers["X-Organization-Id"] = session.organization_id
-    if settings.ecosystem_gateway_key:
-        headers["Authorization"] = f"Bearer {settings.ecosystem_gateway_key}"
 
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.post(event_bus_url, json=payload, headers=headers)
-            if resp.status_code >= 400:
-                logger.warning(
-                    "Event bus returned status %d on refund.proof_captured: %s",
-                    resp.status_code,
-                    resp.text,
-                )
-    except (httpx.HTTPError, OSError) as exc:
-        logger.error("Failed to publish refund.proof_captured to event bus: %s", exc)
+        await ecosystem_client.publish_event(
+            event_name="refund.proof_captured",
+            payload=payload,
+            recipient_id="erp-1",
+            tenant_id=session.tenant_id,
+            organization_id=session.organization_id,
+        )
+        logger.info("Published encrypted refund.proof_captured event for session %s to erp-1.", session.id)
+    except Exception as exc:
+        logger.error("Failed to publish encrypted refund.proof_captured: %s", exc)
