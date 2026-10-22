@@ -247,7 +247,7 @@ def upgrade() -> None:
             "availability_status",
             sa.String(length=20),
             nullable=False,
-            server_default="available",
+            server_default="online",
         ),
     )
     op.add_column(
