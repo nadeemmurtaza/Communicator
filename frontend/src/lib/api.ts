@@ -521,6 +521,51 @@ export interface UpdateWidgetCustomizerPayload {
   hmac_secret?: string
 }
 
+export interface PreChatField {
+  id: string
+  name: string
+  label: string
+  type: 'text' | 'email' | 'phone' | 'select' | 'textarea' | 'number' | 'checkbox'
+  placeholder?: string
+  required: boolean
+  options?: string[]
+  order: number
+}
+
+export interface PreChatRoutingRule {
+  id: string
+  field: string
+  operator: 'equals' | 'contains' | 'not_equals'
+  value: string
+  assign_priority: 'low' | 'medium' | 'high' | 'urgent'
+  assign_tag: string
+  team_target?: string
+}
+
+export interface PreChatFormConfig {
+  website_token: string
+  website_domain: string
+  enabled: boolean
+  title: string
+  description: string
+  submit_button_text: string
+  require_email: boolean
+  fields: PreChatField[]
+  routing_rules: PreChatRoutingRule[]
+}
+
+export interface PreChatTestIntakeResult {
+  valid: boolean
+  errors: string[]
+  routing_result: {
+    priority: string
+    tags: string[]
+    team_target?: string
+    applied_rules: string[]
+  }
+  evaluated_answers: Record<string, any>
+}
+
 export interface LiveChatTestVisitorPayload {
   name: string
   email: string
@@ -3302,4 +3347,20 @@ export const api = {
     request<{ website_token: string; base_url: string; embed_codes: WidgetEmbedCodes }>(
       `/widget/customizer/embed-code${token ? `?token=${encodeURIComponent(token)}` : ''}`
     ),
+// Gap 5: Pre-Chat Intake Forms
+  getPreChatConfig: () => request<PreChatFormConfig>('/inboxes/channels/live-chat/prechat'),
+  updatePreChatConfig: (data: Partial<PreChatFormConfig>) =>
+    request<PreChatFormConfig>('/inboxes/channels/live-chat/prechat', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  resetPreChatConfig: () =>
+    request<PreChatFormConfig>('/inboxes/channels/live-chat/prechat/reset', {
+      method: 'POST',
+    }),
+  testPreChatIntake: (answers: Record<string, any>) =>
+    request<PreChatTestIntakeResult>('/inboxes/channels/live-chat/prechat/test', {
+      method: 'POST',
+      body: JSON.stringify({ answers }),
+    }),
 }

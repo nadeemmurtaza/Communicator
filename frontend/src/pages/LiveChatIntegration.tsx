@@ -5,6 +5,9 @@ import {
   type LiveChatChannelData,
   type LiveChatEvent,
   type WidgetEmbedCodes,
+  type PreChatField,
+  type PreChatRoutingRule,
+  type PreChatTestIntakeResult,
 } from '../lib/api'
 
 export function LiveChatIntegration() {
@@ -44,14 +47,53 @@ export function LiveChatIntegration() {
   const [embedCodes, setEmbedCodes] = useState<WidgetEmbedCodes | null>(null)
   const [previewUrl, setPreviewUrl] = useState('/api/v1/widget/preview-page')
 
-  // Pre-Chat State
+  // Gap 5: Pre-Chat Intake Form & Conditional Routing State
   const [preChatEnabled, setPreChatEnabled] = useState(true)
-  const [preChatFields, setPreChatFields] = useState<Array<{ name: string; label: string; required: boolean }>>([
-    { name: 'fullName', label: 'Full Name', required: true },
-    { name: 'email', label: 'Email Address', required: true },
-    { name: 'phone', label: 'Phone Number', required: false },
-    { name: 'company', label: 'Company', required: false },
+  const [preChatTitle, setPreChatTitle] = useState('Welcome to Live Chat')
+  const [preChatDesc, setPreChatDesc] = useState('Please share a few details so Captain AI or our team can assist you right away.')
+  const [preChatSubmitText, setPreChatSubmitText] = useState('Start Conversation')
+  const [requireEmail, setRequireEmail] = useState(true)
+  const [customPreChatFields, setCustomPreChatFields] = useState<PreChatField[]>([
+    { id: 'f_name', name: 'fullName', label: 'Full Name', type: 'text', placeholder: 'e.g. Jane Doe', required: true, options: [], order: 1 },
+    { id: 'f_email', name: 'email', label: 'Email Address', type: 'email', placeholder: 'e.g. jane@company.com', required: true, options: [], order: 2 },
+    { id: 'f_inquiry', name: 'inquiryType', label: 'What can we help you with?', type: 'select', placeholder: 'Select inquiry reason', required: true, options: ['Sales & Pricing', 'Technical Support', 'Billing & Invoices', 'Partnerships & Other'], order: 3 },
+    { id: 'f_company', name: 'company', label: 'Company / Organization', type: 'text', placeholder: 'e.g. Acme Innovations', required: false, options: [], order: 4 },
+    { id: 'f_message', name: 'message', label: 'Initial Question or Requirement', type: 'textarea', placeholder: 'Briefly describe your request...', required: false, options: [], order: 5 },
   ])
+  const [routingRules, setRoutingRules] = useState<PreChatRoutingRule[]>([
+    { id: 'rule_billing', field: 'inquiryType', operator: 'equals', value: 'Billing & Invoices', assign_priority: 'high', assign_tag: 'billing', team_target: 'Finance & Billing' },
+    { id: 'rule_sales', field: 'inquiryType', operator: 'equals', value: 'Sales & Pricing', assign_priority: 'high', assign_tag: 'sales_lead', team_target: 'Sales Operations' },
+    { id: 'rule_tech', field: 'inquiryType', operator: 'equals', value: 'Technical Support', assign_priority: 'medium', assign_tag: 'tier1_support', team_target: 'Engineering Support' },
+  ])
+
+  // New Field Creator State
+  const [showAddField, setShowAddField] = useState(false)
+  const [newFieldLabel, setNewFieldLabel] = useState('')
+  const [newFieldName, setNewFieldName] = useState('')
+  const [newFieldType, setNewFieldType] = useState<PreChatField['type']>('text')
+  const [newFieldPlaceholder, setNewFieldPlaceholder] = useState('')
+  const [newFieldRequired, setNewFieldRequired] = useState(false)
+  const [newFieldOptionsText, setNewFieldOptionsText] = useState('')
+
+  // New Rule Creator State
+  const [showAddRule, setShowAddRule] = useState(false)
+  const [newRuleField, setNewRuleField] = useState('inquiryType')
+  const [newRuleOp, setNewRuleOp] = useState<'equals' | 'contains' | 'not_equals'>('equals')
+  const [newRuleVal, setNewRuleVal] = useState('')
+  const [newRulePriority, setNewRulePriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('high')
+  const [newRuleTag, setNewRuleTag] = useState('')
+  const [newRuleTeam, setNewRuleTeam] = useState('')
+
+  // Pre-Chat Test Simulation State
+  const [simAnswers, setSimAnswers] = useState<Record<string, any>>({
+    fullName: 'David Hasselhoff',
+    email: 'david@knightindustries.com',
+    inquiryType: 'Billing & Invoices',
+    company: 'Knight Industries',
+    message: 'Need help reconciling our monthly autonomous fleet subscription.',
+  })
+  const [simIntakeResult, setSimIntakeResult] = useState<PreChatTestIntakeResult | null>(null)
+  const [testingIntake, setTestingIntake] = useState(false)
 
   // Security State
   const [identityValidation, setIdentityValidation] = useState(false)
@@ -83,10 +125,11 @@ export function LiveChatIntegration() {
   async function loadChannel() {
     try {
       setLoading(true)
-      const [channelData, evList, customizerData] = await Promise.all([
+      const [channelData, evList, customizerData, prechatData] = await Promise.all([
         api.getLiveChatChannel(),
         api.listLiveChatEvents().catch(() => []),
         api.getWidgetCustomizer().catch(() => null),
+        api.getPreChatConfig().catch(() => null),
       ])
 
       setData(channelData)
@@ -113,9 +156,20 @@ export function LiveChatIntegration() {
         setPreviewUrl(customizerData.preview_url || '/api/v1/widget/preview-page')
       }
 
-      setPreChatEnabled(channelData.preChatForm.enabled)
-      if (channelData.preChatForm.fields && channelData.preChatForm.fields.length > 0) {
-        setPreChatFields(channelData.preChatForm.fields)
+      if (prechatData) {
+        setPreChatEnabled(prechatData.enabled)
+        setPreChatTitle(prechatData.title || 'Welcome to Live Chat')
+        setPreChatDesc(prechatData.description || 'Please share a few details so Captain AI or our team can assist you right away.')
+        setPreChatSubmitText(prechatData.submit_button_text || 'Start Conversation')
+        setRequireEmail(prechatData.require_email ?? true)
+        if (prechatData.fields && prechatData.fields.length > 0) {
+          setCustomPreChatFields(prechatData.fields)
+        }
+        if (prechatData.routing_rules) {
+          setRoutingRules(prechatData.routing_rules)
+        }
+      } else {
+        setPreChatEnabled(channelData.preChatForm.enabled)
       }
 
       setIdentityValidation(channelData.security.identityValidation)
@@ -151,7 +205,7 @@ export function LiveChatIntegration() {
           widget_position: widgetPosition,
           avatar_url: avatarUrl,
           pre_chat_form_enabled: preChatEnabled,
-          pre_chat_fields: preChatFields,
+          pre_chat_fields: customPreChatFields.map((f) => ({ name: f.name, label: f.label, required: f.required })),
           identity_validation: identityValidation,
           hmac_secret: hmacSecret,
           greeting_enabled: greetingEnabled,
@@ -183,6 +237,15 @@ export function LiveChatIntegration() {
           pre_chat_form_enabled: preChatEnabled,
           identity_validation: identityValidation,
           hmac_secret: hmacSecret,
+        }),
+        api.updatePreChatConfig({
+          enabled: preChatEnabled,
+          title: preChatTitle,
+          description: preChatDesc,
+          submit_button_text: preChatSubmitText,
+          require_email: requireEmail,
+          fields: customPreChatFields,
+          routing_rules: routingRules,
         }),
       ])
       setData(res)
@@ -283,11 +346,117 @@ export function LiveChatIntegration() {
     setTimeout(() => setCopiedKey(null), 2000)
   }
 
-  function toggleFieldRequired(index: number) {
-    setPreChatFields((prev) =>
-      prev.map((f, i) => (i === index ? { ...f, required: !f.required } : f))
+
+  // Gap 5 Pre-Chat Helpers
+  function handleAddNewField() {
+    if (!newFieldLabel.trim()) return
+    const nameSlug = (newFieldName.trim() || newFieldLabel.trim())
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, '')
+    const options = newFieldType === 'select'
+      ? newFieldOptionsText.split(',').map((s) => s.trim()).filter(Boolean)
+      : []
+
+    const newField: PreChatField = {
+      id: `f_${Date.now()}`,
+      name: nameSlug || `field_${customPreChatFields.length + 1}`,
+      label: newFieldLabel.trim(),
+      type: newFieldType,
+      placeholder: newFieldPlaceholder.trim(),
+      required: newFieldRequired,
+      options,
+      order: customPreChatFields.length + 1,
+    }
+
+    setCustomPreChatFields([...customPreChatFields, newField])
+    setNewFieldLabel('')
+    setNewFieldName('')
+    setNewFieldPlaceholder('')
+    setNewFieldOptionsText('')
+    setNewFieldRequired(false)
+    setShowAddField(false)
+  }
+
+  function handleRemoveCustomField(id: string) {
+    setCustomPreChatFields(customPreChatFields.filter((f) => f.id !== id))
+  }
+
+  function handleMoveField(index: number, direction: 'up' | 'down') {
+    if (direction === 'up' && index === 0) return
+    if (direction === 'down' && index === customPreChatFields.length - 1) return
+    const targetIdx = direction === 'up' ? index - 1 : index + 1
+    const copy = [...customPreChatFields]
+    const temp = copy[index]
+    copy[index] = copy[targetIdx]
+    copy[targetIdx] = temp
+    copy.forEach((f, idx) => (f.order = idx + 1))
+    setCustomPreChatFields(copy)
+  }
+
+  function handleToggleFieldReq(id: string) {
+    setCustomPreChatFields(
+      customPreChatFields.map((f) => (f.id === id ? { ...f, required: !f.required } : f))
     )
   }
+
+  function handleAddNewRule() {
+    if (!newRuleField.trim() || !newRuleVal.trim()) return
+    const newRule: PreChatRoutingRule = {
+      id: `rule_${Date.now()}`,
+      field: newRuleField.trim(),
+      operator: newRuleOp,
+      value: newRuleVal.trim(),
+      assign_priority: newRulePriority,
+      assign_tag: newRuleTag.trim().toLowerCase(),
+      team_target: newRuleTeam.trim(),
+    }
+    setRoutingRules([...routingRules, newRule])
+    setNewRuleVal('')
+    setNewRuleTag('')
+    setNewRuleTeam('')
+    setShowAddRule(false)
+  }
+
+  function handleRemoveRule(id: string) {
+    setRoutingRules(routingRules.filter((r) => r.id !== id))
+  }
+
+  async function handleResetPreChatDefaults() {
+    if (!window.confirm('Reset all pre-chat intake fields and conditional routing rules to default settings?')) {
+      return
+    }
+    try {
+      setSaving(true)
+      const res = await api.resetPreChatConfig()
+      setPreChatEnabled(res.enabled)
+      setPreChatTitle(res.title)
+      setPreChatDesc(res.description)
+      setPreChatSubmitText(res.submit_button_text)
+      setRequireEmail(res.require_email)
+      setCustomPreChatFields(res.fields)
+      setRoutingRules(res.routing_rules)
+      setSuccess('Pre-Chat intake fields and routing rules reset to default!')
+      setTimeout(() => setSuccess(null), 3500)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleRunIntakeSimulation() {
+    try {
+      setTestingIntake(true)
+      const res = await api.testPreChatIntake(simAnswers)
+      setSimIntakeResult(res)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setTestingIntake(false)
+    }
+  }
+
+
 
   const PALETTE = ['#1570EF', '#7F56D9', '#10B981', '#E11D48', '#F59E0B', '#0F172A']
 
@@ -1289,157 +1458,620 @@ export function LiveChatIntegration() {
         </div>
       )}
 
-{/* TAB 3: PRE-CHAT FORM */}
+      {/* TAB 3: PRE-CHAT FORM */}
       {activeTab === 'prechat' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-7 space-y-6">
             <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div>
-                  <h2 className="text-base font-semibold text-slate-900">Pre-Chat Qualification Form</h2>
+                  <h2 className="text-base font-semibold text-slate-900">Pre-Chat Intake Form Builder</h2>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Collect visitor credentials before opening the chat window to generate verified leads.
+                    Collect visitor credentials, qualify requirements, and automatically route conversations before chat opens.
                   </p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={preChatEnabled}
-                    onChange={(e) => setPreChatEnabled(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleResetPreChatDefaults}
+                    disabled={saving}
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+                  >
+                    ↺ Reset Defaults
+                  </button>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={preChatEnabled}
+                      onChange={(e) => setPreChatEnabled(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
               </div>
 
               {preChatEnabled ? (
-                <div className="space-y-4">
-                  <div className="text-xs font-semibold text-slate-700">Configured Form Fields</div>
-                  <div className="divide-y divide-slate-100 rounded-lg border border-slate-200 overflow-hidden">
-                    {preChatFields.map((field, idx) => (
-                      <div key={field.name} className="flex items-center justify-between p-3.5 bg-white">
-                        <div className="flex items-center gap-3">
-                          <span className="text-slate-400 font-mono text-xs">#{idx + 1}</span>
-                          <div>
-                            <div className="text-xs font-semibold text-slate-800">{field.label}</div>
-                            <div className="text-[10px] font-mono text-slate-400">key: {field.name}</div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={field.required}
-                              onChange={() => toggleFieldRequired(idx)}
-                              className="rounded border-slate-300 text-blue-600"
-                            />
-                            <span>Required</span>
-                          </label>
-                          <span
-                            className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
-                              field.required
-                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                : 'bg-slate-100 text-slate-600'
-                            }`}
-                          >
-                            {field.required ? 'Mandatory' : 'Optional'}
-                          </span>
-                        </div>
+                <div className="space-y-6">
+                  {/* Form Header Customization */}
+                  <div className="rounded-lg bg-slate-50 p-4 border border-slate-200 space-y-3">
+                    <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">Form Presentation & Instructions</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">Form Heading Title</label>
+                        <input
+                          type="text"
+                          value={preChatTitle}
+                          onChange={(e) => setPreChatTitle(e.target.value)}
+                          className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
+                          placeholder="Welcome to Live Chat"
+                        />
                       </div>
-                    ))}
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">Submit CTA Button Label</label>
+                        <input
+                          type="text"
+                          value={preChatSubmitText}
+                          onChange={(e) => setPreChatSubmitText(e.target.value)}
+                          className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
+                          placeholder="Start Conversation"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">Introductory Prompt</label>
+                      <textarea
+                        rows={2}
+                        value={preChatDesc}
+                        onChange={(e) => setPreChatDesc(e.target.value)}
+                        className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
+                        placeholder="Please share a few details so we can assist you..."
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 pt-1">
+                      <input
+                        type="checkbox"
+                        id="reqEmailToggle"
+                        checked={requireEmail}
+                        onChange={(e) => setRequireEmail(e.target.checked)}
+                        className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600"
+                      />
+                      <label htmlFor="reqEmailToggle" className="text-xs text-slate-700 font-medium">
+                        Strict email validation: require valid RFC-compliant email to start conversation
+                      </label>
+                    </div>
                   </div>
 
-                  <div className="rounded-lg bg-blue-50 border border-blue-200 p-3.5 text-xs text-blue-800">
-                    <span className="font-bold">Lead Automation Note:</span> Visitors completing this form are automatically enriched as high-intent <code className="font-semibold text-blue-900">Lead</code> entities, synced with CRM contacts, and queued in the Shared Inbox under the <code className="font-semibold text-blue-900">Website Live Chat</code> inbox.
+                  {/* Field Builder */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                        Configured Form Fields ({customPreChatFields.length})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddField(!showAddField)}
+                        className="rounded-lg bg-blue-50 border border-blue-200 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 flex items-center gap-1"
+                      >
+                        <span>{showAddField ? '✕ Cancel' : '+ Add Custom Field'}</span>
+                      </button>
+                    </div>
+
+                    {/* Inline Add Field Form */}
+                    {showAddField && (
+                      <div className="rounded-xl border border-blue-200 bg-blue-50/40 p-4 space-y-3 shadow-xs">
+                        <div className="text-xs font-bold text-blue-900">New Field Definition</div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">Field Label</label>
+                            <input
+                              type="text"
+                              value={newFieldLabel}
+                              onChange={(e) => {
+                                setNewFieldLabel(e.target.value)
+                                if (!newFieldName) {
+                                  setNewFieldName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))
+                                }
+                              }}
+                              placeholder="e.g. Budget Range"
+                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">Variable Key (Slug)</label>
+                            <input
+                              type="text"
+                              value={newFieldName}
+                              onChange={(e) => setNewFieldName(e.target.value)}
+                              placeholder="e.g. budgetRange"
+                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-mono"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">Field Type</label>
+                            <select
+                              value={newFieldType}
+                              onChange={(e) => setNewFieldType(e.target.value as any)}
+                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs"
+                            >
+                              <option value="text">Text (single line)</option>
+                              <option value="email">Email Address</option>
+                              <option value="phone">Phone Number</option>
+                              <option value="select">Dropdown Select</option>
+                              <option value="textarea">Textarea (multiline)</option>
+                              <option value="number">Number</option>
+                              <option value="checkbox">Checkbox (boolean)</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">Placeholder Text</label>
+                            <input
+                              type="text"
+                              value={newFieldPlaceholder}
+                              onChange={(e) => setNewFieldPlaceholder(e.target.value)}
+                              placeholder="e.g. Select your budget tier..."
+                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs"
+                            />
+                          </div>
+                          {newFieldType === 'select' && (
+                            <div>
+                              <label className="block text-[11px] font-semibold text-slate-700 mb-1">Choices (Comma-Separated)</label>
+                              <input
+                                type="text"
+                                value={newFieldOptionsText}
+                                onChange={(e) => setNewFieldOptionsText(e.target.value)}
+                                placeholder="<$1k, $1k-$5k, $5k-$20k, $20k+"
+                                className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs"
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1">
+                          <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={newFieldRequired}
+                              onChange={(e) => setNewFieldRequired(e.target.checked)}
+                              className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600"
+                            />
+                            <span>Mark this field as mandatory (Required)</span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={handleAddNewField}
+                            disabled={!newFieldLabel.trim()}
+                            className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                          >
+                            Add Field
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Field List */}
+                    <div className="divide-y divide-slate-100 rounded-lg border border-slate-200 overflow-hidden bg-white shadow-xs">
+                      {customPreChatFields.map((field, idx) => (
+                        <div key={field.id || field.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 gap-2 hover:bg-slate-50/50 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <span className="text-slate-400 font-mono text-xs w-5">#{idx + 1}</span>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-semibold text-slate-900">{field.label}</span>
+                                <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono text-slate-600 uppercase">
+                                  {field.type}
+                                </span>
+                              </div>
+                              <div className="text-[11px] font-mono text-slate-400 mt-0.5">
+                                key: <span className="text-slate-600">{field.name}</span>
+                                {field.options && field.options.length > 0 && (
+                                  <span className="ml-2 font-sans text-slate-500">
+                                    • {field.options.length} choices ({field.options.slice(0, 3).join(', ')}{field.options.length > 3 ? '...' : ''})
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            {/* Reorder buttons */}
+                            <button
+                              type="button"
+                              onClick={() => handleMoveField(idx, 'up')}
+                              disabled={idx === 0}
+                              className="h-6 w-6 rounded border border-slate-200 flex items-center justify-center text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+                              title="Move Up"
+                            >
+                              ↑
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMoveField(idx, 'down')}
+                              disabled={idx === customPreChatFields.length - 1}
+                              className="h-6 w-6 rounded border border-slate-200 flex items-center justify-center text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+                              title="Move Down"
+                            >
+                              ↓
+                            </button>
+
+                            {/* Required toggle */}
+                            <button
+                              type="button"
+                              onClick={() => handleToggleFieldReq(field.id)}
+                              className={`rounded px-2 py-0.5 text-[11px] font-semibold border transition-all ${
+                                field.required
+                                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                  : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                              }`}
+                            >
+                              {field.required ? '★ Required' : 'Optional'}
+                            </button>
+
+                            {/* Delete field */}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveCustomField(field.id)}
+                              className="h-6 w-6 rounded border border-red-200 text-red-600 hover:bg-red-50 flex items-center justify-center text-xs"
+                              title="Delete Field"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Conditional Routing Rules */}
+                  <div className="space-y-3 pt-3 border-t border-slate-100">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                          Conditional Lead Triage & Routing Rules ({routingRules.length})
+                        </span>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          Automatically tag, prioritize, and route conversation to teams based on submitted answers.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddRule(!showAddRule)}
+                        className="rounded-lg bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 flex items-center gap-1"
+                      >
+                        <span>{showAddRule ? '✕ Cancel' : '+ Add Routing Rule'}</span>
+                      </button>
+                    </div>
+
+                    {/* Inline Add Rule Form */}
+                    {showAddRule && (
+                      <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 space-y-3 shadow-xs">
+                        <div className="text-xs font-bold text-emerald-900">Define Conditional Routing Logic</div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">Evaluate Field</label>
+                            <select
+                              value={newRuleField}
+                              onChange={(e) => setNewRuleField(e.target.value)}
+                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-mono"
+                            >
+                              {customPreChatFields.map((f) => (
+                                <option key={f.name} value={f.name}>
+                                  {f.label} ({f.name})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">Condition</label>
+                            <select
+                              value={newRuleOp}
+                              onChange={(e) => setNewRuleOp(e.target.value as any)}
+                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs"
+                            >
+                              <option value="equals">Equals (exact match)</option>
+                              <option value="contains">Contains substring</option>
+                              <option value="not_equals">Does not equal</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">Value to Match</label>
+                            <input
+                              type="text"
+                              value={newRuleVal}
+                              onChange={(e) => setNewRuleVal(e.target.value)}
+                              placeholder="e.g. Enterprise or Billing"
+                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">Set Priority</label>
+                            <select
+                              value={newRulePriority}
+                              onChange={(e) => setNewRulePriority(e.target.value as any)}
+                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs"
+                            >
+                              <option value="low">Low Priority</option>
+                              <option value="medium">Medium Priority</option>
+                              <option value="high">High Priority</option>
+                              <option value="urgent">⚡ Urgent Priority</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">Attach Tag</label>
+                            <input
+                              type="text"
+                              value={newRuleTag}
+                              onChange={(e) => setNewRuleTag(e.target.value)}
+                              placeholder="e.g. enterprise_lead"
+                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">Target Team / Queue</label>
+                            <input
+                              type="text"
+                              value={newRuleTeam}
+                              onChange={(e) => setNewRuleTeam(e.target.value)}
+                              placeholder="e.g. Strategic Sales"
+                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end pt-1">
+                          <button
+                            type="button"
+                            onClick={handleAddNewRule}
+                            disabled={!newRuleVal.trim()}
+                            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                          >
+                            Save Routing Rule
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Routing Rules List */}
+                    <div className="space-y-2">
+                      {routingRules.map((rule) => (
+                        <div
+                          key={rule.id}
+                          className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/60 p-3 text-xs"
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-semibold text-slate-700">IF</span>
+                            <code className="rounded bg-white px-1.5 py-0.5 border border-slate-200 font-mono text-blue-600">
+                              {rule.field}
+                            </code>
+                            <span className="text-slate-500">{rule.operator}</span>
+                            <span className="font-bold text-slate-900">"{rule.value}"</span>
+                            <span className="text-slate-400">➔</span>
+                            <span className="rounded bg-amber-50 px-2 py-0.5 font-bold uppercase text-[10px] text-amber-700 border border-amber-200">
+                              {rule.assign_priority} Priority
+                            </span>
+                            {rule.assign_tag && (
+                              <span className="rounded bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 border border-blue-200">
+                                #{rule.assign_tag}
+                              </span>
+                            )}
+                            {rule.team_target && (
+                              <span className="rounded bg-purple-50 px-2 py-0.5 text-[10px] font-semibold text-purple-700 border border-purple-200">
+                                Team: {rule.team_target}
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveRule(rule.id)}
+                            className="text-red-500 hover:text-red-700 p-1 text-xs shrink-0"
+                            title="Remove Rule"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="pt-2">
                     <button
                       onClick={handleSave}
                       disabled={saving}
-                      className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
+                      className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
                     >
-                      {saving ? 'Saving...' : 'Save Pre-Chat Settings'}
+                      {saving ? 'Saving...' : 'Save Pre-Chat Form Configuration'}
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="rounded-lg bg-slate-50 border border-slate-200 p-6 text-center">
+                <div className="rounded-lg bg-slate-50 p-6 text-center border border-dashed border-slate-200">
                   <span className="text-2xl">⚡</span>
-                  <div className="mt-2 text-xs font-semibold text-slate-700">Pre-chat form is currently disabled</div>
-                  <p className="mt-1 text-[11px] text-slate-500 max-w-sm mx-auto">
-                    Visitors will be able to send messages immediately without providing their email or name first. Anonymous sessions will be tracked by browser cookie.
+                  <div className="text-xs font-semibold text-slate-800 mt-2">Pre-Chat Qualification is Disabled</div>
+                  <p className="text-[11px] text-slate-500 max-w-sm mx-auto mt-1">
+                    Visitors will immediately see the conversation message thread without answering any required form fields.
                   </p>
-                  <button
-                    onClick={() => setPreChatEnabled(true)}
-                    className="mt-3 rounded-md bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow hover:bg-blue-700"
-                  >
-                    Enable Pre-Chat Form
-                  </button>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Form Visual Preview */}
+          {/* Right Column: Live Interactive Visitor Preview & Simulator */}
           <div className="lg:col-span-5">
-            <div className="sticky top-6 rounded-xl border border-slate-200 bg-slate-100 p-5 shadow-sm">
-              <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
-                Pre-Chat Form Preview
+            <div className="sticky top-6 rounded-xl border border-slate-200 bg-slate-100 p-5 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                  Live Intake Preview & Simulator
+                </span>
+                <span className="text-[11px] font-semibold text-emerald-600">● Interactive</span>
               </div>
 
-              <div className="mx-auto max-w-[340px] rounded-2xl bg-white shadow-xl border border-slate-200 overflow-hidden">
-                <div className="p-4 text-white" style={{ backgroundColor: widgetColor }}>
-                  <div className="font-bold text-sm tracking-tight">{greetingTitle}</div>
-                  <div className="text-[11px] text-white/80">{greetingTagline}</div>
+              {/* Mockup Container */}
+              <div
+                className={`relative mx-auto h-[510px] w-full max-w-[340px] shadow-2xl border border-slate-200 overflow-hidden flex flex-col ${
+                  borderRadius === 'rounded_lg'
+                    ? 'rounded-xl'
+                    : borderRadius === 'rounded_full'
+                    ? 'rounded-3xl'
+                    : 'rounded-2xl'
+                } ${themeMode === 'dark' ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-800'}`}
+              >
+                {/* Header */}
+                <div className="p-4 text-white shrink-0 shadow-sm" style={{ backgroundColor: widgetColor }}>
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128'}
+                      alt="Avatar"
+                      className="h-9 w-9 rounded-full border-2 border-white/60 object-cover shadow-xs"
+                    />
+                    <div>
+                      <div className="font-bold text-sm tracking-tight">{greetingTitle}</div>
+                      <div className="text-[11px] text-white/80">{greetingTagline}</div>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="p-4 space-y-3.5">
-                  <div className="text-xs font-medium text-slate-600">
-                    Please fill out the form below to start chatting with our team:
+                {/* Form Body */}
+                <div
+                  className={`flex-1 p-4 space-y-3 overflow-y-auto ${
+                    themeMode === 'dark' ? 'bg-slate-950/70' : 'bg-slate-50/70'
+                  }`}
+                >
+                  <div className="border-b border-slate-200 pb-2">
+                    <div className="text-xs font-bold text-slate-900 dark:text-white">{preChatTitle}</div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{preChatDesc}</div>
                   </div>
 
-                  {preChatFields.map((field) => (
+                  {customPreChatFields.map((field) => (
                     <div key={field.name} className="space-y-1">
-                      <label className="block text-[11px] font-semibold text-slate-700">
+                      <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300">
                         {field.label} {field.required && <span className="text-red-500">*</span>}
                       </label>
-                      <input
-                        type="text"
-                        disabled
-                        placeholder={`Enter your ${field.label.toLowerCase()}`}
-                        className="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-xs text-slate-400 bg-slate-50 cursor-not-allowed"
-                      />
+                      {field.type === 'select' ? (
+                        <select
+                          value={simAnswers[field.name] || ''}
+                          onChange={(e) => setSimAnswers({ ...simAnswers, [field.name]: e.target.value })}
+                          className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                        >
+                          <option value="">{field.placeholder || 'Select an option'}</option>
+                          {field.options?.map((opt) => (
+                            <option key={opt} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      ) : field.type === 'textarea' ? (
+                        <textarea
+                          rows={2}
+                          value={simAnswers[field.name] || ''}
+                          onChange={(e) => setSimAnswers({ ...simAnswers, [field.name]: e.target.value })}
+                          placeholder={field.placeholder || ''}
+                          className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                        />
+                      ) : (
+                        <input
+                          type={field.type === 'number' ? 'number' : field.type === 'email' ? 'email' : 'text'}
+                          value={simAnswers[field.name] || ''}
+                          onChange={(e) => setSimAnswers({ ...simAnswers, [field.name]: e.target.value })}
+                          placeholder={field.placeholder || ''}
+                          className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                        />
+                      )}
                     </div>
                   ))}
 
-                  <div className="space-y-1">
-                    <label className="block text-[11px] font-semibold text-slate-700">
-                      Message <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      disabled
-                      rows={2}
-                      placeholder="How can we help?"
-                      className="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-xs text-slate-400 bg-slate-50 cursor-not-allowed resize-none"
-                    />
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={handleRunIntakeSimulation}
+                      disabled={testingIntake}
+                      className="w-full rounded-md py-2 text-xs font-bold text-white shadow-sm transition-opacity hover:opacity-95"
+                      style={{ backgroundColor: widgetColor }}
+                    >
+                      {testingIntake ? 'Evaluating Triage...' : preChatSubmitText}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Footer Branding */}
+                {showBranding && (
+                  <div
+                    className={`py-1.5 text-center text-[10px] font-medium border-t ${
+                      themeMode === 'dark'
+                        ? 'bg-slate-900 text-slate-400 border-slate-800'
+                        : 'bg-white text-slate-500 border-slate-200'
+                    }`}
+                  >
+                    ⚡ Powered by <span className="font-semibold text-blue-600">Captain AI</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Simulation Result Box */}
+              {simIntakeResult && (
+                <div className="rounded-xl border border-blue-200 bg-white p-3.5 shadow-sm space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-800">Triage & Routing Evaluation</span>
+                    <span
+                      className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase ${
+                        simIntakeResult.valid ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
+                      }`}
+                    >
+                      {simIntakeResult.valid ? '✓ Valid Intake' : 'Validation Error'}
+                    </span>
                   </div>
 
-                  <button
-                    disabled
-                    className="w-full rounded-lg text-white font-semibold py-2 text-xs shadow-sm cursor-not-allowed opacity-90"
-                    style={{ backgroundColor: widgetColor }}
-                  >
-                    Start Chatting →
-                  </button>
+                  {simIntakeResult.errors.length > 0 && (
+                    <div className="text-[11px] text-red-600 space-y-0.5">
+                      {simIntakeResult.errors.map((e, idx) => (
+                        <div key={idx}>• {e}</div>
+                      ))}
+                    </div>
+                  )}
+
+                  {simIntakeResult.valid && (
+                    <div className="space-y-1.5 text-xs pt-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500">Calculated Priority:</span>
+                        <span className="font-bold text-amber-700 uppercase">
+                          {simIntakeResult.routing_result.priority}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500">Target Team / Queue:</span>
+                        <span className="font-semibold text-purple-700">
+                          {simIntakeResult.routing_result.team_target || 'General Support Queue'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500">Attached Tags:</span>
+                        <div className="flex gap-1">
+                          {simIntakeResult.routing_result.tags.map((t) => (
+                            <span key={t} className="rounded bg-blue-50 text-blue-700 px-1.5 py-0.2 text-[10px] font-mono">
+                              #{t}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* TAB 4: SECURITY & IDENTITY VALIDATION */}
+{/* TAB 4: SECURITY & IDENTITY VALIDATION */}
       {activeTab === 'security' && (
         <div className="space-y-6">
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">

@@ -5,7 +5,8 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from communicator.services import prechat_service
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,6 +37,11 @@ class WidgetContactIn(BaseModel):
 class WidgetMessageIn(BaseModel):
     conversation_id: uuid.UUID
     body: str
+
+
+class WidgetPreChatSubmitIn(BaseModel):
+    website_token: str
+    answers: dict[str, Any]
 
 
 class WidgetPresenceIn(BaseModel):
@@ -289,3 +295,45 @@ async def update_widget_presence(
         await session.flush()
 
     return {"status": "ok", "agentOnline": True}
+
+@router.get("/prechat")
+async def get_widget_prechat_form(
+    token: str = Query(..., description="Website live chat widget token"),
+    session: AsyncSession = Depends(get_db_session),
+):
+    """Public endpoint returning active pre-chat form fields and validation rules."""
+    cfg = await prechat_service.get_prechat_config(session)
+    return {
+        "enabled": cfg.get("enabled", True),
+        "title": cfg.get("title", "Welcome to Live Chat"),
+        "description": cfg.get("description", "Please answer a few questions to begin."),
+        "submit_button_text": cfg.get("submit_button_text", "Start Conversation"),
+        "require_email": cfg.get("require_email", True),
+        "fields": cfg.get("fields", []),
+    }
+
+
+@router.post("/prechat/submit")
+async def submit_widget_prechat(
+    payload: WidgetPreChatSubmitIn,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+):
+    """
+    Public intake endpoint: validates form responses, provisions or updates contact,
+    evaluates conditional routing rules, and creates conversation.
+    """
+    client_ip = request.client.host if request.client else None
+    result = await prechat_service.submit_prechat_intake(
+        session,
+        website_token=payload.website_token,
+        answers=payload.answers,
+        client_ip=client_ip,
+    )
+    if not result.get("success"):
+        raise HTTPException(
+            status_code=422,
+            detail={"message": "Pre-chat form validation failed", "errors": result.get("errors", [])},
+        )
+    return result
+
