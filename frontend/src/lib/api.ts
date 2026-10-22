@@ -2060,6 +2060,36 @@ export interface AutoAssignResult {
   tags?: string[]
 }
 
+
+export interface SSOConfigItem {
+  id: string
+  is_enabled: boolean
+  provider_type: 'saml' | 'okta' | 'azure_ad' | 'google_workspace' | 'onelogin'
+  idp_entity_id: string
+  idp_sso_url: string
+  idp_x509_cert: string
+  sp_entity_id: string
+  sp_acs_url: string
+  enforced_domains: string[]
+  jit_provisioning_enabled: boolean
+  default_role: string
+  allow_unlinked_passwords: boolean
+  attribute_mapping: Record<string, string>
+  last_tested_at: string | null
+  last_test_status: string
+  last_test_message: string
+  created_at: string
+  updated_at: string
+}
+
+export interface SSOTestResult {
+  status: 'healthy' | 'warning' | 'error'
+  message: string
+  tested_at: string
+  checks: Array<{ name: string; passed: boolean; message: string }>
+  sample_parsed?: Record<string, any>
+}
+
 export const api = {
   listDrafts: () => request<Draft[]>('/drafts?status=pending_review'),
   approveDraft: (id: string) => request<Draft>(`/drafts/${id}/approve`, { method: 'POST' }),
@@ -3512,4 +3542,29 @@ export const api = {
     request<{ member_id: string; permission: string; allowed: boolean }>(
       `/roles/members/${memberId}/check?permission=${encodeURIComponent(permission)}`
     ),
+  // Gap 8: Enterprise SSO & SAML 2.0
+  getSSOConfig: () =>
+    request<{ sso_config: SSOConfigItem }>('/sso/config').then((r) => r.sso_config),
+  updateSSOConfig: (data: Partial<SSOConfigItem>) =>
+    request<{ sso_config: SSOConfigItem }>('/sso/config', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }).then((r) => r.sso_config),
+  testSSOConnection: (sampleXml?: string) =>
+    request<SSOTestResult>('/sso/test', {
+      method: 'POST',
+      body: JSON.stringify({ sample_xml: sampleXml }),
+    }),
+  checkSSOEmail: (email: string) =>
+    request<{
+      sso_required: boolean
+      is_enabled: boolean
+      provider_type: string
+      domain: string
+      redirect_url: string | null
+      allow_unlinked_passwords: boolean
+    }>('/sso/check', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
 }

@@ -38,6 +38,7 @@ from communicator.api.routes import (
     prechat,
     audit_logs,
     roles,
+    sso,
 )
 
 app = FastAPI(
@@ -64,6 +65,7 @@ app.include_router(widget_customizer.router, prefix="/api/v1")
 app.include_router(prechat.router, prefix="/api/v1")
 app.include_router(audit_logs.router, prefix="/api/v1")
 app.include_router(roles.router, prefix="/api/v1")
+app.include_router(sso.router, prefix="/api/v1/sso", tags=["sso"])
 app.include_router(inboxes.router, prefix="/api/v1")
 app.include_router(drafts.router, prefix="/api/v1")
 app.include_router(services.router, prefix="/api/v1")

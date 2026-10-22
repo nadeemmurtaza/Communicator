@@ -3,11 +3,32 @@ import {
   api,
   type PermissionCatalogItem,
   type RoleItem,
+  type SSOConfigItem,
+  type SSOTestResult,
   type TeamMember,
 } from '../lib/api'
 
 export function Team() {
-  const [activeTab, setActiveTab] = useState<'members' | 'roles'>('members')
+  const [activeTab, setActiveTab] = useState<'members' | 'roles' | 'sso'>('members')
+
+  // SSO State
+  const [ssoConfig, setSsoConfig] = useState<SSOConfigItem | null>(null)
+  const [ssoProvider, setSsoProvider] = useState<'saml' | 'okta' | 'azure_ad' | 'google_workspace' | 'onelogin'>('saml')
+  const [ssoEnabled, setSsoEnabled] = useState(false)
+  const [idpEntityId, setIdpEntityId] = useState('')
+  const [idpSsoUrl, setIdpSsoUrl] = useState('')
+  const [idpCert, setIdpCert] = useState('')
+  const [spEntityId, setSpEntityId] = useState('urn:communicator:sp')
+  const [spAcsUrl, setSpAcsUrl] = useState('/api/v1/sso/saml/acs')
+  const [enforcedDomainsText, setEnforcedDomainsText] = useState('')
+  const [jitEnabled, setJitEnabled] = useState(true)
+  const [defaultSsoRole, setDefaultSsoRole] = useState('agent')
+  const [allowUnlinkedPasswords, setAllowUnlinkedPasswords] = useState(true)
+  const [savingSso, setSavingSso] = useState(false)
+  const [testingSso, setTestingSso] = useState(false)
+  const [ssoTestResult, setSsoTestResult] = useState<SSOTestResult | null>(null)
+  const [showTestModal, setShowTestModal] = useState(false)
+  const [copiedField, setCopiedField] = useState<string | null>(null)
   const [members, setMembers] = useState<TeamMember[] | null>(null)
   const [roles, setRoles] = useState<RoleItem[]>([])
   const [catalog, setCatalog] = useState<PermissionCatalogItem[]>([])
@@ -41,19 +62,97 @@ export function Team() {
     try {
       setLoading(true)
       setError(null)
-      const [mList, rList, pCatalog] = await Promise.all([
+      const [mList, rList, pCatalog, sso] = await Promise.all([
         api.listTeam(),
         api.getRoles().catch(() => []),
         api.getPermissionsCatalog().catch(() => []),
+        api.getSSOConfig().catch(() => null),
       ])
       setMembers(mList)
       setRoles(rList)
       setCatalog(pCatalog)
+      if (sso) {
+        setSsoConfig(sso)
+        setSsoProvider(sso.provider_type)
+        setSsoEnabled(sso.is_enabled)
+        setIdpEntityId(sso.idp_entity_id)
+        setIdpSsoUrl(sso.idp_sso_url)
+        setIdpCert(sso.idp_x509_cert)
+        setSpEntityId(sso.sp_entity_id)
+        setSpAcsUrl(sso.sp_acs_url)
+        setEnforcedDomainsText(sso.enforced_domains.join(', '))
+        setJitEnabled(sso.jit_provisioning_enabled)
+        setDefaultSsoRole(sso.default_role || 'agent')
+        setAllowUnlinkedPasswords(sso.allow_unlinked_passwords)
+      }
     } catch (e) {
       setError((e as Error).message)
     } finally {
       setLoading(false)
     }
+  }
+
+  async function handleSaveSSO(e: React.FormEvent) {
+    e.preventDefault()
+    setSavingSso(true)
+    setError(null)
+    try {
+      const domains = enforcedDomainsText
+        .split(',')
+        .map((d) => d.trim().replace(/^@/, '').toLowerCase())
+        .filter(Boolean)
+
+      const updated = await api.updateSSOConfig({
+        is_enabled: ssoEnabled,
+        provider_type: ssoProvider,
+        idp_entity_id: idpEntityId.trim(),
+        idp_sso_url: idpSsoUrl.trim(),
+        idp_x509_cert: idpCert.trim(),
+        sp_entity_id: spEntityId.trim(),
+        sp_acs_url: spAcsUrl.trim(),
+        enforced_domains: domains,
+        jit_provisioning_enabled: jitEnabled,
+        default_role: defaultSsoRole,
+        allow_unlinked_passwords: allowUnlinkedPasswords,
+      })
+
+      setSsoConfig(updated)
+      setSuccess('Enterprise SSO & SAML 2.0 configuration saved and logged to SOC 2 compliance trail!')
+      setTimeout(() => setSuccess(null), 3500)
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setSavingSso(false)
+    }
+  }
+
+  async function handleRunSSOTest() {
+    setTestingSso(true)
+    setError(null)
+    try {
+      const result = await api.testSSOConnection()
+      setSsoTestResult(result)
+      setShowTestModal(true)
+      if (result.status === 'healthy') {
+        setSuccess('All SAML 2.0 connectivity and assertion parsing checks passed successfully!')
+      } else {
+        setError(result.message)
+      }
+      setTimeout(() => {
+        setSuccess(null)
+        setError(null)
+      }, 4000)
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setTestingSso(false)
+    }
+  }
+
+  function handleCopy(text: string, fieldName: string) {
+    navigator.clipboard.writeText(text)
+    setCopiedField(fieldName)
+    setTimeout(() => setCopiedField(null), 2000)
   }
 
   async function submitMember(e: React.FormEvent) {
@@ -223,6 +322,16 @@ export function Team() {
             }`}
           >
             🛡️ RBAC Roles ({roles.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('sso')}
+            className={`rounded-md px-3.5 py-1.5 transition-all ${
+              activeTab === 'sso'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            🔑 Enterprise SSO & SAML
           </button>
         </div>
       </div>
@@ -488,6 +597,412 @@ export function Team() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: ENTERPRISE SSO & SAML 2.0 */}
+      {activeTab === 'sso' && (
+        <div className="space-y-6">
+          {/* SSO Top Status Banner */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-blue-600 font-bold text-lg">
+                  🔑
+                </div>
+                <div>
+                  {ssoConfig?.last_tested_at && (
+                    <div className="text-[10px] font-mono text-slate-400">
+                      Config ID: {ssoConfig.id.slice(0, 8)}... | Last verified: {new Date(ssoConfig.last_tested_at).toLocaleString()}
+                    </div>
+                  )}
+                  <h2 className="text-base font-bold text-slate-900">
+                    SAML 2.0 Identity Provider (IdP) & SSO Enforcement
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Connect Okta, Microsoft Entra ID (Azure AD), Google Workspace, OneLogin, or custom SAML 2.0 federations.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold border ${
+                  ssoEnabled
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-slate-100 text-slate-600 border-slate-200'
+                }`}
+              >
+                <span
+                  className={`h-2 w-2 rounded-full ${ssoEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}
+                />
+                {ssoEnabled ? 'SSO Enforced' : 'SSO Inactive'}
+              </span>
+
+              <button
+                type="button"
+                onClick={handleRunSSOTest}
+                disabled={testingSso}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 disabled:opacity-50"
+              >
+                {testingSso ? 'Testing Connection...' : '⚡ Test Connection'}
+              </button>
+            </div>
+          </div>
+
+          <form onSubmit={handleSaveSSO} className="space-y-6">
+            {/* Identity Provider Presets */}
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">1. Select Identity Provider</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Choose your organization's enterprise directory or select Generic SAML 2.0.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                {[
+                  { id: 'okta', name: 'Okta', icon: '🔵', desc: 'Okta Verify & SAML' },
+                  { id: 'azure_ad', name: 'Microsoft Entra ID', icon: '🔷', desc: 'Azure AD / M365' },
+                  { id: 'google_workspace', name: 'Google Workspace', icon: '🔴', desc: 'Google Cloud Identity' },
+                  { id: 'onelogin', name: 'OneLogin', icon: '🟣', desc: 'OneLogin Cloud Directory' },
+                  { id: 'saml', name: 'Generic SAML 2.0', icon: '🌐', desc: 'Ping / Keycloak / Custom' },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setSsoProvider(item.id as any)}
+                    className={`flex flex-col items-center justify-center p-3.5 rounded-xl border text-center transition-all ${
+                      ssoProvider === item.id
+                        ? 'border-blue-500 bg-blue-50/60 shadow-xs ring-2 ring-blue-500/20'
+                        : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100 hover:border-slate-300'
+                    }`}
+                  >
+                    <span className="text-2xl mb-1">{item.icon}</span>
+                    <span className="text-xs font-bold text-slate-800">{item.name}</span>
+                    <span className="text-[10px] text-slate-400 mt-0.5">{item.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* IdP Settings */}
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+                <div className="border-b border-slate-100 pb-3">
+                  <h3 className="text-sm font-bold text-slate-900">2. Identity Provider (IdP) Credentials</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Enter the SSO endpoints provided by your identity directory.
+                  </p>
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      IdP Single Sign-On URL (HTTP-POST Binding) *
+                    </label>
+                    <input
+                      type="url"
+                      value={idpSsoUrl}
+                      onChange={(e) => setIdpSsoUrl(e.target.value)}
+                      placeholder={
+                        ssoProvider === 'okta'
+                          ? 'https://yourcompany.okta.com/app/yourcompany_communicator/sso/saml'
+                          : ssoProvider === 'azure_ad'
+                          ? 'https://login.microsoftonline.com/{tenant-id}/saml2'
+                          : 'https://idp.example.com/sso/saml'
+                      }
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none font-mono text-[11px]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      IdP Entity ID / Issuer URI *
+                    </label>
+                    <input
+                      type="text"
+                      value={idpEntityId}
+                      onChange={(e) => setIdpEntityId(e.target.value)}
+                      placeholder={
+                        ssoProvider === 'okta'
+                          ? 'http://www.okta.com/exk123456789'
+                          : ssoProvider === 'azure_ad'
+                          ? 'https://sts.windows.net/{tenant-id}/'
+                          : 'https://idp.example.com/entity-id'
+                      }
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none font-mono text-[11px]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      X.509 Public Certificate (PEM format) *
+                    </label>
+                    <textarea
+                      rows={5}
+                      value={idpCert}
+                      onChange={(e) => setIdpCert(e.target.value)}
+                      placeholder="-----BEGIN CERTIFICATE-----
+MIIDpDCCAoygAwIBAgIGAX...
+-----END CERTIFICATE-----"
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none font-mono text-[10px] leading-relaxed"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Used to verify XML digital signatures on SAML authentication assertions.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Service Provider (SP) Metadata */}
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+                <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">3. Service Provider (SP) Settings</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Configure these values in your IdP application setup.
+                    </p>
+                  </div>
+                  <a
+                    href="/api/v1/sso/metadata.xml"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 rounded-md bg-blue-50 border border-blue-200 px-2.5 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100"
+                  >
+                    📥 Download XML
+                  </a>
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="font-semibold text-slate-700">Assertion Consumer Service (ACS) URL</label>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(`${window.location.origin}/api/v1/sso/saml/acs`, 'acs')}
+                        className="text-blue-600 hover:text-blue-800 text-[11px] font-semibold"
+                      >
+                        {copiedField === 'acs' ? '✓ Copied' : 'Copy'}
+                      </button>
+                    </div>
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-[11px] text-slate-700 select-all">
+                      {window.location.origin}/api/v1/sso/saml/acs
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="font-semibold text-slate-700">SP Entity ID (Audience URI)</label>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(spEntityId, 'entityId')}
+                        className="text-blue-600 hover:text-blue-800 text-[11px] font-semibold"
+                      >
+                        {copiedField === 'entityId' ? '✓ Copied' : 'Copy'}
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={spEntityId}
+                      onChange={(e) => setSpEntityId(e.target.value)}
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none font-mono text-[11px]"
+                    />
+                  </div>
+
+                  <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-[11px] text-amber-800 space-y-1">
+                    <div className="font-bold">Required SAML Attribute Claims:</div>
+                    <ul className="list-disc pl-4 space-y-0.5 text-[10px]">
+                      <li><strong className="font-mono">NameID</strong> or <strong className="font-mono">email</strong>: Team member email</li>
+                      <li><strong className="font-mono">displayName</strong> or <strong className="font-mono">name</strong>: Full member name</li>
+                      <li><strong className="font-mono">role</strong> (Optional): Mapped RBAC role slug</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Access Policies & Provisioning */}
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+              <div className="border-b border-slate-100 pb-3">
+                <h3 className="text-sm font-bold text-slate-900">4. Domain Enforcement & Just-in-Time (JIT) Provisioning</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Control domain restrictions, automated account creation, and default RBAC privilege assignments.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      Enforced Email Domains
+                    </label>
+                    <input
+                      type="text"
+                      value={enforcedDomainsText}
+                      onChange={(e) => setEnforcedDomainsText(e.target.value)}
+                      placeholder="e.g. bayworks.com, acme.io, enterprise.org"
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Separate multiple domains with commas. Team members with these domains will be forced to authenticate via SSO.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      Default RBAC Role for Provisioned Members
+                    </label>
+                    <select
+                      value={defaultSsoRole}
+                      onChange={(e) => setDefaultSsoRole(e.target.value)}
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+                    >
+                      {roles.map((r) => (
+                        <option key={r.name} value={r.name}>
+                          {r.display_name} ({r.name})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50/70 p-4">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={ssoEnabled}
+                      onChange={(e) => setSsoEnabled(e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 mt-0.5"
+                    />
+                    <div>
+                      <div className="font-semibold text-slate-800">Enforce Enterprise SSO</div>
+                      <div className="text-[11px] text-slate-500">
+                        Require team members with matching domains to log in through your Identity Provider.
+                      </div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={jitEnabled}
+                      onChange={(e) => setJitEnabled(e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 mt-0.5"
+                    />
+                    <div>
+                      <div className="font-semibold text-slate-800">Just-in-Time (JIT) User Provisioning</div>
+                      <div className="text-[11px] text-slate-500">
+                        Automatically create team accounts on first successful SAML login.
+                      </div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={allowUnlinkedPasswords}
+                      onChange={(e) => setAllowUnlinkedPasswords(e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 mt-0.5"
+                    />
+                    <div>
+                      <div className="font-semibold text-slate-800">Allow Break-Glass Password Sign-In</div>
+                      <div className="text-[11px] text-slate-500">
+                        Enable emergency local password logins if your Identity Provider is down.
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={handleRunSSOTest}
+                  disabled={testingSso}
+                  className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  {testingSso ? 'Testing Connection...' : '⚡ Validate Setup'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingSso}
+                  className="rounded-lg bg-blue-600 px-6 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {savingSso ? 'Saving Configuration...' : 'Save Enterprise SSO Settings'}
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* SSO DIAGNOSTIC TEST RESULTS MODAL */}
+      {showTestModal && ssoTestResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">
+                  {ssoTestResult.status === 'healthy' ? '✅' : '⚠️'}
+                </span>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900">SAML 2.0 Connection Diagnostics</h3>
+                  <p className="text-[11px] text-slate-500">
+                    Tested at: {new Date(ssoTestResult.tested_at).toLocaleTimeString()}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowTestModal(false)}
+                className="h-7 w-7 rounded-full bg-slate-200 text-slate-600 hover:bg-slate-300 flex items-center justify-center text-xs font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 space-y-3 overflow-y-auto flex-1">
+              <div
+                className={`rounded-lg p-3 text-xs border ${
+                  ssoTestResult.status === 'healthy'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    : 'bg-amber-50 text-amber-800 border-amber-200'
+                }`}
+              >
+                {ssoTestResult.message}
+              </div>
+
+              <div className="divide-y divide-slate-100 border border-slate-200 rounded-lg overflow-hidden text-xs">
+                {ssoTestResult.checks.map((check, idx) => (
+                  <div key={idx} className="p-3 bg-white flex items-start justify-between gap-3">
+                    <div>
+                      <div className="font-semibold text-slate-800">{check.name}</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">{check.message}</div>
+                    </div>
+                    <span
+                      className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-bold uppercase border ${
+                        check.passed
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-amber-50 text-amber-700 border-amber-200'
+                      }`}
+                    >
+                      {check.passed ? '✓ Pass' : 'Warning'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+              <button
+                onClick={() => setShowTestModal(false)}
+                className="rounded-lg bg-slate-900 px-4 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}

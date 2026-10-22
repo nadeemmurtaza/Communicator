@@ -53,6 +53,10 @@ from .simulation import (
     SimulationScenario,
     SimulationVerdict,
 )
+from .sso import (
+    SINGLETON_SSO_CONFIG_ID,
+    SSOConfig,
+)
 from .stripe_integration import (
     SINGLETON_STRIPE_CONFIG_ID,
     StripeBillingActionLog,
@@ -135,6 +139,8 @@ __all__ = [
     "SimulationRun",
     "SimulationScenario",
     "SimulationVerdict",
+    "SINGLETON_SSO_CONFIG_ID",
+    "SSOConfig",
     "SINGLETON_STRIPE_CONFIG_ID",
     "SlackConversationSync",
     "SLAPolicy",
