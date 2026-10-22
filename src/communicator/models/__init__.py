@@ -32,6 +32,7 @@ from .issue_tracker import (
 )
 from .knowledge_base import KnowledgeBaseEntry, KnowledgeGap, KnowledgeRecommendation
 from .lead import Lead
+from .rbac import RoleDefinition
 from .macro import Macro
 from .message import Message, MessageDirection, MessageStatus
 from .segment import ContactSegment
@@ -126,6 +127,7 @@ __all__ = [
     "MessageStatus",
     "PolicyStatus",
     "RecipientStatus",
+    "RoleDefinition",
     "RuleActionType",
     "RuleMatchType",
     "SequenceStep",

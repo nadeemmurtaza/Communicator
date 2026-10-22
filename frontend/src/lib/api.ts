@@ -98,6 +98,30 @@ export interface TeamMember {
   id: string
   name: string
   email: string
+  role?: string
+  custom_permissions?: string[]
+  availability_status?: string
+  max_concurrent_conversations?: number
+}
+
+export interface RoleItem {
+  id: string
+  name: string
+  display_name: string
+  description: string
+  is_system_role: boolean
+  permissions: string[]
+  permissions_count: number
+  assigned_members_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface PermissionCatalogItem {
+  key: string
+  label: string
+  description: string
+  category: string
 }
 
 export interface KnowledgeBaseEntry {
@@ -3441,4 +3465,51 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+// Gap 7: Granular Role-Based Access Control (RBAC)
+  getRoles: () => request<RoleItem[]>('/roles'),
+  getPermissionsCatalog: () => request<PermissionCatalogItem[]>('/roles/permissions'),
+  getRoleDetail: (roleIdOrName: string) => request<RoleItem>(`/roles/${roleIdOrName}`),
+  createRole: (data: {
+    name: string
+    display_name: string
+    description?: string
+    permissions: string[]
+  }) =>
+    request<{ success: boolean; id: string; name: string; display_name: string; permissions: string[] }>(
+      '/roles',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    ),
+  updateRole: (
+    roleIdOrName: string,
+    data: { display_name?: string; description?: string; permissions?: string[] }
+  ) =>
+    request<{ success: boolean; id: string; name: string; display_name: string; permissions: string[] }>(
+      `/roles/${roleIdOrName}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }
+    ),
+  deleteRole: (roleIdOrName: string) =>
+    request<{ success: boolean; deleted_role: string }>(`/roles/${roleIdOrName}`, {
+      method: 'DELETE',
+    }),
+  assignMemberRole: (
+    memberId: string,
+    data: { role: string; custom_permissions?: string[]; actor?: string }
+  ) =>
+    request<{ success: boolean; member_id: string; name: string; role: string; custom_permissions: string[] }>(
+      `/roles/members/${memberId}/assign`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    ),
+  checkMemberPermission: (memberId: string, permission: string) =>
+    request<{ member_id: string; permission: string; allowed: boolean }>(
+      `/roles/members/${memberId}/check?permission=${encodeURIComponent(permission)}`
+    ),
 }

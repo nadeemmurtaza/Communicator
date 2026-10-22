@@ -2,7 +2,7 @@ import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, Integer, String
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from communicator.database import Base
@@ -16,6 +16,10 @@ class TeamMember(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+
+    # RBAC Role & Permissions
+    role: Mapped[str] = mapped_column(String(50), default="agent", nullable=False)
+    custom_permissions: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
 
     # Auto-Assignment & Capacity Routing
     availability_status: Mapped[str] = mapped_column(String(20), default="online", nullable=False)  # online | busy | offline
