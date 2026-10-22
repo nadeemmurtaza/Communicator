@@ -3,7 +3,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, Float, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -45,7 +45,7 @@ class AgentInsight(Base):
         ForeignKey("team_members.id", ondelete="SET NULL"), nullable=True
     )
     human_rep_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    
+
     # Winning response text or pattern extracted from top human conversations
     exemplar_content: Mapped[str | None] = mapped_column(Text, nullable=True)
 
@@ -54,7 +54,9 @@ class AgentInsight(Base):
     estimated_resolution_lift: Mapped[float] = mapped_column(Float, default=3.5, nullable=False)
 
     # Suggested 1-click action: apply_policy | add_kb | retrain_agent | coach_team
-    suggested_action: Mapped[str] = mapped_column(String(50), default="retrain_agent", nullable=False)
+    suggested_action: Mapped[str] = mapped_column(
+        String(50), default="retrain_agent", nullable=False
+    )
     action_payload: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
 
     status: Mapped[str] = mapped_column(
@@ -87,8 +89,10 @@ class AgentRetrainingEvent(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
-    trigger_type: Mapped[str] = mapped_column(String(50), default="human_exemplar_sync", nullable=False)
-    
+    trigger_type: Mapped[str] = mapped_column(
+        String(50), default="human_exemplar_sync", nullable=False
+    )
+
     version_from: Mapped[str] = mapped_column(String(20), default="2.1", nullable=False)
     version_to: Mapped[str] = mapped_column(String(20), default="2.2", nullable=False)
 
@@ -96,16 +100,22 @@ class AgentRetrainingEvent(Base):
         ForeignKey("agent_insights.id", ondelete="SET NULL"), nullable=True
     )
 
-    changes_applied: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list, nullable=False)
+    changes_applied: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, default=list, nullable=False
+    )
     status: Mapped[str] = mapped_column(String(30), default="applied", nullable=False)
 
     # Before and after performance impact
     baseline_resolution_rate: Mapped[float] = mapped_column(Float, default=86.4, nullable=False)
-    post_training_resolution_rate: Mapped[float] = mapped_column(Float, default=91.2, nullable=False)
+    post_training_resolution_rate: Mapped[float] = mapped_column(
+        Float, default=91.2, nullable=False
+    )
     resolution_lift: Mapped[float] = mapped_column(Float, default=4.8, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
 
-    insight: Mapped["AgentInsight | None"] = relationship("AgentInsight", back_populates="retraining_events")
+    insight: Mapped["AgentInsight | None"] = relationship(
+        "AgentInsight", back_populates="retraining_events"
+    )

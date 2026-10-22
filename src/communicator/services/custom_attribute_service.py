@@ -3,10 +3,10 @@ from __future__ import annotations
 import logging
 import re
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.models.contact import Contact
@@ -198,13 +198,13 @@ async def create_attribute_definition(
     attr_model = data.get("attribute_model", "contact_attribute")
     if attr_model not in ALLOWED_MODELS:
         raise ValueError(
-            f"Invalid attribute_model '{attr_model}'. Allowed models: {sorted(list(ALLOWED_MODELS))}"
+            f"Invalid attribute_model '{attr_model}'. Allowed models: {sorted(ALLOWED_MODELS)}"
         )
 
     attr_type = data.get("attribute_type", "text")
     if attr_type not in ALLOWED_TYPES:
         raise ValueError(
-            f"Invalid attribute_type '{attr_type}'. Allowed types: {sorted(list(ALLOWED_TYPES))}"
+            f"Invalid attribute_type '{attr_type}'. Allowed types: {sorted(ALLOWED_TYPES)}"
         )
 
     # Check for duplicate
@@ -389,7 +389,7 @@ def validate_attribute_value(
     elif attr_type == "date":
         val_str = str(value).strip()
         try:
-            datetime.fromisoformat(val_str.replace("Z", "+00:00"))
+            datetime.fromisoformat(val_str)
             return True, val_str, None
         except ValueError:
             if re.match(r"^\d{4}-\d{2}-\d{2}$", val_str):
@@ -402,7 +402,7 @@ def validate_attribute_value(
 
     elif attr_type == "link":
         val_str = str(value).strip()
-        if not (val_str.startswith("http://") or val_str.startswith("https://")):
+        if not (val_str.startswith(("http://", "https://"))):
             return (
                 False,
                 None,
@@ -426,9 +426,7 @@ async def set_contact_custom_attributes(
     if not contact:
         raise ValueError(f"Contact {contact_id} not found.")
 
-    definitions = await list_attribute_definitions(
-        session, attribute_model="contact_attribute"
-    )
+    definitions = await list_attribute_definitions(session, attribute_model="contact_attribute")
     def_map = {d.name: d for d in definitions}
 
     current_fields = dict(contact.custom_fields or {})

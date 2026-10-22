@@ -1,4 +1,5 @@
 import uuid
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -73,12 +74,19 @@ async def test_member_role_assignment_and_permission_check(db_session):
     await db_session.flush()
 
     # 2. Check default agent permissions
-    assert await rbac_service.check_member_permission(db_session, member.id, "conversations:reply") is True
-    assert await rbac_service.check_member_permission(db_session, member.id, "billing:manage") is False
+    assert (
+        await rbac_service.check_member_permission(db_session, member.id, "conversations:reply")
+        is True
+    )
+    assert (
+        await rbac_service.check_member_permission(db_session, member.id, "billing:manage") is False
+    )
 
     # 3. Elevate to super_admin
     await rbac_service.assign_member_role(db_session, member.id, "super_admin")
-    assert await rbac_service.check_member_permission(db_session, member.id, "billing:manage") is True
+    assert (
+        await rbac_service.check_member_permission(db_session, member.id, "billing:manage") is True
+    )
 
     # 4. Restrict to restricted_agent with custom export permission
     await rbac_service.assign_member_role(
@@ -87,8 +95,13 @@ async def test_member_role_assignment_and_permission_check(db_session):
         "restricted_agent",
         custom_permissions=["contacts:export"],
     )
-    assert await rbac_service.check_member_permission(db_session, member.id, "contacts:export") is True
-    assert await rbac_service.check_member_permission(db_session, member.id, "conversations:delete") is False
+    assert (
+        await rbac_service.check_member_permission(db_session, member.id, "contacts:export") is True
+    )
+    assert (
+        await rbac_service.check_member_permission(db_session, member.id, "conversations:delete")
+        is False
+    )
 
 
 @pytest.mark.asyncio
@@ -136,9 +149,7 @@ async def test_roles_api_endpoints(db_session, override_database_dependency):
         assert assign_data["role"] == "tier1_triage"
 
         # 5. Check permission via API
-        r_check = await client.get(
-            f"/api/v1/roles/members/{m.id}/check?permission=contacts:edit"
-        )
+        r_check = await client.get(f"/api/v1/roles/members/{m.id}/check?permission=contacts:edit")
         assert r_check.status_code == 200
         assert r_check.json()["allowed"] is True
 

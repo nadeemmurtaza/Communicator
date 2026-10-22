@@ -172,7 +172,9 @@ async def update_ticket(
     return detail or {"id": str(ticket_id)}
 
 
-@router.post("/{ticket_id}/activities", status_code=status.HTTP_201_CREATED, response_model=dict[str, Any])
+@router.post(
+    "/{ticket_id}/activities", status_code=status.HTTP_201_CREATED, response_model=dict[str, Any]
+)
 async def add_ticket_activity(
     ticket_id: uuid.UUID,
     body: TicketActivityCreateRequest,

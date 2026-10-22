@@ -8,14 +8,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from communicator.models.contact import ChannelType, Contact
+from communicator.models.contact import ChannelType
 from communicator.models.contact_note import ContactNote
 from communicator.models.conversation import Conversation, ConversationState
 from communicator.models.macro import Macro
 from communicator.models.message import Message, MessageDirection, MessageStatus
 from communicator.models.team import Team
 from communicator.models.team_member import TeamMember
-
 
 DEFAULT_SYSTEM_MACROS = [
     {
@@ -210,7 +209,9 @@ async def execute_macro(
                     conversation.team_id = matched_team.id
                     executed_actions.append({"action": a_type, "team": matched_team.name})
                 else:
-                    executed_actions.append({"action": a_type, "team": team_name, "status": "noted"})
+                    executed_actions.append(
+                        {"action": a_type, "team": team_name, "status": "noted"}
+                    )
 
         elif a_type == "assign_agent":
             agent_name_val = action.get("agent_name")

@@ -22,7 +22,9 @@ class TeamMember(Base):
     custom_permissions: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
 
     # Auto-Assignment & Capacity Routing
-    availability_status: Mapped[str] = mapped_column(String(20), default="online", nullable=False)  # online | busy | offline
+    availability_status: Mapped[str] = mapped_column(
+        String(20), default="online", nullable=False
+    )  # online | busy | offline
     max_concurrent_conversations: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
     last_assigned_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

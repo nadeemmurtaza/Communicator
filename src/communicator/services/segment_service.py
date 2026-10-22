@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import func, or_, select
@@ -56,7 +55,7 @@ def build_segment_filter_stmt(filters: dict[str, Any]):
         try:
             dt = datetime.fromisoformat(str(created_after))
             stmt = stmt.where(Contact.created_at >= dt)
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
 
     created_before = filters.get("created_before")
@@ -64,7 +63,7 @@ def build_segment_filter_stmt(filters: dict[str, Any]):
         try:
             dt = datetime.fromisoformat(str(created_before))
             stmt = stmt.where(Contact.created_at <= dt)
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
 
     return stmt
@@ -93,7 +92,11 @@ async def seed_default_segments(session: AsyncSession) -> list[ContactSegment]:
     """Initializes standard dynamic audience segments if none exist."""
     existing = (await session.execute(select(ContactSegment))).scalars().first()
     if existing is not None:
-        return list((await session.execute(select(ContactSegment).order_by(ContactSegment.name))).scalars().all())
+        return list(
+            (await session.execute(select(ContactSegment).order_by(ContactSegment.name)))
+            .scalars()
+            .all()
+        )
 
     defaults = [
         ContactSegment(

@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.channels.base import ChannelProvider, SendResult
-from communicator.channels.email import PostmarkEmailProvider, UniversalEmailProvider
+from communicator.channels.email import UniversalEmailProvider
 from communicator.channels.line import LineProvider
 from communicator.channels.live_chat import WebLiveChatProvider
 from communicator.channels.messenger import MetaMessengerProvider
@@ -188,14 +188,14 @@ async def get_provider(channel: ChannelType, session: AsyncSession) -> ChannelPr
 
 __all__ = [
     "ChannelProvider",
-    "SendResult",
-    "get_provider",
-    "WebLiveChatProvider",
-    "TwilioSMSProvider",
-    "MetaMessengerProvider",
-    "TelegramProvider",
     "LineProvider",
+    "MetaMessengerProvider",
+    "SendResult",
+    "TelegramProvider",
     "TikTokProvider",
-    "VoiceProvider",
+    "TwilioSMSProvider",
     "UniversalEmailProvider",
+    "VoiceProvider",
+    "WebLiveChatProvider",
+    "get_provider",
 ]

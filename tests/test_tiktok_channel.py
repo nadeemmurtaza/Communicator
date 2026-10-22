@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
@@ -10,7 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from communicator.channels.tiktok import TikTokProvider
 from communicator.models.contact import ChannelType, Contact
 from communicator.models.conversation import Conversation
-from communicator.models.inbox import Inbox
 from communicator.models.message import Message, MessageDirection
 
 
@@ -85,7 +85,10 @@ async def test_tiktok_channel_inbox_flow(test_client: AsyncClient, db_session: A
     updated = update_res.json()
     assert updated["inbox"]["name"] == "Bay Works TikTok Support"
     assert updated["businessProfile"]["appId"] == "tt_app_custom_888"
-    assert updated["commentAutoReply"]["template"] == "Thanks for your comment! DM us for prompt support. 🚀"
+    assert (
+        updated["commentAutoReply"]["template"]
+        == "Thanks for your comment! DM us for prompt support. 🚀"
+    )
 
     # 3. Verify TikTok connection
     verify_res = await test_client.post("/api/v1/inboxes/channels/tiktok/verify")

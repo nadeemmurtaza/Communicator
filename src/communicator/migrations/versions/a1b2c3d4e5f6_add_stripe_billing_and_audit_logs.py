@@ -23,7 +23,12 @@ def upgrade() -> None:
     op.create_table(
         "stripe_configs",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("account_name", sa.String(length=255), nullable=False, server_default="Primary Stripe Account"),
+        sa.Column(
+            "account_name",
+            sa.String(length=255),
+            nullable=False,
+            server_default="Primary Stripe Account",
+        ),
         sa.Column("api_key", sa.Text(), nullable=False, server_default=""),
         sa.Column("publishable_key", sa.String(length=255), nullable=False, server_default=""),
         sa.Column("webhook_secret", sa.String(length=255), nullable=False, server_default=""),
@@ -31,7 +36,9 @@ def upgrade() -> None:
         sa.Column("test_mode", sa.Boolean(), nullable=False, server_default=sa.text("true")),
         sa.Column("default_currency", sa.String(length=10), nullable=False, server_default="usd"),
         sa.Column("last_tested_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("last_test_status", sa.String(length=50), nullable=False, server_default="untested"),
+        sa.Column(
+            "last_test_status", sa.String(length=50), nullable=False, server_default="untested"
+        ),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -58,7 +65,9 @@ def upgrade() -> None:
         sa.Column("currency", sa.String(length=10), nullable=False, server_default="usd"),
         sa.Column("status", sa.String(length=50), nullable=False, server_default="succeeded"),
         sa.Column("stripe_id", sa.String(length=255), nullable=False, server_default=""),
-        sa.Column("actor_email", sa.String(length=255), nullable=False, server_default="agent@newax.com"),
+        sa.Column(
+            "actor_email", sa.String(length=255), nullable=False, server_default="agent@newax.com"
+        ),
         sa.Column("reason", sa.Text(), nullable=False, server_default=""),
         sa.Column(
             "details",
@@ -75,7 +84,9 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["contact_id"], ["contacts.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_stripe_billing_action_logs_contact_id", "stripe_billing_action_logs", ["contact_id"])
+    op.create_index(
+        "ix_stripe_billing_action_logs_contact_id", "stripe_billing_action_logs", ["contact_id"]
+    )
     op.create_index(
         "ix_stripe_billing_action_logs_customer_identifier",
         "stripe_billing_action_logs",
@@ -84,7 +95,11 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index("ix_stripe_billing_action_logs_customer_identifier", table_name="stripe_billing_action_logs")
-    op.drop_index("ix_stripe_billing_action_logs_contact_id", table_name="stripe_billing_action_logs")
+    op.drop_index(
+        "ix_stripe_billing_action_logs_customer_identifier", table_name="stripe_billing_action_logs"
+    )
+    op.drop_index(
+        "ix_stripe_billing_action_logs_contact_id", table_name="stripe_billing_action_logs"
+    )
     op.drop_table("stripe_billing_action_logs")
     op.drop_table("stripe_configs")

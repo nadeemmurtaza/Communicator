@@ -4,9 +4,8 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from communicator.models.contact import Contact
 from communicator.models.conversation import Conversation, ConversationState
@@ -46,14 +45,18 @@ DEFAULT_SLA_POLICIES = [
 
 async def list_policies(session: AsyncSession) -> list[SLAPolicy]:
     """Lists all SLA policies, seeding defaults if empty."""
-    res = await session.execute(select(SLAPolicy).order_by(SLAPolicy.first_response_time_threshold.asc()))
+    res = await session.execute(
+        select(SLAPolicy).order_by(SLAPolicy.first_response_time_threshold.asc())
+    )
     policies = list(res.scalars().all())
     if not policies:
         for item in DEFAULT_SLA_POLICIES:
             p = SLAPolicy(**item)
             session.add(p)
         await session.flush()
-        res = await session.execute(select(SLAPolicy).order_by(SLAPolicy.first_response_time_threshold.asc()))
+        res = await session.execute(
+            select(SLAPolicy).order_by(SLAPolicy.first_response_time_threshold.asc())
+        )
         policies = list(res.scalars().all())
     return policies
 
@@ -201,7 +204,8 @@ async def evaluate_conversation_sla(
     )
     all_msgs = list(res_msgs.scalars().all())
     outbound_msgs = [
-        m for m in all_msgs
+        m
+        for m in all_msgs
         if m.direction == MessageDirection.OUTBOUND and not getattr(m, "is_private", False)
     ]
 
@@ -218,7 +222,10 @@ async def evaluate_conversation_sla(
         minutes_to_fr_breach = int((target_fr_at - now).total_seconds() / 60)
 
     # 2. Check Resolution
-    is_resolved = conversation.state in (ConversationState.CLOSED_WON, ConversationState.CLOSED_LOST)
+    is_resolved = conversation.state in (
+        ConversationState.CLOSED_WON,
+        ConversationState.CLOSED_LOST,
+    )
     if is_resolved:
         resolution_at = conversation.updated_at or now
         resolution_breached = resolution_at > target_res_at
@@ -350,8 +357,12 @@ async def get_sla_metrics(session: AsyncSession) -> dict[str, Any]:
     total_fr_evaluated = fr_fulfilled + fr_breached
     total_res_evaluated = res_fulfilled + res_breached
 
-    fr_rate = round((fr_fulfilled / total_fr_evaluated * 100), 1) if total_fr_evaluated > 0 else 100.0
-    res_rate = round((res_fulfilled / total_res_evaluated * 100), 1) if total_res_evaluated > 0 else 100.0
+    fr_rate = (
+        round((fr_fulfilled / total_fr_evaluated * 100), 1) if total_fr_evaluated > 0 else 100.0
+    )
+    res_rate = (
+        round((res_fulfilled / total_res_evaluated * 100), 1) if total_res_evaluated > 0 else 100.0
+    )
 
     return {
         "totalTracked": total_tracked,
@@ -369,9 +380,7 @@ async def get_sla_metrics(session: AsyncSession) -> dict[str, Any]:
 
 async def list_breached_conversations(session: AsyncSession) -> list[dict[str, Any]]:
     """Returns all active conversations currently in breach or nearing breach."""
-    res = await session.execute(
-        select(Conversation).order_by(Conversation.updated_at.desc())
-    )
+    res = await session.execute(select(Conversation).order_by(Conversation.updated_at.desc()))
     convs = list(res.scalars().all())
 
     results: list[dict[str, Any]] = []
@@ -385,23 +394,25 @@ async def list_breached_conversations(session: AsyncSession) -> list[dict[str, A
             contact_name = contact.person_name if contact else "Anonymous Visitor"
             contact_val = contact.value if contact else "Unknown"
             channel_val = contact.channel.value if (contact and contact.channel) else "chat"
-            results.append({
-                "conversationId": str(c.id),
-                "contactName": contact_name,
-                "contactIdentifier": contact_val,
-                "priority": c.priority,
-                "channel": channel_val,
-                "state": c.state.value,
-                "policyName": sla.get("policyName", "SLA"),
-                "firstResponseStatus": sla.get("firstResponseStatus"),
-                "firstResponseTargetAt": sla.get("firstResponseTargetAt"),
-                "resolutionStatus": sla.get("resolutionStatus"),
-                "resolutionTargetAt": sla.get("resolutionTargetAt"),
-                "isBreached": sla.get("isBreached", False),
-                "nearingBreach": sla.get("nearingBreach", False),
-                "minutesToFirstResponseBreach": sla.get("minutesToFirstResponseBreach", 0),
-                "minutesToResolutionBreach": sla.get("minutesToResolutionBreach", 0),
-                "updatedAt": c.updated_at.isoformat() if c.updated_at else None,
-            })
+            results.append(
+                {
+                    "conversationId": str(c.id),
+                    "contactName": contact_name,
+                    "contactIdentifier": contact_val,
+                    "priority": c.priority,
+                    "channel": channel_val,
+                    "state": c.state.value,
+                    "policyName": sla.get("policyName", "SLA"),
+                    "firstResponseStatus": sla.get("firstResponseStatus"),
+                    "firstResponseTargetAt": sla.get("firstResponseTargetAt"),
+                    "resolutionStatus": sla.get("resolutionStatus"),
+                    "resolutionTargetAt": sla.get("resolutionTargetAt"),
+                    "isBreached": sla.get("isBreached", False),
+                    "nearingBreach": sla.get("nearingBreach", False),
+                    "minutesToFirstResponseBreach": sla.get("minutesToFirstResponseBreach", 0),
+                    "minutesToResolutionBreach": sla.get("minutesToResolutionBreach", 0),
+                    "updatedAt": c.updated_at.isoformat() if c.updated_at else None,
+                }
+            )
 
     return results

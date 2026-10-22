@@ -1,5 +1,6 @@
 import uuid
 from datetime import UTC, datetime, timedelta
+
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -95,8 +96,12 @@ async def test_create_and_delete_sla_policy(test_client: AsyncClient, db_session
 
 
 @pytest.mark.asyncio
-async def test_evaluate_conversation_sla_on_time_fulfillment(test_client: AsyncClient, db_session: AsyncSession):
-    _, _, conv = await _create_test_lead_and_conv(db_session, priority="urgent", created_minutes_ago=10)
+async def test_evaluate_conversation_sla_on_time_fulfillment(
+    test_client: AsyncClient, db_session: AsyncSession
+):
+    _, _, conv = await _create_test_lead_and_conv(
+        db_session, priority="urgent", created_minutes_ago=10
+    )
 
     # Agent replied 3 minutes after conversation creation
     msg = Message(
@@ -129,9 +134,13 @@ async def test_evaluate_conversation_sla_on_time_fulfillment(test_client: AsyncC
 
 
 @pytest.mark.asyncio
-async def test_evaluate_conversation_sla_breach_detection(test_client: AsyncClient, db_session: AsyncSession):
+async def test_evaluate_conversation_sla_breach_detection(
+    test_client: AsyncClient, db_session: AsyncSession
+):
     # Created 45 minutes ago with urgent priority (15-min target) and no reply
-    _, _, conv = await _create_test_lead_and_conv(db_session, priority="urgent", created_minutes_ago=45)
+    _, _, conv = await _create_test_lead_and_conv(
+        db_session, priority="urgent", created_minutes_ago=45
+    )
 
     res = await test_client.post(f"/api/v1/conversations/{conv.id}/sla/evaluate")
     assert res.status_code == 200
@@ -153,7 +162,9 @@ async def test_evaluate_conversation_sla_breach_detection(test_client: AsyncClie
 @pytest.mark.asyncio
 async def test_sla_metrics_and_active_breaches(test_client: AsyncClient, db_session: AsyncSession):
     # Seed breach
-    _, _, conv = await _create_test_lead_and_conv(db_session, priority="urgent", created_minutes_ago=60)
+    _, _, conv = await _create_test_lead_and_conv(
+        db_session, priority="urgent", created_minutes_ago=60
+    )
     await test_client.post(f"/api/v1/conversations/{conv.id}/sla/evaluate")
 
     # 1. Metrics

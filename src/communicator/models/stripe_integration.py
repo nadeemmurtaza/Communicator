@@ -20,11 +20,19 @@ class StripeConfig(Base):
     __tablename__ = "stripe_configs"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    account_name: Mapped[str] = mapped_column(String(255), default="Primary Stripe Account", nullable=False)
-    api_key: Mapped[str] = mapped_column(Text, default="", nullable=False)  # sk_test_... or sk_live_...
-    publishable_key: Mapped[str] = mapped_column(String(255), default="", nullable=False)  # pk_test_... or pk_live_...
-    webhook_secret: Mapped[str] = mapped_column(String(255), default="", nullable=False)  # whsec_...
-    
+    account_name: Mapped[str] = mapped_column(
+        String(255), default="Primary Stripe Account", nullable=False
+    )
+    api_key: Mapped[str] = mapped_column(
+        Text, default="", nullable=False
+    )  # sk_test_... or sk_live_...
+    publishable_key: Mapped[str] = mapped_column(
+        String(255), default="", nullable=False
+    )  # pk_test_... or pk_live_...
+    webhook_secret: Mapped[str] = mapped_column(
+        String(255), default="", nullable=False
+    )  # whsec_...
+
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     test_mode: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     default_currency: Mapped[str] = mapped_column(String(10), default="usd", nullable=False)
@@ -58,12 +66,18 @@ class StripeBillingActionLog(Base):
         nullable=True,
         index=True,
     )
-    customer_identifier: Mapped[str] = mapped_column(String(255), default="", nullable=False, index=True)
-    action_type: Mapped[str] = mapped_column(String(50), nullable=False)  # "refund", "portal_session", "charge", etc.
+    customer_identifier: Mapped[str] = mapped_column(
+        String(255), default="", nullable=False, index=True
+    )
+    action_type: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # "refund", "portal_session", "charge", etc.
     amount_cents: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     currency: Mapped[str] = mapped_column(String(10), default="usd", nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="succeeded", nullable=False)
-    stripe_id: Mapped[str] = mapped_column(String(255), default="", nullable=False)  # charge_id, refund_id, session_url
+    stripe_id: Mapped[str] = mapped_column(
+        String(255), default="", nullable=False
+    )  # charge_id, refund_id, session_url
     actor_email: Mapped[str] = mapped_column(String(255), default="agent@newax.com", nullable=False)
     reason: Mapped[str] = mapped_column(Text, default="", nullable=False)
     details: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)

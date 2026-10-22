@@ -31,15 +31,26 @@ def upgrade() -> None:
         sa.Column("temperature", sa.Float(), nullable=False, server_default="0.7"),
         sa.Column("max_tokens", sa.Integer(), nullable=False, server_default="1024"),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
-        sa.Column("assigned_jobs", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default="[]"),
+        sa.Column(
+            "assigned_jobs",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+            server_default="[]",
+        ),
         sa.Column("last_tested_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("test_status", sa.String(length=30), nullable=False, server_default="untested"),
         sa.Column("latency_ms", sa.Integer(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(op.f("ix_ai_connections_provider"), "ai_connections", ["provider"], unique=False)
+    op.create_index(
+        op.f("ix_ai_connections_provider"), "ai_connections", ["provider"], unique=False
+    )
 
     # 2. Create ai_custom_policies table
     op.create_table(
@@ -48,16 +59,34 @@ def upgrade() -> None:
         sa.Column("job_type", sa.String(length=50), nullable=False),
         sa.Column("tone", sa.String(length=50), nullable=False, server_default="empathetic"),
         sa.Column("guidelines", sa.Text(), nullable=False, server_default=""),
-        sa.Column("rules", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default="[]"),
-        sa.Column("guardrails", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default="[]"),
-        sa.Column("auto_approval_mode", sa.String(length=50), nullable=False, server_default="require_manager_review"),
+        sa.Column(
+            "rules", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default="[]"
+        ),
+        sa.Column(
+            "guardrails",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+            server_default="[]",
+        ),
+        sa.Column(
+            "auto_approval_mode",
+            sa.String(length=50),
+            nullable=False,
+            server_default="require_manager_review",
+        ),
         sa.Column("min_csat_learning_threshold", sa.Float(), nullable=False, server_default="4.0"),
         sa.Column("max_autonomous_refund", sa.Float(), nullable=False, server_default="50.0"),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(op.f("ix_ai_custom_policies_job_type"), "ai_custom_policies", ["job_type"], unique=True)
+    op.create_index(
+        op.f("ix_ai_custom_policies_job_type"), "ai_custom_policies", ["job_type"], unique=True
+    )
 
 
 def downgrade() -> None:

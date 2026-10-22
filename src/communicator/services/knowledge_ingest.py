@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import io
+import ipaddress
 import re
+import socket
 from urllib.parse import urlparse
 
 import httpx
@@ -24,6 +26,32 @@ def _clean_text(raw: str) -> str:
     return "\n\n".join(non_empty)
 
 
+def _assert_public_host(hostname: str) -> None:
+    """
+    Blocks SSRF: refuses to fetch a URL whose host resolves to a private,
+    loopback, link-local, or other non-public IP (internal services, cloud
+    metadata endpoints like 169.254.169.254, etc). This is an admin-only
+    knowledge-base import feature, but the URL itself is still
+    attacker-influenceable input.
+    """
+    try:
+        infos = socket.getaddrinfo(hostname, None)
+    except OSError as e:
+        raise IngestionError(f"Could not resolve host: {hostname}") from e
+
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0])
+        if (
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_reserved
+            or ip.is_multicast
+            or ip.is_unspecified
+        ):
+            raise IngestionError(f"Refusing to fetch non-public address: {hostname} -> {ip}")
+
+
 async def ingest_url(session: AsyncSession, url: str) -> KnowledgeBaseEntry:
     """
     Crawls an external help center or documentation URL (e.g., helpcenter.com),
@@ -37,6 +65,8 @@ async def ingest_url(session: AsyncSession, url: str) -> KnowledgeBaseEntry:
     if not parsed.netloc:
         raise IngestionError(f"Invalid URL: {url}")
 
+    _assert_public_host(parsed.hostname or "")
+
     headers = {
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -46,20 +76,43 @@ async def ingest_url(session: AsyncSession, url: str) -> KnowledgeBaseEntry:
     }
 
     try:
-        async with httpx.AsyncClient(timeout=25.0, follow_redirects=True) as client:
+        # follow_redirects=False: a public URL redirecting to a private/
+        # internal address is the classic SSRF-via-redirect bypass, so
+        # redirects are rejected outright rather than silently followed.
+        async with httpx.AsyncClient(timeout=25.0, follow_redirects=False) as client:
             resp = await client.get(url, headers=headers)
+            if resp.is_redirect:
+                raise IngestionError(f"Refusing to follow redirect from {url}")
             resp.raise_for_status()
             html = resp.text
+    except IngestionError:
+        raise
     except Exception as e:
         raise IngestionError(f"Failed to fetch {url}: {e}") from e
 
     soup = BeautifulSoup(html, "html.parser")
 
     # Remove scripts, styles, navbars, footers, forms, cookie banners, ads to keep crisp text
-    for tag in soup(["script", "style", "noscript", "svg", "nav", "footer", "aside", "header", "form", "iframe", "button"]):
+    for tag in soup(
+        [
+            "script",
+            "style",
+            "noscript",
+            "svg",
+            "nav",
+            "footer",
+            "aside",
+            "header",
+            "form",
+            "iframe",
+            "button",
+        ]
+    ):
         tag.decompose()
 
-    for el in soup.find_all(class_=re.compile(r"(cookie|consent|banner|newsletter|popup|modal|ad-)", re.I)):
+    for el in soup.find_all(
+        class_=re.compile(r"(cookie|consent|banner|newsletter|popup|modal|ad-)", re.IGNORECASE)
+    ):
         el.decompose()
 
     # Extract title

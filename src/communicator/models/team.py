@@ -16,8 +16,15 @@ if TYPE_CHECKING:
 team_memberships = Table(
     "team_memberships",
     Base.metadata,
-    Column("team_id", UUID(as_uuid=True), ForeignKey("teams.id", ondelete="CASCADE"), primary_key=True),
-    Column("team_member_id", UUID(as_uuid=True), ForeignKey("team_members.id", ondelete="CASCADE"), primary_key=True),
+    Column(
+        "team_id", UUID(as_uuid=True), ForeignKey("teams.id", ondelete="CASCADE"), primary_key=True
+    ),
+    Column(
+        "team_member_id",
+        UUID(as_uuid=True),
+        ForeignKey("team_members.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
 )
 
 

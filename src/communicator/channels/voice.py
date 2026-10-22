@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import uuid
 from typing import Any
+
 import httpx
 
 from communicator.channels.base import ChannelProvider, SendResult
@@ -40,13 +41,25 @@ class VoiceProvider(ChannelProvider):
         self.credentials = credentials or {}
         self.config = config or {}
 
-        self.account_sid = account_sid or self.credentials.get("account_sid") or getattr(settings, "twilio_account_sid", "AC_voice_mock_sid")
-        self.auth_token = auth_token or self.credentials.get("auth_token") or getattr(settings, "twilio_auth_token", "voice_mock_token")
+        self.account_sid = (
+            account_sid
+            or self.credentials.get("account_sid")
+            or getattr(settings, "twilio_account_sid", "AC_voice_mock_sid")
+        )
+        self.auth_token = (
+            auth_token
+            or self.credentials.get("auth_token")
+            or getattr(settings, "twilio_auth_token", "voice_mock_token")
+        )
         self.voice_number = voice_number or self.config.get("caller_id") or "+14155550199"
         self.caller_id = caller_id or self.voice_number
-        self.twiml_app_sid = twiml_app_sid or self.config.get("twiml_app_sid", "AP_mock_twiml_app_sid")
+        self.twiml_app_sid = twiml_app_sid or self.config.get(
+            "twiml_app_sid", "AP_mock_twiml_app_sid"
+        )
         self.sip_domain = sip_domain or self.config.get("sip_domain", "bayworks.sip.twilio.com")
-        self.recording_enabled = recording_enabled or bool(self.config.get("recording_enabled", True))
+        self.recording_enabled = recording_enabled or bool(
+            self.config.get("recording_enabled", True)
+        )
         self.transcription_enabled = transcription_enabled
 
     def _is_simulated(self) -> bool:
@@ -100,7 +113,11 @@ class VoiceProvider(ChannelProvider):
             return SendResult(
                 provider="plivo_voice",
                 provider_message_id=f"plv_call_{uuid.uuid4().hex[:12]}",
-                raw_response={"message": "call fired", "request_uuid": str(uuid.uuid4()), "simulated": True},
+                raw_response={
+                    "message": "call fired",
+                    "request_uuid": str(uuid.uuid4()),
+                    "simulated": True,
+                },
             )
 
         # 4. Vonage Voice
@@ -150,12 +167,19 @@ class VoiceProvider(ChannelProvider):
                     provider_message_id=payload.get("sid", call_sid),
                     raw_response=payload,
                 )
-        except Exception as exc:
-            logger.warning("Twilio Voice API call failed (%s); falling back to simulated call SID", exc)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "Twilio Voice API call failed (%s); falling back to simulated call SID", exc
+            )
             return SendResult(
                 provider="twilio_voice",
                 provider_message_id=call_sid,
-                raw_response={"sid": call_sid, "status": "queued", "error": str(exc), "simulated": True},
+                raw_response={
+                    "sid": call_sid,
+                    "status": "queued",
+                    "error": str(exc),
+                    "simulated": True,
+                },
             )
 
     async def initiate_call(

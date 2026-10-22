@@ -34,11 +34,17 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["source_message_id"], ["messages.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(op.f("ix_contact_memories_contact_id"), "contact_memories", ["contact_id"], unique=False)
+    op.create_index(
+        op.f("ix_contact_memories_contact_id"), "contact_memories", ["contact_id"], unique=False
+    )
 
     # 2. Add columns to knowledge_base_entries
-    op.add_column("knowledge_base_entries", sa.Column("source_url", sa.String(length=1024), nullable=True))
-    op.add_column("knowledge_base_entries", sa.Column("file_name", sa.String(length=255), nullable=True))
+    op.add_column(
+        "knowledge_base_entries", sa.Column("source_url", sa.String(length=1024), nullable=True)
+    )
+    op.add_column(
+        "knowledge_base_entries", sa.Column("file_name", sa.String(length=255), nullable=True)
+    )
 
     # 3. Create knowledge_gaps table
     op.create_table(
@@ -54,18 +60,47 @@ def upgrade() -> None:
     )
 
     # 4. Add campaign / broadcast fields
-    op.add_column("broadcasts", sa.Column("audience_count", sa.Integer(), nullable=False, server_default="0"))
-    op.add_column("broadcasts", sa.Column("skipped_count", sa.Integer(), nullable=False, server_default="0"))
-    op.add_column("broadcasts", sa.Column("template_params", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default="{}"))
+    op.add_column(
+        "broadcasts", sa.Column("audience_count", sa.Integer(), nullable=False, server_default="0")
+    )
+    op.add_column(
+        "broadcasts", sa.Column("skipped_count", sa.Integer(), nullable=False, server_default="0")
+    )
+    op.add_column(
+        "broadcasts",
+        sa.Column(
+            "template_params",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+            server_default="{}",
+        ),
+    )
 
-    op.add_column("broadcast_recipients", sa.Column("sent_at", sa.DateTime(timezone=True), nullable=True))
-    op.add_column("broadcast_recipients", sa.Column("delivered_at", sa.DateTime(timezone=True), nullable=True))
-    op.add_column("broadcast_recipients", sa.Column("read_at", sa.DateTime(timezone=True), nullable=True))
+    op.add_column(
+        "broadcast_recipients", sa.Column("sent_at", sa.DateTime(timezone=True), nullable=True)
+    )
+    op.add_column(
+        "broadcast_recipients", sa.Column("delivered_at", sa.DateTime(timezone=True), nullable=True)
+    )
+    op.add_column(
+        "broadcast_recipients", sa.Column("read_at", sa.DateTime(timezone=True), nullable=True)
+    )
 
     # 5. Add resolution_type and broadcast_id to conversations
-    op.add_column("conversations", sa.Column("resolution_type", sa.String(length=50), nullable=True))
-    op.add_column("conversations", sa.Column("broadcast_id", postgresql.UUID(as_uuid=True), nullable=True))
-    op.create_foreign_key("fk_conversations_broadcast_id", "conversations", "broadcasts", ["broadcast_id"], ["id"], ondelete="SET NULL")
+    op.add_column(
+        "conversations", sa.Column("resolution_type", sa.String(length=50), nullable=True)
+    )
+    op.add_column(
+        "conversations", sa.Column("broadcast_id", postgresql.UUID(as_uuid=True), nullable=True)
+    )
+    op.create_foreign_key(
+        "fk_conversations_broadcast_id",
+        "conversations",
+        "broadcasts",
+        ["broadcast_id"],
+        ["id"],
+        ondelete="SET NULL",
+    )
 
 
 def downgrade() -> None:

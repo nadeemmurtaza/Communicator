@@ -15,7 +15,6 @@ from communicator.models.self_improving import (
     InsightStatus,
 )
 from communicator.models.simulation import AgentPolicy
-from communicator.models.team_member import TeamMember
 
 
 class SelfImprovingService:
@@ -185,12 +184,12 @@ class SelfImprovingService:
         )
         last_event = last_event_q.scalar_one_or_none()
         current_version = last_event.version_to if last_event else "2.2"
-        
+
         # Calculate new version (e.g. 2.2 -> 2.3)
         try:
             parts = current_version.split(".")
             new_version = f"{parts[0]}.{int(parts[1]) + 1}"
-        except Exception:
+        except Exception:  # noqa: BLE001
             new_version = f"{current_version}.1"
 
         changes_applied = []
@@ -208,17 +207,19 @@ class SelfImprovingService:
                 usage_count=1,
             )
             db.add(kb_entry)
-            changes_applied.append({
-                "type": "kb_article_published",
-                "title": kb_entry.title,
-                "topic": kb_entry.topic,
-            })
+            changes_applied.append(
+                {
+                    "type": "kb_article_published",
+                    "title": kb_entry.title,
+                    "topic": kb_entry.topic,
+                }
+            )
 
         # 2. If Action is apply_policy: add process step or rule to AgentPolicy
         elif insight.suggested_action in ["apply_policy", "retrain_agent"]:
             payload = insight.action_payload
             target_sop = payload.get("target_sop", "SOP-REF-201")
-            
+
             # Find policy matching target_sop
             p_stmt = select(AgentPolicy).where(AgentPolicy.name.ilike(f"%{target_sop}%"))
             p_res = await db.execute(p_stmt)
@@ -229,12 +230,14 @@ class SelfImprovingService:
                 policy.version = new_version
                 if insight.exemplar_content:
                     policy.guardrails.append(f"Exemplar Learning: {insight.title}")
-                changes_applied.append({
-                    "type": "policy_retrained",
-                    "policy_name": policy.name,
-                    "new_version": new_version,
-                    "exemplar_source": insight.human_rep_name or "Human Team",
-                })
+                changes_applied.append(
+                    {
+                        "type": "policy_retrained",
+                        "policy_name": policy.name,
+                        "new_version": new_version,
+                        "exemplar_source": insight.human_rep_name or "Human Team",
+                    }
+                )
 
         baseline_rate = last_event.post_training_resolution_rate if last_event else 91.2
         post_rate = round(baseline_rate + insight.estimated_resolution_lift, 1)
@@ -242,7 +245,9 @@ class SelfImprovingService:
         # 3. Create Retraining Event
         retrain_event = AgentRetrainingEvent(
             title=f"Retraining Cycle v{new_version} - {insight.title}",
-            trigger_type="human_exemplar_sync" if insight.category == InsightCategory.HUMAN_EXEMPLAR.value else "trend_optimization",
+            trigger_type="human_exemplar_sync"
+            if insight.category == InsightCategory.HUMAN_EXEMPLAR.value
+            else "trend_optimization",
             version_from=current_version,
             version_to=new_version,
             insight_id=insight.id,
@@ -328,7 +333,7 @@ class SelfImprovingService:
         if high_csat_convs:
             c = high_csat_convs[0]
             rep_name = c.assigned_to.name if c.assigned_to else "Support Representative"
-            
+
             # Check if an exemplar from this rep exists already
             existing_q = await db.execute(
                 select(AgentInsight).where(AgentInsight.title.ilike(f"%{rep_name}%"))
@@ -368,12 +373,16 @@ class SelfImprovingService:
         total_insights = insights_q.scalar_one() or 0
 
         open_q = await db.execute(
-            select(func.count(AgentInsight.id)).where(AgentInsight.status == InsightStatus.OPEN.value)
+            select(func.count(AgentInsight.id)).where(
+                AgentInsight.status == InsightStatus.OPEN.value
+            )
         )
         open_suggestions = open_q.scalar_one() or 0
 
         applied_q = await db.execute(
-            select(func.count(AgentInsight.id)).where(AgentInsight.status == InsightStatus.APPLIED.value)
+            select(func.count(AgentInsight.id)).where(
+                AgentInsight.status == InsightStatus.APPLIED.value
+            )
         )
         applied_retrainings = applied_q.scalar_one() or 0
 
@@ -397,7 +406,9 @@ class SelfImprovingService:
 
         # Latest version
         latest_event_q = await db.execute(
-            select(AgentRetrainingEvent.version_to).order_by(AgentRetrainingEvent.created_at.desc()).limit(1)
+            select(AgentRetrainingEvent.version_to)
+            .order_by(AgentRetrainingEvent.created_at.desc())
+            .limit(1)
         )
         latest_version = latest_event_q.scalar_one_or_none() or "v2.2"
 
@@ -406,7 +417,9 @@ class SelfImprovingService:
             "open_suggestions": open_suggestions,
             "applied_retrainings": applied_retrainings,
             "cumulative_resolution_lift": cum_lift,
-            "current_agent_version": f"v{latest_version}" if not latest_version.startswith("v") else latest_version,
+            "current_agent_version": f"v{latest_version}"
+            if not latest_version.startswith("v")
+            else latest_version,
             "human_exemplars_learned": exemplars_count,
             "team_coaching_active": coaching_count,
             "agent_name": "Captain AI Agent",

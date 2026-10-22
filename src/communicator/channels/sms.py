@@ -4,6 +4,7 @@ import json
 import logging
 import uuid
 from typing import Any
+
 import httpx
 
 from communicator.channels.base import ChannelProvider, SendResult
@@ -30,7 +31,11 @@ class TwilioSMSProvider(ChannelProvider):
         self.from_number = from_number if from_number is not None else settings.twilio_sms_from
         self.messaging_service_sid = messaging_service_sid
 
-        if not (self.account_sid and self.auth_token and (self.from_number or self.messaging_service_sid)):
+        if not (
+            self.account_sid
+            and self.auth_token
+            and (self.from_number or self.messaging_service_sid)
+        ):
             raise RuntimeError(
                 "TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_SMS_FROM must be set to send SMS."
             )
@@ -68,15 +73,19 @@ class TwilioSMSProvider(ChannelProvider):
             async with httpx.AsyncClient(
                 base_url=self.api_base, auth=(self.account_sid, self.auth_token), timeout=30.0
             ) as client:
-                response = await client.post(f"/Accounts/{self.account_sid}/Messages.json", data=data)
+                response = await client.post(
+                    f"/Accounts/{self.account_sid}/Messages.json", data=data
+                )
                 response.raise_for_status()
                 payload = response.json()
 
             return SendResult(
                 provider="twilio", provider_message_id=payload.get("sid", ""), raw_response=payload
             )
-        except Exception as e:
-            logger.warning(f"Twilio live API dispatch failed ({e}); falling back to simulated dispatch.")
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                f"Twilio live API dispatch failed ({e}); falling back to simulated dispatch."
+            )
             msg_sid = f"SM{uuid.uuid4().hex[:30]}"
             return SendResult(
                 provider="twilio",
@@ -126,41 +135,60 @@ class UniversalSMSProvider(ChannelProvider):
                 headers["Authorization"] = f"Bearer {bearer}"
 
             # Template interpolation
-            template = self.config.get("payload_template", '{"to": "{{to}}", "message": "{{body}}"}')
+            template = self.config.get(
+                "payload_template", '{"to": "{{to}}", "message": "{{body}}"}'
+            )
             payload_str = template.replace("{{to}}", contact.value).replace("{{body}}", body)
             try:
                 payload_json = json.loads(payload_str)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 payload_json = {"to": contact.value, "text": body}
 
             return SendResult(
                 provider="custom_http",
                 provider_message_id=simulated_id,
-                raw_response={"dispatched_to": endpoint, "payload": payload_json, "status": "sent", "simulated": True},
+                raw_response={
+                    "dispatched_to": endpoint,
+                    "payload": payload_json,
+                    "status": "sent",
+                    "simulated": True,
+                },
             )
 
         # 2. Vonage (Nexmo)
         elif self.provider == "vonage":
-            api_key = self.credentials.get("api_key", "vonage_mock_key")
-            api_secret = self.credentials.get("api_secret", "vonage_mock_sec")
-            from_name = self.config.get("from", "BayWorks")
+            self.credentials.get("api_key", "vonage_mock_key")
+            self.credentials.get("api_secret", "vonage_mock_sec")
+            self.config.get("from", "BayWorks")
             return SendResult(
                 provider="vonage",
                 provider_message_id=f"von_{uuid.uuid4().hex[:12]}",
                 raw_response={
-                    "messages": [{"to": contact.value, "message-id": simulated_id, "status": "0", "remaining-balance": "100.00"}],
+                    "messages": [
+                        {
+                            "to": contact.value,
+                            "message-id": simulated_id,
+                            "status": "0",
+                            "remaining-balance": "100.00",
+                        }
+                    ],
                     "simulated": True,
                 },
             )
 
         # 3. MessageBird
         elif self.provider == "messagebird":
-            access_key = self.credentials.get("access_key", "mb_mock_key")
+            self.credentials.get("access_key", "mb_mock_key")
             originator = self.config.get("originator", "BayWorks")
             return SendResult(
                 provider="messagebird",
                 provider_message_id=f"mb_{uuid.uuid4().hex[:12]}",
-                raw_response={"id": simulated_id, "recipient": contact.value, "originator": originator, "simulated": True},
+                raw_response={
+                    "id": simulated_id,
+                    "recipient": contact.value,
+                    "originator": originator,
+                    "simulated": True,
+                },
             )
 
         # 4. Plivo
@@ -168,7 +196,11 @@ class UniversalSMSProvider(ChannelProvider):
             return SendResult(
                 provider="plivo",
                 provider_message_id=f"plv_{uuid.uuid4().hex[:12]}",
-                raw_response={"message_uuid": [simulated_id], "api_id": str(uuid.uuid4()), "simulated": True},
+                raw_response={
+                    "message_uuid": [simulated_id],
+                    "api_id": str(uuid.uuid4()),
+                    "simulated": True,
+                },
             )
 
         # 5. Sinch, AWS SNS, Infobip

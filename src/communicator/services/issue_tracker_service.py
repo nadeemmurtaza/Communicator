@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import logging
 import random
 import time
@@ -33,7 +32,9 @@ def mask_secret(token: str) -> str:
 def format_tracker_config(cfg: IssueTrackerConfig) -> dict[str, Any]:
     masked_credentials = {}
     for k, v in (cfg.credentials or {}).items():
-        if isinstance(v, str) and any(secret_term in k.lower() for secret_term in ("token", "key", "secret", "password")):
+        if isinstance(v, str) and any(
+            secret_term in k.lower() for secret_term in ("token", "key", "secret", "password")
+        ):
             masked_credentials[k] = mask_secret(v)
             masked_credentials[f"has_{k}"] = bool(v)
         else:
@@ -229,11 +230,15 @@ async def test_tracker_connection(session: AsyncSession, provider: str) -> dict[
                             cfg.last_test_status = "connected"
                             cfg.last_tested_at = now
                             await session.commit()
-                            return {"status": "connected", "mode": "live", "message": "Connected to Linear GraphQL API"}
+                            return {
+                                "status": "connected",
+                                "mode": "live",
+                                "message": "Connected to Linear GraphQL API",
+                            }
 
                 elif provider == "github":
                     tok = creds.get("access_token", "")
-                    if tok.startswith("ghp_") or tok.startswith("github_pat_"):
+                    if tok.startswith(("ghp_", "github_pat_")):
                         res = await client.get(
                             "https://api.github.com/user",
                             headers={"Authorization": f"Bearer {tok}", "User-Agent": "Newax-App"},
@@ -242,7 +247,11 @@ async def test_tracker_connection(session: AsyncSession, provider: str) -> dict[
                             cfg.last_test_status = "connected"
                             cfg.last_tested_at = now
                             await session.commit()
-                            return {"status": "connected", "mode": "live", "message": f"Connected to GitHub as {res.json().get('login')}"}
+                            return {
+                                "status": "connected",
+                                "mode": "live",
+                                "message": f"Connected to GitHub as {res.json().get('login')}",
+                            }
 
                 elif provider == "jira":
                     domain = creds.get("domain", "")
@@ -257,7 +266,11 @@ async def test_tracker_connection(session: AsyncSession, provider: str) -> dict[
                             cfg.last_test_status = "connected"
                             cfg.last_tested_at = now
                             await session.commit()
-                            return {"status": "connected", "mode": "live", "message": "Connected to Jira Cloud REST API"}
+                            return {
+                                "status": "connected",
+                                "mode": "live",
+                                "message": "Connected to Jira Cloud REST API",
+                            }
 
                 elif provider == "slack":
                     bot_tok = creds.get("bot_token", "")
@@ -270,8 +283,12 @@ async def test_tracker_connection(session: AsyncSession, provider: str) -> dict[
                             cfg.last_test_status = "connected"
                             cfg.last_tested_at = now
                             await session.commit()
-                            return {"status": "connected", "mode": "live", "message": f"Connected to Slack Workspace as {res.json().get('user')}"}
-        except Exception as e:
+                            return {
+                                "status": "connected",
+                                "mode": "live",
+                                "message": f"Connected to Slack Workspace as {res.json().get('user')}",
+                            }
+        except Exception as e:  # noqa: BLE001
             logger.warning(f"Error testing live {provider}: {e}")
 
     # Fallback to high-fidelity Sandbox Simulator
@@ -321,7 +338,11 @@ async def create_linked_issue(
         status = "Open"
     elif provider == "jira":
         proj = conf.get("project_key", "SUP")
-        domain = (cfg.credentials or {}).get("domain", "newax.atlassian.net") if cfg else "newax.atlassian.net"
+        domain = (
+            (cfg.credentials or {}).get("domain", "newax.atlassian.net")
+            if cfg
+            else "newax.atlassian.net"
+        )
         issue_key = f"{proj}-{issue_num}"
         issue_url = f"https://{domain}/browse/{issue_key}"
         ext_id = f"jira_key_{issue_key}"
@@ -365,7 +386,9 @@ async def list_linked_issues(
 ) -> list[LinkedIssue]:
     stmt = select(LinkedIssue)
     if conversation_id and ticket_id:
-        stmt = stmt.where((LinkedIssue.conversation_id == conversation_id) | (LinkedIssue.ticket_id == ticket_id))
+        stmt = stmt.where(
+            (LinkedIssue.conversation_id == conversation_id) | (LinkedIssue.ticket_id == ticket_id)
+        )
     elif conversation_id:
         stmt = stmt.where(LinkedIssue.conversation_id == conversation_id)
     elif ticket_id:
@@ -418,11 +441,17 @@ async def sync_conversation_to_slack(
     Synchronizes conversation to a dedicated Slack thread for team visibility.
     """
     cfg = await get_tracker_config(session, IssueTrackerProvider.SLACK.value)
-    default_ch = (cfg.config or {}).get("channel_name", "#customer-escalations") if cfg else "#customer-escalations"
+    default_ch = (
+        (cfg.config or {}).get("channel_name", "#customer-escalations")
+        if cfg
+        else "#customer-escalations"
+    )
     ch_name = channel_name or default_ch
 
     res = await session.execute(
-        select(SlackConversationSync).where(SlackConversationSync.conversation_id == conversation_id)
+        select(SlackConversationSync).where(
+            SlackConversationSync.conversation_id == conversation_id
+        )
     )
     sync = res.scalar_one_or_none()
 
@@ -464,7 +493,9 @@ async def get_slack_sync_status(
     session: AsyncSession, conversation_id: uuid.UUID
 ) -> dict[str, Any] | None:
     res = await session.execute(
-        select(SlackConversationSync).where(SlackConversationSync.conversation_id == conversation_id)
+        select(SlackConversationSync).where(
+            SlackConversationSync.conversation_id == conversation_id
+        )
     )
     sync = res.scalar_one_or_none()
     if not sync:

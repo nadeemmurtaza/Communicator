@@ -282,7 +282,9 @@ async def test_telegram_and_line_shared_inbox_reply(
     )
     assert agent_tg_reply.status_code == 200
     tg_reply_data = agent_tg_reply.json()
-    assert tg_reply_data["body"] == "Hi Dmitri, our enterprise tier includes unlimited API throughput."
+    assert (
+        tg_reply_data["body"] == "Hi Dmitri, our enterprise tier includes unlimited API throughput."
+    )
     assert tg_reply_data["senderName"] == "Riley Brooks"
 
     # 2. Create a LINE conversation via test message

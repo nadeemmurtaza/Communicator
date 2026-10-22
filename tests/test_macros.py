@@ -1,4 +1,5 @@
 import uuid
+
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,7 +9,9 @@ from communicator.models.conversation import Conversation, ConversationState
 from communicator.models.lead import Lead
 
 
-async def _create_test_lead_and_conv(db_session: AsyncSession) -> tuple[Lead, Contact, Conversation]:
+async def _create_test_lead_and_conv(
+    db_session: AsyncSession,
+) -> tuple[Lead, Contact, Conversation]:
     lead = Lead(harvester_institution_id=str(uuid.uuid4()), name="Macro Org")
     db_session.add(lead)
     await db_session.flush()

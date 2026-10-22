@@ -66,7 +66,9 @@ _PREFERENCE_PATTERNS = [
     (
         r"(?:i am the|i'm the|as the)\s+(founder|ceo|cto|cfo|coo|vp of engineering|procurement manager|decision maker|owner|head of product)",
         "organization",
-        lambda m: f"Contact role: {m.group(1).upper() if len(m.group(1)) <= 4 else m.group(1).title()}",
+        lambda m: (
+            f"Contact role: {m.group(1).upper() if len(m.group(1)) <= 4 else m.group(1).title()}"
+        ),
     ),
     (
         r"(?:need approval from|need to check with|have to consult)\s+(?:our|my)?\s*([a-zA-Z\s]{3,30}\s+(?:team|board|director|partner|manager))",
@@ -149,9 +151,7 @@ async def extract_contact_memories(
     return extracted
 
 
-async def get_contact_memories(
-    session: AsyncSession, contact_id: uuid.UUID
-) -> list[ContactMemory]:
+async def get_contact_memories(session: AsyncSession, contact_id: uuid.UUID) -> list[ContactMemory]:
     """Retrieves all memories for a contact in chronological order."""
     stmt = (
         select(ContactMemory)

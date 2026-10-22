@@ -1,4 +1,5 @@
 import uuid
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -80,7 +81,9 @@ async def test_get_customer_billing_deterministic(db_session):
     assert billing["payment_method"]["brand"] in ("visa", "mastercard", "amex")
 
     # Query by raw email
-    billing_email = await stripe_service.get_customer_billing(db_session, "sarah.connor@cyberdyne.org")
+    billing_email = await stripe_service.get_customer_billing(
+        db_session, "sarah.connor@cyberdyne.org"
+    )
     assert billing_email["customer_id"] == billing["customer_id"]
     assert billing_email["mrr"] == billing["mrr"]
 

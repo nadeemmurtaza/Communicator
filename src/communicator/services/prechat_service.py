@@ -49,7 +49,12 @@ DEFAULT_PRECHAT_FIELDS: list[dict[str, Any]] = [
         "type": "select",
         "placeholder": "Select inquiry reason",
         "required": True,
-        "options": ["Sales & Pricing", "Technical Support", "Billing & Invoices", "Partnerships & Other"],
+        "options": [
+            "Sales & Pricing",
+            "Technical Support",
+            "Billing & Invoices",
+            "Partnerships & Other",
+        ],
         "order": 3,
     },
     {
@@ -147,7 +152,11 @@ async def get_prechat_config(session: AsyncSession) -> dict[str, Any]:
     if not isinstance(cfg, dict) or "fields" not in cfg:
         cfg = _build_default_prechat_config()
         # Migrate old flat fields if present
-        if "preChatFields" in creds and isinstance(creds["preChatFields"], list) and creds["preChatFields"]:
+        if (
+            "preChatFields" in creds
+            and isinstance(creds["preChatFields"], list)
+            and creds["preChatFields"]
+        ):
             cfg["fields"] = [
                 {
                     "id": f"field_{idx}",
@@ -190,30 +199,36 @@ async def update_prechat_config(session: AsyncSession, updates: dict[str, Any]) 
             fid = str(field.get("id") or f"field_{uuid.uuid4().hex[:8]}")
             raw_name = str(field.get("name") or f"custom_{i}").strip()
             slug_name = re.sub(r"[^a-zA-Z0-9_]", "", raw_name) or f"field_{i}"
-            clean_fields.append({
-                "id": fid,
-                "name": slug_name,
-                "label": str(field.get("label") or slug_name).strip(),
-                "type": str(field.get("type") or "text").lower(),
-                "placeholder": str(field.get("placeholder") or ""),
-                "required": bool(field.get("required", False)),
-                "options": [str(opt).strip() for opt in field.get("options", []) if str(opt).strip()],
-                "order": int(field.get("order", i + 1)),
-            })
+            clean_fields.append(
+                {
+                    "id": fid,
+                    "name": slug_name,
+                    "label": str(field.get("label") or slug_name).strip(),
+                    "type": str(field.get("type") or "text").lower(),
+                    "placeholder": str(field.get("placeholder") or ""),
+                    "required": bool(field.get("required", False)),
+                    "options": [
+                        str(opt).strip() for opt in field.get("options", []) if str(opt).strip()
+                    ],
+                    "order": int(field.get("order", i + 1)),
+                }
+            )
         current_cfg["fields"] = sorted(clean_fields, key=lambda f: f["order"])
 
     if "routing_rules" in updates and isinstance(updates["routing_rules"], list):
         clean_rules = []
         for i, rule in enumerate(updates["routing_rules"]):
-            clean_rules.append({
-                "id": str(rule.get("id") or f"rule_{uuid.uuid4().hex[:8]}"),
-                "field": str(rule.get("field") or "").strip(),
-                "operator": str(rule.get("operator") or "equals").lower(),
-                "value": str(rule.get("value") or "").strip(),
-                "assign_priority": str(rule.get("assign_priority") or "medium").lower(),
-                "assign_tag": str(rule.get("assign_tag") or "").strip().lower(),
-                "team_target": str(rule.get("team_target") or "").strip(),
-            })
+            clean_rules.append(
+                {
+                    "id": str(rule.get("id") or f"rule_{uuid.uuid4().hex[:8]}"),
+                    "field": str(rule.get("field") or "").strip(),
+                    "operator": str(rule.get("operator") or "equals").lower(),
+                    "value": str(rule.get("value") or "").strip(),
+                    "assign_priority": str(rule.get("assign_priority") or "medium").lower(),
+                    "assign_tag": str(rule.get("assign_tag") or "").strip().lower(),
+                    "team_target": str(rule.get("team_target") or "").strip(),
+                }
+            )
         current_cfg["routing_rules"] = clean_rules
 
     creds["preChatConfig"] = current_cfg
@@ -253,21 +268,25 @@ def validate_submission_answers(
             errors.append(f"Field '{f.get('label') or name}' is required.")
             continue
 
-        if val_str and f.get("type") == "email":
-            if not EMAIL_REGEX.match(val_str):
-                errors.append(f"Field '{f.get('label') or name}' must be a valid email address.")
+        if val_str and f.get("type") == "email" and not EMAIL_REGEX.match(val_str):
+            errors.append(f"Field '{f.get('label') or name}' must be a valid email address.")
 
-        if val_str and f.get("type") == "select" and f.get("options"):
-            if val_str not in f["options"]:
-                errors.append(
-                    f"Selected value '{val_str}' for '{f.get('label') or name}' is not among allowed choices: {', '.join(f['options'])}."
-                )
+        if (
+            val_str
+            and f.get("type") == "select"
+            and f.get("options")
+            and val_str not in f["options"]
+        ):
+            errors.append(
+                f"Selected value '{val_str}' for '{f.get('label') or name}' is not among allowed choices: {', '.join(f['options'])}."
+            )
 
     if require_email:
         email_val = str(answers.get("email") or answers.get("emailAddress") or "").strip()
-        if not email_val or not EMAIL_REGEX.match(email_val):
-            if not any("email" in err.lower() for err in errors):
-                errors.append("A valid email address is required to initiate live chat.")
+        if (not email_val or not EMAIL_REGEX.match(email_val)) and not any(
+            "email" in err.lower() for err in errors
+        ):
+            errors.append("A valid email address is required to initiate live chat.")
 
     return errors
 
@@ -294,22 +313,29 @@ def evaluate_routing_rules(
         submitted_val = str(answers.get(f_name, "")).strip().lower()
         if not submitted_val and f_name == "inquiryType":
             # Check fallback aliases
-            submitted_val = str(answers.get("inquiry_type") or answers.get("inquiry") or "").strip().lower()
+            submitted_val = (
+                str(answers.get("inquiry_type") or answers.get("inquiry") or "").strip().lower()
+            )
 
         matched = False
-        if op == "equals" and submitted_val == target_val:
-            matched = True
-        elif op == "contains" and target_val in submitted_val:
-            matched = True
-        elif op == "not_equals" and submitted_val and submitted_val != target_val:
+        if (
+            op == "equals"
+            and submitted_val == target_val
+            or op == "contains"
+            and target_val in submitted_val
+            or op == "not_equals"
+            and submitted_val
+            and submitted_val != target_val
+        ):
             matched = True
 
         if matched:
             applied_rules.append(rule.get("id", "rule"))
             rule_priority = rule.get("assign_priority", "").lower()
-            if rule_priority in priority_weight:
-                if priority_weight.get(rule_priority, 0) > priority_weight.get(priority, 0):
-                    priority = rule_priority
+            if rule_priority in priority_weight and priority_weight.get(
+                rule_priority, 0
+            ) > priority_weight.get(priority, 0):
+                priority = rule_priority
 
             tag = rule.get("assign_tag")
             if tag and tag not in tags:
@@ -366,11 +392,15 @@ async def submit_prechat_intake(
         }
 
     # 3. Extract core contact attributes
-    email = str(
-        answers.get("email")
-        or answers.get("emailAddress")
-        or f"guest_{uuid.uuid4().hex[:8]}@livechat.local"
-    ).strip().lower()
+    email = (
+        str(
+            answers.get("email")
+            or answers.get("emailAddress")
+            or f"guest_{uuid.uuid4().hex[:8]}@livechat.local"
+        )
+        .strip()
+        .lower()
+    )
     full_name = str(
         answers.get("fullName")
         or answers.get("name")
@@ -380,10 +410,7 @@ async def submit_prechat_intake(
     phone = str(answers.get("phone") or answers.get("phoneNumber") or "").strip()
     company = str(answers.get("company") or answers.get("companyName") or "").strip()
     initial_message = str(
-        answers.get("message")
-        or answers.get("initialMessage")
-        or answers.get("question")
-        or ""
+        answers.get("message") or answers.get("initialMessage") or answers.get("question") or ""
     ).strip()
 
     # 4. Find or Create Contact

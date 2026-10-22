@@ -1,6 +1,5 @@
 import uuid
 from datetime import UTC, datetime
-from typing import Any
 
 from sqlalchemy import DateTime, Float, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -63,7 +62,9 @@ class KnowledgeGap(Base):
     suggested_answer: Mapped[str] = mapped_column(Text, default="", nullable=False)
     source_query: Mapped[str] = mapped_column(Text, default="", nullable=False)
     frequency: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
-    status: Mapped[str] = mapped_column(String(30), default="suggested", nullable=False)  # suggested, approved, dismissed
+    status: Mapped[str] = mapped_column(
+        String(30), default="suggested", nullable=False
+    )  # suggested, approved, dismissed
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
@@ -89,7 +90,9 @@ class KnowledgeRecommendation(Base):
     impact_on_resolution: Mapped[float] = mapped_column(Float, default=3.5, nullable=False)
     suggested_action: Mapped[str] = mapped_column(Text, default="", nullable=False)
     suggested_content: Mapped[str] = mapped_column(Text, default="", nullable=False)
-    status: Mapped[str] = mapped_column(String(30), default="open", nullable=False, index=True)  # open, applied, dismissed
+    status: Mapped[str] = mapped_column(
+        String(30), default="open", nullable=False, index=True
+    )  # open, applied, dismissed
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)

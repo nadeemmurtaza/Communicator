@@ -1,24 +1,27 @@
-from datetime import UTC, datetime
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from communicator.models.broadcast import Broadcast, BroadcastStatus
 from communicator.models.contact import ChannelType, Contact
 from communicator.models.lead import Lead
-from communicator.models.tag import Tag
-from communicator.services.tags import add_tag_to_contact, get_or_create_tag
+from communicator.services.tags import add_tag_to_contact
 
 
 @pytest.mark.asyncio
-async def test_campaign_audience_preview_and_creation(test_client: AsyncClient, db_session: AsyncSession):
+async def test_campaign_audience_preview_and_creation(
+    test_client: AsyncClient, db_session: AsyncSession
+):
     # Setup leads and tagged contacts
     lead = Lead(harvester_institution_id="test:camp-1", name="Acme Inc", institution_type="tech")
     db_session.add(lead)
     await db_session.flush()
 
-    c1 = Contact(lead_id=lead.id, channel=ChannelType.WHATSAPP, value="+14155551111", person_name="Maya")
-    c2 = Contact(lead_id=lead.id, channel=ChannelType.WHATSAPP, value="+14155552222", person_name="Daniel")
+    c1 = Contact(
+        lead_id=lead.id, channel=ChannelType.WHATSAPP, value="+14155551111", person_name="Maya"
+    )
+    c2 = Contact(
+        lead_id=lead.id, channel=ChannelType.WHATSAPP, value="+14155552222", person_name="Daniel"
+    )
     db_session.add_all([c1, c2])
     await db_session.flush()
 
@@ -27,7 +30,9 @@ async def test_campaign_audience_preview_and_creation(test_client: AsyncClient, 
     await add_tag_to_contact(db_session, c2, "newsletter")  # c2 has both tags
 
     # Test audience preview with deduplication
-    resp_prev = await test_client.get("/api/v1/broadcasts/audience-preview?tags=vip-customers,newsletter")
+    resp_prev = await test_client.get(
+        "/api/v1/broadcasts/audience-preview?tags=vip-customers,newsletter"
+    )
     assert resp_prev.status_code == 200
     prev_data = resp_prev.json()
     assert prev_data["totalSelected"] == 2  # Deduplicated: exactly 2 distinct contacts
@@ -90,15 +95,17 @@ async def test_campaign_analytics_and_dispatch(test_client: AsyncClient, db_sess
     # Check percentages matching Chatwoot example
     assert metrics["submittedPct"] == 97  # 97% of audience
     assert metrics["deliveredPct"] == 88  # 88% of audience
-    assert metrics["readPct"] == 66       # 66% of audience
-    assert metrics["failedPct"] == 5       # 5% of audience
-    assert metrics["skippedPct"] == 3      # 3% of audience
+    assert metrics["readPct"] == 66  # 66% of audience
+    assert metrics["failedPct"] == 5  # 5% of audience
+    assert metrics["skippedPct"] == 3  # 3% of audience
 
 
 @pytest.mark.asyncio
 async def test_whatsapp_pricing_calculator(test_client: AsyncClient):
     # Marketing rate in US
-    resp_us = await test_client.get("/api/v1/broadcasts/pricing-calculator?region=US&category=marketing&volume=1000")
+    resp_us = await test_client.get(
+        "/api/v1/broadcasts/pricing-calculator?region=US&category=marketing&volume=1000"
+    )
     assert resp_us.status_code == 200
     data_us = resp_us.json()
     assert data_us["region"] == "US"
@@ -106,7 +113,9 @@ async def test_whatsapp_pricing_calculator(test_client: AsyncClient):
     assert data_us["estimatedCostUsd"] == 25.0
 
     # Utility rate in India
-    resp_in = await test_client.get("/api/v1/broadcasts/pricing-calculator?region=IN&category=utility&volume=5000")
+    resp_in = await test_client.get(
+        "/api/v1/broadcasts/pricing-calculator?region=IN&category=utility&volume=5000"
+    )
     assert resp_in.status_code == 200
     data_in = resp_in.json()
     assert data_in["region"] == "IN"

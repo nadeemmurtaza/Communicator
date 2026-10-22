@@ -186,7 +186,7 @@ async def _advance_conversation(
                         )
                     )
                     return message
-                except Exception:
+                except Exception:  # noqa: BLE001, S110
                     pass
 
             # Otherwise defer and retry rather than attempting a doomed freeform send

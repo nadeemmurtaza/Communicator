@@ -32,7 +32,9 @@ class BatchAutoAssignIn(BaseModel):
 
 
 @router.get("/routing/agents")
-async def list_routing_agents(session: AsyncSession = Depends(get_db_session)) -> list[dict[str, Any]]:
+async def list_routing_agents(
+    session: AsyncSession = Depends(get_db_session),
+) -> list[dict[str, Any]]:
     """Lists all team agents with live availability, current active load, and capacity slots."""
     return await routing_service.list_agents(session)
 
@@ -91,7 +93,11 @@ async def auto_assign_conversation(
         # Demo / mock conversation handler
         agents = await routing_service.list_agents(session)
         online_agents = [a for a in agents if a["availabilityStatus"] == "online"]
-        chosen = online_agents[0] if online_agents else (agents[0] if agents else {"name": "Riley Brooks", "id": "agent-riley"})
+        chosen = (
+            online_agents[0]
+            if online_agents
+            else (agents[0] if agents else {"name": "Riley Brooks", "id": "agent-riley"})
+        )
         return {
             "status": "assigned",
             "assigned": True,

@@ -1,5 +1,6 @@
 import uuid
 from datetime import UTC, datetime, timedelta
+
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +11,9 @@ from communicator.models.lead import Lead
 from communicator.models.team_member import TeamMember
 
 
-async def _create_test_conv(db_session: AsyncSession, assigned_to_id: uuid.UUID | None = None) -> Conversation:
+async def _create_test_conv(
+    db_session: AsyncSession, assigned_to_id: uuid.UUID | None = None
+) -> Conversation:
     lead = Lead(harvester_institution_id=str(uuid.uuid4()), name="Routing Org")
     db_session.add(lead)
     await db_session.flush()
@@ -83,7 +86,9 @@ async def test_update_agent_status_and_capacity(test_client: AsyncClient, db_ses
 
 
 @pytest.mark.asyncio
-async def test_auto_assign_capacity_based_least_loaded(test_client: AsyncClient, db_session: AsyncSession):
+async def test_auto_assign_capacity_based_least_loaded(
+    test_client: AsyncClient, db_session: AsyncSession
+):
     # Create two fresh dedicated online agents
     agent_busy = TeamMember(
         name=f"Busy Rep {uuid.uuid4().hex[:4]}",
@@ -157,7 +162,9 @@ async def test_auto_assign_round_robin(test_client: AsyncClient, db_session: Asy
 
 
 @pytest.mark.asyncio
-async def test_auto_assign_capacity_overflow_fallback(test_client: AsyncClient, db_session: AsyncSession):
+async def test_auto_assign_capacity_overflow_fallback(
+    test_client: AsyncClient, db_session: AsyncSession
+):
     # Set all existing agents to offline or max capacity 0
     agents_res = await test_client.get("/api/v1/routing/agents")
     for a in agents_res.json():
@@ -185,7 +192,9 @@ async def test_auto_assign_capacity_overflow_fallback(test_client: AsyncClient, 
 
 
 @pytest.mark.asyncio
-async def test_batch_auto_assign_and_capacity_overview(test_client: AsyncClient, db_session: AsyncSession):
+async def test_batch_auto_assign_and_capacity_overview(
+    test_client: AsyncClient, db_session: AsyncSession
+):
     # Make at least one agent online
     agents_res = await test_client.get("/api/v1/routing/agents")
     agent_id = agents_res.json()[0]["id"]

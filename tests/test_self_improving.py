@@ -1,11 +1,11 @@
 import uuid
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from communicator.api.app import app
 from communicator.models.self_improving import (
     AgentInsight,
-    AgentRetrainingEvent,
     InsightCategory,
     InsightStatus,
 )

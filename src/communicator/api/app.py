@@ -3,6 +3,7 @@ from fastapi.responses import RedirectResponse
 
 from communicator.api.routes import (
     ai_connections,
+    audit_logs,
     automation,
     broadcasts,
     canned_responses,
@@ -10,6 +11,7 @@ from communicator.api.routes import (
     contacts,
     conversations,
     copilot_approvals,
+    custom_attributes,
     drafts,
     gateways,
     inboxes,
@@ -17,8 +19,10 @@ from communicator.api.routes import (
     knowledge_base,
     macros,
     outgoing_webhooks,
+    prechat,
     presence,
     reports,
+    roles,
     routing,
     scheduler,
     segments,
@@ -28,19 +32,15 @@ from communicator.api.routes import (
     settings,
     simulations,
     sla,
+    sso,
     stripe_integration,
     team,
     teams,
     tickets,
+    translation,
     webhooks,
     widget,
     widget_customizer,
-    prechat,
-    audit_logs,
-    roles,
-    sso,
-    translation,
-    custom_attributes,
 )
 
 app = FastAPI(

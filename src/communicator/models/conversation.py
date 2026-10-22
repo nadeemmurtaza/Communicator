@@ -78,9 +78,7 @@ class Conversation(Base):
     )
 
     # Snooze until
-    snoozed_until: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    snoozed_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Custom attributes / metadata (e.g. plan tier, account value)
     custom_attributes: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
@@ -102,9 +100,7 @@ class Conversation(Base):
     resolution_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     # WhatsApp 24-hour Session Window tracking
-    last_inbound_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    last_inbound_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_outbound_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

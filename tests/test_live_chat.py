@@ -1,8 +1,8 @@
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
-from communicator.models.contact import ChannelType, Contact
-from communicator.models.conversation import Conversation
+
+from communicator.models.contact import ChannelType
 from communicator.models.message import Message, MessageDirection
 
 
@@ -169,7 +169,10 @@ async def test_public_widget_flow(test_client: AsyncClient, db_session: AsyncSes
     )
     assert agent_reply_res.status_code == 200
     agent_msg = agent_reply_res.json()
-    assert agent_msg["body"] == "Hello Jane, thanks for reaching out! How can our support team assist you today?"
+    assert (
+        agent_msg["body"]
+        == "Hello Jane, thanks for reaching out! How can our support team assist you today?"
+    )
     assert agent_msg["isPrivate"] is False
 
     # 7. Visitor fetches updated chat history to receive agent reply

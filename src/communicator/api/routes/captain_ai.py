@@ -90,7 +90,9 @@ async def triage_conversation(
     """
     try:
         apply_changes = payload.apply if payload else False
-        return await captain_ai.triage_conversation(session, conversation_id, apply_changes=apply_changes)
+        return await captain_ai.triage_conversation(
+            session, conversation_id, apply_changes=apply_changes
+        )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 

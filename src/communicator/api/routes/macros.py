@@ -149,9 +149,17 @@ async def execute_macro_on_conversation(
             "conversationId": str(conversation_id),
             "executedActionsCount": len(executed_actions),
             "executedActions": executed_actions,
-            "conversationState": "closed_won" if any(a.get("type") == "resolve_conversation" for a in macro.actions) else "open",
-            "conversationPriority": next((a.get("priority") for a in macro.actions if a.get("type") == "change_priority"), "medium"),
-            "conversationTags": next((a.get("tags") for a in macro.actions if a.get("type") == "add_tags"), ["macro-executed"]),
+            "conversationState": "closed_won"
+            if any(a.get("type") == "resolve_conversation" for a in macro.actions)
+            else "open",
+            "conversationPriority": next(
+                (a.get("priority") for a in macro.actions if a.get("type") == "change_priority"),
+                "medium",
+            ),
+            "conversationTags": next(
+                (a.get("tags") for a in macro.actions if a.get("type") == "add_tags"),
+                ["macro-executed"],
+            ),
             "executedAt": now.isoformat(),
         }
 

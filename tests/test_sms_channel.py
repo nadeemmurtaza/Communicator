@@ -1,10 +1,6 @@
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
-from communicator.models.contact import ChannelType, Contact
-from communicator.models.conversation import Conversation
-from communicator.models.message import Message, MessageDirection
-from communicator.config import settings
 
 
 @pytest.mark.asyncio
@@ -81,7 +77,9 @@ async def test_sms_channel_integration(test_client: AsyncClient, db_session: Asy
 
 
 @pytest.mark.asyncio
-async def test_sms_outbound_reply_from_shared_inbox(test_client: AsyncClient, db_session: AsyncSession):
+async def test_sms_outbound_reply_from_shared_inbox(
+    test_client: AsyncClient, db_session: AsyncSession
+):
     # Send a diagnostic test message to seed contact and conversation
     res = await test_client.post(
         "/api/v1/inboxes/channels/sms/test-message",

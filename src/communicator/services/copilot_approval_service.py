@@ -10,10 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from communicator.models.approval import ApprovalStatus, ApprovalType, CopilotApprovalRequest
-from communicator.models.contact import ChannelType, Contact
+from communicator.models.contact import ChannelType
 from communicator.models.conversation import Conversation
 from communicator.models.message import Message, MessageDirection, MessageStatus
-from communicator.models.team_member import TeamMember
 
 
 def serialize_approval(a: CopilotApprovalRequest) -> dict[str, Any]:
@@ -99,7 +98,7 @@ async def create_approval_request(
         f"🤖 [Copilot Approval Requested] {title}\n"
         f"Type: {request_type.upper()} • Status: PENDING TEAMMATE APPROVAL\n"
         f"Note: {approval.internal_note}\n"
-        f"Proposed Reply: \"{proposed_reply}\""
+        f'Proposed Reply: "{proposed_reply}"'
     )
     if question_to_teammate:
         note_body += f"\n❓ Question for teammate: {question_to_teammate}"
@@ -161,7 +160,9 @@ async def approve_request(
     approval = await session.get(
         CopilotApprovalRequest,
         approval_id,
-        options=[selectinload(CopilotApprovalRequest.conversation).selectinload(Conversation.contact)],
+        options=[
+            selectinload(CopilotApprovalRequest.conversation).selectinload(Conversation.contact)
+        ],
     )
     if not approval:
         raise ValueError(f"Approval request {approval_id} not found")
@@ -170,7 +171,11 @@ async def approve_request(
         raise ValueError(f"Approval request is already {approval.status}")
 
     conv = approval.conversation
-    reply_to_send = amended_reply.strip() if amended_reply and amended_reply.strip() else approval.proposed_reply
+    reply_to_send = (
+        amended_reply.strip()
+        if amended_reply and amended_reply.strip()
+        else approval.proposed_reply
+    )
 
     approval.status = (
         ApprovalStatus.AMENDED.value
@@ -224,7 +229,9 @@ async def reject_request(
     approval = await session.get(
         CopilotApprovalRequest,
         approval_id,
-        options=[selectinload(CopilotApprovalRequest.conversation).selectinload(Conversation.contact)],
+        options=[
+            selectinload(CopilotApprovalRequest.conversation).selectinload(Conversation.contact)
+        ],
     )
     if not approval:
         raise ValueError(f"Approval request {approval_id} not found")
@@ -268,7 +275,9 @@ async def provide_teammate_info(
     approval = await session.get(
         CopilotApprovalRequest,
         approval_id,
-        options=[selectinload(CopilotApprovalRequest.conversation).selectinload(Conversation.contact)],
+        options=[
+            selectinload(CopilotApprovalRequest.conversation).selectinload(Conversation.contact)
+        ],
     )
     if not approval:
         raise ValueError(f"Approval request {approval_id} not found")
@@ -311,7 +320,7 @@ async def provide_teammate_info(
         conversation_id=conv.id,
         direction=MessageDirection.OUTBOUND,
         channel=channel,
-        body=f"✅ [Teammate Info Answered] {reviewer_name} answered: \"{teammate_answer.strip()}\". Agent Captain finalized and dispatched response to customer.",
+        body=f'✅ [Teammate Info Answered] {reviewer_name} answered: "{teammate_answer.strip()}". Agent Captain finalized and dispatched response to customer.',
         is_private=True,
         sender_type="copilot_agent",
         sender_name="Captain AI Copilot",
@@ -334,7 +343,10 @@ async def evaluate_and_trigger_refund_approval(
     to approve the refund reply before answering the customer.
     """
     text_lower = customer_message.lower()
-    is_refund = any(kw in text_lower for kw in ["refund", "money back", "reimburse", "cancel order", "defective item"])
+    is_refund = any(
+        kw in text_lower
+        for kw in ["refund", "money back", "reimburse", "cancel order", "defective item"]
+    )
     if not is_refund:
         return None
 
@@ -355,7 +367,9 @@ async def evaluate_and_trigger_refund_approval(
     if existing:
         return serialize_approval(existing)
 
-    contact_name = conv.contact.person_name if conv.contact and conv.contact.person_name else "Valued Customer"
+    contact_name = (
+        conv.contact.person_name if conv.contact and conv.contact.person_name else "Valued Customer"
+    )
     first_name = contact_name.split()[0] if contact_name else "there"
 
     # Extract or simulate refund amount

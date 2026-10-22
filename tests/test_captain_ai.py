@@ -1,5 +1,6 @@
-import pytest
 import uuid
+
+import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -71,7 +72,10 @@ async def test_captain_suggested_reply(test_client: AsyncClient, db_session: Asy
 async def test_captain_thread_summarization(test_client: AsyncClient, db_session: AsyncSession):
     # 1. Create conversation with multi-turn messages
     _, contact = await _create_test_lead_and_contact(
-        db_session, "Lorrie Trosdall", ChannelType.WEBSITE, f"test_{uuid.uuid4().hex[:6]}@example.com"
+        db_session,
+        "Lorrie Trosdall",
+        ChannelType.WEBSITE,
+        f"test_{uuid.uuid4().hex[:6]}@example.com",
     )
 
     conv = Conversation(
@@ -162,7 +166,10 @@ async def test_captain_tone_rewriter(test_client: AsyncClient):
 async def test_captain_triage_engine(test_client: AsyncClient, db_session: AsyncSession):
     # Create an urgent billing dispute conversation
     _, contact = await _create_test_lead_and_contact(
-        db_session, "Harrison Sterling", ChannelType.EMAIL, f"billing_{uuid.uuid4().hex[:6]}@corp.com"
+        db_session,
+        "Harrison Sterling",
+        ChannelType.EMAIL,
+        f"billing_{uuid.uuid4().hex[:6]}@corp.com",
     )
 
     conv = Conversation(
@@ -239,4 +246,6 @@ async def test_captain_monitors_api(test_client: AsyncClient):
 
     # Verify custom monitor appears in list
     res_after = await test_client.get("/api/v1/captain/monitors")
-    assert any(m["name"] == "Checkout Cart Abandonment Alert" for m in res_after.json()["activeMonitors"])
+    assert any(
+        m["name"] == "Checkout Cart Abandonment Alert" for m in res_after.json()["activeMonitors"]
+    )

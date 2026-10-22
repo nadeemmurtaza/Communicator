@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any
+
 import httpx
 
 from communicator.channels.base import ChannelProvider, SendResult
@@ -60,16 +60,16 @@ class TelegramProvider(ChannelProvider):
                 res.raise_for_status()
                 data = res.json()
 
-            telegram_msg_id = str((data.get("result") or {}).get("message_id") or uuid.uuid4().hex[:16])
+            telegram_msg_id = str(
+                (data.get("result") or {}).get("message_id") or uuid.uuid4().hex[:16]
+            )
             return SendResult(
                 provider="telegram",
                 provider_message_id=telegram_msg_id,
                 raw_response=data,
             )
-        except Exception as e:
-            logger.warning(
-                f"Telegram live dispatch failed ({e}); using simulated fallback."
-            )
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Telegram live dispatch failed ({e}); using simulated fallback.")
             msg_id = f"tg_sim_{uuid.uuid4().hex[:16]}"
             return SendResult(
                 provider="telegram",

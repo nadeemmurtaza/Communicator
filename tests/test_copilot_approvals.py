@@ -4,9 +4,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
-from communicator.models.approval import ApprovalStatus, ApprovalType, CopilotApprovalRequest
 from communicator.models.contact import ChannelType, Contact
 from communicator.models.conversation import Conversation
 from communicator.models.lead import Lead
@@ -15,9 +13,13 @@ from communicator.models.team_member import TeamMember
 
 
 @pytest.mark.asyncio
-async def test_create_and_approve_refund_workflow(test_client: AsyncClient, db_session: AsyncSession):
+async def test_create_and_approve_refund_workflow(
+    test_client: AsyncClient, db_session: AsyncSession
+):
     # 1. Setup Lead, Contact, Agent, and Conversation
-    lead = Lead(harvester_institution_id="test_inst_approval_1", name="Bruce Wayne", institution_type="vip")
+    lead = Lead(
+        harvester_institution_id="test_inst_approval_1", name="Bruce Wayne", institution_type="vip"
+    )
     db_session.add(lead)
     await db_session.flush()
 
@@ -98,7 +100,9 @@ async def test_create_and_approve_refund_workflow(test_client: AsyncClient, db_s
 
 
 @pytest.mark.asyncio
-async def test_teammate_amends_reply_and_approves(test_client: AsyncClient, db_session: AsyncSession):
+async def test_teammate_amends_reply_and_approves(
+    test_client: AsyncClient, db_session: AsyncSession
+):
     lead = Lead(harvester_institution_id="test_inst_approval_2", name="Selina Kyle")
     db_session.add(lead)
     await db_session.flush()
@@ -131,7 +135,9 @@ async def test_teammate_amends_reply_and_approves(test_client: AsyncClient, db_s
     approval_id = create_res.json()["id"]
 
     # Teammate amends reply to 15% VIP discount
-    amended_text = "Hi Selina, as a valued client we are pleased to offer you an exclusive 15% VIP discount!"
+    amended_text = (
+        "Hi Selina, as a valued client we are pleased to offer you an exclusive 15% VIP discount!"
+    )
     approve_res = await test_client.post(
         f"/api/v1/copilot/approvals/{approval_id}/approve",
         json={
@@ -195,7 +201,10 @@ async def test_teammate_rejects_approval(test_client: AsyncClient, db_session: A
     assert reject_res.status_code == 200
     rejected_body = reject_res.json()
     assert rejected_body["status"] == "rejected"
-    assert rejected_body["reviewerFeedback"] == "Item was purchased over 90 days ago. Not eligible for replacement credit."
+    assert (
+        rejected_body["reviewerFeedback"]
+        == "Item was purchased over 90 days ago. Not eligible for replacement credit."
+    )
 
     # Verify no customer outbound message was dispatched
     outbound_stmt = select(Message).where(
@@ -208,7 +217,9 @@ async def test_teammate_rejects_approval(test_client: AsyncClient, db_session: A
 
 
 @pytest.mark.asyncio
-async def test_ai_asks_teammate_info_and_finishes_itself(test_client: AsyncClient, db_session: AsyncSession):
+async def test_ai_asks_teammate_info_and_finishes_itself(
+    test_client: AsyncClient, db_session: AsyncSession
+):
     lead = Lead(harvester_institution_id="test_inst_approval_4", name="Barbara Gordon")
     db_session.add(lead)
     await db_session.flush()
@@ -252,7 +263,9 @@ async def test_ai_asks_teammate_info_and_finishes_itself(test_client: AsyncClien
     assert info_res.status_code == 200
     info_body = info_res.json()
     assert info_body["status"] == "approved"
-    assert info_body["teammateAnswer"] == "Yes, we have 6 units in Bay 4 ready for next-day dispatch."
+    assert (
+        info_body["teammateAnswer"] == "Yes, we have 6 units in Bay 4 ready for next-day dispatch."
+    )
 
     # Verify Agent finished the conversation itself by sending synthesized reply to customer
     outbound_stmt = select(Message).where(
@@ -267,7 +280,9 @@ async def test_ai_asks_teammate_info_and_finishes_itself(test_client: AsyncClien
 
 
 @pytest.mark.asyncio
-async def test_evaluate_and_trigger_refund_approval(test_client: AsyncClient, db_session: AsyncSession):
+async def test_evaluate_and_trigger_refund_approval(
+    test_client: AsyncClient, db_session: AsyncSession
+):
     lead = Lead(harvester_institution_id="test_inst_approval_5", name="Harvey Dent")
     db_session.add(lead)
     await db_session.flush()

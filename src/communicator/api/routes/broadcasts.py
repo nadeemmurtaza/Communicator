@@ -15,7 +15,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import distinct, or_, select
+from sqlalchemy import distinct, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -29,7 +29,6 @@ from communicator.models.broadcast import (
     RecipientStatus,
 )
 from communicator.models.contact import ChannelType, Contact
-from communicator.models.conversation import Conversation
 from communicator.models.message import Message, MessageDirection, MessageStatus
 from communicator.services.integration_settings import get_whatsapp_config
 from communicator.services.messaging import get_or_create_conversation
@@ -239,7 +238,9 @@ async def reschedule_broadcast(
     if broadcast is None:
         raise HTTPException(status_code=404, detail="Campaign not found")
     if broadcast.status in (BroadcastStatus.SENDING, BroadcastStatus.COMPLETED):
-        raise HTTPException(status_code=400, detail="Cannot reschedule a campaign that has already started.")
+        raise HTTPException(
+            status_code=400, detail="Cannot reschedule a campaign that has already started."
+        )
 
     broadcast.scheduled_at = payload.scheduled_at
     broadcast.status = BroadcastStatus.SCHEDULED if payload.scheduled_at else BroadcastStatus.DRAFT
@@ -344,7 +345,7 @@ async def dispatch_broadcast(
                     status=MessageStatus.SENT,
                 )
                 session.add(msg)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 recipient.status = RecipientStatus.FAILED
                 recipient.error = str(e)
                 broadcast.failed_count += 1
@@ -399,21 +400,71 @@ async def process_scheduled_campaigns(session: AsyncSession = Depends(get_db_ses
 
 
 META_RATES_USD = {
-    "US": {"marketing": 0.0250, "utility": 0.0150, "auth": 0.0135, "service": 0.0080, "name": "United States 🇺🇸"},
-    "UK": {"marketing": 0.0388, "utility": 0.0200, "auth": 0.0180, "service": 0.0100, "name": "United Kingdom 🇬🇧"},
-    "EU": {"marketing": 0.0520, "utility": 0.0300, "auth": 0.0250, "service": 0.0150, "name": "European Union 🇪🇺"},
-    "IN": {"marketing": 0.0105, "utility": 0.0035, "auth": 0.0030, "service": 0.0020, "name": "India 🇮🇳"},
-    "BR": {"marketing": 0.0625, "utility": 0.0350, "auth": 0.0315, "service": 0.0180, "name": "Brazil 🇧🇷"},
-    "MX": {"marketing": 0.0430, "utility": 0.0250, "auth": 0.0220, "service": 0.0120, "name": "Mexico 🇲🇽"},
-    "UAE": {"marketing": 0.0340, "utility": 0.0220, "auth": 0.0190, "service": 0.0110, "name": "United Arab Emirates 🇦🇪"},
-    "ROW": {"marketing": 0.0300, "utility": 0.0180, "auth": 0.0150, "service": 0.0090, "name": "Rest of World 🌐"},
+    "US": {
+        "marketing": 0.0250,
+        "utility": 0.0150,
+        "auth": 0.0135,
+        "service": 0.0080,
+        "name": "United States 🇺🇸",
+    },
+    "UK": {
+        "marketing": 0.0388,
+        "utility": 0.0200,
+        "auth": 0.0180,
+        "service": 0.0100,
+        "name": "United Kingdom 🇬🇧",
+    },
+    "EU": {
+        "marketing": 0.0520,
+        "utility": 0.0300,
+        "auth": 0.0250,
+        "service": 0.0150,
+        "name": "European Union 🇪🇺",
+    },
+    "IN": {
+        "marketing": 0.0105,
+        "utility": 0.0035,
+        "auth": 0.0030,
+        "service": 0.0020,
+        "name": "India 🇮🇳",
+    },
+    "BR": {
+        "marketing": 0.0625,
+        "utility": 0.0350,
+        "auth": 0.0315,
+        "service": 0.0180,
+        "name": "Brazil 🇧🇷",
+    },
+    "MX": {
+        "marketing": 0.0430,
+        "utility": 0.0250,
+        "auth": 0.0220,
+        "service": 0.0120,
+        "name": "Mexico 🇲🇽",
+    },
+    "UAE": {
+        "marketing": 0.0340,
+        "utility": 0.0220,
+        "auth": 0.0190,
+        "service": 0.0110,
+        "name": "United Arab Emirates 🇦🇪",
+    },
+    "ROW": {
+        "marketing": 0.0300,
+        "utility": 0.0180,
+        "auth": 0.0150,
+        "service": 0.0090,
+        "name": "Rest of World 🌐",
+    },
 }
 
 
 @router.get("/pricing-calculator")
 async def calculate_whatsapp_pricing(
     region: str = Query("US", description="Country/Region code"),
-    category: str = Query("marketing", description="Conversation category: marketing, utility, auth, service"),
+    category: str = Query(
+        "marketing", description="Conversation category: marketing, utility, auth, service"
+    ),
     volume: int = Query(1000, description="Number of conversations"),
 ):
     """
@@ -423,7 +474,9 @@ async def calculate_whatsapp_pricing(
     region_data = META_RATES_USD.get(region.upper(), META_RATES_USD["ROW"])
     rate_per_msg = region_data.get(category.lower(), 0.0250)
     total_cost = round(rate_per_msg * volume, 2)
-    potential_revenue_estimate = round(total_cost * 8.5, 2)  # ~8.5x industry standard ROI for WhatsApp marketing
+    potential_revenue_estimate = round(
+        total_cost * 8.5, 2
+    )  # ~8.5x industry standard ROI for WhatsApp marketing
 
     return {
         "region": region.upper(),

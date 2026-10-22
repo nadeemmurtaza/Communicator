@@ -140,23 +140,25 @@ async def search_audit_logs(
             if q not in haystack:
                 continue
 
-        items.append({
-            "id": str(r.id),
-            "created_at": r.created_at.isoformat() if r.created_at else "",
-            "action": r.action,
-            "actor": r.actor,
-            "actor_email": d.get("actor_email", ""),
-            "actor_name": d.get("actor_name", r.actor),
-            "actor_role": d.get("actor_role", "admin"),
-            "entity_type": r.entity_type,
-            "entity_id": str(r.entity_id),
-            "severity": row_severity,
-            "compliance_category": row_category,
-            "description": d.get("description", f"{r.actor} executed {r.action}"),
-            "ip_address": d.get("ip_address", "127.0.0.1"),
-            "user_agent": d.get("user_agent", ""),
-            "details": d,
-        })
+        items.append(
+            {
+                "id": str(r.id),
+                "created_at": r.created_at.isoformat() if r.created_at else "",
+                "action": r.action,
+                "actor": r.actor,
+                "actor_email": d.get("actor_email", ""),
+                "actor_name": d.get("actor_name", r.actor),
+                "actor_role": d.get("actor_role", "admin"),
+                "entity_type": r.entity_type,
+                "entity_id": str(r.entity_id),
+                "severity": row_severity,
+                "compliance_category": row_category,
+                "description": d.get("description", f"{r.actor} executed {r.action}"),
+                "ip_address": d.get("ip_address", "127.0.0.1"),
+                "user_agent": d.get("user_agent", ""),
+                "details": d,
+            }
+        )
 
     total_pages = max(1, (total_count + page_size - 1) // page_size)
 
@@ -216,7 +218,9 @@ async def get_audit_statistics(session: AsyncSession) -> dict[str, Any]:
         "top_actors": top_actors,
         "top_actions": top_actions,
         "soc2_compliance_status": "MONITORED_AND_AUDITED",
-        "last_audit_event_at": rows[0].created_at.isoformat() if rows and rows[0].created_at else None,
+        "last_audit_event_at": rows[0].created_at.isoformat()
+        if rows and rows[0].created_at
+        else None,
     }
 
 
@@ -230,39 +234,43 @@ async def export_audit_trail_csv(session: AsyncSession, limit: int = 2000) -> st
     output = io.StringIO()
     writer = csv.writer(output)
 
-    writer.writerow([
-        "Event ID",
-        "Timestamp (UTC)",
-        "Action",
-        "Severity",
-        "Compliance Category",
-        "Actor",
-        "Actor Email",
-        "Actor Role",
-        "Entity Type",
-        "Entity ID",
-        "IP Address",
-        "Description",
-        "Details JSON",
-    ])
+    writer.writerow(
+        [
+            "Event ID",
+            "Timestamp (UTC)",
+            "Action",
+            "Severity",
+            "Compliance Category",
+            "Actor",
+            "Actor Email",
+            "Actor Role",
+            "Entity Type",
+            "Entity ID",
+            "IP Address",
+            "Description",
+            "Details JSON",
+        ]
+    )
 
     for r in rows:
         d = dict(r.details or {})
-        writer.writerow([
-            str(r.id),
-            r.created_at.isoformat() if r.created_at else "",
-            r.action,
-            d.get("severity", "info"),
-            d.get("compliance_category", "general"),
-            r.actor,
-            d.get("actor_email", ""),
-            d.get("actor_role", "admin"),
-            r.entity_type,
-            str(r.entity_id),
-            d.get("ip_address", ""),
-            d.get("description", ""),
-            json.dumps(d),
-        ])
+        writer.writerow(
+            [
+                str(r.id),
+                r.created_at.isoformat() if r.created_at else "",
+                r.action,
+                d.get("severity", "info"),
+                d.get("compliance_category", "general"),
+                r.actor,
+                d.get("actor_email", ""),
+                d.get("actor_role", "admin"),
+                r.entity_type,
+                str(r.entity_id),
+                d.get("ip_address", ""),
+                d.get("description", ""),
+                json.dumps(d),
+            ]
+        )
 
     return output.getvalue()
 
@@ -277,29 +285,31 @@ async def export_audit_trail_json(session: AsyncSession, limit: int = 2000) -> d
     items = []
     for r in rows:
         d = dict(r.details or {})
-        items.append({
-            "id": str(r.id),
-            "timestamp_utc": r.created_at.isoformat() if r.created_at else "",
-            "action": r.action,
-            "severity": d.get("severity", "info"),
-            "compliance_category": d.get("compliance_category", "general"),
-            "actor": {
-                "identifier": r.actor,
-                "email": d.get("actor_email", ""),
-                "name": d.get("actor_name", r.actor),
-                "role": d.get("actor_role", "admin"),
-            },
-            "target": {
-                "entity_type": r.entity_type,
-                "entity_id": str(r.entity_id),
-            },
-            "network": {
-                "ip_address": d.get("ip_address", "127.0.0.1"),
-                "user_agent": d.get("user_agent", ""),
-            },
-            "description": d.get("description", ""),
-            "metadata": d,
-        })
+        items.append(
+            {
+                "id": str(r.id),
+                "timestamp_utc": r.created_at.isoformat() if r.created_at else "",
+                "action": r.action,
+                "severity": d.get("severity", "info"),
+                "compliance_category": d.get("compliance_category", "general"),
+                "actor": {
+                    "identifier": r.actor,
+                    "email": d.get("actor_email", ""),
+                    "name": d.get("actor_name", r.actor),
+                    "role": d.get("actor_role", "admin"),
+                },
+                "target": {
+                    "entity_type": r.entity_type,
+                    "entity_id": str(r.entity_id),
+                },
+                "network": {
+                    "ip_address": d.get("ip_address", "127.0.0.1"),
+                    "user_agent": d.get("user_agent", ""),
+                },
+                "description": d.get("description", ""),
+                "metadata": d,
+            }
+        )
 
     return {
         "export_metadata": {

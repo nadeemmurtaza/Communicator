@@ -9,7 +9,7 @@ import csv
 import io
 import uuid
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Query, Response, UploadFile
+from fastapi import APIRouter, Depends, Form, HTTPException, Response, UploadFile
 from pydantic import BaseModel
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -79,9 +79,10 @@ async def list_contacts(
             term = f"%{search.strip()}%"
             stmt = stmt.where(or_(Contact.person_name.ilike(term), Contact.value.ilike(term)))
 
-    contacts = (await session.execute(stmt.order_by(Contact.created_at.desc()))).scalars().unique().all()
+    contacts = (
+        (await session.execute(stmt.order_by(Contact.created_at.desc()))).scalars().unique().all()
+    )
     return [_serialize(c) for c in contacts]
-
 
 
 class TagIn(BaseModel):
@@ -128,9 +129,7 @@ class MemoryIn(BaseModel):
 
 
 @router.get("/{contact_id}/memories")
-async def list_memories(
-    contact_id: uuid.UUID, session: AsyncSession = Depends(get_db_session)
-):
+async def list_memories(contact_id: uuid.UUID, session: AsyncSession = Depends(get_db_session)):
     contact = await session.get(Contact, contact_id)
     if contact is None:
         raise HTTPException(status_code=404, detail="Contact not found")
@@ -203,12 +202,10 @@ def _resolve_contact_channel_and_value(
 
     # 2. Determine channel type
     raw_ch = (
-        row.get("channel")
-        or row.get("channel_type")
-        or row.get("type")
-        or default_channel
-        or ""
-    ).strip().lower()
+        (row.get("channel") or row.get("channel_type") or row.get("type") or default_channel or "")
+        .strip()
+        .lower()
+    )
 
     ch_enum: ChannelType | None = None
     if raw_ch:
@@ -237,9 +234,12 @@ def _resolve_contact_channel_and_value(
             ch_enum = ChannelType.WHATSAPP
 
     # Normalization for phone-based channels
-    if ch_enum in (ChannelType.WHATSAPP, ChannelType.SMS, ChannelType.VOICE):
-        if not val.startswith("+") and any(c.isdigit() for c in val):
-            val = "+" + val.lstrip("+")
+    if (
+        ch_enum in (ChannelType.WHATSAPP, ChannelType.SMS, ChannelType.VOICE)
+        and not val.startswith("+")
+        and any(c.isdigit() for c in val)
+    ):
+        val = "+" + val.lstrip("+")
 
     return ch_enum, val
 
@@ -373,22 +373,19 @@ async def preview_import(
         ch_enum, value = _resolve_contact_channel_and_value(row, default_channel)
         if ch_enum:
             detected_channels.add(ch_enum.value)
-        name = (
-            row.get("name")
-            or row.get("person_name")
-            or row.get("full_name")
-            or ""
-        ).strip()
+        name = (row.get("name") or row.get("person_name") or row.get("full_name") or "").strip()
         tags_raw = (row.get("tags") or "").strip()
         tags = [t.strip() for t in tags_raw.replace("|", ",").split(",") if t.strip()]
 
-        sample_rows.append({
-            "name": name,
-            "channel": ch_enum.value if ch_enum else "unknown",
-            "value": value,
-            "tags": tags,
-            "valid": bool(ch_enum and value),
-        })
+        sample_rows.append(
+            {
+                "name": name,
+                "channel": ch_enum.value if ch_enum else "unknown",
+                "value": value,
+                "tags": tags,
+                "valid": bool(ch_enum and value),
+            }
+        )
 
     return {
         "totalRows": total_rows,
@@ -428,26 +425,29 @@ async def export_contacts(
             term = f"%{search.strip()}%"
             stmt = stmt.where(or_(Contact.person_name.ilike(term), Contact.value.ilike(term)))
 
-    contacts = (await session.execute(stmt.order_by(Contact.created_at.desc()))).scalars().unique().all()
+    contacts = (
+        (await session.execute(stmt.order_by(Contact.created_at.desc()))).scalars().unique().all()
+    )
 
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(["ID", "Name", "Channel", "Value", "Language", "Tags", "Created At"])
 
     for c in contacts:
-        writer.writerow([
-            str(c.id),
-            c.person_name,
-            c.channel.value,
-            c.value,
-            c.language,
-            ",".join(t.name for t in c.tags),
-            c.created_at.isoformat(),
-        ])
+        writer.writerow(
+            [
+                str(c.id),
+                c.person_name,
+                c.channel.value,
+                c.value,
+                c.language,
+                ",".join(t.name for t in c.tags),
+                c.created_at.isoformat(),
+            ]
+        )
 
     return Response(
         content=output.getvalue(),
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="contacts_export.csv"'},
     )
-

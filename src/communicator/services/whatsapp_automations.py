@@ -27,7 +27,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.channels import get_provider
 from communicator.channels.whatsapp import MetaWhatsAppProvider
-from communicator.config import settings
 from communicator.models.automation_rule import (
     AutomationRule,
     RuleActionType,
@@ -38,8 +37,7 @@ from communicator.models.conversation import Conversation, ConversationState
 from communicator.models.message import Message, MessageDirection, MessageStatus
 from communicator.models.service import Service
 from communicator.models.team_member import TeamMember
-from communicator.services.business_hours import is_within_business_hours
-from communicator.services.integration_settings import get_settings_row, get_whatsapp_config
+from communicator.services.integration_settings import get_settings_row
 from communicator.services.messaging import send_outbound_message
 from communicator.services.tags import add_tag_to_contact, remove_tag_from_contact
 
@@ -49,6 +47,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # 1. In-Chat Agent Control Commands (#bot, #resolve, #csat, #tag)
 # ---------------------------------------------------------------------------
+
 
 async def handle_agent_commands(
     session: AsyncSession,
@@ -98,9 +97,7 @@ async def handle_agent_commands(
     if cmd == "tag" and arg:
         await add_tag_to_contact(session, contact, arg)
         provider = await get_provider(contact.channel, session)
-        await send_outbound_message(
-            session, contact, provider, f"✅ Contact tagged as '{arg}'."
-        )
+        await send_outbound_message(session, contact, provider, f"✅ Contact tagged as '{arg}'.")
         return True
 
     return False
@@ -109,6 +106,7 @@ async def handle_agent_commands(
 # ---------------------------------------------------------------------------
 # 2. CSAT (Customer Satisfaction) Survey Automation
 # ---------------------------------------------------------------------------
+
 
 async def send_csat_survey(
     session: AsyncSession,
@@ -221,6 +219,7 @@ async def handle_csat_response(
 # 3. Live Agent Handoff & Auto-Assignment Automation
 # ---------------------------------------------------------------------------
 
+
 async def execute_handoff(
     session: AsyncSession,
     conversation: Conversation,
@@ -278,7 +277,7 @@ async def execute_handoff(
             )
             await session.flush()
             return
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
 
     await send_outbound_message(session, contact, provider, msg)
@@ -290,6 +289,7 @@ async def execute_handoff(
 # ---------------------------------------------------------------------------
 # 4. Interactive Navigation Tree & Menus
 # ---------------------------------------------------------------------------
+
 
 async def handle_navigation_menu(
     session: AsyncSession,
@@ -306,25 +306,43 @@ async def handle_navigation_menu(
       - Office Location & Working Hours
     """
     normalized = (text or "").strip().lower()
-    match_main = (
-        payload_id in ("menu:main", "menu")
-        or normalized in ("menu", "help", "options", "start", "main menu")
+    match_main = payload_id in ("menu:main", "menu") or normalized in (
+        "menu",
+        "help",
+        "options",
+        "start",
+        "main menu",
     )
-    match_services = (
-        payload_id in ("menu:services", "pricing_catalog")
-        or normalized in ("services", "catalog", "solutions", "1", "1️⃣")
+    match_services = payload_id in ("menu:services", "pricing_catalog") or normalized in (
+        "services",
+        "catalog",
+        "solutions",
+        "1",
+        "1️⃣",
     )
-    match_pricing = (
-        payload_id == "menu:pricing"
-        or normalized in ("pricing", "price", "rates", "cost", "quote", "2", "2️⃣")
+    match_pricing = payload_id == "menu:pricing" or normalized in (
+        "pricing",
+        "price",
+        "rates",
+        "cost",
+        "quote",
+        "2",
+        "2️⃣",
     )
-    match_location = (
-        payload_id == "menu:location"
-        or normalized in ("location", "office", "address", "hours", "directions")
+    match_location = payload_id == "menu:location" or normalized in (
+        "location",
+        "office",
+        "address",
+        "hours",
+        "directions",
     )
-    match_agent = (
-        payload_id in ("action:agent", "human_agent")
-        or normalized in ("agent", "human", "representative", "support", "talk to human", "operator")
+    match_agent = payload_id in ("action:agent", "human_agent") or normalized in (
+        "agent",
+        "human",
+        "representative",
+        "support",
+        "talk to human",
+        "operator",
     )
 
     provider = await get_provider(contact.channel, session)
@@ -485,6 +503,7 @@ async def handle_navigation_menu(
 # 5. Welcome / Greeting Automation (First-Touch or > 24h Idle)
 # ---------------------------------------------------------------------------
 
+
 async def should_send_welcome_greeting(
     session: AsyncSession,
     conversation: Conversation,
@@ -552,6 +571,7 @@ async def send_welcome_greeting(
 # 6. Advanced Automation Rules Matcher & Action Executor
 # ---------------------------------------------------------------------------
 
+
 async def match_advanced_rule(
     session: AsyncSession,
     text: str,
@@ -595,19 +615,20 @@ async def match_advanced_rule(
                 pass
 
         # 5. Button click match
-        if rule.match_type == RuleMatchType.BUTTON_CLICK:
-            if norm_payload == keyword or keyword in norm_payload or norm_text == keyword:
-                return rule
+        if rule.match_type == RuleMatchType.BUTTON_CLICK and (
+            norm_payload == keyword or keyword in norm_payload or norm_text == keyword
+        ):
+            return rule
 
         # 6. List select match
-        if rule.match_type == RuleMatchType.LIST_SELECT:
-            if norm_payload == keyword or keyword in norm_payload or norm_text == keyword:
-                return rule
+        if rule.match_type == RuleMatchType.LIST_SELECT and (
+            norm_payload == keyword or keyword in norm_payload or norm_text == keyword
+        ):
+            return rule
 
         # 7. Intent match
-        if rule.match_type == RuleMatchType.INTENT and intent:
-            if intent.strip().lower() == keyword:
-                return rule
+        if rule.match_type == RuleMatchType.INTENT and intent and intent.strip().lower() == keyword:
+            return rule
 
     return None
 
@@ -834,7 +855,7 @@ async def execute_rule_action(
     # L. TRIGGER_WEBHOOK
     elif rule.action_type == RuleActionType.TRIGGER_WEBHOOK:
         url = rule.action_value.strip()
-        if url.startswith("http://") or url.startswith("https://"):
+        if url.startswith(("http://", "https://")):
             payload = {
                 "event": "automation_rule_triggered",
                 "rule_id": str(rule.id),
@@ -857,6 +878,7 @@ async def execute_rule_action(
 # ---------------------------------------------------------------------------
 # 7. 24-Hour Session Window Inactivity Nudge Automation
 # ---------------------------------------------------------------------------
+
 
 async def run_inactivity_nudges(session: AsyncSession) -> list[uuid.UUID]:
     """
@@ -928,6 +950,7 @@ async def run_inactivity_nudges(session: AsyncSession) -> list[uuid.UUID]:
 # 8. Pre-Configured Default Automations Seeder
 # ---------------------------------------------------------------------------
 
+
 async def seed_default_whatsapp_automations(session: AsyncSession) -> int:
     """
     Installs 11 production-grade, battle-tested WhatsApp automations:
@@ -944,7 +967,7 @@ async def seed_default_whatsapp_automations(session: AsyncSession) -> int:
     11. High-Value Lead Auto-Tagging
     """
     existing_stmt = select(func.count()).select_from(AutomationRule)
-    existing_count = (await session.execute(existing_stmt)).scalar_one()
+    (await session.execute(existing_stmt)).scalar_one()
 
     defaults = [
         AutomationRule(
@@ -953,16 +976,18 @@ async def seed_default_whatsapp_automations(session: AsyncSession) -> int:
             trigger_keyword="menu",
             match_type=RuleMatchType.EXACT,
             action_type=RuleActionType.INTERACTIVE_BUTTONS,
-            action_value=json.dumps({
-                "body": "Welcome to our WhatsApp Center! Please select an option to get started immediately:",
-                "buttons": [
-                    {"id": "menu:services", "title": "🌟 Browse Services"},
-                    {"id": "menu:pricing", "title": "💰 Pricing & Plans"},
-                    {"id": "action:agent", "title": "📞 Talk to Human"},
-                ],
-                "header": "Main Menu",
-                "footer": "Select an option or reply with your question",
-            }),
+            action_value=json.dumps(
+                {
+                    "body": "Welcome to our WhatsApp Center! Please select an option to get started immediately:",
+                    "buttons": [
+                        {"id": "menu:services", "title": "🌟 Browse Services"},
+                        {"id": "menu:pricing", "title": "💰 Pricing & Plans"},
+                        {"id": "action:agent", "title": "📞 Talk to Human"},
+                    ],
+                    "header": "Main Menu",
+                    "footer": "Select an option or reply with your question",
+                }
+            ),
             priority=100,
             is_active=True,
         ),
@@ -992,15 +1017,17 @@ async def seed_default_whatsapp_automations(session: AsyncSession) -> int:
             trigger_keyword="services",
             match_type=RuleMatchType.CONTAINS,
             action_type=RuleActionType.INTERACTIVE_BUTTONS,
-            action_value=json.dumps({
-                "body": "We specialize in custom web software, AI automations, and digital marketing systems.",
-                "buttons": [
-                    {"id": "menu:pricing", "title": "💰 Pricing & Rates"},
-                    {"id": "action:agent", "title": "📞 Speak with Sales"},
-                    {"id": "menu:main", "title": "🔙 Main Menu"},
-                ],
-                "header": "Services Catalog",
-            }),
+            action_value=json.dumps(
+                {
+                    "body": "We specialize in custom web software, AI automations, and digital marketing systems.",
+                    "buttons": [
+                        {"id": "menu:pricing", "title": "💰 Pricing & Rates"},
+                        {"id": "action:agent", "title": "📞 Speak with Sales"},
+                        {"id": "menu:main", "title": "🔙 Main Menu"},
+                    ],
+                    "header": "Services Catalog",
+                }
+            ),
             priority=85,
             is_active=True,
         ),
@@ -1010,15 +1037,17 @@ async def seed_default_whatsapp_automations(session: AsyncSession) -> int:
             trigger_keyword="pricing",
             match_type=RuleMatchType.CONTAINS,
             action_type=RuleActionType.INTERACTIVE_BUTTONS,
-            action_value=json.dumps({
-                "body": "Our solutions start with flexible monthly plans, or fixed-price milestones with 100% upfront quotes.",
-                "buttons": [
-                    {"id": "action:agent", "title": "📞 Get Custom Quote"},
-                    {"id": "menu:services", "title": "🌟 Our Services"},
-                    {"id": "menu:main", "title": "🔙 Main Menu"},
-                ],
-                "header": "Pricing Information",
-            }),
+            action_value=json.dumps(
+                {
+                    "body": "Our solutions start with flexible monthly plans, or fixed-price milestones with 100% upfront quotes.",
+                    "buttons": [
+                        {"id": "action:agent", "title": "📞 Get Custom Quote"},
+                        {"id": "menu:services", "title": "🌟 Our Services"},
+                        {"id": "menu:main", "title": "🔙 Main Menu"},
+                    ],
+                    "header": "Pricing Information",
+                }
+            ),
             priority=80,
             is_active=True,
         ),
@@ -1028,12 +1057,14 @@ async def seed_default_whatsapp_automations(session: AsyncSession) -> int:
             trigger_keyword="demo",
             match_type=RuleMatchType.CONTAINS,
             action_type=RuleActionType.SEND_CTA_URL,
-            action_value=json.dumps({
-                "body": "Ready to discuss your project? Schedule a 15-minute discovery call directly on our calendar:",
-                "display_text": "📅 Book Free Demo",
-                "url": "https://calendly.com",
-                "header": "Schedule Discovery",
-            }),
+            action_value=json.dumps(
+                {
+                    "body": "Ready to discuss your project? Schedule a 15-minute discovery call directly on our calendar:",
+                    "display_text": "📅 Book Free Demo",
+                    "url": "https://calendly.com",
+                    "header": "Schedule Discovery",
+                }
+            ),
             priority=75,
             is_active=True,
         ),

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import Any, Literal
 
 PresenceAction = Literal["viewing", "typing", "left"]
@@ -114,7 +114,8 @@ class PresenceManager:
         all_presences = self._store.get(conv_str, {})
 
         other_agents = [
-            p for name, p in all_presences.items()
+            p
+            for name, p in all_presences.items()
             if name.lower().strip() != current_agent_name.lower().strip()
         ]
 
@@ -131,7 +132,9 @@ class PresenceManager:
             severity = "danger"
         elif viewers:
             names = ", ".join(v.agent_name for v in viewers)
-            warning_message = f"👀 {names} is viewing this conversation. Overlapping replies will be warned."
+            warning_message = (
+                f"👀 {names} is viewing this conversation. Overlapping replies will be warned."
+            )
             severity = "warning"
 
         return {

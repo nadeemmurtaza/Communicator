@@ -97,7 +97,9 @@ async def apply_content_recommendation(
     """
     custom = payload.custom_content if payload else None
     try:
-        return await apply_recommendation(session=session, recommendation_id=rec_id, custom_content=custom)
+        return await apply_recommendation(
+            session=session, recommendation_id=rec_id, custom_content=custom
+        )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -143,9 +145,7 @@ async def create_entry(payload: EntryIn, session: AsyncSession = Depends(get_db_
 
 
 @router.post("/ingest-url")
-async def ingest_web_url(
-    payload: IngestUrlIn, session: AsyncSession = Depends(get_db_session)
-):
+async def ingest_web_url(payload: IngestUrlIn, session: AsyncSession = Depends(get_db_session)):
     """
     Crawls and scrapes an external help center or documentation URL (e.g., helpcenter.com)
     and stores it in the Knowledge Base ("Learns").
@@ -158,9 +158,7 @@ async def ingest_web_url(
 
 
 @router.post("/upload")
-async def upload_document(
-    file: UploadFile, session: AsyncSession = Depends(get_db_session)
-):
+async def upload_document(file: UploadFile, session: AsyncSession = Depends(get_db_session)):
     """
     Extracts text from uploaded documents (PDF, Markdown, TXT) and adds them
     as grounded knowledge entries ("Learns").
@@ -180,9 +178,7 @@ async def upload_document(
 
 
 @router.get("/gaps")
-async def get_gaps(
-    status: str = "suggested", session: AsyncSession = Depends(get_db_session)
-):
+async def get_gaps(status: str = "suggested", session: AsyncSession = Depends(get_db_session)):
     """Lists auto-detected knowledge gaps / suggested FAQs."""
     gaps = await list_knowledge_gaps(session, status=status)
     return [
@@ -234,9 +230,7 @@ async def approve_gap(
 
 
 @router.post("/gaps/{gap_id}/dismiss")
-async def dismiss_gap(
-    gap_id: uuid.UUID, session: AsyncSession = Depends(get_db_session)
-):
+async def dismiss_gap(gap_id: uuid.UUID, session: AsyncSession = Depends(get_db_session)):
     """Dismisses a suggested knowledge gap."""
     await dismiss_knowledge_gap(session, gap_id)
     return {"status": "dismissed"}

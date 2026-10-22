@@ -27,9 +27,11 @@ class TicketService:
         result = await db.execute(select(func.count(Ticket.id)))
         count = result.scalar_one() or 0
         number_candidate = f"TCK-{1001 + count}"
-        
+
         # Ensure collision safety
-        existing = await db.execute(select(Ticket.id).where(Ticket.ticket_number == number_candidate))
+        existing = await db.execute(
+            select(Ticket.id).where(Ticket.ticket_number == number_candidate)
+        )
         if existing.scalar_one_or_none():
             unique_suffix = uuid.uuid4().hex[:4].upper()
             return f"TCK-{1001 + count}-{unique_suffix}"
@@ -77,10 +79,14 @@ class TicketService:
 
         # Log initial creation activity
         if ticket_type == TicketType.TRACKER.value:
-            init_msg = f"Tracker Ticket initialized to coordinate widespread issue across customer threads."
+            init_msg = (
+                "Tracker Ticket initialized to coordinate widespread issue across customer threads."
+            )
             act_type = ActivityType.STATUS_CHANGE.value
         elif ticket_type == TicketType.BACK_OFFICE.value:
-            init_msg = f"Back-office collaboration ticket dispatched to {department.upper()} department."
+            init_msg = (
+                f"Back-office collaboration ticket dispatched to {department.upper()} department."
+            )
             act_type = ActivityType.BACK_OFFICE_NOTE.value
         else:
             init_msg = f"Customer issue ticket opened and assigned to {department.upper()}."
@@ -104,7 +110,10 @@ class TicketService:
                     author_name=author_name,
                     activity_type=ActivityType.LINKED_TRACKER.value,
                     message=f"Linked child issue {ticket.ticket_number}: '{ticket.title}'",
-                    activity_metadata={"child_ticket_id": str(ticket.id), "ticket_number": ticket.ticket_number},
+                    activity_metadata={
+                        "child_ticket_id": str(ticket.id),
+                        "ticket_number": ticket.ticket_number,
+                    },
                 )
                 db.add(tracker_activity)
 
@@ -187,7 +196,9 @@ class TicketService:
                 "child_count": len(t.child_tickets) if t.child_tickets else 0,
             }
             if t.ticket_type == TicketType.TRACKER.value and t.child_tickets:
-                resolved_children = sum(1 for c in t.child_tickets if c.status == TicketStatus.RESOLVED.value)
+                resolved_children = sum(
+                    1 for c in t.child_tickets if c.status == TicketStatus.RESOLVED.value
+                )
                 item["resolved_child_count"] = resolved_children
             output.append(item)
 
@@ -305,12 +316,14 @@ class TicketService:
             ticket.priority = priority
 
         if department is not None and department != ticket.department:
-            changes.append(f"Department re-routed from {ticket.department.upper()} to {department.upper()}")
+            changes.append(
+                f"Department re-routed from {ticket.department.upper()} to {department.upper()}"
+            )
             ticket.department = department
 
         if assigned_to_id is not None and assigned_to_id != ticket.assigned_to_id:
             ticket.assigned_to_id = assigned_to_id
-            changes.append(f"Assigned to team member")
+            changes.append("Assigned to team member")
 
         if status is not None and status != ticket.status:
             old_status = ticket.status
@@ -332,7 +345,9 @@ class TicketService:
             act = TicketActivity(
                 ticket_id=ticket.id,
                 author_name=author_name,
-                activity_type=ActivityType.STATUS_CHANGE.value if "Status" in change else ActivityType.COMMENT.value,
+                activity_type=ActivityType.STATUS_CHANGE.value
+                if "Status" in change
+                else ActivityType.COMMENT.value,
                 message=change,
             )
             db.add(act)
@@ -392,14 +407,20 @@ class TicketService:
             author_name=author_name,
             activity_type=ActivityType.LINKED_TRACKER.value,
             message=f"Linked to Tracker Incident {tracker.ticket_number}: '{tracker.title}'",
-            activity_metadata={"tracker_id": str(tracker_id), "tracker_number": tracker.ticket_number},
+            activity_metadata={
+                "tracker_id": str(tracker_id),
+                "tracker_number": tracker.ticket_number,
+            },
         )
         act_tracker = TicketActivity(
             ticket_id=tracker.id,
             author_name=author_name,
             activity_type=ActivityType.LINKED_TRACKER.value,
             message=f"Linked customer issue {ticket.ticket_number}: '{ticket.title}'",
-            activity_metadata={"child_ticket_id": str(ticket.id), "ticket_number": ticket.ticket_number},
+            activity_metadata={
+                "child_ticket_id": str(ticket.id),
+                "ticket_number": ticket.ticket_number,
+            },
         )
         db.add(act_child)
         db.add(act_tracker)
@@ -468,7 +489,11 @@ class TicketService:
 
             # 2. If customer message requested and conversation exists, post into customer chat
             if send_customer_message and child.conversation_id:
-                msg_channel = child.contact.channel if (child.contact and child.contact.channel) else ChannelType.EMAIL
+                msg_channel = (
+                    child.contact.channel
+                    if (child.contact and child.contact.channel)
+                    else ChannelType.EMAIL
+                )
                 outbound_msg = Message(
                     conversation_id=child.conversation_id,
                     direction=MessageDirection.OUTBOUND,
@@ -485,14 +510,16 @@ class TicketService:
             if resolve_all_children:
                 child.status = TicketStatus.RESOLVED.value
                 child.resolved_at = datetime.now(UTC)
-                child.resolution_summary = f"Resolved via Tracker {tracker.ticket_number}: {broadcast_message}"
+                child.resolution_summary = (
+                    f"Resolved via Tracker {tracker.ticket_number}: {broadcast_message}"
+                )
                 resolved_count += 1
 
                 res_act = TicketActivity(
                     ticket_id=child.id,
                     author_name=author_name,
                     activity_type=ActivityType.RESOLUTION.value,
-                    message=f"Automatically resolved following tracker incident resolution.",
+                    message="Automatically resolved following tracker incident resolution.",
                 )
                 db.add(res_act)
 
@@ -505,7 +532,7 @@ class TicketService:
                 ticket_id=tracker.id,
                 author_name=author_name,
                 activity_type=ActivityType.RESOLUTION.value,
-                message=f"Tracker Incident resolved and closed across all linked issues.",
+                message="Tracker Incident resolved and closed across all linked issues.",
             )
             db.add(tracker_res_act)
 
@@ -530,13 +557,21 @@ class TicketService:
 
         open_q = await db.execute(
             select(func.count(Ticket.id)).where(
-                Ticket.status.in_([TicketStatus.OPEN.value, TicketStatus.IN_PROGRESS.value, TicketStatus.WAITING_ON_BACK_OFFICE.value])
+                Ticket.status.in_(
+                    [
+                        TicketStatus.OPEN.value,
+                        TicketStatus.IN_PROGRESS.value,
+                        TicketStatus.WAITING_ON_BACK_OFFICE.value,
+                    ]
+                )
             )
         )
         open_tickets = open_q.scalar_one() or 0
 
         cust_q = await db.execute(
-            select(func.count(Ticket.id)).where(Ticket.ticket_type == TicketType.CUSTOMER_ISSUE.value)
+            select(func.count(Ticket.id)).where(
+                Ticket.ticket_type == TicketType.CUSTOMER_ISSUE.value
+            )
         )
         customer_issues = cust_q.scalar_one() or 0
 
@@ -563,7 +598,9 @@ class TicketService:
 
         # Distinct impacted contacts attached to child tickets of trackers
         impacted_q = await db.execute(
-            select(func.count(func.distinct(Ticket.contact_id))).where(Ticket.tracker_id.isnot(None))
+            select(func.count(func.distinct(Ticket.contact_id))).where(
+                Ticket.tracker_id.isnot(None)
+            )
         )
         impacted_customers = impacted_q.scalar_one() or 0
 

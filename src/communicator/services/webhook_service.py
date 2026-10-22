@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 import httpx
-from sqlalchemy import desc, select, update
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.models.webhook import WebhookDeliveryLog, WebhookEndpoint, WebhookEvent
@@ -264,7 +264,7 @@ async def deliver_payload_to_endpoint(
                 success = res.is_success
                 if not success:
                     error_message = f"HTTP {res.status_code}: {res.reason_phrase}"
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             duration_ms = int((time.perf_counter() - start_time) * 1000)
             status_code = 0
             success = False

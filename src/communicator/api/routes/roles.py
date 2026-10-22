@@ -16,7 +16,9 @@ class CreateRoleIn(BaseModel):
     name: str = Field(..., description="Unique slug identifier, e.g. billing_specialist")
     display_name: str = Field(..., description="Display label, e.g. Billing Specialist")
     description: str = ""
-    permissions: list[str] = Field(default_factory=list, description="List of granted permission keys")
+    permissions: list[str] = Field(
+        default_factory=list, description="List of granted permission keys"
+    )
 
 
 class UpdateRoleIn(BaseModel):

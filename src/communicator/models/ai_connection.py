@@ -43,23 +43,29 @@ class AIConnection(Base):
     provider: Mapped[str] = mapped_column(
         String(50), default=AIProvider.ANTHROPIC.value, nullable=False, index=True
     )
-    model_id: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g. claude-3-5-sonnet, gpt-4o, deepseek-r1
-    
+    model_id: Mapped[str] = mapped_column(
+        String(100), nullable=False
+    )  # e.g. claude-3-5-sonnet, gpt-4o, deepseek-r1
+
     # Credentials & Endpoint
     api_key: Mapped[str] = mapped_column(Text, default="", nullable=False)
-    base_url: Mapped[str | None] = mapped_column(String(255), nullable=True)  # e.g. http://localhost:11434/v1 for Ollama
-    
+    base_url: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )  # e.g. http://localhost:11434/v1 for Ollama
+
     # Generation parameters
     temperature: Mapped[float] = mapped_column(Float, default=0.7, nullable=False)
     max_tokens: Mapped[int] = mapped_column(Integer, default=1024, nullable=False)
-    
+
     # Active state & Job routing
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     assigned_jobs: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
-    
+
     # Health & Verification
     last_tested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    test_status: Mapped[str] = mapped_column(String(30), default="untested", nullable=False)  # connected | failed | untested
+    test_status: Mapped[str] = mapped_column(
+        String(30), default="untested", nullable=False
+    )  # connected | failed | untested
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
@@ -85,19 +91,21 @@ class AICustomPolicy(Base):
     job_type: Mapped[str] = mapped_column(
         String(50), default=AIJobType.SELF_IMPROVING.value, unique=True, nullable=False, index=True
     )
-    
+
     # Tone & persona
     tone: Mapped[str] = mapped_column(String(50), default="empathetic", nullable=False)
     guidelines: Mapped[str] = mapped_column(Text, default="", nullable=False)
-    
+
     # Dynamic rules: [{"id": "r1", "rule": "...", "enabled": true, "category": "..."}]
     rules: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list, nullable=False)
-    
+
     # Guardrails: ["Never commit to refunds > $150 without approval", "Never reveal competitor names"]
     guardrails: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
-    
+
     # Self-improving specific controls
-    auto_approval_mode: Mapped[str] = mapped_column(String(50), default="require_manager_review", nullable=False)
+    auto_approval_mode: Mapped[str] = mapped_column(
+        String(50), default="require_manager_review", nullable=False
+    )
     min_csat_learning_threshold: Mapped[float] = mapped_column(Float, default=4.0, nullable=False)
     max_autonomous_refund: Mapped[float] = mapped_column(Float, default=50.0, nullable=False)
 

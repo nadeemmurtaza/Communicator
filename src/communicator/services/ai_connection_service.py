@@ -6,8 +6,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.models.ai_connection import (
-    AICustomPolicy,
     AIConnection,
+    AICustomPolicy,
     AIJobType,
     AIProvider,
 )
@@ -247,7 +247,9 @@ class AIConnectionService:
                 "name": c.name,
                 "provider": c.provider,
                 "model_id": c.model_id,
-                "api_key_masked": f"••••••••{c.api_key[-4:]}" if len(c.api_key) > 4 else ("••••" if c.api_key else "None"),
+                "api_key_masked": f"••••••••{c.api_key[-4:]}"
+                if len(c.api_key) > 4
+                else ("••••" if c.api_key else "None"),
                 "has_api_key": bool(c.api_key),
                 "base_url": c.base_url,
                 "temperature": c.temperature,
@@ -381,7 +383,9 @@ class AIConnectionService:
         return mapping
 
     @staticmethod
-    async def assign_model_to_job(db: AsyncSession, job_type: str, connection_id: uuid.UUID) -> dict[str, Any]:
+    async def assign_model_to_job(
+        db: AsyncSession, job_type: str, connection_id: uuid.UUID
+    ) -> dict[str, Any]:
         """Routes a specific AI job (e.g. self_improving, autonomous_agent) to a chosen AI model."""
         target_conn = await db.get(AIConnection, connection_id)
         if not target_conn:

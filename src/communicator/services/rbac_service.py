@@ -145,7 +145,7 @@ DEFAULT_SYSTEM_ROLES: dict[str, dict[str, Any]] = {
     "admin": {
         "display_name": "Administrator",
         "description": "Comprehensive operational control over channels, team members, macros, and routing. Excludes direct billing.",
-        "permissions": [p for p in STANDARD_PERMISSIONS.keys() if not p.startswith("billing:")],
+        "permissions": [p for p in STANDARD_PERMISSIONS if not p.startswith("billing:")],
     },
     "agent": {
         "display_name": "Support Agent",
@@ -216,12 +216,14 @@ def get_permissions_catalog() -> list[dict[str, Any]]:
     """Returns the full master catalog of available system permissions grouped by category."""
     catalog = []
     for key, meta in STANDARD_PERMISSIONS.items():
-        catalog.append({
-            "key": key,
-            "label": meta["label"],
-            "description": meta["description"],
-            "category": meta["category"],
-        })
+        catalog.append(
+            {
+                "key": key,
+                "label": meta["label"],
+                "description": meta["description"],
+                "category": meta["category"],
+            }
+        )
     return catalog
 
 
@@ -229,7 +231,17 @@ async def list_roles(session: AsyncSession) -> list[dict[str, Any]]:
     """Lists all role definitions with permission lists and member count."""
     await initialize_default_roles(session)
 
-    roles = (await session.execute(select(RoleDefinition).order_by(RoleDefinition.is_system_role.desc(), RoleDefinition.name))).scalars().all()
+    roles = (
+        (
+            await session.execute(
+                select(RoleDefinition).order_by(
+                    RoleDefinition.is_system_role.desc(), RoleDefinition.name
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
     members = (await session.execute(select(TeamMember))).scalars().all()
 
     # Count members per role
@@ -269,7 +281,11 @@ async def get_role(session: AsyncSession, role_id_or_name: str) -> dict[str, Any
     if not role:
         return None
 
-    members = (await session.execute(select(TeamMember).where(TeamMember.role == role.name))).scalars().all()
+    members = (
+        (await session.execute(select(TeamMember).where(TeamMember.role == role.name)))
+        .scalars()
+        .all()
+    )
 
     return {
         "id": str(role.id),
@@ -350,7 +366,7 @@ async def update_role(
     if not role:
         raise ValueError(f"Role '{role_id_or_name}' not found.")
 
-    if "display_name" in updates and updates["display_name"]:
+    if updates.get("display_name"):
         role.display_name = str(updates["display_name"]).strip()
     if "description" in updates and updates["description"] is not None:
         role.description = str(updates["description"]).strip()
@@ -401,7 +417,11 @@ async def delete_custom_role(
         raise ValueError(f"System role '{role.display_name}' is protected and cannot be deleted.")
 
     # Reassign members with this role to standard agent role
-    members = (await session.execute(select(TeamMember).where(TeamMember.role == role.name))).scalars().all()
+    members = (
+        (await session.execute(select(TeamMember).where(TeamMember.role == role.name)))
+        .scalars()
+        .all()
+    )
     for m in members:
         m.role = "agent"
 

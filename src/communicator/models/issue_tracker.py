@@ -3,7 +3,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -30,14 +30,14 @@ class IssueTrackerConfig(Base):
     account_name: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     test_mode: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    
+
     # Encrypted / stored credentials:
     # Linear: {"api_key": "lin_api_..."}
     # GitHub: {"access_token": "ghp_..."}
     # Jira: {"domain": "acme.atlassian.net", "email": "agent@acme.com", "api_token": "..."}
     # Slack: {"bot_token": "xoxb-...", "webhook_url": "https://hooks.slack.com/..."}
     credentials: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
-    
+
     # Workspace defaults:
     # Linear: {"team_id": "...", "team_key": "ENG", "default_project_id": "..."}
     # GitHub: {"owner": "acme-corp", "repo": "product-engine"}
@@ -80,15 +80,21 @@ class LinkedIssue(Base):
         index=True,
     )
 
-    provider: Mapped[str] = mapped_column(String(50), nullable=False)  # "linear" | "github" | "jira"
+    provider: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # "linear" | "github" | "jira"
     external_issue_id: Mapped[str] = mapped_column(String(255), default="", nullable=False)
-    issue_key: Mapped[str] = mapped_column(String(100), nullable=False, index=True)  # e.g. "ENG-142", "#84", "PROJ-205"
+    issue_key: Mapped[str] = mapped_column(
+        String(100), nullable=False, index=True
+    )  # e.g. "ENG-142", "#84", "PROJ-205"
     issue_url: Mapped[str] = mapped_column(String(1024), nullable=False)
     title: Mapped[str] = mapped_column(String(512), nullable=False)
     status: Mapped[str] = mapped_column(String(100), default="Open", nullable=False)
     priority: Mapped[str] = mapped_column(String(50), default="medium", nullable=False)
     assigned_to: Mapped[str] = mapped_column(String(255), default="", nullable=False)
-    created_by_email: Mapped[str] = mapped_column(String(255), default="agent@newax.com", nullable=False)
+    created_by_email: Mapped[str] = mapped_column(
+        String(255), default="agent@newax.com", nullable=False
+    )
     sync_status: Mapped[str] = mapped_column(String(50), default="synced", nullable=False)
     metadata_json: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
 
@@ -119,8 +125,12 @@ class SlackConversationSync(Base):
         index=True,
     )
     slack_channel_id: Mapped[str] = mapped_column(String(100), nullable=False)
-    slack_channel_name: Mapped[str] = mapped_column(String(255), default="#customer-support", nullable=False)
-    slack_thread_ts: Mapped[str] = mapped_column(String(100), nullable=False)  # Slack thread identifier
+    slack_channel_name: Mapped[str] = mapped_column(
+        String(255), default="#customer-support", nullable=False
+    )
+    slack_thread_ts: Mapped[str] = mapped_column(
+        String(100), nullable=False
+    )  # Slack thread identifier
     is_synced: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     last_synced_at: Mapped[datetime] = mapped_column(

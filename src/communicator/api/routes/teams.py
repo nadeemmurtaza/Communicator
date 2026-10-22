@@ -33,9 +33,7 @@ def _serialize_team(t: Team) -> dict[str, Any]:
         "description": t.description,
         "autoAssign": t.auto_assign,
         "membersCount": len(t.members) if t.members else 0,
-        "members": [
-            {"id": str(m.id), "name": m.name, "email": m.email} for m in (t.members or [])
-        ],
+        "members": [{"id": str(m.id), "name": m.name, "email": m.email} for m in (t.members or [])],
         "createdAt": t.created_at.isoformat(),
     }
 
@@ -48,9 +46,21 @@ async def list_teams(session: AsyncSession = Depends(get_db_session)):
     # Pre-seed starter teams if empty
     if not teams:
         defaults = [
-            Team(name="Sales & Growth", description="Handles new customer inquiries and deals", auto_assign=True),
-            Team(name="Customer Support", description="Resolves technical questions and account issues", auto_assign=True),
-            Team(name="VIP Accounts", description="Priority queue for enterprise customers", auto_assign=False),
+            Team(
+                name="Sales & Growth",
+                description="Handles new customer inquiries and deals",
+                auto_assign=True,
+            ),
+            Team(
+                name="Customer Support",
+                description="Resolves technical questions and account issues",
+                auto_assign=True,
+            ),
+            Team(
+                name="VIP Accounts",
+                description="Priority queue for enterprise customers",
+                auto_assign=False,
+            ),
         ]
         session.add_all(defaults)
         await session.flush()

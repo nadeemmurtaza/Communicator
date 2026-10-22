@@ -4,7 +4,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import desc, func, select
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.models.knowledge_base import KnowledgeBaseEntry, KnowledgeRecommendation
@@ -231,7 +231,8 @@ async def get_knowledge_hub_overview(
     if search_query and search_query.strip():
         q = search_query.strip().lower()
         entries = [
-            e for e in entries
+            e
+            for e in entries
             if q in e.title.lower() or q in e.content.lower() or q in (e.topic or "").lower()
         ]
 
@@ -241,10 +242,7 @@ async def get_knowledge_hub_overview(
 
     if touchpoint_filter and touchpoint_filter.strip() and touchpoint_filter.lower() != "all":
         tp = touchpoint_filter.strip().lower()
-        entries = [
-            e for e in entries
-            if tp in [x.lower() for x in (e.target_touchpoints or [])]
-        ]
+        entries = [e for e in entries if tp in [x.lower() for x in (e.target_touchpoints or [])]]
 
     # Group by topic
     topics_map: dict[str, list[dict[str, Any]]] = {}
@@ -257,13 +255,15 @@ async def get_knowledge_hub_overview(
     grouped_topics = []
     for top_name, items in topics_map.items():
         avg_res = sum(it["resolutionRate"] for it in items) / len(items) if items else 0.0
-        grouped_topics.append({
-            "name": top_name,
-            "icon": TOPIC_ICONS.get(top_name, "📁"),
-            "sourcesCount": len(items),
-            "avgResolutionRate": round(avg_res, 1),
-            "sources": items,
-        })
+        grouped_topics.append(
+            {
+                "name": top_name,
+                "icon": TOPIC_ICONS.get(top_name, "📁"),
+                "sourcesCount": len(items),
+                "avgResolutionRate": round(avg_res, 1),
+                "sources": items,
+            }
+        )
 
     # Sort topics alphabetically
     grouped_topics.sort(key=lambda x: x["name"])
@@ -281,21 +281,27 @@ async def get_knowledge_hub_overview(
     touchpoint_breakdown = {
         "agent": {
             "title": "Fin Autonomous Agent",
-            "sourcesDeployed": len([e for e in all_entries if "agent" in (e.target_touchpoints or [])]),
+            "sourcesDeployed": len(
+                [e for e in all_entries if "agent" in (e.target_touchpoints or [])]
+            ),
             "resolutionRate": round(overall_res_rate - 1.2, 1),
             "deflectionsCount": sum(int(e.usage_count or 0) for e in all_entries),
             "status": "Active & Grounded",
         },
         "copilot": {
             "title": "Inbox Copilot Assistant",
-            "sourcesDeployed": len([e for e in all_entries if "copilot" in (e.target_touchpoints or [])]),
+            "sourcesDeployed": len(
+                [e for e in all_entries if "copilot" in (e.target_touchpoints or [])]
+            ),
             "resolutionRate": round(overall_res_rate + 4.5, 1),
             "insertionsCount": int(sum(int(e.usage_count or 0) for e in all_entries) * 0.72),
             "status": "Assisting Teammates",
         },
         "help_center": {
             "title": "Customer Help Center",
-            "sourcesDeployed": len([e for e in all_entries if "help_center" in (e.target_touchpoints or [])]),
+            "sourcesDeployed": len(
+                [e for e in all_entries if "help_center" in (e.target_touchpoints or [])]
+            ),
             "resolutionRate": round(overall_res_rate + 2.0, 1),
             "satisfactionPct": 93.4,
             "status": "Public Self-Serve",
@@ -316,7 +322,9 @@ async def list_recommendations(
     gap_type: str | None = None,
 ) -> list[dict[str, Any]]:
     await ensure_default_recommendations(session)
-    stmt = select(KnowledgeRecommendation).order_by(desc(KnowledgeRecommendation.impact_on_resolution))
+    stmt = select(KnowledgeRecommendation).order_by(
+        desc(KnowledgeRecommendation.impact_on_resolution)
+    )
 
     if status and status.lower() != "all":
         stmt = stmt.where(KnowledgeRecommendation.status == status.lower())
@@ -336,7 +344,11 @@ async def apply_recommendation(
     if not rec:
         raise ValueError(f"Recommendation {recommendation_id} not found")
 
-    content_to_use = custom_content.strip() if custom_content and custom_content.strip() else rec.suggested_content
+    content_to_use = (
+        custom_content.strip()
+        if custom_content and custom_content.strip()
+        else rec.suggested_content
+    )
 
     # Create new published Knowledge Base article
     new_entry = KnowledgeBaseEntry(

@@ -206,7 +206,9 @@ def generate_preview_page_html(token: str, base_url: str, styling: dict[str, Any
 </html>"""
 
 
-async def get_customizer_config(session: AsyncSession, base_url: str = "http://localhost:8000") -> dict[str, Any]:
+async def get_customizer_config(
+    session: AsyncSession, base_url: str = "http://localhost:8000"
+) -> dict[str, Any]:
     inbox = await get_or_create_website_inbox(session)
     creds = inbox.credentials or {}
     token = creds.get("websiteToken") or "web_token_default"
@@ -225,8 +227,12 @@ async def get_customizer_config(session: AsyncSession, base_url: str = "http://l
         "play_sound": creds.get("playSound", DEFAULT_WIDGET_CONFIG["play_sound"]),
         "show_branding": creds.get("showBranding", DEFAULT_WIDGET_CONFIG["show_branding"]),
         "allowed_domains": creds.get("allowedDomains", DEFAULT_WIDGET_CONFIG["allowed_domains"]),
-        "pre_chat_form_enabled": creds.get("preChatFormEnabled", DEFAULT_WIDGET_CONFIG["pre_chat_form_enabled"]),
-        "identity_validation": creds.get("identityValidation", DEFAULT_WIDGET_CONFIG["identity_validation"]),
+        "pre_chat_form_enabled": creds.get(
+            "preChatFormEnabled", DEFAULT_WIDGET_CONFIG["pre_chat_form_enabled"]
+        ),
+        "identity_validation": creds.get(
+            "identityValidation", DEFAULT_WIDGET_CONFIG["identity_validation"]
+        ),
         "hmac_secret": creds.get("hmacSecret", DEFAULT_WIDGET_CONFIG["hmac_secret"]),
     }
 

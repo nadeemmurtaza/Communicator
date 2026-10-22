@@ -1,4 +1,5 @@
 import uuid
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -8,11 +9,9 @@ from communicator.channels.sms import UniversalSMSProvider
 from communicator.channels.voice import VoiceProvider
 from communicator.models.contact import ChannelType, Contact
 from communicator.models.gateway_connection import (
-    ChannelGatewayConnection,
     EmailProvider,
     GatewayType,
     SMSProvider,
-    VoiceSIPProvider,
 )
 from communicator.services import gateway_service
 
@@ -90,7 +89,9 @@ async def test_set_default_gateway(db_session):
 
 @pytest.mark.asyncio
 async def test_universal_sms_provider_dispatch():
-    contact = Contact(id=uuid.uuid4(), lead_id=uuid.uuid4(), channel=ChannelType.SMS, value="+14155552671")
+    contact = Contact(
+        id=uuid.uuid4(), lead_id=uuid.uuid4(), channel=ChannelType.SMS, value="+14155552671"
+    )
 
     # 1. Custom HTTP Provider
     custom_prov = UniversalSMSProvider(
@@ -116,7 +117,9 @@ async def test_universal_sms_provider_dispatch():
 
 @pytest.mark.asyncio
 async def test_universal_email_provider_dispatch():
-    contact = Contact(id=uuid.uuid4(), lead_id=uuid.uuid4(), channel=ChannelType.EMAIL, value="client@example.com")
+    contact = Contact(
+        id=uuid.uuid4(), lead_id=uuid.uuid4(), channel=ChannelType.EMAIL, value="client@example.com"
+    )
 
     # 1. SendGrid
     sg_prov = UniversalEmailProvider(provider="sendgrid")
@@ -136,7 +139,9 @@ async def test_universal_email_provider_dispatch():
 
 @pytest.mark.asyncio
 async def test_universal_voice_sip_provider_dispatch():
-    contact = Contact(id=uuid.uuid4(), lead_id=uuid.uuid4(), channel=ChannelType.VOICE, value="+14155559090")
+    contact = Contact(
+        id=uuid.uuid4(), lead_id=uuid.uuid4(), channel=ChannelType.VOICE, value="+14155559090"
+    )
 
     # 1. Telnyx
     telnyx_prov = VoiceProvider(provider="telnyx")
@@ -145,7 +150,9 @@ async def test_universal_voice_sip_provider_dispatch():
     assert "call_control_id" in res_telnyx.raw_response
 
     # 2. Generic SIP Trunk
-    sip_prov = VoiceProvider(provider="sip_trunk", config={"sip_server": "pbx.mycompany.com", "sip_port": 5060})
+    sip_prov = VoiceProvider(
+        provider="sip_trunk", config={"sip_server": "pbx.mycompany.com", "sip_port": 5060}
+    )
     res_sip = await sip_prov.send(contact, "SIP trunk announcement")
     assert res_sip.provider == "sip_trunk"
     assert "sip_uri" in res_sip.raw_response
@@ -164,7 +171,7 @@ async def test_gateway_api_endpoints(db_session, override_database_dependency):
 
         # Verify credential masking
         for gw in gateways:
-            for k, v in gw.get("credentials", {}).items():
+            for v in gw.get("credentials", {}).values():
                 if isinstance(v, str) and len(v) > 0:
                     assert "••••" in v
 
@@ -206,7 +213,9 @@ async def test_gateway_api_endpoints(db_session, override_database_dependency):
         assert resp_def.json()["is_default"] is True
 
         # 6. Test ping via API
-        resp_ping = await client.post(f"/api/v1/gateways/{gw_id}/ping", json={"target": "+14155550199", "message": "Hi test"})
+        resp_ping = await client.post(
+            f"/api/v1/gateways/{gw_id}/ping", json={"target": "+14155550199", "message": "Hi test"}
+        )
         assert resp_ping.status_code == 200
         assert resp_ping.json()["success"] is True
 

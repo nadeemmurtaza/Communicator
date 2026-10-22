@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import json
-import uuid
-from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -23,15 +20,10 @@ from communicator.models.lead import Lead
 from communicator.models.team_member import TeamMember
 from communicator.services.whatsapp_automations import (
     execute_handoff,
-    execute_rule_action,
     handle_agent_commands,
     handle_csat_response,
-    handle_navigation_menu,
     match_advanced_rule,
-    run_inactivity_nudges,
     seed_default_whatsapp_automations,
-    send_csat_survey,
-    should_send_welcome_greeting,
 )
 
 
@@ -98,7 +90,9 @@ async def test_agent_commands(db_session: AsyncSession):
     await db_session.flush()
     await record_consent(db_session, contact.id, ConsentStatus.OPTED_IN, source="test")
 
-    conv = Conversation(contact_id=contact.id, human_takeover=True, state=ConversationState.HANDED_OFF)
+    conv = Conversation(
+        contact_id=contact.id, human_takeover=True, state=ConversationState.HANDED_OFF
+    )
     db_session.add(conv)
     await db_session.flush()
 
@@ -135,7 +129,9 @@ async def test_csat_survey_flow(db_session: AsyncSession):
         mock_provider.return_value = prov
 
         # Customer sends csat:5 button click
-        handled = await handle_csat_response(db_session, conv, contact, "Great", payload_id="csat:5")
+        handled = await handle_csat_response(
+            db_session, conv, contact, "Great", payload_id="csat:5"
+        )
         assert handled is True
         assert conv.csat_score == 5
 

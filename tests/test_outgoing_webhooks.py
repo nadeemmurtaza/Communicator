@@ -1,9 +1,10 @@
 import uuid
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from communicator.api.app import app
-from communicator.models.webhook import WebhookDeliveryLog, WebhookEndpoint, WebhookEvent
+from communicator.models.webhook import WebhookEvent
 from communicator.services import webhook_service
 
 

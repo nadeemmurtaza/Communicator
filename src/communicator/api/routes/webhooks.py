@@ -9,11 +9,12 @@ data model to attach it to, and providers retry on non-2xx responses.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 import base64
 import hashlib
 import hmac
 import re
+from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from sqlalchemy import select
@@ -230,7 +231,7 @@ async def _apply_meta_status(session: AsyncSession, status_event: dict) -> None:
     if raw_ts:
         try:
             event_dt = datetime.fromtimestamp(int(raw_ts), tz=UTC)
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
 
     # Extract detailed error message if failed
@@ -242,7 +243,11 @@ async def _apply_meta_status(session: AsyncSession, status_event: dict) -> None:
             err_code = err.get("code")
             err_title = err.get("title", "")
             err_details = (err.get("error_data") or {}).get("details") or err.get("message", "")
-            if err_code == 131026 or "not on whatsapp" in err_title.lower() or "not on whatsapp" in err_details.lower():
+            if (
+                err_code == 131026
+                or "not on whatsapp" in err_title.lower()
+                or "not on whatsapp" in err_details.lower()
+            ):
                 failure_reason = "Number is not on WhatsApp"
             elif err_details:
                 failure_reason = f"{err_title}: {err_details}"
@@ -276,7 +281,10 @@ async def _apply_meta_status(session: AsyncSession, status_event: dict) -> None:
 
         broadcast = await session.get(Broadcast, recipient.broadcast_id)
         if broadcast is not None and old_status != new_status:
-            if meta_status == "delivered" and old_status not in (RecipientStatus.DELIVERED, RecipientStatus.READ):
+            if meta_status == "delivered" and old_status not in (
+                RecipientStatus.DELIVERED,
+                RecipientStatus.READ,
+            ):
                 broadcast.delivered_count += 1
             elif meta_status == "read":
                 broadcast.read_count += 1
@@ -372,7 +380,8 @@ async def _get_or_create_social_contact(
         title = channel.value.title()
         lead = Lead(
             harvester_institution_id=f"{channel.value}_{sender_id[:16]}",
-            name=sender_name or f"{title} Contact {sender_id[-4:] if len(sender_id) > 4 else sender_id}",
+            name=sender_name
+            or f"{title} Contact {sender_id[-4:] if len(sender_id) > 4 else sender_id}",
             institution_type=f"{title} Contact",
             city="Social Media",
         )
@@ -426,9 +435,14 @@ async def meta_facebook_inbound(
     app_secret = inbox.credentials.get("appSecret") if (inbox and inbox.credentials) else None
 
     raw_body = await request.body()
-    if app_secret and not app_secret.startswith("•") and not app_secret.startswith("mock") and x_hub_signature_256:
-        if not validate_meta_signature(app_secret, raw_body, x_hub_signature_256):
-            raise HTTPException(status_code=403, detail="Invalid Meta Facebook signature.")
+    if (
+        app_secret
+        and not app_secret.startswith("•")
+        and not app_secret.startswith("mock")
+        and x_hub_signature_256
+        and not validate_meta_signature(app_secret, raw_body, x_hub_signature_256)
+    ):
+        raise HTTPException(status_code=403, detail="Invalid Meta Facebook signature.")
 
     body = await request.json()
     if body.get("object") not in ("page", "facebook"):
@@ -507,9 +521,14 @@ async def meta_instagram_inbound(
     app_secret = inbox.credentials.get("appSecret") if (inbox and inbox.credentials) else None
 
     raw_body = await request.body()
-    if app_secret and not app_secret.startswith("•") and not app_secret.startswith("mock") and x_hub_signature_256:
-        if not validate_meta_signature(app_secret, raw_body, x_hub_signature_256):
-            raise HTTPException(status_code=403, detail="Invalid Meta Instagram signature.")
+    if (
+        app_secret
+        and not app_secret.startswith("•")
+        and not app_secret.startswith("mock")
+        and x_hub_signature_256
+        and not validate_meta_signature(app_secret, raw_body, x_hub_signature_256)
+    ):
+        raise HTTPException(status_code=403, detail="Invalid Meta Instagram signature.")
 
     body = await request.json()
     if body.get("object") not in ("instagram", "page"):
@@ -568,9 +587,12 @@ async def telegram_inbound(
         inbox.credentials.get("secretToken") if (inbox and inbox.credentials) else None
     )
 
-    if expected_secret and x_telegram_bot_api_secret_token:
-        if not hmac.compare_digest(expected_secret, x_telegram_bot_api_secret_token):
-            raise HTTPException(status_code=403, detail="Invalid Telegram secret token.")
+    if (
+        expected_secret
+        and x_telegram_bot_api_secret_token
+        and not hmac.compare_digest(expected_secret, x_telegram_bot_api_secret_token)
+    ):
+        raise HTTPException(status_code=403, detail="Invalid Telegram secret token.")
 
     payload = await request.json()
 
@@ -589,7 +611,9 @@ async def telegram_inbound(
         text = msg.get("text", "")
 
         if sender_id and text:
-            await _get_or_create_social_contact(session, ChannelType.TELEGRAM, sender_id, sender_name)
+            await _get_or_create_social_contact(
+                session, ChannelType.TELEGRAM, sender_id, sender_name
+            )
             try:
                 await process_inbound_message(
                     session,
@@ -619,7 +643,9 @@ async def telegram_inbound(
         cb_id = str(cb.get("id", ""))
 
         if sender_id and data:
-            await _get_or_create_social_contact(session, ChannelType.TELEGRAM, sender_id, sender_name)
+            await _get_or_create_social_contact(
+                session, ChannelType.TELEGRAM, sender_id, sender_name
+            )
             try:
                 await process_inbound_message(
                     session,
@@ -637,7 +663,9 @@ async def telegram_inbound(
     return {"status": "ok"}
 
 
-def _validate_line_signature(channel_secret: str, body: bytes, signature_header: str | None) -> bool:
+def _validate_line_signature(
+    channel_secret: str, body: bytes, signature_header: str | None
+) -> bool:
     if not signature_header:
         return False
     hash_val = hmac.new(channel_secret.encode("utf-8"), body, hashlib.sha256).digest()
@@ -665,9 +693,8 @@ async def line_inbound(
         and not channel_secret.startswith("•")
         and not channel_secret.startswith("mock")
         and x_line_signature
-    ):
-        if not _validate_line_signature(channel_secret, raw_body, x_line_signature):
-            raise HTTPException(status_code=403, detail="Invalid LINE webhook signature.")
+    ) and not _validate_line_signature(channel_secret, raw_body, x_line_signature):
+        raise HTTPException(status_code=403, detail="Invalid LINE webhook signature.")
 
     payload = await request.json()
     events = payload.get("events", [])
@@ -734,11 +761,21 @@ async def voice_inbound_webhook(
     else:
         form = await request.form()
         data = dict(form)
-        if x_twilio_signature and settings.twilio_auth_token and not settings.twilio_auth_token.startswith("mock"):
-            if not validate_twilio_signature(settings.twilio_auth_token, str(request.url), data, x_twilio_signature):
-                raise HTTPException(status_code=403, detail="Invalid Twilio signature.")
+        if (
+            x_twilio_signature
+            and settings.twilio_auth_token
+            and not settings.twilio_auth_token.startswith("mock")
+            and not validate_twilio_signature(
+                settings.twilio_auth_token, str(request.url), data, x_twilio_signature
+            )
+        ):
+            raise HTTPException(status_code=403, detail="Invalid Twilio signature.")
 
-    call_sid = str(data.get("CallSid") or data.get("call_sid") or f"CA{datetime.now().strftime('%Y%m%d%H%M%S')}")
+    call_sid = str(
+        data.get("CallSid")
+        or data.get("call_sid")
+        or f"CA{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    )
     from_number = str(data.get("From") or data.get("from") or "+14155550100")
     to_number = str(data.get("To") or data.get("to") or "+14155550199")
     digits = data.get("Digits") or data.get("digits")
@@ -748,16 +785,25 @@ async def voice_inbound_webhook(
     inbox = (await session.execute(stmt)).scalars().first()
     creds = inbox.credentials if (inbox and inbox.credentials) else {}
     ivr_enabled = creds.get("ivrEnabled", True)
-    ivr_prompt = creds.get("ivrPrompt", "Thank you for calling Bay Works. Press 1 for Sales, 2 for Technical Support, or 3 to leave a Voicemail.")
+    ivr_prompt = creds.get(
+        "ivrPrompt",
+        "Thank you for calling Bay Works. Press 1 for Sales, 2 for Technical Support, or 3 to leave a Voicemail.",
+    )
 
     # Locate or create contact & lead
-    contact = await _get_or_create_social_contact(session, ChannelType.VOICE, from_number, f"Caller {from_number[-4:]}")
+    contact = await _get_or_create_social_contact(
+        session, ChannelType.VOICE, from_number, f"Caller {from_number[-4:]}"
+    )
 
     # Locate or create active conversation
-    conv_stmt = select(Conversation).where(
-        Conversation.contact_id == contact.id,
-        Conversation.inbox_id == (inbox.id if inbox else None)
-    ).order_by(Conversation.created_at.desc())
+    conv_stmt = (
+        select(Conversation)
+        .where(
+            Conversation.contact_id == contact.id,
+            Conversation.inbox_id == (inbox.id if inbox else None),
+        )
+        .order_by(Conversation.created_at.desc())
+    )
     conv = (await session.execute(conv_stmt)).scalars().first()
 
     if conv is None or conv.state in (ConversationState.CLOSED_WON, ConversationState.CLOSED_LOST):
@@ -774,57 +820,57 @@ async def voice_inbound_webhook(
         action_note = "Selected option [1: Sales] · Routing to Sales queue"
         twiml = (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<Response>\n'
+            "<Response>\n"
             '  <Say voice="Polly.Joanna">Connecting you to our Sales team.</Say>\n'
             '  <Dial timeout="30" record="record-from-answer-dual" action="/api/v1/webhooks/voice/status">\n'
-            '    <Client>sales-queue</Client>\n'
-            '  </Dial>\n'
-            '</Response>'
+            "    <Client>sales-queue</Client>\n"
+            "  </Dial>\n"
+            "</Response>"
         )
     elif str(digits) == "2":
         action_note = "Selected option [2: Support] · Routing to Technical Support"
         twiml = (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<Response>\n'
+            "<Response>\n"
             '  <Say voice="Polly.Joanna">Connecting you to Technical Support.</Say>\n'
             '  <Dial timeout="30" record="record-from-answer-dual" action="/api/v1/webhooks/voice/status">\n'
-            '    <Client>support-queue</Client>\n'
-            '  </Dial>\n'
-            '</Response>'
+            "    <Client>support-queue</Client>\n"
+            "  </Dial>\n"
+            "</Response>"
         )
     elif str(digits) == "3":
         action_note = "Selected option [3: Voicemail] · Recording voicemail"
         twiml = (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<Response>\n'
+            "<Response>\n"
             '  <Say voice="Polly.Joanna">Please leave your message after the tone. Press pound when finished.</Say>\n'
             '  <Record maxLength="120" action="/api/v1/webhooks/voice/recording" transcribe="true" transcribeCallback="/api/v1/webhooks/voice/transcription"/>\n'
-            '</Response>'
+            "</Response>"
         )
     elif ivr_enabled and not digits:
         action_note = "Ringing · IVR Menu presented"
         twiml = (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<Response>\n'
+            "<Response>\n"
             '  <Gather action="/api/v1/webhooks/voice/inbound" numDigits="1" timeout="10">\n'
             f'    <Say voice="Polly.Joanna">{ivr_prompt}</Say>\n'
-            '  </Gather>\n'
+            "  </Gather>\n"
             '  <Say voice="Polly.Joanna">We did not receive any input. Connecting you to an agent.</Say>\n'
             '  <Dial timeout="20" record="record-from-answer-dual" action="/api/v1/webhooks/voice/status">\n'
-            '    <Client>agent-inbox</Client>\n'
-            '  </Dial>\n'
-            '</Response>'
+            "    <Client>agent-inbox</Client>\n"
+            "  </Dial>\n"
+            "</Response>"
         )
     else:
         action_note = "Direct Dial · Connecting to agent inbox"
         twiml = (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
-            '<Response>\n'
+            "<Response>\n"
             '  <Say voice="Polly.Joanna">Connecting your call to our support team.</Say>\n'
             '  <Dial timeout="30" record="record-from-answer-dual" action="/api/v1/webhooks/voice/status">\n'
-            '    <Client>agent-inbox</Client>\n'
-            '  </Dial>\n'
-            '</Response>'
+            "    <Client>agent-inbox</Client>\n"
+            "  </Dial>\n"
+            "</Response>"
         )
 
     # Record message in conversation thread
@@ -947,7 +993,9 @@ async def voice_transcription_webhook(
 
     call_sid = str(data.get("CallSid") or data.get("call_sid") or "")
     transcription_text = str(data.get("TranscriptionText") or data.get("transcription_text") or "")
-    transcription_status = str(data.get("TranscriptionStatus") or data.get("transcription_status") or "completed")
+    transcription_status = str(
+        data.get("TranscriptionStatus") or data.get("transcription_status") or "completed"
+    )
 
     if call_sid and transcription_text:
         stmt = select(Message).where(Message.provider_message_id == call_sid)
@@ -1005,7 +1053,7 @@ async def email_inbound_webhook(
     if "<" in raw_from and ">" in raw_from:
         parts = raw_from.split("<", 1)
         if not from_name:
-            from_name = parts[0].strip(' "\'')
+            from_name = parts[0].strip(" \"'")
         sender_email = parts[1].split(">", 1)[0].strip().lower()
     else:
         sender_email = raw_from.strip().lower()
@@ -1018,7 +1066,13 @@ async def email_inbound_webhook(
     subject = str(payload.get("Subject") or payload.get("subject") or "Support Request")
     text_body = str(payload.get("TextBody") or payload.get("text") or payload.get("body") or "")
     html_body = str(payload.get("HtmlBody") or payload.get("html") or "")
-    message_id = str(payload.get("MessageID") or payload.get("message_id") or payload.get("headers", {}).get("Message-ID", f"<{datetime.now().strftime('%Y%m%d%H%M%S')}@customer-email>"))
+    message_id = str(
+        payload.get("MessageID")
+        or payload.get("message_id")
+        or payload.get("headers", {}).get(
+            "Message-ID", f"<{datetime.now().strftime('%Y%m%d%H%M%S')}@customer-email>"
+        )
+    )
     in_reply_to = payload.get("InReplyTo") or payload.get("in_reply_to")
     references = payload.get("References") or payload.get("references")
     attachments = payload.get("Attachments") or payload.get("attachments") or []
@@ -1030,13 +1084,19 @@ async def email_inbound_webhook(
     inbox = (await session.execute(stmt)).scalars().first()
 
     # 3. Locate or create contact & lead
-    contact = await _get_or_create_social_contact(session, ChannelType.EMAIL, sender_email, from_name)
+    contact = await _get_or_create_social_contact(
+        session, ChannelType.EMAIL, sender_email, from_name
+    )
 
     # 4. Resolve conversation thread
-    conv_stmt = select(Conversation).where(
-        Conversation.contact_id == contact.id,
-        Conversation.inbox_id == (inbox.id if inbox else None),
-    ).order_by(Conversation.created_at.desc())
+    conv_stmt = (
+        select(Conversation)
+        .where(
+            Conversation.contact_id == contact.id,
+            Conversation.inbox_id == (inbox.id if inbox else None),
+        )
+        .order_by(Conversation.created_at.desc())
+    )
     conv = (await session.execute(conv_stmt)).scalars().first()
 
     if conv is None or conv.state in (ConversationState.CLOSED_WON, ConversationState.CLOSED_LOST):
@@ -1126,7 +1186,9 @@ async def tiktok_webhook_inbound(
             raise HTTPException(status_code=403, detail="Invalid TikTok webhook signature.")
 
     payload = await request.json()
-    event_type = str(payload.get("event") or payload.get("event_type") or "im.direct_message.receive")
+    event_type = str(
+        payload.get("event") or payload.get("event_type") or "im.direct_message.receive"
+    )
     content = payload.get("content") or payload.get("data") or {}
     user = payload.get("user") or {}
 
@@ -1166,14 +1228,16 @@ async def tiktok_webhook_inbound(
     is_comment = "comment" in event_type.lower()
     if is_comment:
         video_id = content.get("video_id") or payload.get("video_id") or "v_unknown"
-        formatted_text = f"[TikTok Video Comment #{video_id}]: {text}" if text else f"[TikTok Video Comment #{video_id}]"
+        formatted_text = (
+            f"[TikTok Video Comment #{video_id}]: {text}"
+            if text
+            else f"[TikTok Video Comment #{video_id}]"
+        )
     else:
         formatted_text = text or "[TikTok Direct Message]"
 
     # Resolve or create contact & lead
-    await _get_or_create_social_contact(
-        session, ChannelType.TIKTOK, sender_open_id, sender_name
-    )
+    await _get_or_create_social_contact(session, ChannelType.TIKTOK, sender_open_id, sender_name)
 
     # Process inbound message
     try:
@@ -1196,4 +1260,3 @@ async def tiktok_webhook_inbound(
         "openId": sender_open_id,
         "isComment": is_comment,
     }
-

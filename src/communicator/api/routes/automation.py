@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -50,9 +49,7 @@ def _serialize(rule: AutomationRule) -> dict:
         "priority": rule.priority,
         "isActive": rule.is_active,
         "executionCount": rule.execution_count,
-        "lastTriggeredAt": rule.last_triggered_at.isoformat()
-        if rule.last_triggered_at
-        else None,
+        "lastTriggeredAt": rule.last_triggered_at.isoformat() if rule.last_triggered_at else None,
         "createdAt": rule.created_at.isoformat(),
     }
 
@@ -105,7 +102,7 @@ async def test_rule(payload: TestRuleIn, session: AsyncSession = Depends(get_db_
     try:
         if rule.action_value.strip().startswith(("{", "[")):
             preview = json.loads(rule.action_value)
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass
 
     return {
@@ -136,7 +133,9 @@ async def get_automation_stats(session: AsyncSession = Depends(get_db_session)):
     ).scalar_one()
     active_rules = (
         await session.execute(
-            select(func.count()).select_from(AutomationRule).where(AutomationRule.is_active.is_(True))
+            select(func.count())
+            .select_from(AutomationRule)
+            .where(AutomationRule.is_active.is_(True))
         )
     ).scalar_one()
     total_executions = (
@@ -151,7 +150,9 @@ async def get_automation_stats(session: AsyncSession = Depends(get_db_session)):
     ).scalar_one()
     csat_count = (
         await session.execute(
-            select(func.count()).select_from(Conversation).where(Conversation.csat_score.is_not(None))
+            select(func.count())
+            .select_from(Conversation)
+            .where(Conversation.csat_score.is_not(None))
         )
     ).scalar_one()
 

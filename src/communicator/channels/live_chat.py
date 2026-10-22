@@ -4,7 +4,6 @@ import hashlib
 import hmac
 import logging
 import uuid
-from typing import Any
 
 from communicator.channels.base import ChannelProvider, SendResult
 from communicator.models.contact import Contact

@@ -13,7 +13,9 @@ def anyio_backend():
 @pytest.mark.asyncio
 async def test_get_and_update_customizer_config(db_session):
     # 1. Get default config
-    cfg = await widget_customizer_service.get_customizer_config(db_session, base_url="https://app.test.com")
+    cfg = await widget_customizer_service.get_customizer_config(
+        db_session, base_url="https://app.test.com"
+    )
     assert cfg is not None
     assert "styling" in cfg
     assert cfg["styling"]["widget_color"] == "#1570EF"

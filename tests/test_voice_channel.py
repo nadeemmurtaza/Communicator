@@ -3,14 +3,14 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from communicator.models.contact import ChannelType, Contact
-from communicator.models.conversation import Conversation
-from communicator.models.inbox import Inbox
+from communicator.models.contact import ChannelType
 from communicator.models.message import Message
 
 
 @pytest.mark.asyncio
-async def test_voice_channel_config_and_webrtc_token(test_client: AsyncClient, db_session: AsyncSession):
+async def test_voice_channel_config_and_webrtc_token(
+    test_client: AsyncClient, db_session: AsyncSession
+):
     # 1. Verify Voice inbox is listed in /inboxes
     res = await test_client.get("/api/v1/inboxes")
     assert res.status_code == 200
@@ -84,7 +84,9 @@ async def test_voice_inbound_call_and_ivr_flow(test_client: AsyncClient, db_sess
         },
     )
     assert res.status_code == 200
-    assert "text/xml" in res.headers.get("content-type", "") or "application/xml" in res.headers.get("content-type", "")
+    assert "text/xml" in res.headers.get(
+        "content-type", ""
+    ) or "application/xml" in res.headers.get("content-type", "")
     xml_content = res.text
     assert "<Response>" in xml_content
     assert "<Gather" in xml_content
@@ -138,7 +140,9 @@ async def test_voice_inbound_call_and_ivr_flow(test_client: AsyncClient, db_sess
 
 
 @pytest.mark.asyncio
-async def test_voice_status_and_recording_callbacks(test_client: AsyncClient, db_session: AsyncSession):
+async def test_voice_status_and_recording_callbacks(
+    test_client: AsyncClient, db_session: AsyncSession
+):
     call_sid = "CA_rec_callback_789"
     # Seed incoming call first
     await test_client.post(
@@ -202,7 +206,9 @@ async def test_voice_status_and_recording_callbacks(test_client: AsyncClient, db
 
 
 @pytest.mark.asyncio
-async def test_voice_outbound_call_and_shared_inbox(test_client: AsyncClient, db_session: AsyncSession):
+async def test_voice_outbound_call_and_shared_inbox(
+    test_client: AsyncClient, db_session: AsyncSession
+):
     # 1. Outbound call via dialpad
     res_call = await test_client.post(
         "/api/v1/inboxes/channels/voice/call",

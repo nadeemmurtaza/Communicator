@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import io
+
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.models.contact import ChannelType, Contact
-from communicator.models.segment import ContactSegment
 
 
 @pytest.mark.asyncio
@@ -104,7 +104,10 @@ async def test_contacts_export_csv(test_client: AsyncClient, db_session: AsyncSe
         person_name="Export Tester",
     )
     from communicator.models.lead import Lead
-    lead = Lead(harvester_institution_id="export_lead_1", name="Export Tester", institution_type="test")
+
+    lead = Lead(
+        harvester_institution_id="export_lead_1", name="Export Tester", institution_type="test"
+    )
     db_session.add(lead)
     await db_session.flush()
     contact.lead_id = lead.id
@@ -120,7 +123,9 @@ async def test_contacts_export_csv(test_client: AsyncClient, db_session: AsyncSe
 
 
 @pytest.mark.asyncio
-async def test_saved_segments_crud_and_filtering(test_client: AsyncClient, db_session: AsyncSession):
+async def test_saved_segments_crud_and_filtering(
+    test_client: AsyncClient, db_session: AsyncSession
+):
     # 1. Fetch default segments
     list_res = await test_client.get("/api/v1/segments")
     assert list_res.status_code == 200
@@ -182,7 +187,9 @@ async def test_saved_segments_crud_and_filtering(test_client: AsyncClient, db_se
 
 
 @pytest.mark.asyncio
-async def test_contacts_list_by_channel_and_search(test_client: AsyncClient, db_session: AsyncSession):
+async def test_contacts_list_by_channel_and_search(
+    test_client: AsyncClient, db_session: AsyncSession
+):
     # Test filtering by channel and search keyword
     list_all = await test_client.get("/api/v1/contacts")
     assert list_all.status_code == 200

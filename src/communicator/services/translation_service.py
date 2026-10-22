@@ -6,7 +6,6 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.models.contact import Contact
@@ -286,7 +285,7 @@ async def translate_text(
                 "confidence": 0.95,
                 "provider": "ai_gateway",
             }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug(f"AI translation fallback: {e}")
 
     # 3. Graceful fallback for offline testing

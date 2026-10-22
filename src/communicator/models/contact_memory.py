@@ -41,4 +41,4 @@ class ContactMemory(Base):
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
 
-    contact: Mapped["Contact"] = relationship("Contact", back_populates="memories")
+    contact: Mapped[Contact] = relationship("Contact", back_populates="memories")

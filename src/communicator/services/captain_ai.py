@@ -2,23 +2,19 @@ from __future__ import annotations
 
 import re
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from communicator.ai.claude_client import call_claude, parse_json_reply
 from communicator.config import settings
-from communicator.models.contact import Contact
 from communicator.models.conversation import Conversation, ConversationState
 from communicator.models.knowledge_base import KnowledgeBaseEntry
 from communicator.models.message import Message, MessageDirection
 from communicator.models.team import Team
-from communicator.services.integration_settings import get_settings_row
-from communicator.services.memory import get_contact_memories
-
 
 # In-memory store for custom created Captain Monitors (persists during process runtime)
 _CUSTOM_MONITORS: list[dict[str, Any]] = []
@@ -43,9 +39,7 @@ async def generate_copilot_reply(
 
     # Fetch messages
     msg_stmt = (
-        select(Message)
-        .where(Message.conversation_id == conversation_id)
-        .order_by(Message.sent_at)
+        select(Message).where(Message.conversation_id == conversation_id).order_by(Message.sent_at)
     )
     messages = (await session.execute(msg_stmt)).scalars().all()
 
@@ -64,7 +58,11 @@ async def generate_copilot_reply(
 
     # Fetch knowledge base entries
     kb_entries = (await session.execute(select(KnowledgeBaseEntry))).scalars().all()
-    kb_summary = "\n".join(f"- {e.title}: {e.content[:140]}..." for e in kb_entries[:5]) if kb_entries else ""
+    kb_summary = (
+        "\n".join(f"- {e.title}: {e.content[:140]}..." for e in kb_entries[:5])
+        if kb_entries
+        else ""
+    )
 
     # Call LLM if API key configured
     if settings.anthropic_api_key:
@@ -74,7 +72,7 @@ async def generate_copilot_reply(
                 "Craft a helpful, empathetic, concise, and professional reply grounded strictly in knowledge base and conversation context. "
                 f"Customer name: {contact_name}. Channel: {channel_name}.\n"
                 f"Knowledge Base:\n{kb_summary}\n"
-                "Return JSON with: {\"reply\": \"...\", \"confidence\": 0.95, \"citations\": [\"...\"], \"suggested_actions\": [\"...\"]}"
+                'Return JSON with: {"reply": "...", "confidence": 0.95, "citations": ["..."], "suggested_actions": ["..."]}'
             )
             user_prompt = f"Last customer message: {last_inbound_text}\nCustom agent instruction: {custom_instruction or 'None'}"
             llm_res = await call_claude(system_prompt, user_prompt)
@@ -84,9 +82,11 @@ async def generate_copilot_reply(
                 "suggestedReply": parsed.get("reply", ""),
                 "confidence": float(parsed.get("confidence", 0.92)),
                 "groundedSources": parsed.get("citations", ["Knowledge Base"]),
-                "suggestedActions": parsed.get("suggested_actions", ["Insert Draft", "Send Immediately"]),
+                "suggestedActions": parsed.get(
+                    "suggested_actions", ["Insert Draft", "Send Immediately"]
+                ),
             }
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass  # Fallback to intelligent local contextual generation
 
     # Intelligent local contextual generation
@@ -94,14 +94,24 @@ async def generate_copilot_reply(
     sources = ["Knowledge Base"]
     suggested_actions = ["Insert Draft", "Send Immediately"]
 
-    if "discount" in text_lower or "sale" in text_lower or "linen" in text_lower or "offer" in text_lower:
+    if (
+        "discount" in text_lower
+        or "sale" in text_lower
+        or "linen" in text_lower
+        or "offer" in text_lower
+    ):
         reply = (
             f"Hi {contact_name}! Yes, our 20% early access VIP discount applies to the entire new linen collection "
             "as well as seasonal selections through this Sunday. Would you like me to reserve an order for you?"
         )
         sources.append("Promotion Guidelines & Pricing")
         confidence = 0.96
-    elif "price" in text_lower or "cost" in text_lower or "pricing" in text_lower or "quote" in text_lower:
+    elif (
+        "price" in text_lower
+        or "cost" in text_lower
+        or "pricing" in text_lower
+        or "quote" in text_lower
+    ):
         reply = (
             f"Hello {contact_name}, our plans start with our Standard tier with dedicated support. "
             "I can also provide a tailored quote based on your team size and monthly volume. Would that work?"
@@ -115,7 +125,13 @@ async def generate_copilot_reply(
         )
         sources.append("Business Hours & SLA Policy")
         confidence = 0.98
-    elif "error" in text_lower or "bug" in text_lower or "issue" in text_lower or "login" in text_lower or "help" in text_lower:
+    elif (
+        "error" in text_lower
+        or "bug" in text_lower
+        or "issue" in text_lower
+        or "login" in text_lower
+        or "help" in text_lower
+    ):
         reply = (
             f"Hi {contact_name}, I understand you are experiencing an issue with your account. "
             "I have inspected the active logs and can assist in resetting your session or escalating directly to Technical Support."
@@ -166,9 +182,7 @@ async def summarize_conversation(
         raise ValueError(f"Conversation {conversation_id} not found")
 
     msg_stmt = (
-        select(Message)
-        .where(Message.conversation_id == conversation_id)
-        .order_by(Message.sent_at)
+        select(Message).where(Message.conversation_id == conversation_id).order_by(Message.sent_at)
     )
     messages = (await session.execute(msg_stmt)).scalars().all()
 
@@ -200,7 +214,7 @@ async def summarize_conversation(
                 "You are Captain AI, an executive assistant summarizer. "
                 "Provide a 2 to 3 bullet point executive summary of the conversation thread, "
                 "overall sentiment (positive|neutral|negative|urgent), and key topics. "
-                "Return JSON with: {\"summary\": \"...\", \"bullet_points\": [\"...\"], \"sentiment\": \"...\", \"key_topics\": [\"...\"]}"
+                'Return JSON with: {"summary": "...", "bullet_points": ["..."], "sentiment": "...", "key_topics": ["..."]}'
             )
             res = await call_claude(system, transcript)
             parsed = parse_json_reply(res)
@@ -212,7 +226,7 @@ async def summarize_conversation(
                 "keyTopics": parsed.get("key_topics", ["Inquiry"]),
                 "actionRequired": conversation.state == ConversationState.AWAITING_REPLY,
             }
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
 
     # Intelligent contextual summarization
@@ -236,13 +250,17 @@ async def summarize_conversation(
     sentiment = "neutral"
     if any(w in full_text for w in ["thank", "great", "awesome", "perfect", "resolved", "love"]):
         sentiment = "positive"
-    elif any(w in full_text for w in ["urgent", "broken", "angry", "terrible", "complaint", "fail"]):
+    elif any(
+        w in full_text for w in ["urgent", "broken", "angry", "terrible", "complaint", "fail"]
+    ):
         sentiment = "urgent" if "urgent" in full_text else "negative"
 
     bullets = [
         f"{contact_name} initiated inquiry on {channel} regarding {topics[0]}.",
         f"Exchanged {len(messages)} total messages ({len(inbound_msgs)} inbound, {len(outbound_msgs)} outbound replies).",
-        f"Latest state: \"{last_msg[:90]}...\"" if len(last_msg) > 90 else f"Latest state: \"{last_msg}\"",
+        f'Latest state: "{last_msg[:90]}..."'
+        if len(last_msg) > 90
+        else f'Latest state: "{last_msg}"',
     ]
     summary_text = "\n".join(f"• {b}" for b in bullets)
 
@@ -252,7 +270,8 @@ async def summarize_conversation(
         "bulletPoints": bullets,
         "sentiment": sentiment,
         "keyTopics": topics,
-        "actionRequired": conversation.state in [ConversationState.NEW, ConversationState.AWAITING_REPLY],
+        "actionRequired": conversation.state
+        in [ConversationState.NEW, ConversationState.AWAITING_REPLY],
     }
 
 
@@ -280,7 +299,11 @@ def rewrite_text(text: str, tone: str) -> dict[str, Any]:
         rewritten = f"Hi there! 😊 {cleaned} Hope you are having a wonderful day! Let me know if you need anything else."
     elif tone_lower == "shorten":
         # Remove fluff words
-        shortened = re.sub(r"(?i)\b(please be advised that|kindly note that|we would like to inform you that)\b", "", cleaned)
+        shortened = re.sub(
+            r"(?i)\b(please be advised that|kindly note that|we would like to inform you that)\b",
+            "",
+            cleaned,
+        )
         rewritten = shortened.strip()
     elif tone_lower == "fix_spelling":
         # Capitalize sentences and clean up double spaces
@@ -320,13 +343,13 @@ async def triage_conversation(
         raise ValueError(f"Conversation {conversation_id} not found")
 
     msg_stmt = (
-        select(Message)
-        .where(Message.conversation_id == conversation_id)
-        .order_by(Message.sent_at)
+        select(Message).where(Message.conversation_id == conversation_id).order_by(Message.sent_at)
     )
     messages = (await session.execute(msg_stmt)).scalars().all()
 
-    inbound_text = " ".join(m.body.lower() for m in messages if m.direction == MessageDirection.INBOUND)
+    inbound_text = " ".join(
+        m.body.lower() for m in messages if m.direction == MessageDirection.INBOUND
+    )
     if not inbound_text and messages:
         inbound_text = messages[-1].body.lower()
 
@@ -336,24 +359,48 @@ async def triage_conversation(
     suggested_team_name = "Customer Support"
     intent = "general_inquiry"
 
-    if any(k in inbound_text for k in ["billing", "invoice", "refund", "pricing", "cost", "quote", "discount", "payment"]):
+    if any(
+        k in inbound_text
+        for k in ["billing", "invoice", "refund", "pricing", "cost", "quote", "discount", "payment"]
+    ):
         suggested_team_name = "Sales & Billing"
         intent = "billing_or_sales"
         inferred_tags.extend(["billing", "pricing"])
-    elif any(k in inbound_text for k in ["bug", "error", "exception", "api", "webhook", "login", "broken", "down", "500", "crash"]):
+    elif any(
+        k in inbound_text
+        for k in [
+            "bug",
+            "error",
+            "exception",
+            "api",
+            "webhook",
+            "login",
+            "broken",
+            "down",
+            "500",
+            "crash",
+        ]
+    ):
         suggested_team_name = "Technical Support"
         intent = "technical_issue"
         inferred_tags.extend(["technical", "incident"])
-    elif any(k in inbound_text for k in ["ship", "tracking", "order", "delivery", "courier", "package"]):
+    elif any(
+        k in inbound_text for k in ["ship", "tracking", "order", "delivery", "courier", "package"]
+    ):
         suggested_team_name = "Customer Support"
         intent = "fulfillment_order"
         inferred_tags.extend(["order", "fulfillment"])
 
     # Determine priority
-    if any(k in inbound_text for k in ["urgent", "emergency", "asap", "down", "outage", "critical", "immediately"]):
+    if any(
+        k in inbound_text
+        for k in ["urgent", "emergency", "asap", "down", "outage", "critical", "immediately"]
+    ):
         priority = "urgent"
         inferred_tags.append("urgent")
-    elif any(k in inbound_text for k in ["high", "blocked", "cancel", "fail", "complaint", "angry"]):
+    elif any(
+        k in inbound_text for k in ["high", "blocked", "cancel", "fail", "complaint", "angry"]
+    ):
         priority = "high"
         inferred_tags.append("high-priority")
     elif any(k in inbound_text for k in ["minor", "feedback", "suggestion", "when you can"]):
@@ -438,8 +485,7 @@ async def get_captain_monitors(session: AsyncSession) -> dict[str, Any]:
     ]
 
     # Append custom monitors created via API
-    for cm in _CUSTOM_MONITORS:
-        monitors.append(cm)
+    monitors.extend(_CUSTOM_MONITORS)
 
     # 2. Emerging Conversation Themes
     emerging_themes = [
@@ -487,7 +533,9 @@ async def get_captain_monitors(session: AsyncSession) -> dict[str, Any]:
     }
 
 
-def add_custom_monitor(name: str, topic: str, keywords: list[str], threshold: int = 5) -> dict[str, Any]:
+def add_custom_monitor(
+    name: str, topic: str, keywords: list[str], threshold: int = 5
+) -> dict[str, Any]:
     new_mon = {
         "id": f"mon-{uuid.uuid4().hex[:8]}",
         "name": name,

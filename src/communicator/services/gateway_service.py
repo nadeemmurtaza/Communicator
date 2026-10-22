@@ -6,11 +6,9 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-import httpx
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from communicator.models.contact import Contact
 from communicator.models.gateway_connection import (
     ChannelGatewayConnection,
     EmailProvider,
@@ -71,7 +69,10 @@ async def seed_default_gateways_if_empty(session: AsyncSession) -> None:
             name="Twilio SMS Global",
             is_default=True,
             is_active=True,
-            credentials={"account_sid": "AC_mock_twilio_sms_sid", "auth_token": "mock_token_twilio_sms"},
+            credentials={
+                "account_sid": "AC_mock_twilio_sms_sid",
+                "auth_token": "mock_token_twilio_sms",
+            },
             config={"from_number": "+14155550100", "messaging_service_id": "MG_mock_service"},
             test_status="connected",
             latency_ms=118,
@@ -84,7 +85,10 @@ async def seed_default_gateways_if_empty(session: AsyncSession) -> None:
             name="Vonage SMS (Nexmo)",
             is_default=False,
             is_active=True,
-            credentials={"api_key": "mock_vonage_key_8492", "api_secret": "mock_vonage_secret_7721"},
+            credentials={
+                "api_key": "mock_vonage_key_8492",
+                "api_secret": "mock_vonage_secret_7721",
+            },
             config={"from": "BayWorks", "encoding": "unicode"},
             test_status="connected",
             latency_ms=92,
@@ -121,7 +125,6 @@ async def seed_default_gateways_if_empty(session: AsyncSession) -> None:
             latency_ms=45,
             last_tested_at=datetime.now(UTC),
         ),
-
         # Email Gateways
         ChannelGatewayConnection(
             id=uuid.uuid4(),
@@ -130,7 +133,10 @@ async def seed_default_gateways_if_empty(session: AsyncSession) -> None:
             name="Corporate SMTP Server (TLS)",
             is_default=True,
             is_active=True,
-            credentials={"smtp_username": "support@bayworks.co", "smtp_password": "smtp_secret_mock_password"},
+            credentials={
+                "smtp_username": "support@bayworks.co",
+                "smtp_password": "smtp_secret_mock_password",
+            },
             config={
                 "smtp_host": "smtp.bayworks.co",
                 "smtp_port": 587,
@@ -167,8 +173,15 @@ async def seed_default_gateways_if_empty(session: AsyncSession) -> None:
             name="AWS SES Production Mailer",
             is_default=False,
             is_active=True,
-            credentials={"aws_access_key": "AKIA_MOCK_SES_ACCESS_KEY", "aws_secret_key": "mock_ses_secret_key_8829"},
-            config={"region": "us-east-1", "from_address": "mailer@bayworks.co", "configuration_set": "bayworks-default"},
+            credentials={
+                "aws_access_key": "AKIA_MOCK_SES_ACCESS_KEY",
+                "aws_secret_key": "mock_ses_secret_key_8829",
+            },
+            config={
+                "region": "us-east-1",
+                "from_address": "mailer@bayworks.co",
+                "configuration_set": "bayworks-default",
+            },
             test_status="connected",
             latency_ms=72,
             last_tested_at=datetime.now(UTC),
@@ -186,7 +199,6 @@ async def seed_default_gateways_if_empty(session: AsyncSession) -> None:
             latency_ms=53,
             last_tested_at=datetime.now(UTC),
         ),
-
         # VoIP & SIP Trunks
         ChannelGatewayConnection(
             id=uuid.uuid4(),
@@ -360,9 +372,7 @@ async def delete_gateway(session: AsyncSession, gateway_id: uuid.UUID) -> bool:
     return True
 
 
-async def test_gateway_connection(
-    session: AsyncSession, gateway_id: uuid.UUID
-) -> dict[str, Any]:
+async def test_gateway_connection(session: AsyncSession, gateway_id: uuid.UUID) -> dict[str, Any]:
     gw = await session.get(ChannelGatewayConnection, gateway_id)
     if not gw:
         return {"success": False, "error": "Gateway not found"}
@@ -411,7 +421,7 @@ async def test_gateway_connection(
             else:
                 latency_ms = int((time.perf_counter() - start_time) * 1000) + 98
 
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         status = "error"
         error_msg = str(exc)
         latency_ms = 0
@@ -435,7 +445,10 @@ async def test_gateway_connection(
 
 
 async def send_gateway_test_ping(
-    session: AsyncSession, gateway_id: uuid.UUID, target: str, message: str = "Test ping from Universal Gateway"
+    session: AsyncSession,
+    gateway_id: uuid.UUID,
+    target: str,
+    message: str = "Test ping from Universal Gateway",
 ) -> dict[str, Any]:
     """Sends a live test transmission through the specific gateway."""
     gw = await session.get(ChannelGatewayConnection, gateway_id)
@@ -461,13 +474,10 @@ async def get_active_gateway(
     """Returns the default active gateway for the given type, or the first active one."""
     await seed_default_gateways_if_empty(session)
     # 1. Try default
-    stmt = (
-        select(ChannelGatewayConnection)
-        .where(
-            ChannelGatewayConnection.gateway_type == gateway_type,
-            ChannelGatewayConnection.is_default == True,
-            ChannelGatewayConnection.is_active == True,
-        )
+    stmt = select(ChannelGatewayConnection).where(
+        ChannelGatewayConnection.gateway_type == gateway_type,
+        ChannelGatewayConnection.is_default == True,
+        ChannelGatewayConnection.is_active == True,
     )
     result = await session.execute(stmt)
     gw = result.scalars().first()
@@ -475,12 +485,9 @@ async def get_active_gateway(
         return gw
 
     # 2. Fallback to any active
-    stmt = (
-        select(ChannelGatewayConnection)
-        .where(
-            ChannelGatewayConnection.gateway_type == gateway_type,
-            ChannelGatewayConnection.is_active == True,
-        )
+    stmt = select(ChannelGatewayConnection).where(
+        ChannelGatewayConnection.gateway_type == gateway_type,
+        ChannelGatewayConnection.is_active == True,
     )
     result = await session.execute(stmt)
     return result.scalars().first()

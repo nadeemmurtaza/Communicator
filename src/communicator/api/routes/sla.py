@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -57,7 +57,9 @@ def _serialize_policy(p: SLAPolicy) -> dict[str, Any]:
 
 
 @router.get("/sla/policies")
-async def list_sla_policies(session: AsyncSession = Depends(get_db_session)) -> list[dict[str, Any]]:
+async def list_sla_policies(
+    session: AsyncSession = Depends(get_db_session),
+) -> list[dict[str, Any]]:
     """Lists all configured SLA policies, auto-seeding defaults if none exist."""
     policies = await sla_service.list_policies(session)
     return [_serialize_policy(p) for p in policies]
@@ -140,7 +142,9 @@ async def get_sla_metrics(session: AsyncSession = Depends(get_db_session)) -> di
 
 
 @router.get("/sla/breaches")
-async def list_breached_conversations(session: AsyncSession = Depends(get_db_session)) -> list[dict[str, Any]]:
+async def list_breached_conversations(
+    session: AsyncSession = Depends(get_db_session),
+) -> list[dict[str, Any]]:
     """Returns all conversations currently in SLA breach or nearing breach."""
     return await sla_service.list_breached_conversations(session)
 

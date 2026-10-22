@@ -2,10 +2,7 @@ from __future__ import annotations
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from communicator.models.knowledge_base import KnowledgeBaseEntry, KnowledgeRecommendation
 
 
 @pytest.mark.asyncio
@@ -83,6 +80,8 @@ async def test_list_and_apply_recommendations(test_client: AsyncClient, db_sessi
 
     # 3. Dismiss another recommendation
     other_rec = next(r for r in recs if r["id"] != rec_id)
-    dismiss_res = await test_client.post(f"/api/v1/knowledge-base/recommendations/{other_rec['id']}/dismiss")
+    dismiss_res = await test_client.post(
+        f"/api/v1/knowledge-base/recommendations/{other_rec['id']}/dismiss"
+    )
     assert dismiss_res.status_code == 200
     assert dismiss_res.json()["status"] == "dismissed"

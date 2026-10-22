@@ -26,8 +26,18 @@ def upgrade() -> None:
         sa.Column("name", sa.String(length=255), nullable=False),
         sa.Column("url", sa.String(length=1024), nullable=False),
         sa.Column("secret", sa.String(length=255), nullable=False),
-        sa.Column("events", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default=sa.text("'[]'::jsonb")),
-        sa.Column("headers", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default=sa.text("'{}'::jsonb")),
+        sa.Column(
+            "events",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+            server_default=sa.text("'[]'::jsonb"),
+        ),
+        sa.Column(
+            "headers",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+            server_default=sa.text("'{}'::jsonb"),
+        ),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
         sa.Column("retry_count", sa.Integer(), nullable=False, server_default="3"),
         sa.Column("timeout_seconds", sa.Integer(), nullable=False, server_default="10"),
@@ -35,8 +45,18 @@ def upgrade() -> None:
         sa.Column("total_failed", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("last_status_code", sa.Integer(), nullable=True),
         sa.Column("last_delivered_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
 
@@ -46,19 +66,36 @@ def upgrade() -> None:
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("endpoint_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("event", sa.String(length=100), nullable=False),
-        sa.Column("payload", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default=sa.text("'{}'::jsonb")),
+        sa.Column(
+            "payload",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+            server_default=sa.text("'{}'::jsonb"),
+        ),
         sa.Column("status_code", sa.Integer(), nullable=False, server_default="0"),
-        sa.Column("response_headers", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default=sa.text("'{}'::jsonb")),
+        sa.Column(
+            "response_headers",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+            server_default=sa.text("'{}'::jsonb"),
+        ),
         sa.Column("response_body", sa.Text(), nullable=False, server_default=""),
         sa.Column("duration_ms", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("attempt", sa.Integer(), nullable=False, server_default="1"),
         sa.Column("success", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("error_message", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
         sa.ForeignKeyConstraint(["endpoint_id"], ["webhook_endpoints.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_webhook_delivery_logs_endpoint_id", "webhook_delivery_logs", ["endpoint_id"])
+    op.create_index(
+        "ix_webhook_delivery_logs_endpoint_id", "webhook_delivery_logs", ["endpoint_id"]
+    )
     op.create_index("ix_webhook_delivery_logs_event", "webhook_delivery_logs", ["event"])
 
 

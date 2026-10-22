@@ -111,10 +111,7 @@ async def list_canned_responses(
     # Filter by q (matches short_code or content)
     if q and q.strip():
         term = q.strip().lstrip("/").lower()
-        results = [
-            c for c in results
-            if term in c.short_code.lower() or term in c.content.lower()
-        ]
+        results = [c for c in results if term in c.short_code.lower() or term in c.content.lower()]
 
     # Filter by category
     if category and category.strip() and category.lower() != "all":

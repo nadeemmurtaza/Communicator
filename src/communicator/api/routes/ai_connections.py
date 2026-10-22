@@ -1,12 +1,12 @@
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.api.dependencies import get_db_session
-from communicator.models.ai_connection import AIJobType, AIProvider
+from communicator.models.ai_connection import AIProvider
 from communicator.services.ai_connection_service import AIConnectionService
 
 router = APIRouter(prefix="/ai", tags=["ai-connections"])
@@ -129,7 +129,9 @@ async def get_custom_policy(
     await AIConnectionService.seed_default_connections_and_policies(db)
     policy = await AIConnectionService.get_custom_policy(db, job_type)
     if not policy:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Policy for {job_type} not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Policy for {job_type} not found"
+        )
     return policy
 
 

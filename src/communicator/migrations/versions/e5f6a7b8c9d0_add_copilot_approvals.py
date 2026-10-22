@@ -29,7 +29,12 @@ def upgrade() -> None:
         sa.Column("title", sa.String(length=255), nullable=False),
         sa.Column("proposed_reply", sa.Text(), nullable=False, server_default=""),
         sa.Column("amended_reply", sa.Text(), nullable=True),
-        sa.Column("action_data", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default="{}"),
+        sa.Column(
+            "action_data",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+            server_default="{}",
+        ),
         sa.Column("internal_note", sa.Text(), nullable=False, server_default=""),
         sa.Column("question_to_teammate", sa.Text(), nullable=True),
         sa.Column("teammate_answer", sa.Text(), nullable=True),
@@ -46,10 +51,24 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["dispatched_message_id"], ["messages.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(op.f("ix_copilot_approvals_conversation_id"), "copilot_approvals", ["conversation_id"], unique=False)
-    op.create_index(op.f("ix_copilot_approvals_contact_id"), "copilot_approvals", ["contact_id"], unique=False)
-    op.create_index(op.f("ix_copilot_approvals_request_type"), "copilot_approvals", ["request_type"], unique=False)
-    op.create_index(op.f("ix_copilot_approvals_status"), "copilot_approvals", ["status"], unique=False)
+    op.create_index(
+        op.f("ix_copilot_approvals_conversation_id"),
+        "copilot_approvals",
+        ["conversation_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_copilot_approvals_contact_id"), "copilot_approvals", ["contact_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_copilot_approvals_request_type"),
+        "copilot_approvals",
+        ["request_type"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_copilot_approvals_status"), "copilot_approvals", ["status"], unique=False
+    )
 
 
 def downgrade() -> None:

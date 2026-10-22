@@ -50,7 +50,9 @@ class WebhookEndpoint(Base):
     total_delivered: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     total_failed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     last_status_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    last_delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_delivered_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
@@ -76,7 +78,10 @@ class WebhookDeliveryLog(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     endpoint_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("webhook_endpoints.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True),
+        ForeignKey("webhook_endpoints.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     event: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
@@ -93,4 +98,6 @@ class WebhookDeliveryLog(Base):
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
 
-    endpoint: Mapped["WebhookEndpoint"] = relationship("WebhookEndpoint", back_populates="deliveries")
+    endpoint: Mapped["WebhookEndpoint"] = relationship(
+        "WebhookEndpoint", back_populates="deliveries"
+    )

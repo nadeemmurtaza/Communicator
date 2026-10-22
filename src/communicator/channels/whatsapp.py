@@ -155,7 +155,7 @@ class MetaWhatsAppProvider(ChannelProvider):
                             err_msg = err_dict.get("message", response.text)
                             err_code = err_dict.get("code")
                             err_subcode = err_dict.get("error_subcode")
-                    except Exception:
+                    except Exception:  # noqa: BLE001, S110
                         pass
 
                     # Rate limited or transient server error: back off and retry
@@ -482,7 +482,7 @@ class MetaWhatsAppProvider(ChannelProvider):
         filename: str | None = None,
     ) -> SendResult:
         """Sends media: 'image', 'document', 'audio', 'video'."""
-        is_link = media_url_or_id.startswith("http://") or media_url_or_id.startswith("https://")
+        is_link = media_url_or_id.startswith(("http://", "https://"))
         media_payload: dict[str, Any] = {"link" if is_link else "id": media_url_or_id}
         if caption and media_type in ("image", "document", "video"):
             media_payload["caption"] = caption[:1024]
@@ -556,7 +556,7 @@ class MetaWhatsAppProvider(ChannelProvider):
         try:
             data = await self._post_with_retry(self.messages_url, payload, max_retries=1)
             return bool(data.get("success", True))
-        except Exception:
+        except Exception:  # noqa: BLE001
             return False
 
     async def send_template(
@@ -575,16 +575,20 @@ class MetaWhatsAppProvider(ChannelProvider):
         components: list[dict[str, Any]] = []
 
         if header_params:
-            components.append({
-                "type": "header",
-                "parameters": header_params,
-            })
+            components.append(
+                {
+                    "type": "header",
+                    "parameters": header_params,
+                }
+            )
 
         if body_params:
-            components.append({
-                "type": "body",
-                "parameters": [{"type": "text", "text": str(p)} for p in body_params],
-            })
+            components.append(
+                {
+                    "type": "body",
+                    "parameters": [{"type": "text", "text": str(p)} for p in body_params],
+                }
+            )
 
         if button_params:
             components.extend(button_params)

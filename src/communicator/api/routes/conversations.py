@@ -12,14 +12,11 @@ from sqlalchemy.orm import selectinload
 
 from communicator.api.dependencies import get_db_session
 from communicator.channels import get_provider
-from communicator.models.broadcast import Broadcast
 from communicator.models.contact import ChannelType, Contact
 from communicator.models.contact_note import ContactNote
 from communicator.models.conversation import Conversation, ConversationState
 from communicator.models.message import Message, MessageDirection, MessageStatus
 from communicator.models.sequence import FollowUpSequence
-from communicator.models.team import Team
-from communicator.models.team_member import TeamMember
 from communicator.services.followup_scheduler import enroll_conversation
 from communicator.services.messaging import NotSendableError, send_outbound_message
 
@@ -329,8 +326,12 @@ async def snooze_conversation(
     return {
         "status": "snoozed",
         "id": str(conversation.id),
-        "snoozedUntil": conversation.snoozed_until.isoformat() if conversation.snoozed_until else None,
-        "snoozed_until": conversation.snoozed_until.isoformat() if conversation.snoozed_until else None,
+        "snoozedUntil": conversation.snoozed_until.isoformat()
+        if conversation.snoozed_until
+        else None,
+        "snoozed_until": conversation.snoozed_until.isoformat()
+        if conversation.snoozed_until
+        else None,
     }
 
 
@@ -371,7 +372,11 @@ async def resolve_conversation(
         conversation.resolution_type = "human_assisted"
     conversation.updated_at = datetime.now(UTC)
     await session.flush()
-    return {"id": str(conversation.id), "state": conversation.state.value, "resolutionType": conversation.resolution_type}
+    return {
+        "id": str(conversation.id),
+        "state": conversation.state.value,
+        "resolutionType": conversation.resolution_type,
+    }
 
 
 @router.post("/{conversation_id}/enroll-sequence")

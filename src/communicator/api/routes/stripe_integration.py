@@ -24,8 +24,13 @@ class UpdateStripeConfigRequest(BaseModel):
 
 class ProcessRefundRequest(BaseModel):
     charge_or_invoice_id: str = Field(..., description="Stripe charge or invoice ID to refund")
-    amount_cents: int | None = Field(None, description="Optional refund amount in cents; full amount if omitted")
-    reason: str = Field("requested_by_customer", description="Reason for refund (duplicate, fraudulent, requested_by_customer)")
+    amount_cents: int | None = Field(
+        None, description="Optional refund amount in cents; full amount if omitted"
+    )
+    reason: str = Field(
+        "requested_by_customer",
+        description="Reason for refund (duplicate, fraudulent, requested_by_customer)",
+    )
     actor_email: str = Field("agent@newax.com", description="Email of agent issuing the refund")
     contact_id: str | None = Field(None, description="Optional associated contact UUID")
     customer_identifier: str = Field("", description="Optional customer email or identifier")
@@ -33,7 +38,9 @@ class ProcessRefundRequest(BaseModel):
 
 class CreatePortalSessionRequest(BaseModel):
     identifier: str = Field(..., description="Contact UUID, email address, or customer ID")
-    return_url: str | None = Field(None, description="URL where customer returns after billing portal")
+    return_url: str | None = Field(
+        None, description="URL where customer returns after billing portal"
+    )
     actor_email: str = Field("agent@newax.com", description="Email of agent creating the link")
 
 
@@ -96,7 +103,7 @@ async def process_refund(
             contact_id=payload.contact_id,
             customer_identifier=payload.customer_identifier,
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         raise HTTPException(status_code=400, detail=str(e))
 
 
@@ -112,7 +119,7 @@ async def create_portal_session(
             return_url=payload.return_url,
             actor_email=payload.actor_email,
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         raise HTTPException(status_code=400, detail=str(e))
 
 

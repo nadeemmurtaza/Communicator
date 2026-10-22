@@ -4,13 +4,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.models.contact import ChannelType, Contact
-from communicator.models.conversation import Conversation
-from communicator.models.inbox import Inbox
 from communicator.models.message import Message
 
 
 @pytest.mark.asyncio
-async def test_email_channel_config_and_verification(test_client: AsyncClient, db_session: AsyncSession):
+async def test_email_channel_config_and_verification(
+    test_client: AsyncClient, db_session: AsyncSession
+):
     # 1. Verify Email inbox exists in /inboxes listing
     res = await test_client.get("/api/v1/inboxes")
     assert res.status_code == 200
@@ -77,7 +77,9 @@ async def test_email_channel_config_and_verification(test_client: AsyncClient, d
 
 
 @pytest.mark.asyncio
-async def test_email_inbound_webhook_and_threading(test_client: AsyncClient, db_session: AsyncSession):
+async def test_email_inbound_webhook_and_threading(
+    test_client: AsyncClient, db_session: AsyncSession
+):
     # Inbound email webhook payload
     res = await test_client.post(
         "/api/v1/webhooks/email/inbound",
@@ -101,7 +103,7 @@ async def test_email_inbound_webhook_and_threading(test_client: AsyncClient, db_
     inbound_data = res.json()
     assert inbound_data["status"] == "ok"
     assert inbound_data["from"] == "victoria.vance@vancetech.io"
-    conv_id = inbound_data["conversationId"]
+    inbound_data["conversationId"]
 
     # Verify contact was auto-provisioned
     stmt = select(Contact).where(Contact.value == "victoria.vance@vancetech.io")
@@ -111,7 +113,9 @@ async def test_email_inbound_webhook_and_threading(test_client: AsyncClient, db_
     assert contact.person_name == "Victoria Vance"
 
     # Verify message body has quoted header stripped
-    msg_stmt = select(Message).where(Message.provider_message_id == "<msg_vance_20261021@vancetech.io>")
+    msg_stmt = select(Message).where(
+        Message.provider_message_id == "<msg_vance_20261021@vancetech.io>"
+    )
     msg = (await db_session.execute(msg_stmt)).scalars().first()
     assert msg is not None
     assert "spike in webhook traffic" in msg.body
@@ -120,7 +124,9 @@ async def test_email_inbound_webhook_and_threading(test_client: AsyncClient, db_
 
 
 @pytest.mark.asyncio
-async def test_email_outbound_and_shared_inbox_reply(test_client: AsyncClient, db_session: AsyncSession):
+async def test_email_outbound_and_shared_inbox_reply(
+    test_client: AsyncClient, db_session: AsyncSession
+):
     # 1. Send outbound test email via channel diagnostics
     res_test = await test_client.post(
         "/api/v1/inboxes/channels/email/test-message",
@@ -154,4 +160,8 @@ async def test_email_outbound_and_shared_inbox_reply(test_client: AsyncClient, d
     assert res_events.status_code == 200
     events = res_events.json()
     assert len(events) >= 1
-    assert any("daniel.okafor@fintech.ng" in str(ev.get("body", "")) or "Maintenance" in str(ev.get("body", "")) for ev in events)
+    assert any(
+        "daniel.okafor@fintech.ng" in str(ev.get("body", ""))
+        or "Maintenance" in str(ev.get("body", ""))
+        for ev in events
+    )

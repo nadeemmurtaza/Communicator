@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import re
 import uuid
-from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.models.draft import Draft
@@ -18,17 +17,11 @@ async def detect_knowledge_gaps(session: AsyncSession) -> list[KnowledgeGap]:
     recurring customer questions not covered by existing KnowledgeBaseEntries ("Fills gaps").
     """
     # 1. Fetch existing KB entry titles to check what is already known
-    kb_titles = set(
-        (await session.execute(select(KnowledgeBaseEntry.title))).scalars().all()
-    )
-    kb_text_corpus = " ".join(
-        (await session.execute(select(KnowledgeBaseEntry.content))).scalars().all()
-    ).lower()
+    kb_titles = set((await session.execute(select(KnowledgeBaseEntry.title))).scalars().all())
+    " ".join((await session.execute(select(KnowledgeBaseEntry.content))).scalars().all()).lower()
 
     # 2. Fetch existing gaps to avoid duplicates
-    existing_gaps = (
-        (await session.execute(select(KnowledgeGap))).scalars().all()
-    )
+    existing_gaps = (await session.execute(select(KnowledgeGap))).scalars().all()
     existing_questions = {g.question.lower().strip() for g in existing_gaps}
 
     # 3. Find customer inquiries from inbound messages ending with "?" or question words
@@ -58,8 +51,7 @@ async def detect_knowledge_gaps(session: AsyncSession) -> list[KnowledgeGap]:
 
                 # Check if already covered in KB
                 is_covered = any(
-                    clean_q.lower() in t.lower() or t.lower() in clean_q.lower()
-                    for t in kb_titles
+                    clean_q.lower() in t.lower() or t.lower() in clean_q.lower() for t in kb_titles
                 )
                 if not is_covered and clean_q.lower() not in existing_questions:
                     if clean_q not in candidates:
@@ -73,10 +65,7 @@ async def detect_knowledge_gaps(session: AsyncSession) -> list[KnowledgeGap]:
 
     # Also look at low confidence drafts
     drafts_stmt = (
-        select(Draft)
-        .where(Draft.confidence < 0.8)
-        .order_by(Draft.created_at.desc())
-        .limit(50)
+        select(Draft).where(Draft.confidence < 0.8).order_by(Draft.created_at.desc()).limit(50)
     )
     low_conf_drafts = (await session.execute(drafts_stmt)).scalars().all()
     for d in low_conf_drafts:

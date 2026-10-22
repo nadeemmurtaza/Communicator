@@ -18,8 +18,12 @@ class UpdateWidgetCustomizerRequest(BaseModel):
     website_domain: str | None = None
     widget_color: str | None = Field(None, description="HEX brand color e.g. #1570EF")
     theme_mode: str | None = Field(None, description="light | dark | system")
-    launcher_style: str | None = Field(None, description="round_bubble | pill_with_text | minimal_tab")
-    launcher_icon: str | None = Field(None, description="chat_bubble | sparkle_ai | headset_support | envelope")
+    launcher_style: str | None = Field(
+        None, description="round_bubble | pill_with_text | minimal_tab"
+    )
+    launcher_icon: str | None = Field(
+        None, description="chat_bubble | sparkle_ai | headset_support | envelope"
+    )
     launcher_text: str | None = Field(None, description="Text for pill launcher e.g. Chat with us")
     widget_position: str | None = Field(None, description="right | left")
     greeting_title: str | None = None
@@ -94,5 +98,7 @@ async def get_preview_page(
     base_url = str(request.base_url).rstrip("/")
     cfg = await widget_customizer_service.get_customizer_config(session, base_url=base_url)
     target_token = token or cfg["website_token"]
-    html = widget_customizer_service.generate_preview_page_html(target_token, base_url, cfg["styling"])
+    html = widget_customizer_service.generate_preview_page_html(
+        target_token, base_url, cfg["styling"]
+    )
     return HTMLResponse(content=html)

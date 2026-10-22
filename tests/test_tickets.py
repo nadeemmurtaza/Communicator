@@ -1,4 +1,3 @@
-import uuid
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -6,10 +5,8 @@ from communicator.api.app import app
 from communicator.models.contact import ChannelType, Contact
 from communicator.models.conversation import Conversation, ConversationState
 from communicator.models.lead import Lead
-from communicator.models.message import Message, MessageDirection, MessageStatus
 from communicator.models.ticket import (
     ActivityType,
-    Ticket,
     TicketDepartment,
     TicketPriority,
     TicketStatus,
@@ -129,8 +126,12 @@ async def test_tracker_ticket_widespread_linking_and_broadcast_resolution(db_ses
     db_session.add_all([lead1, lead2])
     await db_session.flush()
 
-    contact1 = Contact(lead_id=lead1.id, person_name="Alice", value="+15551111111", channel=ChannelType.SMS)
-    contact2 = Contact(lead_id=lead2.id, person_name="Bob", value="+15552222222", channel=ChannelType.SMS)
+    contact1 = Contact(
+        lead_id=lead1.id, person_name="Alice", value="+15551111111", channel=ChannelType.SMS
+    )
+    contact2 = Contact(
+        lead_id=lead2.id, person_name="Bob", value="+15552222222", channel=ChannelType.SMS
+    )
     db_session.add_all([contact1, contact2])
     await db_session.flush()
 

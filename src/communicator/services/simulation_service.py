@@ -282,25 +282,29 @@ class SimulationService:
         output = []
         for s in scenarios:
             latest_run = s.runs[-1] if s.runs else None
-            output.append({
-                "id": str(s.id),
-                "name": s.name,
-                "description": s.description,
-                "category": s.category,
-                "policy_id": str(s.policy_id) if s.policy_id else None,
-                "policy_name": s.policy.name if s.policy else None,
-                "customer_persona": s.customer_persona,
-                "expected_outcome": s.expected_outcome,
-                "customer_messages": s.customer_messages,
-                "created_at": s.created_at.isoformat(),
-                "latest_run": {
-                    "id": str(latest_run.id),
-                    "verdict": latest_run.verdict,
-                    "overall_score": latest_run.overall_score,
-                    "policy_adherence_score": latest_run.policy_adherence_score,
-                    "created_at": latest_run.created_at.isoformat(),
-                } if latest_run else None,
-            })
+            output.append(
+                {
+                    "id": str(s.id),
+                    "name": s.name,
+                    "description": s.description,
+                    "category": s.category,
+                    "policy_id": str(s.policy_id) if s.policy_id else None,
+                    "policy_name": s.policy.name if s.policy else None,
+                    "customer_persona": s.customer_persona,
+                    "expected_outcome": s.expected_outcome,
+                    "customer_messages": s.customer_messages,
+                    "created_at": s.created_at.isoformat(),
+                    "latest_run": {
+                        "id": str(latest_run.id),
+                        "verdict": latest_run.verdict,
+                        "overall_score": latest_run.overall_score,
+                        "policy_adherence_score": latest_run.policy_adherence_score,
+                        "created_at": latest_run.created_at.isoformat(),
+                    }
+                    if latest_run
+                    else None,
+                }
+            )
         return output
 
     @staticmethod
@@ -336,39 +340,48 @@ class SimulationService:
         turn_count = 0
         policy_checks_passed = 0
         total_policy_checks = 0
-        guardrail_violations = 0
         escalated_to_human = False
 
         for i, user_msg in enumerate(messages):
             turn_count += 1
             # 1. Customer Turn
-            transcript.append({
-                "turn": turn_count,
-                "role": "customer",
-                "speaker": customer_name,
-                "content": user_msg,
-                "sentiment": sentiment,
-            })
+            transcript.append(
+                {
+                    "turn": turn_count,
+                    "role": "customer",
+                    "speaker": customer_name,
+                    "content": user_msg,
+                    "sentiment": sentiment,
+                }
+            )
 
             # 2. Agent Turn reasoning & policy evaluation
             agent_thought: list[str] = []
             policy_check_note = ""
 
             # Check if user mentioned an order ID
-            has_order_id = bool(re.search(r"#?ORD-?\d+", user_msg, re.IGNORECASE))
+            bool(re.search(r"#?ORD-?\d+", user_msg, re.IGNORECASE))
             has_high_value = bool(re.search(r"\$(1[5-9]\d|[2-9]\d{2,})", user_msg))
             has_refund_request = "refund" in user_msg.lower() or "return" in user_msg.lower()
-            has_shipping_delay = "delayed" in user_msg.lower() or "shipping" in user_msg.lower() or "tracking" in user_msg.lower()
+            has_shipping_delay = (
+                "delayed" in user_msg.lower()
+                or "shipping" in user_msg.lower()
+                or "tracking" in user_msg.lower()
+            )
 
             total_policy_checks += 1
 
             if tier == "vip":
-                agent_thought.append("Identified VIP Tier customer. Waiving standard return and restocking friction.")
+                agent_thought.append(
+                    "Identified VIP Tier customer. Waiving standard return and restocking friction."
+                )
                 policy_checks_passed += 1
 
             if has_high_value and has_refund_request:
                 # High value tier (> $150) -> Must escalate for human approval
-                agent_thought.append("Detected refund amount exceeding autonomous cap ($150.00). Applying SOP-REF-201 Step 5: Routing for Teammate Approval.")
+                agent_thought.append(
+                    "Detected refund amount exceeding autonomous cap ($150.00). Applying SOP-REF-201 Step 5: Routing for Teammate Approval."
+                )
                 escalated_to_human = True
                 policy_checks_passed += 1
                 policy_check_note = "SOP-REF-201 Step 5: High-value refund correctly identified. Escalation request dispatched."
@@ -379,7 +392,9 @@ class SimulationService:
                 )
             elif has_refund_request and not has_high_value:
                 # Under $50 tier -> Instant autonomous refund
-                agent_thought.append("Detected damaged item under $50.00 autonomous threshold. Applying SOP-REF-201 Step 3.")
+                agent_thought.append(
+                    "Detected damaged item under $50.00 autonomous threshold. Applying SOP-REF-201 Step 3."
+                )
                 policy_checks_passed += 1
                 policy_check_note = "SOP-REF-201 Step 3: Autonomous instant refund granted without requiring damaged item return."
                 agent_reply = (
@@ -389,7 +404,9 @@ class SimulationService:
                 )
             elif has_shipping_delay:
                 # Shipping delay policy
-                agent_thought.append("Applying SOP-SHP-104: Carrier weather delay confirmed. Waiving express delivery fee.")
+                agent_thought.append(
+                    "Applying SOP-SHP-104: Carrier weather delay confirmed. Waiving express delivery fee."
+                )
                 policy_checks_passed += 1
                 policy_check_note = "SOP-SHP-104 Step 2: Express delivery guarantee refund issued."
                 agent_reply = (
@@ -398,7 +415,9 @@ class SimulationService:
                     f"The carrier expects delivery tomorrow, and I'll keep monitoring it for you."
                 )
             else:
-                agent_thought.append("Applying standard VIP exchange protocol. Generating prepaid exchange label.")
+                agent_thought.append(
+                    "Applying standard VIP exchange protocol. Generating prepaid exchange label."
+                )
                 policy_checks_passed += 1
                 policy_check_note = "SOP-VIP-301 Step 2: Frictionless exchange initiated."
                 agent_reply = (
@@ -408,26 +427,38 @@ class SimulationService:
                 )
 
             # Record Agent Turn
-            transcript.append({
-                "turn": turn_count,
-                "role": "agent",
-                "speaker": "Captain AI Agent",
-                "content": agent_reply,
-                "agent_thoughts": agent_thought,
-                "policy_check": policy_check_note,
-            })
+            transcript.append(
+                {
+                    "turn": turn_count,
+                    "role": "agent",
+                    "speaker": "Captain AI Agent",
+                    "content": agent_reply,
+                    "agent_thoughts": agent_thought,
+                    "policy_check": policy_check_note,
+                }
+            )
 
         # Calculate Scores
         policy_adherence = round((policy_checks_passed / max(total_policy_checks, 1)) * 96.0, 1)
         empathy_score = 94.0 if sentiment in ["frustrated", "anxious"] else 92.0
         accuracy_score = 95.0
-        overall_score = round((policy_adherence * 0.4 + empathy_score * 0.3 + accuracy_score * 0.3), 1)
+        overall_score = round(
+            (policy_adherence * 0.4 + empathy_score * 0.3 + accuracy_score * 0.3), 1
+        )
 
         # Verdict evaluation against expected outcome
         if scenario.expected_outcome == "escalate_to_human":
-            verdict = SimulationVerdict.PASSED.value if escalated_to_human else SimulationVerdict.FAILED.value
+            verdict = (
+                SimulationVerdict.PASSED.value
+                if escalated_to_human
+                else SimulationVerdict.FAILED.value
+            )
         else:
-            verdict = SimulationVerdict.PASSED.value if not escalated_to_human else SimulationVerdict.ESCALATED.value
+            verdict = (
+                SimulationVerdict.PASSED.value
+                if not escalated_to_human
+                else SimulationVerdict.ESCALATED.value
+            )
 
         evaluation_summary = (
             f"Agent successfully followed all configured process steps in '{active_policy.name if active_policy else 'Default Policy'}'. "
@@ -477,13 +508,15 @@ class SimulationService:
             if run.verdict in [SimulationVerdict.PASSED.value, SimulationVerdict.ESCALATED.value]:
                 passed_runs += 1
             total_score += run.overall_score
-            results.append({
-                "scenario_id": str(scenario.id),
-                "scenario_name": scenario.name,
-                "verdict": run.verdict,
-                "overall_score": run.overall_score,
-                "policy_adherence": run.policy_adherence_score,
-            })
+            results.append(
+                {
+                    "scenario_id": str(scenario.id),
+                    "scenario_name": scenario.name,
+                    "verdict": run.verdict,
+                    "overall_score": run.overall_score,
+                    "policy_adherence": run.policy_adherence_score,
+                }
+            )
 
         pass_rate = round((passed_runs / max(total_runs, 1)) * 100, 1)
         avg_score = round(total_score / max(total_runs, 1), 1)
@@ -515,11 +548,17 @@ class SimulationService:
             selected_policy = await SimulationService.get_policy(db, policy_id)
         elif policies:
             if "refund" in lower_msg or "return" in lower_msg:
-                selected_policy = next((p for p in policies if p.category == "refunds"), policies[0])
+                selected_policy = next(
+                    (p for p in policies if p.category == "refunds"), policies[0]
+                )
             elif "shipping" in lower_msg or "delay" in lower_msg or "tracking" in lower_msg:
-                selected_policy = next((p for p in policies if p.category == "shipping"), policies[0])
+                selected_policy = next(
+                    (p for p in policies if p.category == "shipping"), policies[0]
+                )
             elif "vip" in lower_msg:
-                selected_policy = next((p for p in policies if p.category == "vip_support"), policies[0])
+                selected_policy = next(
+                    (p for p in policies if p.category == "vip_support"), policies[0]
+                )
             else:
                 selected_policy = policies[0]
 
@@ -580,7 +619,9 @@ class SimulationService:
 
         passed_q = await db.execute(
             select(func.count(SimulationRun.id)).where(
-                SimulationRun.verdict.in_([SimulationVerdict.PASSED.value, SimulationVerdict.ESCALATED.value])
+                SimulationRun.verdict.in_(
+                    [SimulationVerdict.PASSED.value, SimulationVerdict.ESCALATED.value]
+                )
             )
         )
         passed_runs = passed_q.scalar_one() or 0

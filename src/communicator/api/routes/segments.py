@@ -124,7 +124,9 @@ async def update_segment(
             existing_stmt = select(ContactSegment).where(ContactSegment.name == new_name)
             existing = (await session.execute(existing_stmt)).scalar_one_or_none()
             if existing is not None:
-                raise HTTPException(status_code=400, detail=f"A segment with name '{new_name}' already exists.")
+                raise HTTPException(
+                    status_code=400, detail=f"A segment with name '{new_name}' already exists."
+                )
             segment.name = new_name
 
     if payload.description is not None:
@@ -165,15 +167,17 @@ async def export_segment_contacts(
     writer.writerow(["ID", "Name", "Channel", "Value", "Language", "Tags", "Created At"])
 
     for c in contacts:
-        writer.writerow([
-            str(c.id),
-            c.person_name,
-            c.channel.value,
-            c.value,
-            c.language,
-            ",".join(t.name for t in c.tags),
-            c.created_at.isoformat(),
-        ])
+        writer.writerow(
+            [
+                str(c.id),
+                c.person_name,
+                c.channel.value,
+                c.value,
+                c.language,
+                ",".join(t.name for t in c.tags),
+                c.created_at.isoformat(),
+            ]
+        )
 
     filename = f"segment_{segment.name.lower().replace(' ', '_')}_{segment.id.hex[:6]}.csv"
     return Response(

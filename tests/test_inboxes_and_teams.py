@@ -1,10 +1,10 @@
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from communicator.models.contact import ChannelType, Contact
 from communicator.models.conversation import Conversation
 from communicator.models.lead import Lead
-from communicator.models.message import Message
 
 
 @pytest.mark.asyncio
@@ -120,7 +120,11 @@ async def test_teams_crud(test_client: AsyncClient):
     # Create team
     res = await test_client.post(
         "/api/v1/teams",
-        json={"name": "VIP Concierge", "description": "High tier enterprise accounts", "auto_assign": True},
+        json={
+            "name": "VIP Concierge",
+            "description": "High tier enterprise accounts",
+            "auto_assign": True,
+        },
     )
     assert res.status_code == 200
     created = res.json()
@@ -146,7 +150,11 @@ async def test_canned_responses_crud(test_client: AsyncClient):
     # Create new canned response
     res = await test_client.post(
         "/api/v1/canned-responses",
-        json={"short_code": "shipping", "content": "Our standard shipping takes 2-4 business days.", "category": "general"},
+        json={
+            "short_code": "shipping",
+            "content": "Our standard shipping takes 2-4 business days.",
+            "category": "general",
+        },
     )
     assert res.status_code == 200
     new_canned = res.json()
@@ -185,7 +193,11 @@ async def test_conversation_actions_and_notes(test_client: AsyncClient, db_sessi
     # 1. Test Private Note vs Customer Message
     res = await test_client.post(
         f"/api/v1/conversations/{conv.id}/messages",
-        json={"body": "Customer asks for 20% discount on linen set.", "is_private": True, "sender_name": "Riley Brooks"},
+        json={
+            "body": "Customer asks for 20% discount on linen set.",
+            "is_private": True,
+            "sender_name": "Riley Brooks",
+        },
     )
     assert res.status_code == 200
     note_data = res.json()
@@ -227,7 +239,10 @@ async def test_conversation_actions_and_notes(test_client: AsyncClient, db_sessi
     # 6. Test Contact Notes
     res = await test_client.post(
         f"/api/v1/conversations/contacts/{contact.id}/notes",
-        json={"body": "Important client: Always provide direct manager contact.", "author_name": "Riley"},
+        json={
+            "body": "Important client: Always provide direct manager contact.",
+            "author_name": "Riley",
+        },
     )
     assert res.status_code == 200
     note = res.json()

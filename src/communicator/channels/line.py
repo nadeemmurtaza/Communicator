@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any
+
 import httpx
 
 from communicator.channels.base import ChannelProvider, SendResult
@@ -80,10 +80,8 @@ class LineProvider(ChannelProvider):
                 provider_message_id=msg_id,
                 raw_response=data,
             )
-        except Exception as e:
-            logger.warning(
-                f"LINE live dispatch failed ({e}); using simulated fallback."
-            )
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"LINE live dispatch failed ({e}); using simulated fallback.")
             msg_id = f"line_sim_{uuid.uuid4().hex[:16]}"
             return SendResult(
                 provider="line",

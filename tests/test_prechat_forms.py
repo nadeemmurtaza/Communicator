@@ -1,4 +1,5 @@
 import uuid
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -74,11 +75,19 @@ async def test_validation_and_routing_logic(db_session):
     fields = [
         {"name": "fullName", "label": "Full Name", "type": "text", "required": True},
         {"name": "email", "label": "Email", "type": "email", "required": True},
-        {"name": "plan", "label": "Plan", "type": "select", "options": ["Basic", "Pro"], "required": False},
+        {
+            "name": "plan",
+            "label": "Plan",
+            "type": "select",
+            "options": ["Basic", "Pro"],
+            "required": False,
+        },
     ]
 
     # Test missing required field
-    errs = prechat_service.validate_submission_answers(fields, {"fullName": "John", "email": "invalid-email"})
+    errs = prechat_service.validate_submission_answers(
+        fields, {"fullName": "John", "email": "invalid-email"}
+    )
     assert any("email" in e.lower() for e in errs)
 
     # Test invalid select option

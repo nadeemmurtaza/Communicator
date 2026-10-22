@@ -3,10 +3,6 @@ from httpx import ASGITransport, AsyncClient
 
 from communicator.api.app import app
 from communicator.models.simulation import (
-    AgentPolicy,
-    PolicyStatus,
-    SimulationRun,
-    SimulationScenario,
     SimulationVerdict,
 )
 from communicator.services.simulation_service import SimulationService
@@ -41,8 +37,9 @@ async def test_run_simulation_scenario_autonomous(db_session):
 
     # Find the $42 perfume bottle scenario
     s1 = next(s for s in scenarios if "Damaged Goods" in s["name"])
-    
+
     import uuid
+
     run = await SimulationService.run_simulation(db_session, uuid.UUID(s1["id"]))
 
     assert run.id is not None
@@ -71,6 +68,7 @@ async def test_run_simulation_scenario_escalation(db_session):
     s2 = next(s for s in scenarios if "High-Value Return" in s["name"])
 
     import uuid
+
     run = await SimulationService.run_simulation(db_session, uuid.UUID(s2["id"]))
 
     assert run.id is not None

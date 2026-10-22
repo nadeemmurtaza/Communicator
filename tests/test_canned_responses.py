@@ -75,7 +75,9 @@ async def test_canned_responses_crud(test_client: AsyncClient, db_session: Async
 
 
 @pytest.mark.asyncio
-async def test_canned_response_variable_expansion(test_client: AsyncClient, db_session: AsyncSession):
+async def test_canned_response_variable_expansion(
+    test_client: AsyncClient, db_session: AsyncSession
+):
     # Setup contact, lead, and agent
     lead = Lead(harvester_institution_id="test_lead_cr", name="Bruce Wayne", institution_type="vip")
     db_session.add(lead)

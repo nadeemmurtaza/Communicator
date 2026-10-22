@@ -55,7 +55,9 @@ def format_billing_action_log(log: StripeBillingActionLog) -> dict[str, Any]:
         "customer_identifier": log.customer_identifier,
         "action_type": log.action_type,
         "amount_cents": log.amount_cents,
-        "amount_formatted": f"${log.amount_cents / 100.0:,.2f}" if log.amount_cents > 0 else "$0.00",
+        "amount_formatted": f"${log.amount_cents / 100.0:,.2f}"
+        if log.amount_cents > 0
+        else "$0.00",
         "currency": log.currency.upper(),
         "status": log.status,
         "stripe_id": log.stripe_id,
@@ -137,7 +139,7 @@ async def test_stripe_connection(session: AsyncSession) -> dict[str, Any]:
                     "message": f"Stripe API responded with HTTP {res.status_code}: {res.text}",
                     "tested_at": now.isoformat(),
                 }
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning(f"Error calling Stripe API: {e}")
             config.last_tested_at = now
             config.last_test_status = "error"
@@ -145,7 +147,7 @@ async def test_stripe_connection(session: AsyncSession) -> dict[str, Any]:
             return {
                 "status": "error",
                 "mode": "live" if not config.test_mode else "test",
-                "message": f"Network error testing Stripe API: {str(e)}",
+                "message": f"Network error testing Stripe API: {e!s}",
                 "tested_at": now.isoformat(),
             }
 
@@ -161,7 +163,9 @@ async def test_stripe_connection(session: AsyncSession) -> dict[str, Any]:
     }
 
 
-async def resolve_contact(session: AsyncSession, identifier: str) -> tuple[Contact | None, str, str]:
+async def resolve_contact(
+    session: AsyncSession, identifier: str
+) -> tuple[Contact | None, str, str]:
     """
     Resolves contact record, identifier string, and customer email.
     """
@@ -207,9 +211,7 @@ async def get_customer_billing(session: AsyncSession, identifier: str) -> dict[s
     seed_int = int(seed[:8], 16)
 
     customer_id = f"cus_{seed[:14]}"
-    customer_name = (
-        contact.person_name if (contact and contact.person_name) else "Acme Corporation"
-    )
+    customer_name = contact.person_name if (contact and contact.person_name) else "Acme Corporation"
     contact_id_str = str(contact.id) if contact else None
 
     # Deterministic Tier
@@ -274,7 +276,7 @@ async def get_customer_invoices(
     """
     Retrieves recent invoices for the customer with status, download links, and amount.
     """
-    contact, final_id, email = await resolve_contact(session, identifier)
+    _contact, final_id, email = await resolve_contact(session, identifier)
     seed = hashlib.md5((email or final_id).encode("utf-8")).hexdigest()
     seed_int = int(seed[:8], 16)
 
@@ -289,23 +291,25 @@ async def get_customer_invoices(
         inv_id = f"in_{seed[i * 4 : i * 4 + 10]}_{i}"
         inv_num = f"INV-2026-{(seed_int % 800) + 100 - i:04d}"
 
-        invoices.append({
-            "id": inv_id,
-            "number": inv_num,
-            "amount_paid_cents": amount_cents,
-            "amount_paid_formatted": f"${amount_cents / 100.0:,.2f}",
-            "amount_due_cents": 0,
-            "currency": "usd",
-            "status": "paid",
-            "created_at": inv_date.isoformat(),
-            "period_start": (inv_date - timedelta(days=30)).isoformat(),
-            "period_end": inv_date.isoformat(),
-            "hosted_invoice_url": f"https://invoice.stripe.com/i/acct_sim/{inv_id}",
-            "invoice_pdf_url": f"https://pay.stripe.com/invoice/acct_sim/{inv_id}/pdf",
-            "refundable_amount_cents": amount_cents,
-            "refunded": False,
-            "charge_id": f"ch_{seed[i * 3 : i * 3 + 8]}_{i}",
-        })
+        invoices.append(
+            {
+                "id": inv_id,
+                "number": inv_num,
+                "amount_paid_cents": amount_cents,
+                "amount_paid_formatted": f"${amount_cents / 100.0:,.2f}",
+                "amount_due_cents": 0,
+                "currency": "usd",
+                "status": "paid",
+                "created_at": inv_date.isoformat(),
+                "period_start": (inv_date - timedelta(days=30)).isoformat(),
+                "period_end": inv_date.isoformat(),
+                "hosted_invoice_url": f"https://invoice.stripe.com/i/acct_sim/{inv_id}",
+                "invoice_pdf_url": f"https://pay.stripe.com/invoice/acct_sim/{inv_id}/pdf",
+                "refundable_amount_cents": amount_cents,
+                "refunded": False,
+                "charge_id": f"ch_{seed[i * 3 : i * 3 + 8]}_{i}",
+            }
+        )
 
     return invoices
 

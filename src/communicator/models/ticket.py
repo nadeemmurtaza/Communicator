@@ -74,12 +74,8 @@ class Ticket(Base):
     ticket_type: Mapped[str] = mapped_column(
         String(50), default="customer_issue", nullable=False, index=True
     )
-    status: Mapped[str] = mapped_column(
-        String(30), default="open", nullable=False, index=True
-    )
-    priority: Mapped[str] = mapped_column(
-        String(20), default="medium", nullable=False
-    )
+    status: Mapped[str] = mapped_column(String(30), default="open", nullable=False, index=True)
+    priority: Mapped[str] = mapped_column(String(20), default="medium", nullable=False)
     department: Mapped[str] = mapped_column(
         String(50), default="support", nullable=False, index=True
     )
@@ -157,13 +153,9 @@ class TicketActivity(Base):
         ForeignKey("team_members.id", ondelete="SET NULL"), nullable=True
     )
     author_name: Mapped[str] = mapped_column(String(100), default="Agent", nullable=False)
-    activity_type: Mapped[str] = mapped_column(
-        String(50), default="comment", nullable=False
-    )
+    activity_type: Mapped[str] = mapped_column(String(50), default="comment", nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
-    activity_metadata: Mapped[dict[str, Any]] = mapped_column(
-        JSONB, default=dict, nullable=False
-    )
+    activity_metadata: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )

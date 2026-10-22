@@ -29,7 +29,9 @@ class CreateWebhookRequest(BaseModel):
     name: str = Field(..., description="Descriptive name for webhook subscriber")
     url: str = Field(..., description="Target HTTPS callback URL")
     events: list[str] = Field(..., description="List of event names or ['*']")
-    secret: str | None = Field(None, description="Optional custom HMAC secret; generated if omitted")
+    secret: str | None = Field(
+        None, description="Optional custom HMAC secret; generated if omitted"
+    )
     headers: dict[str, str] = Field(default_factory=dict, description="Custom HTTP headers")
     is_active: bool = True
     retry_count: int = 3

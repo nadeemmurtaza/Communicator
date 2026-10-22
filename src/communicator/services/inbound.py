@@ -114,10 +114,8 @@ async def process_inbound_message(
 
     # Automatically extract durable contact preferences / memories ("Remembers")
     try:
-        await extract_contact_memories(
-            session, contact, conversation, body, message_id=message.id
-        )
-    except Exception:
+        await extract_contact_memories(session, contact, conversation, body, message_id=message.id)
+    except Exception:  # noqa: BLE001, S110
         pass
 
     # Automatically mark message as read on WhatsApp if Meta Cloud API is used
@@ -126,7 +124,7 @@ async def process_inbound_message(
             channel_provider = await get_provider(channel, session)
             if isinstance(channel_provider, MetaWhatsAppProvider):
                 await channel_provider.mark_as_read(provider_message_id)
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
 
     lead = await session.get(Lead, contact.lead_id)
@@ -183,11 +181,10 @@ async def _route_reply(
         return
 
     # 3. WhatsApp Interactive Navigation Menus (services catalog, pricing, location)
-    if contact.channel == ChannelType.WHATSAPP:
-        if await handle_navigation_menu(
-            session, conversation, contact, interactive_payload_id, body
-        ):
-            return
+    if contact.channel == ChannelType.WHATSAPP and await handle_navigation_menu(
+        session, conversation, contact, interactive_payload_id, body
+    ):
+        return
 
     integration_settings = await get_settings_row(session)
 
@@ -202,7 +199,7 @@ async def _route_reply(
             await send_outbound_message(
                 session, contact, channel_provider, integration_settings.away_message
             )
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
         return
 
@@ -212,7 +209,7 @@ async def _route_reply(
         try:
             if await execute_rule_action(session, rule, conversation, contact):
                 return
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
 
     # 7. Welcome / Greeting Automation for WhatsApp
@@ -220,7 +217,7 @@ async def _route_reply(
         try:
             await send_welcome_greeting(session, conversation, contact)
             return
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
 
     # 8. AI reply engine fallback
@@ -232,5 +229,5 @@ async def _route_reply(
             and harvester_client is not None
         ):
             await approve_and_send(session, draft, harvester_client, actor="ai")
-    except Exception:
+    except Exception:  # noqa: BLE001, S110
         pass

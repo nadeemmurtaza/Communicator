@@ -1,11 +1,10 @@
 import uuid
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from communicator.api.app import app
 from communicator.models.ai_connection import (
-    AICustomPolicy,
-    AIConnection,
     AIJobType,
     AIProvider,
 )
@@ -89,7 +88,11 @@ async def test_custom_policies_and_effective_prompt(db_session):
         guidelines="Focus heavily on reducing customer escalations. Extract winning de-escalation scripts.",
         rules=[
             {"id": "r1", "rule": "Never adopt unverified refunds over $50.", "enabled": True},
-            {"id": "r2", "rule": "Prioritize replies that mention tracking links.", "enabled": True},
+            {
+                "id": "r2",
+                "rule": "Prioritize replies that mention tracking links.",
+                "enabled": True,
+            },
         ],
         guardrails=["Do not alter active refund thresholds without manager review."],
         min_csat_learning_threshold=4.5,
@@ -100,7 +103,9 @@ async def test_custom_policies_and_effective_prompt(db_session):
     assert len(updated["rules"]) == 2
 
     # Check dynamically compiled prompt
-    prompt = await AIConnectionService.get_effective_prompt(db_session, AIJobType.SELF_IMPROVING.value)
+    prompt = await AIConnectionService.get_effective_prompt(
+        db_session, AIJobType.SELF_IMPROVING.value
+    )
     assert "rigorous, data-driven" in prompt
     assert "Never adopt unverified refunds over $50." in prompt
     assert "[DO NOT] Do not alter active refund thresholds" in prompt

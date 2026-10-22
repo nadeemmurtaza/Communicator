@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from communicator.models.conversation import Conversation, ConversationState
-from communicator.models.team import Team, team_memberships
+from communicator.models.team import Team
 from communicator.models.team_member import TeamMember
 
 DEFAULT_TEAM_MEMBERS = [
@@ -70,17 +70,21 @@ async def list_agents(session: AsyncSession) -> list[dict[str, Any]]:
             else 100.0
         )
 
-        results.append({
-            "id": str(agent.id),
-            "name": agent.name,
-            "email": agent.email,
-            "availabilityStatus": agent.availability_status,
-            "maxCapacity": agent.max_concurrent_conversations,
-            "activeConversationsCount": active_count,
-            "availableSlots": available_slots,
-            "utilizationRatePct": utilization,
-            "lastAssignedAt": agent.last_assigned_at.isoformat() if agent.last_assigned_at else None,
-        })
+        results.append(
+            {
+                "id": str(agent.id),
+                "name": agent.name,
+                "email": agent.email,
+                "availabilityStatus": agent.availability_status,
+                "maxCapacity": agent.max_concurrent_conversations,
+                "activeConversationsCount": active_count,
+                "availableSlots": available_slots,
+                "utilizationRatePct": utilization,
+                "lastAssignedAt": agent.last_assigned_at.isoformat()
+                if agent.last_assigned_at
+                else None,
+            }
+        )
 
     return results
 
@@ -89,7 +93,9 @@ async def get_agent(session: AsyncSession, agent_id: uuid.UUID) -> TeamMember | 
     return await session.get(TeamMember, agent_id)
 
 
-async def update_agent_status(session: AsyncSession, agent_id: uuid.UUID, status: str) -> dict[str, Any]:
+async def update_agent_status(
+    session: AsyncSession, agent_id: uuid.UUID, status: str
+) -> dict[str, Any]:
     norm_status = status.lower().strip()
     if norm_status not in ("online", "busy", "offline"):
         raise ValueError(f"Invalid status '{status}'. Must be online, busy, or offline.")
@@ -109,7 +115,9 @@ async def update_agent_status(session: AsyncSession, agent_id: uuid.UUID, status
     }
 
 
-async def update_agent_capacity(session: AsyncSession, agent_id: uuid.UUID, max_capacity: int) -> dict[str, Any]:
+async def update_agent_capacity(
+    session: AsyncSession, agent_id: uuid.UUID, max_capacity: int
+) -> dict[str, Any]:
     if max_capacity < 1:
         raise ValueError("Capacity limit must be at least 1 concurrent conversation.")
 
@@ -294,7 +302,9 @@ async def batch_auto_assign(
     }
 
 
-async def get_capacity_overview(session: AsyncSession, team_id: uuid.UUID | None = None) -> dict[str, Any]:
+async def get_capacity_overview(
+    session: AsyncSession, team_id: uuid.UUID | None = None
+) -> dict[str, Any]:
     """Calculates team-wide active capacity, slots, and availability ratios."""
     agent_stats = await list_agents(session)
 
@@ -304,9 +314,13 @@ async def get_capacity_overview(session: AsyncSession, team_id: uuid.UUID | None
     offline_agents = sum(1 for a in agent_stats if a["availabilityStatus"] == "offline")
 
     total_capacity = sum(a["maxCapacity"] for a in agent_stats)
-    online_capacity = sum(a["maxCapacity"] for a in agent_stats if a["availabilityStatus"] == "online")
+    online_capacity = sum(
+        a["maxCapacity"] for a in agent_stats if a["availabilityStatus"] == "online"
+    )
     total_active = sum(a["activeConversationsCount"] for a in agent_stats)
-    available_slots = sum(a["availableSlots"] for a in agent_stats if a["availabilityStatus"] == "online")
+    available_slots = sum(
+        a["availableSlots"] for a in agent_stats if a["availabilityStatus"] == "online"
+    )
 
     utilization_pct = round((total_active / total_capacity * 100), 1) if total_capacity > 0 else 0.0
 

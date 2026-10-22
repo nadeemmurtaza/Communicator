@@ -1,23 +1,27 @@
 from __future__ import annotations
 
-import json
 from datetime import UTC, datetime, timedelta
+
 import pytest
 from httpx import AsyncClient, Response
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from communicator.channels.whatsapp import MetaWhatsAppProvider, MetaWhatsAppAPIError
+from communicator.channels.whatsapp import MetaWhatsAppProvider
 from communicator.compliance.optout import record_consent
-from communicator.models.broadcast import Broadcast, BroadcastRecipient, BroadcastStatus, RecipientStatus
+from communicator.models.broadcast import (
+    Broadcast,
+    BroadcastRecipient,
+    BroadcastStatus,
+    RecipientStatus,
+)
 from communicator.models.consent import ConsentStatus
 from communicator.models.contact import ChannelType, Contact
 from communicator.models.conversation import Conversation
 from communicator.models.lead import Lead
-from communicator.models.message import Message, MessageDirection, MessageStatus
-from communicator.services.memory import extract_contact_memories, get_contact_memories
+from communicator.models.message import Message
+from communicator.services.memory import extract_contact_memories
 from communicator.services.tags import add_tag_to_contact
-from communicator.webhooks.meta_signature import validate_meta_signature
 
 
 @pytest.mark.asyncio
@@ -54,6 +58,7 @@ async def test_meta_whatsapp_api_error_and_retry(monkeypatch):
 
     # Monkeypatch client.post
     from httpx import AsyncClient as HttpxAsyncClient
+
     monkeypatch.setattr(HttpxAsyncClient, "post", mock_post)
 
     res = await provider.send_text("+14155551234", "Hello world!")
@@ -62,21 +67,32 @@ async def test_meta_whatsapp_api_error_and_retry(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_webhook_message_deduplication(test_client: AsyncClient, db_session: AsyncSession, monkeypatch):
+async def test_webhook_message_deduplication(
+    test_client: AsyncClient, db_session: AsyncSession, monkeypatch
+):
     """Verifies identical Meta webhook messages are not processed multiple times."""
     # Create lead and contact
-    lead = Lead(harvester_institution_id="test:dedup-lead", name="Dedup Corp", institution_type="tech")
+    lead = Lead(
+        harvester_institution_id="test:dedup-lead", name="Dedup Corp", institution_type="tech"
+    )
     db_session.add(lead)
     await db_session.flush()
 
-    contact = Contact(lead_id=lead.id, channel=ChannelType.WHATSAPP, value="+14155559999", person_name="Dedup User")
+    contact = Contact(
+        lead_id=lead.id,
+        channel=ChannelType.WHATSAPP,
+        value="+14155559999",
+        person_name="Dedup User",
+    )
     db_session.add(contact)
     await db_session.flush()
 
     # Bypass meta signature check in test
     import communicator.api.routes.webhooks as webhooks_module
+
     async def mock_require_sig(session, body, sig):
         return None
+
     monkeypatch.setattr(webhooks_module, "_require_meta_signature", mock_require_sig)
 
     webhook_payload = {
@@ -114,7 +130,11 @@ async def test_webhook_message_deduplication(test_client: AsyncClient, db_sessio
 
     # Verify only 1 message row exists
     msgs = (
-        (await db_session.execute(select(Message).where(Message.provider_message_id == "wamid.unique_12345")))
+        (
+            await db_session.execute(
+                select(Message).where(Message.provider_message_id == "wamid.unique_12345")
+            )
+        )
         .scalars()
         .all()
     )
@@ -122,9 +142,13 @@ async def test_webhook_message_deduplication(test_client: AsyncClient, db_sessio
 
 
 @pytest.mark.asyncio
-async def test_webhook_status_failure_parsing(test_client: AsyncClient, db_session: AsyncSession, monkeypatch):
+async def test_webhook_status_failure_parsing(
+    test_client: AsyncClient, db_session: AsyncSession, monkeypatch
+):
     """Verifies detailed error messages like 'Number is not on WhatsApp' are attached to recipients."""
-    lead = Lead(harvester_institution_id="test:status-lead", name="Status Corp", institution_type="tech")
+    lead = Lead(
+        harvester_institution_id="test:status-lead", name="Status Corp", institution_type="tech"
+    )
     db_session.add(lead)
     await db_session.flush()
 
@@ -151,8 +175,10 @@ async def test_webhook_status_failure_parsing(test_client: AsyncClient, db_sessi
     await db_session.flush()
 
     import communicator.api.routes.webhooks as webhooks_module
+
     async def mock_require_sig(session, body, sig):
         return None
+
     monkeypatch.setattr(webhooks_module, "_require_meta_signature", mock_require_sig)
 
     status_payload = {
@@ -194,7 +220,9 @@ async def test_webhook_status_failure_parsing(test_client: AsyncClient, db_sessi
 
 
 @pytest.mark.asyncio
-async def test_scheduled_campaign_processor(test_client: AsyncClient, db_session: AsyncSession, monkeypatch):
+async def test_scheduled_campaign_processor(
+    test_client: AsyncClient, db_session: AsyncSession, monkeypatch
+):
     """Verifies that scheduled campaigns with past timestamps are dispatched automatically."""
     from communicator.channels.base import SendResult
 
@@ -203,11 +231,18 @@ async def test_scheduled_campaign_processor(test_client: AsyncClient, db_session
 
     monkeypatch.setattr(MetaWhatsAppProvider, "send_template", mock_send_template)
 
-    lead = Lead(harvester_institution_id="test:sched-lead", name="Sched Corp", institution_type="tech")
+    lead = Lead(
+        harvester_institution_id="test:sched-lead", name="Sched Corp", institution_type="tech"
+    )
     db_session.add(lead)
     await db_session.flush()
 
-    contact = Contact(lead_id=lead.id, channel=ChannelType.WHATSAPP, value="+14155557777", person_name="Alex Rivera")
+    contact = Contact(
+        lead_id=lead.id,
+        channel=ChannelType.WHATSAPP,
+        value="+14155557777",
+        person_name="Alex Rivera",
+    )
     db_session.add(contact)
     await db_session.flush()
     await add_tag_to_contact(db_session, contact, "vip-scheduled")
@@ -246,7 +281,9 @@ async def test_enhanced_contact_memory_extraction(db_session: AsyncSession):
     db_session.add(lead)
     await db_session.flush()
 
-    contact = Contact(lead_id=lead.id, channel=ChannelType.WHATSAPP, value="+14155556666", person_name="Elena")
+    contact = Contact(
+        lead_id=lead.id, channel=ChannelType.WHATSAPP, value="+14155556666", person_name="Elena"
+    )
     db_session.add(contact)
     await db_session.flush()
 

@@ -6,7 +6,6 @@ from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from communicator.services import prechat_service
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +18,7 @@ from communicator.models.conversation import Conversation
 from communicator.models.inbox import Inbox
 from communicator.models.lead import Lead
 from communicator.models.message import Message, MessageDirection, MessageStatus
+from communicator.services import prechat_service
 
 logger = logging.getLogger(__name__)
 
@@ -95,11 +95,14 @@ async def get_widget_config(
         "showBranding": creds.get("showBranding", True),
         "allowedDomains": creds.get("allowedDomains", "*"),
         "preChatFormEnabled": creds.get("preChatFormEnabled", True),
-        "preChatFields": creds.get("preChatFields", [
-            {"name": "fullName", "label": "Full Name", "required": True},
-            {"name": "email", "label": "Email Address", "required": True},
-            {"name": "phone", "label": "Phone Number", "required": False},
-        ]),
+        "preChatFields": creds.get(
+            "preChatFields",
+            [
+                {"name": "fullName", "label": "Full Name", "required": True},
+                {"name": "email", "label": "Email Address", "required": True},
+                {"name": "phone", "label": "Phone Number", "required": False},
+            ],
+        ),
         "greetingEnabled": target_inbox.greeting_enabled,
         "greetingMessage": target_inbox.greeting_message,
         "avatarUrl": target_inbox.avatar_url,
@@ -271,7 +274,8 @@ async def get_widget_conversation_messages(
             "body": m.body,
             "direction": m.direction.value,
             "senderType": m.sender_type,
-            "senderName": m.sender_name or ("Agent" if m.direction == MessageDirection.OUTBOUND else "You"),
+            "senderName": m.sender_name
+            or ("Agent" if m.direction == MessageDirection.OUTBOUND else "You"),
             "sentAt": m.sent_at.isoformat(),
         }
         for m in messages
@@ -295,6 +299,7 @@ async def update_widget_presence(
         await session.flush()
 
     return {"status": "ok", "agentOnline": True}
+
 
 @router.get("/prechat")
 async def get_widget_prechat_form(
@@ -333,7 +338,9 @@ async def submit_widget_prechat(
     if not result.get("success"):
         raise HTTPException(
             status_code=422,
-            detail={"message": "Pre-chat form validation failed", "errors": result.get("errors", [])},
+            detail={
+                "message": "Pre-chat form validation failed",
+                "errors": result.get("errors", []),
+            },
         )
     return result
-

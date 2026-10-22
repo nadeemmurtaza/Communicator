@@ -20,7 +20,7 @@ from communicator.models.consent import ConsentStatus
 from communicator.models.contact import ChannelType, Contact
 from communicator.models.conversation import Conversation, ConversationState
 from communicator.models.inbox import Inbox
-from communicator.models.integration_settings import IntegrationSettings, SINGLETON_ID
+from communicator.models.integration_settings import SINGLETON_ID, IntegrationSettings
 from communicator.models.lead import Lead
 from communicator.models.message import Message, MessageDirection, MessageStatus
 
@@ -75,15 +75,20 @@ def _serialize_inbox(inbox: Inbox) -> dict[str, Any]:
             "websiteDomain": (inbox.credentials or {}).get("websiteDomain", "bayworks.com"),
             "widgetColor": (inbox.credentials or {}).get("widgetColor", "#1570EF"),
             "greetingTitle": (inbox.credentials or {}).get("greetingTitle", "Hi there! 👋"),
-            "greetingTagline": (inbox.credentials or {}).get("greetingTagline", "We typically reply in a few minutes."),
+            "greetingTagline": (inbox.credentials or {}).get(
+                "greetingTagline", "We typically reply in a few minutes."
+            ),
             "widgetPosition": (inbox.credentials or {}).get("widgetPosition", "right"),
             "preChatFormEnabled": (inbox.credentials or {}).get("preChatFormEnabled", True),
-            "preChatFields": (inbox.credentials or {}).get("preChatFields", [
-                {"name": "fullName", "label": "Full Name", "required": True},
-                {"name": "email", "label": "Email Address", "required": True},
-                {"name": "phone", "label": "Phone Number", "required": False},
-                {"name": "company", "label": "Company", "required": False},
-            ]),
+            "preChatFields": (inbox.credentials or {}).get(
+                "preChatFields",
+                [
+                    {"name": "fullName", "label": "Full Name", "required": True},
+                    {"name": "email", "label": "Email Address", "required": True},
+                    {"name": "phone", "label": "Phone Number", "required": False},
+                    {"name": "company", "label": "Company", "required": False},
+                ],
+            ),
             "hmacSecret": (inbox.credentials or {}).get("hmacSecret", ""),
             "identityValidation": (inbox.credentials or {}).get("identityValidation", False),
             "accountSid": (inbox.credentials or {}).get("accountSid", ""),
@@ -97,17 +102,33 @@ def _serialize_inbox(inbox: Inbox) -> dict[str, Any]:
             "a2p10dlcStatus": (inbox.credentials or {}).get("a2p10dlcStatus", "VERIFIED"),
             "campaignId": (inbox.credentials or {}).get("campaignId", "CR7892340"),
             "brandName": (inbox.credentials or {}).get("brandName", "Bay Works LLC"),
-            "brandTier": (inbox.credentials or {}).get("brandTier", "Standard High Throughput (10DLC)"),
-            "optOutKeywords": (inbox.credentials or {}).get("optOutKeywords", ["STOP", "UNSUBSCRIBE", "CANCEL", "END", "QUIT"]),
-            "optInKeywords": (inbox.credentials or {}).get("optInKeywords", ["START", "UNSTOP", "YES"]),
-            "optOutMessage": (inbox.credentials or {}).get("optOutMessage", "You have successfully unsubscribed from Bay Works SMS. No further messages will be sent. Reply START to resubscribe."),
-            "optInMessage": (inbox.credentials or {}).get("optInMessage", "You have successfully resubscribed to Bay Works SMS. Standard msg & data rates may apply. Reply STOP to cancel."),
+            "brandTier": (inbox.credentials or {}).get(
+                "brandTier", "Standard High Throughput (10DLC)"
+            ),
+            "optOutKeywords": (inbox.credentials or {}).get(
+                "optOutKeywords", ["STOP", "UNSUBSCRIBE", "CANCEL", "END", "QUIT"]
+            ),
+            "optInKeywords": (inbox.credentials or {}).get(
+                "optInKeywords", ["START", "UNSTOP", "YES"]
+            ),
+            "optOutMessage": (inbox.credentials or {}).get(
+                "optOutMessage",
+                "You have successfully unsubscribed from Bay Works SMS. No further messages will be sent. Reply START to resubscribe.",
+            ),
+            "optInMessage": (inbox.credentials or {}).get(
+                "optInMessage",
+                "You have successfully resubscribed to Bay Works SMS. Standard msg & data rates may apply. Reply STOP to cancel.",
+            ),
             "pageId": (inbox.credentials or {}).get("pageId", ""),
             "page_id": (inbox.credentials or {}).get("pageId", ""),
             "pageName": (inbox.credentials or {}).get("pageName", "Bay Works Official"),
             "page_name": (inbox.credentials or {}).get("pageName", "Bay Works Official"),
-            "pageAccessToken": "••••••••" if (inbox.credentials or {}).get("pageAccessToken") else "",
-            "page_access_token": "••••••••" if (inbox.credentials or {}).get("pageAccessToken") else "",
+            "pageAccessToken": "••••••••"
+            if (inbox.credentials or {}).get("pageAccessToken")
+            else "",
+            "page_access_token": "••••••••"
+            if (inbox.credentials or {}).get("pageAccessToken")
+            else "",
             "igUsername": (inbox.credentials or {}).get("igUsername", "@bayworks"),
             "ig_username": (inbox.credentials or {}).get("igUsername", "@bayworks"),
             "igId": (inbox.credentials or {}).get("igId", ""),
@@ -116,36 +137,54 @@ def _serialize_inbox(inbox: Inbox) -> dict[str, Any]:
             "connected_page_id": (inbox.credentials or {}).get("connectedPageId", ""),
             "storyMentionsEnabled": (inbox.credentials or {}).get("storyMentionsEnabled", True),
             "story_mentions_enabled": (inbox.credentials or {}).get("storyMentionsEnabled", True),
-            "storyReplyMessage": (inbox.credentials or {}).get("storyReplyMessage", "Thanks for mentioning us in your story! 🔥"),
-            "story_reply_message": (inbox.credentials or {}).get("storyReplyMessage", "Thanks for mentioning us in your story! 🔥"),
+            "storyReplyMessage": (inbox.credentials or {}).get(
+                "storyReplyMessage", "Thanks for mentioning us in your story! 🔥"
+            ),
+            "story_reply_message": (inbox.credentials or {}).get(
+                "storyReplyMessage", "Thanks for mentioning us in your story! 🔥"
+            ),
             "icebreakers": (inbox.credentials or {}).get("icebreakers", []),
             "botToken": "••••••••" if (inbox.credentials or {}).get("botToken") else "",
             "bot_token": "••••••••" if (inbox.credentials or {}).get("botToken") else "",
             "botUsername": (inbox.credentials or {}).get("botUsername", "@bayworks_support_bot"),
             "bot_username": (inbox.credentials or {}).get("botUsername", "@bayworks_support_bot"),
             "secretToken": (inbox.credentials or {}).get("secretToken", "tg_sec_token_xyz"),
-            "commands": (inbox.credentials or {}).get("commands", [
-                {"command": "/start", "description": "Start conversation"},
-                {"command": "/help", "description": "Speak with an agent"},
-            ]),
+            "commands": (inbox.credentials or {}).get(
+                "commands",
+                [
+                    {"command": "/start", "description": "Start conversation"},
+                    {"command": "/help", "description": "Speak with an agent"},
+                ],
+            ),
             "channelId": (inbox.credentials or {}).get("channelId", "1657890123"),
             "channel_id": (inbox.credentials or {}).get("channelId", "1657890123"),
             "channelSecret": "••••••••" if (inbox.credentials or {}).get("channelSecret") else "",
             "channel_secret": "••••••••" if (inbox.credentials or {}).get("channelSecret") else "",
-            "channelAccessToken": "••••••••" if (inbox.credentials or {}).get("channelAccessToken") else "",
-            "channel_access_token": "••••••••" if (inbox.credentials or {}).get("channelAccessToken") else "",
+            "channelAccessToken": "••••••••"
+            if (inbox.credentials or {}).get("channelAccessToken")
+            else "",
+            "channel_access_token": "••••••••"
+            if (inbox.credentials or {}).get("channelAccessToken")
+            else "",
             "lineAccountId": (inbox.credentials or {}).get("lineAccountId", "@bayworks"),
             "line_account_id": (inbox.credentials or {}).get("lineAccountId", "@bayworks"),
-            "quickReplies": (inbox.credentials or {}).get("quickReplies", [
-                {"label": "Pricing", "text": "What are your pricing plans?"},
-                {"label": "Support", "text": "I need technical support"},
-            ]),
+            "quickReplies": (inbox.credentials or {}).get(
+                "quickReplies",
+                [
+                    {"label": "Pricing", "text": "What are your pricing plans?"},
+                    {"label": "Support", "text": "I need technical support"},
+                ],
+            ),
             "voiceAccountSid": (inbox.credentials or {}).get("accountSid", ""),
             "voice_account_sid": (inbox.credentials or {}).get("accountSid", ""),
             "voiceAuthToken": "••••••••" if (inbox.credentials or {}).get("authToken") else "",
             "voice_auth_token": "••••••••" if (inbox.credentials or {}).get("authToken") else "",
-            "voiceNumber": (inbox.credentials or {}).get("voiceNumber") or inbox.phone_number or "+14155550199",
-            "voice_number": (inbox.credentials or {}).get("voiceNumber") or inbox.phone_number or "+14155550199",
+            "voiceNumber": (inbox.credentials or {}).get("voiceNumber")
+            or inbox.phone_number
+            or "+14155550199",
+            "voice_number": (inbox.credentials or {}).get("voiceNumber")
+            or inbox.phone_number
+            or "+14155550199",
             "callerId": (inbox.credentials or {}).get("callerId") or "+14155550199",
             "caller_id": (inbox.credentials or {}).get("callerId") or "+14155550199",
             "twimlAppSid": (inbox.credentials or {}).get("twimlAppSid", "AP_mock_twiml_app_sid"),
@@ -160,24 +199,60 @@ def _serialize_inbox(inbox: Inbox) -> dict[str, Any]:
             "transcription_enabled": (inbox.credentials or {}).get("transcriptionEnabled", True),
             "ivrEnabled": (inbox.credentials or {}).get("ivrEnabled", True),
             "ivr_enabled": (inbox.credentials or {}).get("ivrEnabled", True),
-            "ivrPrompt": (inbox.credentials or {}).get("ivrPrompt", "Thank you for calling Bay Works. Press 1 for Sales, 2 for Technical Support, or 3 to leave a Voicemail."),
-            "ivr_prompt": (inbox.credentials or {}).get("ivrPrompt", "Thank you for calling Bay Works. Press 1 for Sales, 2 for Technical Support, or 3 to leave a Voicemail."),
-            "ivrMenu": (inbox.credentials or {}).get("ivrMenu", [
-                {"digit": "1", "label": "Sales", "action": "queue", "target": "sales-queue"},
-                {"digit": "2", "label": "Technical Support", "action": "queue", "target": "support-queue"},
-                {"digit": "3", "label": "Voicemail", "action": "voicemail", "target": "voicemail-box"},
-            ]),
-            "ivr_menu": (inbox.credentials or {}).get("ivrMenu", [
-                {"digit": "1", "label": "Sales", "action": "queue", "target": "sales-queue"},
-                {"digit": "2", "label": "Technical Support", "action": "queue", "target": "support-queue"},
-                {"digit": "3", "label": "Voicemail", "action": "voicemail", "target": "voicemail-box"},
-            ]),
+            "ivrPrompt": (inbox.credentials or {}).get(
+                "ivrPrompt",
+                "Thank you for calling Bay Works. Press 1 for Sales, 2 for Technical Support, or 3 to leave a Voicemail.",
+            ),
+            "ivr_prompt": (inbox.credentials or {}).get(
+                "ivrPrompt",
+                "Thank you for calling Bay Works. Press 1 for Sales, 2 for Technical Support, or 3 to leave a Voicemail.",
+            ),
+            "ivrMenu": (inbox.credentials or {}).get(
+                "ivrMenu",
+                [
+                    {"digit": "1", "label": "Sales", "action": "queue", "target": "sales-queue"},
+                    {
+                        "digit": "2",
+                        "label": "Technical Support",
+                        "action": "queue",
+                        "target": "support-queue",
+                    },
+                    {
+                        "digit": "3",
+                        "label": "Voicemail",
+                        "action": "voicemail",
+                        "target": "voicemail-box",
+                    },
+                ],
+            ),
+            "ivr_menu": (inbox.credentials or {}).get(
+                "ivrMenu",
+                [
+                    {"digit": "1", "label": "Sales", "action": "queue", "target": "sales-queue"},
+                    {
+                        "digit": "2",
+                        "label": "Technical Support",
+                        "action": "queue",
+                        "target": "support-queue",
+                    },
+                    {
+                        "digit": "3",
+                        "label": "Voicemail",
+                        "action": "voicemail",
+                        "target": "voicemail-box",
+                    },
+                ],
+            ),
             "webrtcEnabled": (inbox.credentials or {}).get("webrtcEnabled", True),
             "webrtc_enabled": (inbox.credentials or {}).get("webrtcEnabled", True),
             "fallbackNumber": (inbox.credentials or {}).get("fallbackNumber", "+14155550100"),
             "fallback_number": (inbox.credentials or {}).get("fallbackNumber", "+14155550100"),
-            "emailFromAddress": (inbox.credentials or {}).get("emailFromAddress", "support@bayworks.co"),
-            "email_from_address": (inbox.credentials or {}).get("emailFromAddress", "support@bayworks.co"),
+            "emailFromAddress": (inbox.credentials or {}).get(
+                "emailFromAddress", "support@bayworks.co"
+            ),
+            "email_from_address": (inbox.credentials or {}).get(
+                "emailFromAddress", "support@bayworks.co"
+            ),
             "emailFromName": (inbox.credentials or {}).get("emailFromName", "Bay Works Support"),
             "email_from_name": (inbox.credentials or {}).get("emailFromName", "Bay Works Support"),
             "emailReplyTo": (inbox.credentials or {}).get("emailReplyTo", "support@bayworks.co"),
@@ -204,18 +279,40 @@ def _serialize_inbox(inbox: Inbox) -> dict[str, Any]:
             "imap_ssl": (inbox.credentials or {}).get("imapSsl", True),
             "imapFolder": (inbox.credentials or {}).get("imapFolder", "INBOX"),
             "imap_folder": (inbox.credentials or {}).get("imapFolder", "INBOX"),
-            "emailSignature": (inbox.credentials or {}).get("emailSignature", "--\nBest regards,\n{{agent.name}}\nBay Works Support Team"),
-            "email_signature": (inbox.credentials or {}).get("emailSignature", "--\nBest regards,\n{{agent.name}}\nBay Works Support Team"),
-            "emailFooter": (inbox.credentials or {}).get("emailFooter", "Bay Works Inc. · 100 Market St, San Francisco, CA"),
-            "email_footer": (inbox.credentials or {}).get("emailFooter", "Bay Works Inc. · 100 Market St, San Francisco, CA"),
+            "emailSignature": (inbox.credentials or {}).get(
+                "emailSignature", "--\nBest regards,\n{{agent.name}}\nBay Works Support Team"
+            ),
+            "email_signature": (inbox.credentials or {}).get(
+                "emailSignature", "--\nBest regards,\n{{agent.name}}\nBay Works Support Team"
+            ),
+            "emailFooter": (inbox.credentials or {}).get(
+                "emailFooter", "Bay Works Inc. · 100 Market St, San Francisco, CA"
+            ),
+            "email_footer": (inbox.credentials or {}).get(
+                "emailFooter", "Bay Works Inc. · 100 Market St, San Francisco, CA"
+            ),
             "appId": (inbox.credentials or {}).get("appId", "tt_app_mock_6789"),
             "app_id": (inbox.credentials or {}).get("appId", "tt_app_mock_6789"),
-            "businessAccountId": (inbox.credentials or {}).get("businessAccountId", "tt_biz_acc_1001"),
-            "business_account_id": (inbox.credentials or {}).get("businessAccountId", "tt_biz_acc_1001"),
-            "commentAutoReplyEnabled": (inbox.credentials or {}).get("commentAutoReplyEnabled", True),
-            "comment_auto_reply_enabled": (inbox.credentials or {}).get("commentAutoReplyEnabled", True),
-            "commentAutoReplyText": (inbox.credentials or {}).get("commentAutoReplyText", "Thanks for your comment! Send us a direct message for personal support. ✨"),
-            "comment_auto_reply_text": (inbox.credentials or {}).get("commentAutoReplyText", "Thanks for your comment! Send us a direct message for personal support. ✨"),
+            "businessAccountId": (inbox.credentials or {}).get(
+                "businessAccountId", "tt_biz_acc_1001"
+            ),
+            "business_account_id": (inbox.credentials or {}).get(
+                "businessAccountId", "tt_biz_acc_1001"
+            ),
+            "commentAutoReplyEnabled": (inbox.credentials or {}).get(
+                "commentAutoReplyEnabled", True
+            ),
+            "comment_auto_reply_enabled": (inbox.credentials or {}).get(
+                "commentAutoReplyEnabled", True
+            ),
+            "commentAutoReplyText": (inbox.credentials or {}).get(
+                "commentAutoReplyText",
+                "Thanks for your comment! Send us a direct message for personal support. ✨",
+            ),
+            "comment_auto_reply_text": (inbox.credentials or {}).get(
+                "commentAutoReplyText",
+                "Thanks for your comment! Send us a direct message for personal support. ✨",
+            ),
         },
         "createdAt": inbox.created_at.isoformat(),
         "updatedAt": inbox.updated_at.isoformat(),
@@ -259,7 +356,9 @@ class LineChannelIn(BaseModel):
         {"label": "Support", "text": "I need technical support"},
     ]
     greeting_enabled: bool = True
-    greeting_message: str = "👋 Welcome to Bay Works LINE Official Account! How can we assist you today?"
+    greeting_message: str = (
+        "👋 Welcome to Bay Works LINE Official Account! How can we assist you today?"
+    )
     out_of_office_enabled: bool = False
     out_of_office_message: str = "Thank you for contacting us on LINE. We are currently outside business hours and will respond shortly."
     csat_enabled: bool = True
@@ -296,9 +395,13 @@ class VoiceChannelIn(BaseModel):
     webrtc_enabled: bool = True
     fallback_number: str = "+14155550100"
     greeting_enabled: bool = True
-    greeting_message: str = "Thank you for calling Bay Works. All of our agents are currently busy; please hold."
+    greeting_message: str = (
+        "Thank you for calling Bay Works. All of our agents are currently busy; please hold."
+    )
     out_of_office_enabled: bool = False
-    out_of_office_message: str = "We are currently closed. Please leave a voicemail or call back during our working hours."
+    out_of_office_message: str = (
+        "We are currently closed. Please leave a voicemail or call back during our working hours."
+    )
     csat_enabled: bool = True
     working_hours_enabled: bool = False
     working_hours_start: int = 9
@@ -353,7 +456,9 @@ class EmailTestMessageIn(BaseModel):
     recipient_email: str = "alex.mercer@northwind.inc"
     recipient_name: str = "Alex Mercer"
     subject: str = "Test email from Bay Works Support"
-    message: str = "Hello Alex! This is a test message to verify your SMTP and email channel configuration."
+    message: str = (
+        "Hello Alex! This is a test message to verify your SMTP and email channel configuration."
+    )
 
 
 class TikTokChannelIn(BaseModel):
@@ -364,11 +469,17 @@ class TikTokChannelIn(BaseModel):
     business_account_id: str = "tt_biz_acc_1001"
     webhook_verify_token: str = "tiktok_verify_token_xyz"
     comment_auto_reply_enabled: bool = True
-    comment_auto_reply_text: str = "Thanks for your comment! Send us a direct message for personal support. ✨"
+    comment_auto_reply_text: str = (
+        "Thanks for your comment! Send us a direct message for personal support. ✨"
+    )
     greeting_enabled: bool = True
-    greeting_message: str = "👋 Hi there! Thanks for reaching out on TikTok. How can we help you today?"
+    greeting_message: str = (
+        "👋 Hi there! Thanks for reaching out on TikTok. How can we help you today?"
+    )
     out_of_office_enabled: bool = False
-    out_of_office_message: str = "We're currently offline on TikTok. We will respond as soon as our team is back!"
+    out_of_office_message: str = (
+        "We're currently offline on TikTok. We will respond as soon as our team is back!"
+    )
     csat_enabled: bool = True
     working_hours_enabled: bool = False
     working_hours_start: int = 9
@@ -388,7 +499,6 @@ class TikTokTestCommentIn(BaseModel):
     recipient_open_id: str = "tt_user_open_id_1001"
     recipient_name: str = "TikTok Commenter"
     reply_text: str = "Thanks for watching! Feel free to DM us with any questions."
-
 
 
 class FacebookChannelIn(BaseModel):
@@ -429,11 +539,17 @@ class InstagramChannelIn(BaseModel):
     app_secret: str = ""
     webhook_verify_token: str = "meta_instagram_verify_token"
     story_mentions_enabled: bool = True
-    story_reply_message: str = "Thanks for mentioning us in your story! 🔥 How can we assist you today?"
+    story_reply_message: str = (
+        "Thanks for mentioning us in your story! 🔥 How can we assist you today?"
+    )
     greeting_enabled: bool = True
-    greeting_message: str = "Hey! Thanks for DMing Bay Works on Instagram. How can we help you today?"
+    greeting_message: str = (
+        "Hey! Thanks for DMing Bay Works on Instagram. How can we help you today?"
+    )
     out_of_office_enabled: bool = False
-    out_of_office_message: str = "We're away from Instagram DMs right now, but will reply first thing tomorrow!"
+    out_of_office_message: str = (
+        "We're away from Instagram DMs right now, but will reply first thing tomorrow!"
+    )
     csat_enabled: bool = True
     icebreakers: list[dict[str, str]] = [
         {"question": "See our product portfolio", "payload": "PORTFOLIO"},
@@ -449,7 +565,9 @@ class InstagramChannelIn(BaseModel):
 class InstagramTestMessageIn(BaseModel):
     recipient_igsid: str = "igsid_test_549120"
     recipient_username: str = "clara_design"
-    message: str = "Hey Clara! Thanks for reaching out to Bay Works on Instagram. Let us know how we can help!"
+    message: str = (
+        "Hey Clara! Thanks for reaching out to Bay Works on Instagram. Let us know how we can help!"
+    )
 
 
 class SMSChannelIn(BaseModel):
@@ -464,7 +582,9 @@ class SMSChannelIn(BaseModel):
     opt_out_message: str = "You have successfully unsubscribed from Bay Works SMS. No further messages will be sent. Reply START to resubscribe."
     opt_in_message: str = "You have successfully resubscribed to Bay Works SMS. Standard msg & data rates may apply. Reply STOP to cancel."
     greeting_enabled: bool = True
-    greeting_message: str = "👋 Hello from Bay Works SMS Support! Reply to this message to chat with an agent."
+    greeting_message: str = (
+        "👋 Hello from Bay Works SMS Support! Reply to this message to chat with an agent."
+    )
     out_of_office_enabled: bool = False
     out_of_office_message: str = "Thanks for contacting Bay Works SMS. We are currently outside business hours, but we will reply as soon as we reopen."
     csat_enabled: bool = True
@@ -524,7 +644,9 @@ class WhatsAppChannelIn(BaseModel):
     webhook_verify_token: str = ""
     catalog_id: str = ""
     greeting_enabled: bool = True
-    greeting_message: str = "👋 Hello! Welcome to our WhatsApp Business support. How can we assist you today?"
+    greeting_message: str = (
+        "👋 Hello! Welcome to our WhatsApp Business support. How can we assist you today?"
+    )
     out_of_office_enabled: bool = False
     out_of_office_message: str = "Thanks for contacting us! We're currently outside our working hours. We'll reply as soon as we reopen."
     csat_enabled: bool = True
@@ -551,11 +673,14 @@ async def _get_or_create_whatsapp_inbox(session: AsyncSession) -> Inbox:
         phone_no = ""
         if int_settings:
             creds = {
-                "phoneNumberId": int_settings.meta_phone_number_id or settings.meta_whatsapp_phone_number_id,
+                "phoneNumberId": int_settings.meta_phone_number_id
+                or settings.meta_whatsapp_phone_number_id,
                 "wabaId": int_settings.meta_waba_id or settings.meta_whatsapp_waba_id,
-                "accessToken": int_settings.meta_access_token or settings.meta_whatsapp_access_token,
+                "accessToken": int_settings.meta_access_token
+                or settings.meta_whatsapp_access_token,
                 "appSecret": int_settings.meta_app_secret or settings.meta_whatsapp_app_secret,
-                "webhookVerifyToken": int_settings.meta_webhook_verify_token or settings.meta_whatsapp_webhook_verify_token,
+                "webhookVerifyToken": int_settings.meta_webhook_verify_token
+                or settings.meta_whatsapp_webhook_verify_token,
                 "catalogId": "",
             }
             phone_no = int_settings.whatsapp_display_number
@@ -582,21 +707,21 @@ async def _get_or_create_whatsapp_inbox(session: AsyncSession) -> Inbox:
 
 def _generate_embed_script(token: str) -> str:
     return (
-        f'<script>\n'
-        f'  (function(d,t) {{\n'
-        f'    var BASE_URL = window.location.origin;\n'
-        f'    var g = d.createElement(t), s = d.getElementsByTagName(t)[0];\n'
+        f"<script>\n"
+        f"  (function(d,t) {{\n"
+        f"    var BASE_URL = window.location.origin;\n"
+        f"    var g = d.createElement(t), s = d.getElementsByTagName(t)[0];\n"
         f'    g.src = BASE_URL + "/packs/js/sdk.js";\n'
-        f'    g.async = true;\n'
-        f'    s.parentNode.insertBefore(g, s);\n'
-        f'    g.onload = function() {{\n'
-        f'      window.chatwootSDK.run({{\n'
+        f"    g.async = true;\n"
+        f"    s.parentNode.insertBefore(g, s);\n"
+        f"    g.onload = function() {{\n"
+        f"      window.chatwootSDK.run({{\n"
         f'        websiteToken: "{token}",\n'
-        f'        baseUrl: BASE_URL\n'
-        f'      }});\n'
-        f'    }};\n'
+        f"        baseUrl: BASE_URL\n"
+        f"      }});\n"
+        f"    }};\n"
         f'  }})(document, "script");\n'
-        f'</script>'
+        f"</script>"
     )
 
 
@@ -846,8 +971,18 @@ async def _get_or_create_voice_inbox(session: AsyncSession) -> Inbox:
             "ivrPrompt": "Thank you for calling Bay Works. Press 1 for Sales, 2 for Technical Support, or 3 to leave a Voicemail.",
             "ivrMenu": [
                 {"digit": "1", "label": "Sales", "action": "queue", "target": "sales-queue"},
-                {"digit": "2", "label": "Technical Support", "action": "queue", "target": "support-queue"},
-                {"digit": "3", "label": "Voicemail", "action": "voicemail", "target": "voicemail-box"},
+                {
+                    "digit": "2",
+                    "label": "Technical Support",
+                    "action": "queue",
+                    "target": "support-queue",
+                },
+                {
+                    "digit": "3",
+                    "label": "Voicemail",
+                    "action": "voicemail",
+                    "target": "voicemail-box",
+                },
             ],
             "webrtcEnabled": True,
             "fallbackNumber": "+14155550100",
@@ -976,7 +1111,7 @@ async def get_whatsapp_channel(session: AsyncSession = Depends(get_db_session)):
     inbox = await _get_or_create_whatsapp_inbox(session)
     int_settings = await session.get(IntegrationSettings, SINGLETON_ID)
 
-    webhook_callback_url = f"https://api.yourdomain.com/api/v1/webhooks/meta/whatsapp"
+    webhook_callback_url = "https://api.yourdomain.com/api/v1/webhooks/meta/whatsapp"
     verify_token = (inbox.credentials or {}).get("webhookVerifyToken") or "meta_verify_secret_token"
 
     return {
@@ -1095,12 +1230,18 @@ async def verify_whatsapp_connection(session: AsyncSession = Depends(get_db_sess
             resp = await client.get(url, headers={"Authorization": f"Bearer {token}"})
             if resp.status_code == 200:
                 data = resp.json()
-                health_result["displayName"] = data.get("verified_name") or data.get("display_phone_number", health_result["displayName"])
-                health_result["displayPhoneNumber"] = data.get("display_phone_number", health_result["displayPhoneNumber"])
+                health_result["displayName"] = data.get("verified_name") or data.get(
+                    "display_phone_number", health_result["displayName"]
+                )
+                health_result["displayPhoneNumber"] = data.get(
+                    "display_phone_number", health_result["displayPhoneNumber"]
+                )
                 health_result["qualityRating"] = data.get("quality_rating", "GREEN")
-                health_result["codeVerificationStatus"] = data.get("code_verification_status", "VERIFIED")
+                health_result["codeVerificationStatus"] = data.get(
+                    "code_verification_status", "VERIFIED"
+                )
                 inbox.phone_number = health_result["displayPhoneNumber"]
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.warning(f"Meta Graph API test check: {e}")
 
     int_settings = await session.get(IntegrationSettings, SINGLETON_ID)
@@ -1128,7 +1269,10 @@ async def list_whatsapp_templates(session: AsyncSession = Depends(get_db_session
             "bodyText": "Hi {{1}}, our spring sale starts Friday. As a VIP customer you get early access and {{2}} off until Sunday.",
             "components": [
                 {"type": "HEADER", "format": "TEXT", "text": "Spring Sale Early Access"},
-                {"type": "BODY", "text": "Hi {{1}}, our spring sale starts Friday. As a VIP customer you get early access and {{2}} off until Sunday."},
+                {
+                    "type": "BODY",
+                    "text": "Hi {{1}}, our spring sale starts Friday. As a VIP customer you get early access and {{2}} off until Sunday.",
+                },
                 {"type": "FOOTER", "text": "Reply STOP to unsubscribe"},
                 {"type": "BUTTONS", "buttons": [{"type": "QUICK_REPLY", "text": "Claim Offer"}]},
             ],
@@ -1142,8 +1286,20 @@ async def list_whatsapp_templates(session: AsyncSession = Depends(get_db_session
             "status": "APPROVED",
             "bodyText": "Hello {{1}}, thank you for your order #{{2}}. Your items are being prepared for shipping.",
             "components": [
-                {"type": "BODY", "text": "Hello {{1}}, thank you for your order #{{2}}. Your items are being prepared for shipping."},
-                {"type": "BUTTONS", "buttons": [{"type": "URL", "text": "Track Order", "url": "https://example.com/orders/{{2}}"}]},
+                {
+                    "type": "BODY",
+                    "text": "Hello {{1}}, thank you for your order #{{2}}. Your items are being prepared for shipping.",
+                },
+                {
+                    "type": "BUTTONS",
+                    "buttons": [
+                        {
+                            "type": "URL",
+                            "text": "Track Order",
+                            "url": "https://example.com/orders/{{2}}",
+                        }
+                    ],
+                },
             ],
             "lastUpdated": "2026-02-15T09:30:00Z",
         },
@@ -1155,7 +1311,10 @@ async def list_whatsapp_templates(session: AsyncSession = Depends(get_db_session
             "status": "APPROVED",
             "bodyText": "{{1}} is your one-time verification code. For your security, do not share this code.",
             "components": [
-                {"type": "BODY", "text": "{{1}} is your one-time verification code. For your security, do not share this code."},
+                {
+                    "type": "BODY",
+                    "text": "{{1}} is your one-time verification code. For your security, do not share this code.",
+                },
                 {"type": "BUTTONS", "buttons": [{"type": "OTP", "text": "Copy Code"}]},
             ],
             "lastUpdated": "2026-01-20T16:00:00Z",
@@ -1168,8 +1327,17 @@ async def list_whatsapp_templates(session: AsyncSession = Depends(get_db_session
             "status": "APPROVED",
             "bodyText": "Reminder: You have an upcoming appointment scheduled for {{1}} at {{2}}.",
             "components": [
-                {"type": "BODY", "text": "Reminder: You have an upcoming appointment scheduled for {{1}} at {{2}}."},
-                {"type": "BUTTONS", "buttons": [{"type": "QUICK_REPLY", "text": "Confirm"}, {"type": "QUICK_REPLY", "text": "Reschedule"}]},
+                {
+                    "type": "BODY",
+                    "text": "Reminder: You have an upcoming appointment scheduled for {{1}} at {{2}}.",
+                },
+                {
+                    "type": "BUTTONS",
+                    "buttons": [
+                        {"type": "QUICK_REPLY", "text": "Confirm"},
+                        {"type": "QUICK_REPLY", "text": "Reschedule"},
+                    ],
+                },
             ],
             "lastUpdated": "2026-03-05T10:00:00Z",
         },
@@ -1210,7 +1378,7 @@ async def send_whatsapp_test_message(
                 "providerMessageId": res.provider_message_id,
                 "sentAt": now.isoformat(),
             }
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return {
                 "status": "simulated_sent",
                 "error": str(e),
@@ -1300,7 +1468,7 @@ async def update_whatsapp_profile(
                 )
                 if res.status_code == 200:
                     meta_synced = True
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
 
     return {"status": "ok", "profile": profile_data, "metaSynced": meta_synced}
@@ -1327,11 +1495,14 @@ async def register_whatsapp_phone_number(
                     json={"messaging_product": "whatsapp", "pin": payload.pin},
                 )
                 if res.status_code in (200, 201):
-                    return {"status": "registered", "message": "Phone number successfully registered with Meta Cloud API."}
+                    return {
+                        "status": "registered",
+                        "message": "Phone number successfully registered with Meta Cloud API.",
+                    }
                 data = res.json()
                 err = (data.get("error") or {}).get("message", "Registration failed")
                 return {"status": "error", "message": err}
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return {"status": "error", "message": str(e)}
 
     return {
@@ -1596,12 +1767,6 @@ async def list_live_chat_events(session: AsyncSession = Depends(get_db_session))
     ]
 
 
-
-
-
-
-
-
 @router.get("/channels/sms")
 async def get_sms_channel(session: AsyncSession = Depends(get_db_session)):
     """
@@ -1626,10 +1791,16 @@ async def get_sms_channel(session: AsyncSession = Depends(get_db_session)):
             "brandName": creds.get("brandName", "Bay Works LLC"),
             "brandTier": creds.get("brandTier", "Standard High Throughput (10DLC)"),
             "useCase": "Customer Care & Transactional Notifications",
-            "optOutKeywords": creds.get("optOutKeywords", ["STOP", "UNSUBSCRIBE", "CANCEL", "END", "QUIT"]),
+            "optOutKeywords": creds.get(
+                "optOutKeywords", ["STOP", "UNSUBSCRIBE", "CANCEL", "END", "QUIT"]
+            ),
             "optInKeywords": creds.get("optInKeywords", ["START", "UNSTOP", "YES"]),
-            "optOutMessage": creds.get("optOutMessage", "You have successfully unsubscribed. Reply START to resubscribe."),
-            "optInMessage": creds.get("optInMessage", "You have resubscribed to Bay Works SMS. Reply STOP to cancel."),
+            "optOutMessage": creds.get(
+                "optOutMessage", "You have successfully unsubscribed. Reply START to resubscribe."
+            ),
+            "optInMessage": creds.get(
+                "optInMessage", "You have resubscribed to Bay Works SMS. Reply STOP to cancel."
+            ),
             "carrierFiltering": "Strict 10DLC Compliant",
         },
         "health": {
@@ -1749,9 +1920,7 @@ async def send_sms_test_message(
         await session.flush()
 
     # Ensure consent is OPTED_IN for testing
-    await record_consent(
-        session, contact.id, ConsentStatus.OPTED_IN, source="admin_test_sms"
-    )
+    await record_consent(session, contact.id, ConsentStatus.OPTED_IN, source="admin_test_sms")
 
     conv_stmt = (
         select(Conversation)
@@ -1833,12 +2002,6 @@ async def list_sms_events(session: AsyncSession = Depends(get_db_session)):
         }
         for m in messages
     ]
-
-
-
-
-
-
 
 
 @router.get("/channels/facebook")
@@ -1970,9 +2133,7 @@ async def send_facebook_test_message(
         session.add(contact)
         await session.flush()
 
-    await record_consent(
-        session, contact.id, ConsentStatus.OPTED_IN, source="admin_test_facebook"
-    )
+    await record_consent(session, contact.id, ConsentStatus.OPTED_IN, source="admin_test_facebook")
 
     conv_stmt = (
         select(Conversation)
@@ -2053,12 +2214,6 @@ async def list_facebook_events(session: AsyncSession = Depends(get_db_session)):
         }
         for m in messages
     ]
-
-
-
-
-
-
 
 
 @router.get("/channels/instagram")
@@ -2202,9 +2357,7 @@ async def send_instagram_test_message(
         session.add(contact)
         await session.flush()
 
-    await record_consent(
-        session, contact.id, ConsentStatus.OPTED_IN, source="admin_test_instagram"
-    )
+    await record_consent(session, contact.id, ConsentStatus.OPTED_IN, source="admin_test_instagram")
 
     conv_stmt = (
         select(Conversation)
@@ -2285,12 +2438,6 @@ async def list_instagram_events(session: AsyncSession = Depends(get_db_session))
         }
         for m in messages
     ]
-
-
-
-
-
-
 
 
 @router.get("/channels/telegram")
@@ -2415,9 +2562,7 @@ async def send_telegram_test_message(
         session.add(contact)
         await session.flush()
 
-    await record_consent(
-        session, contact.id, ConsentStatus.OPTED_IN, source="admin_test_telegram"
-    )
+    await record_consent(session, contact.id, ConsentStatus.OPTED_IN, source="admin_test_telegram")
 
     conv_stmt = (
         select(Conversation)
@@ -2497,12 +2642,6 @@ async def list_telegram_events(session: AsyncSession = Depends(get_db_session)):
         }
         for m in messages
     ]
-
-
-
-
-
-
 
 
 @router.get("/channels/line")
@@ -2629,9 +2768,7 @@ async def send_line_test_message(
         session.add(contact)
         await session.flush()
 
-    await record_consent(
-        session, contact.id, ConsentStatus.OPTED_IN, source="admin_test_line"
-    )
+    await record_consent(session, contact.id, ConsentStatus.OPTED_IN, source="admin_test_line")
 
     conv_stmt = (
         select(Conversation)
@@ -2714,12 +2851,6 @@ async def list_line_events(session: AsyncSession = Depends(get_db_session)):
     ]
 
 
-
-
-
-
-
-
 @router.get("/channels/voice")
 async def get_voice_channel(session: AsyncSession = Depends(get_db_session)):
     """Returns Voice & WebRTC calling channel configuration, SIP credentials, and IVR menu."""
@@ -2742,12 +2873,28 @@ async def get_voice_channel(session: AsyncSession = Depends(get_db_session)):
         },
         "ivrConfig": {
             "enabled": creds.get("ivrEnabled", True),
-            "prompt": creds.get("ivrPrompt", "Thank you for calling Bay Works. Press 1 for Sales, 2 for Technical Support, or 3 to leave a Voicemail."),
-            "menu": creds.get("ivrMenu", [
-                {"digit": "1", "label": "Sales", "action": "queue", "target": "sales-queue"},
-                {"digit": "2", "label": "Technical Support", "action": "queue", "target": "support-queue"},
-                {"digit": "3", "label": "Voicemail", "action": "voicemail", "target": "voicemail-box"},
-            ]),
+            "prompt": creds.get(
+                "ivrPrompt",
+                "Thank you for calling Bay Works. Press 1 for Sales, 2 for Technical Support, or 3 to leave a Voicemail.",
+            ),
+            "menu": creds.get(
+                "ivrMenu",
+                [
+                    {"digit": "1", "label": "Sales", "action": "queue", "target": "sales-queue"},
+                    {
+                        "digit": "2",
+                        "label": "Technical Support",
+                        "action": "queue",
+                        "target": "support-queue",
+                    },
+                    {
+                        "digit": "3",
+                        "label": "Voicemail",
+                        "action": "voicemail",
+                        "target": "voicemail-box",
+                    },
+                ],
+            ),
         },
         "recordingConfig": {
             "recordingEnabled": creds.get("recordingEnabled", True),
@@ -2847,6 +2994,7 @@ async def get_voice_webrtc_token(
     sip_domain = creds.get("sipDomain") or "bayworks.sip.twilio.com"
 
     from communicator.channels.voice import VoiceProvider
+
     provider = VoiceProvider(
         account_sid=account_sid,
         auth_token=auth_token,
@@ -2871,16 +3019,18 @@ async def initiate_voice_call(
     auth_token = creds.get("authToken")
     caller_id = creds.get("callerId") or "+14155550199"
 
-    from communicator.channels.voice import VoiceProvider
     from communicator.api.routes.webhooks import _get_or_create_social_contact
+    from communicator.channels.voice import VoiceProvider
+
     contact = await _get_or_create_social_contact(
         session, ChannelType.VOICE, payload.recipient_phone, payload.agent_name
     )
 
-    conv_stmt = select(Conversation).where(
-        Conversation.contact_id == contact.id,
-        Conversation.inbox_id == inbox.id
-    ).order_by(Conversation.created_at.desc())
+    conv_stmt = (
+        select(Conversation)
+        .where(Conversation.contact_id == contact.id, Conversation.inbox_id == inbox.id)
+        .order_by(Conversation.created_at.desc())
+    )
     conv = (await session.execute(conv_stmt)).scalars().first()
 
     if conv is None or conv.state in (ConversationState.CLOSED_WON, ConversationState.CLOSED_LOST):
@@ -2902,7 +3052,9 @@ async def initiate_voice_call(
         agent_id=payload.agent_name,
         custom_greeting=payload.message,
     )
-    call_sid = call_result.get("callSid") or call_result.get("sid", f"CA{datetime.now().strftime('%Y%m%d%H%M%S')}")
+    call_sid = call_result.get("callSid") or call_result.get(
+        "sid", f"CA{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    )
 
     outbound_msg = Message(
         conversation_id=conv.id,
@@ -2948,6 +3100,7 @@ async def hangup_voice_call(
     auth_token = creds.get("authToken")
 
     from communicator.channels.voice import VoiceProvider
+
     provider = VoiceProvider(account_sid=account_sid, auth_token=auth_token)
     res = await provider.hangup_call(payload.call_sid)
 
@@ -2978,21 +3131,24 @@ async def get_voice_call_logs(session: AsyncSession = Depends(get_db_session)):
     logs = []
     for m in messages:
         meta = m.provider_metadata or {}
-        logs.append({
-            "id": str(m.id),
-            "conversationId": str(m.conversation_id),
-            "callSid": meta.get("call_sid") or m.provider_message_id,
-            "direction": meta.get("direction") or m.direction.value,
-            "from": meta.get("from") or ("Agent" if m.direction == MessageDirection.OUTBOUND else "Customer"),
-            "to": meta.get("to") or "+14155550199",
-            "status": meta.get("call_status") or m.status.value,
-            "duration": meta.get("duration", 0),
-            "recordingUrl": meta.get("recording_url"),
-            "recordingDuration": meta.get("recording_duration"),
-            "transcriptionText": meta.get("transcription_text"),
-            "summary": m.body,
-            "sentAt": m.sent_at.isoformat(),
-        })
+        logs.append(
+            {
+                "id": str(m.id),
+                "conversationId": str(m.conversation_id),
+                "callSid": meta.get("call_sid") or m.provider_message_id,
+                "direction": meta.get("direction") or m.direction.value,
+                "from": meta.get("from")
+                or ("Agent" if m.direction == MessageDirection.OUTBOUND else "Customer"),
+                "to": meta.get("to") or "+14155550199",
+                "status": meta.get("call_status") or m.status.value,
+                "duration": meta.get("duration", 0),
+                "recordingUrl": meta.get("recording_url"),
+                "recordingDuration": meta.get("recording_duration"),
+                "transcriptionText": meta.get("transcription_text"),
+                "summary": m.body,
+                "sentAt": m.sent_at.isoformat(),
+            }
+        )
     return logs
 
 
@@ -3015,18 +3171,13 @@ async def get_voice_events(session: AsyncSession = Depends(get_db_session)):
             "body": m.body[:120],
             "provider": m.provider,
             "providerMessageId": m.provider_message_id,
-            "senderName": m.sender_name or ("Agent" if m.direction == MessageDirection.OUTBOUND else "Customer"),
+            "senderName": m.sender_name
+            or ("Agent" if m.direction == MessageDirection.OUTBOUND else "Customer"),
             "senderType": m.sender_type,
             "sentAt": m.sent_at.isoformat(),
         }
         for m in messages
     ]
-
-
-
-
-
-
 
 
 @router.get("/channels/email")
@@ -3057,10 +3208,17 @@ async def get_email_channel(session: AsyncSession = Depends(get_db_session)):
         },
         "webhookConfig": {
             "inboundUrl": "/api/v1/webhooks/email/inbound",
-            "supportedProviders": ["Postmark", "SendGrid Inbound Parse", "Cloudflare Email Routing", "Custom Mailer"],
+            "supportedProviders": [
+                "Postmark",
+                "SendGrid Inbound Parse",
+                "Cloudflare Email Routing",
+                "Custom Mailer",
+            ],
         },
         "templateConfig": {
-            "signature": creds.get("emailSignature", "--\nBest regards,\n{{agent.name}}\nBay Works Support Team"),
+            "signature": creds.get(
+                "emailSignature", "--\nBest regards,\n{{agent.name}}\nBay Works Support Team"
+            ),
             "footer": creds.get("emailFooter", "Bay Works Inc. · 100 Market St, San Francisco, CA"),
             "csatLink": True,
         },
@@ -3128,6 +3286,7 @@ async def verify_email_channel(session: AsyncSession = Depends(get_db_session)):
     creds = inbox.credentials or {}
 
     from communicator.channels.email import UniversalEmailProvider
+
     provider = UniversalEmailProvider(
         smtp_host=creds.get("smtpHost"),
         smtp_port=int(creds.get("smtpPort", 587)),
@@ -3157,17 +3316,18 @@ async def send_email_test_message(
     inbox = await _get_or_create_email_inbox(session)
     creds = inbox.credentials or {}
 
-    from communicator.channels.email import UniversalEmailProvider
     from communicator.api.routes.webhooks import _get_or_create_social_contact
+    from communicator.channels.email import UniversalEmailProvider
 
     contact = await _get_or_create_social_contact(
         session, ChannelType.EMAIL, payload.recipient_email, payload.recipient_name
     )
 
-    conv_stmt = select(Conversation).where(
-        Conversation.contact_id == contact.id,
-        Conversation.inbox_id == inbox.id
-    ).order_by(Conversation.created_at.desc())
+    conv_stmt = (
+        select(Conversation)
+        .where(Conversation.contact_id == contact.id, Conversation.inbox_id == inbox.id)
+        .order_by(Conversation.created_at.desc())
+    )
     conv = (await session.execute(conv_stmt)).scalars().first()
 
     if conv is None or conv.state in (ConversationState.CLOSED_WON, ConversationState.CLOSED_LOST):
@@ -3255,14 +3415,13 @@ async def get_email_events(session: AsyncSession = Depends(get_db_session)):
             "body": m.body[:120],
             "provider": m.provider,
             "providerMessageId": m.provider_message_id,
-            "senderName": m.sender_name or ("Agent" if m.direction == MessageDirection.OUTBOUND else "Customer"),
+            "senderName": m.sender_name
+            or ("Agent" if m.direction == MessageDirection.OUTBOUND else "Customer"),
             "senderType": m.sender_type,
             "sentAt": m.sent_at.isoformat(),
         }
         for m in messages
     ]
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -3300,7 +3459,10 @@ async def get_tiktok_channel(session: AsyncSession = Depends(get_db_session)):
         },
         "commentAutoReply": {
             "enabled": creds.get("commentAutoReplyEnabled", True),
-            "template": creds.get("commentAutoReplyText", "Thanks for your comment! Send us a direct message for personal support. ✨"),
+            "template": creds.get(
+                "commentAutoReplyText",
+                "Thanks for your comment! Send us a direct message for personal support. ✨",
+            ),
         },
         "health": {
             "isConnected": bool(creds.get("accessToken") or creds.get("appId")),
@@ -3381,6 +3543,7 @@ async def send_tiktok_test_message(
     open_id = payload.recipient_open_id.strip()
 
     from communicator.api.routes.webhooks import _get_or_create_social_contact
+
     contact = await _get_or_create_social_contact(
         session, ChannelType.TIKTOK, open_id, payload.recipient_name
     )
@@ -3403,6 +3566,7 @@ async def send_tiktok_test_message(
 
     creds = inbox.credentials or {}
     from communicator.channels.tiktok import TikTokProvider
+
     provider = TikTokProvider(
         access_token=creds.get("accessToken"),
         app_id=creds.get("appId"),
@@ -3447,6 +3611,7 @@ async def send_tiktok_test_comment_reply(
     open_id = payload.recipient_open_id.strip()
 
     from communicator.api.routes.webhooks import _get_or_create_social_contact
+
     contact = await _get_or_create_social_contact(
         session, ChannelType.TIKTOK, open_id, payload.recipient_name
     )
@@ -3469,6 +3634,7 @@ async def send_tiktok_test_comment_reply(
 
     creds = inbox.credentials or {}
     from communicator.channels.tiktok import TikTokProvider
+
     provider = TikTokProvider(
         access_token=creds.get("accessToken"),
         app_id=creds.get("appId"),
@@ -3533,4 +3699,3 @@ async def list_tiktok_events(session: AsyncSession = Depends(get_db_session)):
         }
         for m in messages
     ]
-

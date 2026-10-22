@@ -21,8 +21,7 @@ logger = logging.getLogger(__name__)
 def _normalize_domain(domain: str) -> str:
     """Normalizes an email domain (e.g. '@Bayworks.COM ' -> 'bayworks.com')."""
     d = domain.strip().lower()
-    if d.startswith("@"):
-        d = d[1:]
+    d = d.removeprefix("@")
     return d.strip()
 
 
@@ -106,7 +105,7 @@ async def update_sso_config(
         else:
             domains = []
         config.enforced_domains = sorted(
-            list({_normalize_domain(str(d)) for d in domains if _normalize_domain(str(d))})
+            {_normalize_domain(str(d)) for d in domains if _normalize_domain(str(d))}
         )
 
     await session.commit()
@@ -394,7 +393,7 @@ async def process_saml_assertion(
     try:
         decoded_bytes = base64.b64decode(saml_response_raw.strip(), validate=True)
         xml_content = decoded_bytes.decode("utf-8")
-    except Exception:
+    except Exception:  # noqa: BLE001
         # If not valid base64, test if it's already XML
         if saml_response_raw.strip().startswith("<"):
             xml_content = saml_response_raw.strip()
@@ -429,9 +428,7 @@ async def process_saml_assertion(
     # 3. Check domain enforcement if enabled
     domain = _normalize_domain(email.split("@")[-1])
     if config.enforced_domains and domain not in config.enforced_domains:
-        logger.warning(
-            f"User domain '{domain}' not in enforced domains: {config.enforced_domains}"
-        )
+        logger.warning(f"User domain '{domain}' not in enforced domains: {config.enforced_domains}")
 
     # 4. Lookup or JIT provision TeamMember
     member = await session.scalar(select(TeamMember).where(TeamMember.email == email))
@@ -556,9 +553,7 @@ async def test_sso_connection(
     # Check 2: IdP SSO URL
     url_valid = bool(
         config.idp_sso_url
-        and (
-            config.idp_sso_url.startswith("https://") or config.idp_sso_url.startswith("http://")
-        )
+        and (config.idp_sso_url.startswith("https://") or config.idp_sso_url.startswith("http://"))
     )
     if not url_valid:
         has_errors = True
@@ -578,7 +573,9 @@ async def test_sso_connection(
         {
             "name": "Identity Provider Entity ID",
             "passed": issuer_valid,
-            "message": config.idp_entity_id if issuer_valid else "Missing IdP Entity ID / Issuer URI",
+            "message": config.idp_entity_id
+            if issuer_valid
+            else "Missing IdP Entity ID / Issuer URI",
         }
     )
 
@@ -614,7 +611,7 @@ async def test_sso_connection(
         or f"""<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
   xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
   ID="_test123" Version="2.0">
-  <saml:Issuer>{config.idp_entity_id or 'https://test-idp.example.com'}</saml:Issuer>
+  <saml:Issuer>{config.idp_entity_id or "https://test-idp.example.com"}</saml:Issuer>
   <samlp:Status>
     <samlp:StatusCode Value="urn:oasis:names:tc:SAML:2.0:status:Success"/>
   </samlp:Status>
@@ -640,7 +637,7 @@ async def test_sso_connection(
             "name": parsed_test["name"],
             "role": parsed_test["role"],
         }
-    except Exception as ex:
+    except Exception as ex:  # noqa: BLE001
         parser_details = {"error": str(ex)}
 
     checks.append(

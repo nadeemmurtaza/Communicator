@@ -1,13 +1,10 @@
-import uuid
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.models.contact import ChannelType, Contact
-from communicator.models.contact_memory import ContactMemory
-from communicator.models.conversation import Conversation, ConversationState
-from communicator.models.knowledge_base import KnowledgeBaseEntry, KnowledgeGap
+from communicator.models.conversation import Conversation
+from communicator.models.knowledge_base import KnowledgeGap
 from communicator.models.lead import Lead
 from communicator.services.knowledge_gaps import (
     approve_knowledge_gap,
@@ -24,7 +21,9 @@ from communicator.services.memory import (
 
 @pytest.mark.asyncio
 async def test_contact_memory_extraction_and_grounding(db_session: AsyncSession):
-    lead = Lead(harvester_institution_id="test:inst-1", name="Maya Corp", institution_type="hospital")
+    lead = Lead(
+        harvester_institution_id="test:inst-1", name="Maya Corp", institution_type="hospital"
+    )
     db_session.add(lead)
     await db_session.flush()
 
@@ -105,9 +104,17 @@ async def test_knowledge_gap_detection_and_approval(db_session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_knowledge_base_and_memory_api_endpoints(test_client: AsyncClient, db_session: AsyncSession):
+async def test_knowledge_base_and_memory_api_endpoints(
+    test_client: AsyncClient, db_session: AsyncSession
+):
     # 1. Test Ingest Document upload endpoint
-    files = {"file": ("return-policy.txt", b"Items must be returned in original packaging.", "text/plain")}
+    files = {
+        "file": (
+            "return-policy.txt",
+            b"Items must be returned in original packaging.",
+            "text/plain",
+        )
+    }
     resp = await test_client.post("/api/v1/knowledge-base/upload", files=files)
     assert resp.status_code == 200
     data = resp.json()
@@ -123,7 +130,9 @@ async def test_knowledge_base_and_memory_api_endpoints(test_client: AsyncClient,
     assert resp_scan.json()["status"] == "success"
 
     # 3. Test Contact Memories endpoints
-    lead = Lead(harvester_institution_id="test:inst-2", name="Beta Health", institution_type="clinic")
+    lead = Lead(
+        harvester_institution_id="test:inst-2", name="Beta Health", institution_type="clinic"
+    )
     db_session.add(lead)
     await db_session.flush()
 

@@ -1,4 +1,3 @@
-import uuid
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -175,7 +174,9 @@ async def test_custom_attributes_api_endpoints(db_session, override_database_dep
         assert len(attrs) >= 8
 
         # Filter by model
-        r_conv_only = await client.get("/api/v1/custom-attributes?attribute_model=conversation_attribute")
+        r_conv_only = await client.get(
+            "/api/v1/custom-attributes?attribute_model=conversation_attribute"
+        )
         assert r_conv_only.status_code == 200
         assert all(a["attribute_model"] == "conversation_attribute" for a in r_conv_only.json())
 

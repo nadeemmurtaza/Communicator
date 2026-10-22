@@ -20,14 +20,45 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     # 1. Add topic, touchpoints, and performance metrics to knowledge_base_entries
-    op.add_column("knowledge_base_entries", sa.Column("topic", sa.String(length=100), nullable=False, server_default="General"))
-    op.add_column("knowledge_base_entries", sa.Column("target_touchpoints", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default='["agent", "copilot", "help_center"]'))
-    op.add_column("knowledge_base_entries", sa.Column("status", sa.String(length=30), nullable=False, server_default="published"))
-    op.add_column("knowledge_base_entries", sa.Column("resolution_rate", sa.Float(), nullable=False, server_default="85.0"))
-    op.add_column("knowledge_base_entries", sa.Column("usage_count", sa.Integer(), nullable=False, server_default="0"))
-    op.add_column("knowledge_base_entries", sa.Column("helpful_count", sa.Integer(), nullable=False, server_default="0"))
-    op.add_column("knowledge_base_entries", sa.Column("unhelpful_count", sa.Integer(), nullable=False, server_default="0"))
-    op.add_column("knowledge_base_entries", sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()))
+    op.add_column(
+        "knowledge_base_entries",
+        sa.Column("topic", sa.String(length=100), nullable=False, server_default="General"),
+    )
+    op.add_column(
+        "knowledge_base_entries",
+        sa.Column(
+            "target_touchpoints",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+            server_default='["agent", "copilot", "help_center"]',
+        ),
+    )
+    op.add_column(
+        "knowledge_base_entries",
+        sa.Column("status", sa.String(length=30), nullable=False, server_default="published"),
+    )
+    op.add_column(
+        "knowledge_base_entries",
+        sa.Column("resolution_rate", sa.Float(), nullable=False, server_default="85.0"),
+    )
+    op.add_column(
+        "knowledge_base_entries",
+        sa.Column("usage_count", sa.Integer(), nullable=False, server_default="0"),
+    )
+    op.add_column(
+        "knowledge_base_entries",
+        sa.Column("helpful_count", sa.Integer(), nullable=False, server_default="0"),
+    )
+    op.add_column(
+        "knowledge_base_entries",
+        sa.Column("unhelpful_count", sa.Integer(), nullable=False, server_default="0"),
+    )
+    op.add_column(
+        "knowledge_base_entries",
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
+    )
 
     # 2. Create knowledge_recommendations table for Content, Customer Data, and Action Gaps
     op.create_table(
@@ -45,15 +76,36 @@ def upgrade() -> None:
         sa.Column("resolved_at", sa.DateTime(timezone=True), nullable=True),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(op.f("ix_knowledge_recommendations_topic"), "knowledge_recommendations", ["topic"], unique=False)
-    op.create_index(op.f("ix_knowledge_recommendations_gap_type"), "knowledge_recommendations", ["gap_type"], unique=False)
-    op.create_index(op.f("ix_knowledge_recommendations_status"), "knowledge_recommendations", ["status"], unique=False)
+    op.create_index(
+        op.f("ix_knowledge_recommendations_topic"),
+        "knowledge_recommendations",
+        ["topic"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_knowledge_recommendations_gap_type"),
+        "knowledge_recommendations",
+        ["gap_type"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_knowledge_recommendations_status"),
+        "knowledge_recommendations",
+        ["status"],
+        unique=False,
+    )
 
 
 def downgrade() -> None:
-    op.drop_index(op.f("ix_knowledge_recommendations_status"), table_name="knowledge_recommendations")
-    op.drop_index(op.f("ix_knowledge_recommendations_gap_type"), table_name="knowledge_recommendations")
-    op.drop_index(op.f("ix_knowledge_recommendations_topic"), table_name="knowledge_recommendations")
+    op.drop_index(
+        op.f("ix_knowledge_recommendations_status"), table_name="knowledge_recommendations"
+    )
+    op.drop_index(
+        op.f("ix_knowledge_recommendations_gap_type"), table_name="knowledge_recommendations"
+    )
+    op.drop_index(
+        op.f("ix_knowledge_recommendations_topic"), table_name="knowledge_recommendations"
+    )
     op.drop_table("knowledge_recommendations")
 
     op.drop_column("knowledge_base_entries", "updated_at")

@@ -110,7 +110,7 @@ async def create_issue(
             assigned_to=payload.assigned_to,
         )
         return issue_tracker_service.format_linked_issue(issue)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         raise HTTPException(status_code=400, detail=str(e))
 
 
@@ -149,7 +149,7 @@ async def sync_slack_thread(
             note=payload.note,
             author=payload.author,
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         raise HTTPException(status_code=400, detail=str(e))
 
 

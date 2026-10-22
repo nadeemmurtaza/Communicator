@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any
+
 import httpx
 
 from communicator.channels.base import ChannelProvider, SendResult
-from communicator.config import settings
 from communicator.models.contact import Contact
 
 logger = logging.getLogger(__name__)
@@ -74,7 +73,7 @@ class MetaMessengerProvider(ChannelProvider):
                 provider_message_id=msg_id,
                 raw_response=data,
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning(
                 f"Meta {self.channel_name} live dispatch failed ({e}); using simulated fallback."
             )

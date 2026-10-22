@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import uuid
 from typing import Any
+
 import httpx
 
 from communicator.channels.base import ChannelProvider, SendResult
@@ -78,13 +79,25 @@ class UniversalEmailProvider(ChannelProvider):
         # Resolve credentials / configs
         self.smtp_host = smtp_host or self.config.get("smtp_host", "smtp.bayworks.co")
         self.smtp_port = smtp_port or int(self.config.get("smtp_port", 587))
-        self.smtp_username = smtp_username or self.credentials.get("smtp_username", "support@bayworks.co")
-        self.smtp_password = smtp_password or self.credentials.get("smtp_password", "mock_smtp_secret")
+        self.smtp_username = smtp_username or self.credentials.get(
+            "smtp_username", "support@bayworks.co"
+        )
+        self.smtp_password = smtp_password or self.credentials.get(
+            "smtp_password", "mock_smtp_secret"
+        )
         self.smtp_encryption = smtp_encryption or self.config.get("smtp_encryption", "tls")
-        self.from_address = from_address or self.config.get("from_address") or getattr(settings, "email_from_address", "support@bayworks.co")
+        self.from_address = (
+            from_address
+            or self.config.get("from_address")
+            or getattr(settings, "email_from_address", "support@bayworks.co")
+        )
         self.from_name = from_name or self.config.get("from_name", "Bay Works Support")
         self.reply_to = reply_to or self.config.get("reply_to", self.from_address)
-        self.postmark_api_key = postmark_api_key or self.credentials.get("api_key") or getattr(settings, "email_provider_api_key", None)
+        self.postmark_api_key = (
+            postmark_api_key
+            or self.credentials.get("api_key")
+            or getattr(settings, "email_provider_api_key", None)
+        )
 
     def _is_simulated(self) -> bool:
         return (
@@ -125,7 +138,11 @@ class UniversalEmailProvider(ChannelProvider):
             return SendResult(
                 provider="aws_ses",
                 provider_message_id=f"ses_{uuid.uuid4().hex[:16]}",
-                raw_response={"MessageId": f"0100017-{uuid.uuid4().hex[:12]}", "status": "sent", "simulated": True},
+                raw_response={
+                    "MessageId": f"0100017-{uuid.uuid4().hex[:12]}",
+                    "status": "sent",
+                    "simulated": True,
+                },
             )
 
         # 3. Resend
@@ -133,7 +150,11 @@ class UniversalEmailProvider(ChannelProvider):
             return SendResult(
                 provider="resend",
                 provider_message_id=f"re_{uuid.uuid4().hex[:16]}",
-                raw_response={"id": f"res_{uuid.uuid4().hex[:12]}", "from": self.from_address, "simulated": True},
+                raw_response={
+                    "id": f"res_{uuid.uuid4().hex[:12]}",
+                    "from": self.from_address,
+                    "simulated": True,
+                },
             )
 
         # 4. Mailgun
@@ -146,7 +167,9 @@ class UniversalEmailProvider(ChannelProvider):
 
         # 5. Custom Outgoing Email Webhook
         elif self.provider == "custom_webhook":
-            webhook_url = self.config.get("webhook_url", "https://api.internal.bayworks.co/email/send")
+            webhook_url = self.config.get(
+                "webhook_url", "https://api.internal.bayworks.co/email/send"
+            )
             return SendResult(
                 provider="custom_webhook",
                 provider_message_id=f"hook_{uuid.uuid4().hex[:16]}",
@@ -154,9 +177,13 @@ class UniversalEmailProvider(ChannelProvider):
             )
 
         # 6. Postmark API if configured and key is present
-        if self.provider == "postmark" or (self.postmark_api_key and not str(self.postmark_api_key).startswith("mock")):
+        if self.provider == "postmark" or (
+            self.postmark_api_key and not str(self.postmark_api_key).startswith("mock")
+        ):
             payload = {
-                "From": f"{self.from_name} <{self.from_address}>" if self.from_name else self.from_address,
+                "From": f"{self.from_name} <{self.from_address}>"
+                if self.from_name
+                else self.from_address,
                 "To": contact.value,
                 "Subject": mail_subject,
                 "TextBody": body,
@@ -164,9 +191,14 @@ class UniversalEmailProvider(ChannelProvider):
                 "ReplyTo": self.reply_to,
                 "MessageStream": "outbound",
             }
-            headers = {"X-Postmark-Server-Token": str(self.postmark_api_key), "Accept": "application/json"}
+            headers = {
+                "X-Postmark-Server-Token": str(self.postmark_api_key),
+                "Accept": "application/json",
+            }
             try:
-                async with httpx.AsyncClient(base_url="https://api.postmarkapp.com", headers=headers, timeout=15.0) as client:
+                async with httpx.AsyncClient(
+                    base_url="https://api.postmarkapp.com", headers=headers, timeout=15.0
+                ) as client:
                     resp = await client.post("/email", json=payload)
                     resp.raise_for_status()
                     data = resp.json()
@@ -175,7 +207,7 @@ class UniversalEmailProvider(ChannelProvider):
                         provider_message_id=data.get("MessageID", msg_id),
                         raw_response=data,
                     )
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 logger.warning("Postmark send failed (%s); checking SMTP fallback", exc)
 
         # 7. Simulated / sandbox check
@@ -201,14 +233,20 @@ class UniversalEmailProvider(ChannelProvider):
 
             message = MIMEMultipart("alternative")
             message["Subject"] = mail_subject
-            message["From"] = f"{self.from_name} <{self.from_address}>" if self.from_name else self.from_address
+            message["From"] = (
+                f"{self.from_name} <{self.from_address}>" if self.from_name else self.from_address
+            )
             message["To"] = contact.value
             message["Message-ID"] = msg_id
             if self.reply_to:
                 message["Reply-To"] = self.reply_to
 
             part1 = MIMEText(body, "plain", "utf-8")
-            part2 = MIMEText(f"<div style='font-family:sans-serif;line-height:1.5;'>{body.replace(chr(10), '<br/>')}</div>", "html", "utf-8")
+            part2 = MIMEText(
+                f"<div style='font-family:sans-serif;line-height:1.5;'>{body.replace(chr(10), '<br/>')}</div>",
+                "html",
+                "utf-8",
+            )
             message.attach(part1)
             message.attach(part2)
 
@@ -230,7 +268,7 @@ class UniversalEmailProvider(ChannelProvider):
                 provider_message_id=msg_id,
                 raw_response={"status": "sent", "messageId": msg_id},
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.warning("SMTP delivery failed (%s); returning simulated delivery", exc)
             return SendResult(
                 provider="smtp",

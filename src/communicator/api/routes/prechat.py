@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,7 +16,9 @@ class PreChatFieldIn(BaseModel):
     id: str | None = None
     name: str = Field(..., description="Unique field identifier slug, e.g. companySize")
     label: str = Field(..., description="Human-readable field label")
-    type: str = Field("text", description="text | email | phone | select | textarea | number | checkbox")
+    type: str = Field(
+        "text", description="text | email | phone | select | textarea | number | checkbox"
+    )
     placeholder: str = ""
     required: bool = False
     options: list[str] = Field(default_factory=list, description="Dropdown options for select type")

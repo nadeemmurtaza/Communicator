@@ -26,13 +26,18 @@ def upgrade() -> None:
         sa.Column("name", sa.String(length=255), nullable=False),
         sa.Column(
             "channel_type",
-            sa.Enum("email", "sms", "whatsapp", name="channeltype", create_type=False),
+            postgresql.ENUM("email", "sms", "whatsapp", name="channeltype", create_type=False),
             nullable=False,
         ),
         sa.Column("phone_number", sa.String(length=50), nullable=False, server_default=""),
         sa.Column("avatar_url", sa.String(length=500), nullable=False, server_default=""),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default="true"),
-        sa.Column("credentials", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default="{}"),
+        sa.Column(
+            "credentials",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+            server_default="{}",
+        ),
         sa.Column("greeting_enabled", sa.Boolean(), nullable=False, server_default="true"),
         sa.Column("greeting_message", sa.Text(), nullable=False, server_default=""),
         sa.Column("out_of_office_enabled", sa.Boolean(), nullable=False, server_default="false"),
@@ -81,7 +86,9 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(op.f("ix_canned_responses_short_code"), "canned_responses", ["short_code"], unique=True)
+    op.create_index(
+        op.f("ix_canned_responses_short_code"), "canned_responses", ["short_code"], unique=True
+    )
 
     # 5. Create contact_notes table
     op.create_table(
@@ -94,24 +101,73 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["contact_id"], ["contacts.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(op.f("ix_contact_notes_contact_id"), "contact_notes", ["contact_id"], unique=False)
+    op.create_index(
+        op.f("ix_contact_notes_contact_id"), "contact_notes", ["contact_id"], unique=False
+    )
 
     # 6. Add columns to conversations
-    op.add_column("conversations", sa.Column("inbox_id", postgresql.UUID(as_uuid=True), nullable=True))
-    op.add_column("conversations", sa.Column("priority", sa.String(length=20), nullable=False, server_default="medium"))
-    op.add_column("conversations", sa.Column("team_id", postgresql.UUID(as_uuid=True), nullable=True))
-    op.add_column("conversations", sa.Column("snoozed_until", sa.DateTime(timezone=True), nullable=True))
-    op.add_column("conversations", sa.Column("custom_attributes", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default="{}"))
-    op.create_foreign_key("fk_conversations_inbox_id", "conversations", "inboxes", ["inbox_id"], ["id"], ondelete="SET NULL")
-    op.create_foreign_key("fk_conversations_team_id", "conversations", "teams", ["team_id"], ["id"], ondelete="SET NULL")
+    op.add_column(
+        "conversations", sa.Column("inbox_id", postgresql.UUID(as_uuid=True), nullable=True)
+    )
+    op.add_column(
+        "conversations",
+        sa.Column("priority", sa.String(length=20), nullable=False, server_default="medium"),
+    )
+    op.add_column(
+        "conversations", sa.Column("team_id", postgresql.UUID(as_uuid=True), nullable=True)
+    )
+    op.add_column(
+        "conversations", sa.Column("snoozed_until", sa.DateTime(timezone=True), nullable=True)
+    )
+    op.add_column(
+        "conversations",
+        sa.Column(
+            "custom_attributes",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+            server_default="{}",
+        ),
+    )
+    op.create_foreign_key(
+        "fk_conversations_inbox_id",
+        "conversations",
+        "inboxes",
+        ["inbox_id"],
+        ["id"],
+        ondelete="SET NULL",
+    )
+    op.create_foreign_key(
+        "fk_conversations_team_id",
+        "conversations",
+        "teams",
+        ["team_id"],
+        ["id"],
+        ondelete="SET NULL",
+    )
     op.create_index(op.f("ix_conversations_inbox_id"), "conversations", ["inbox_id"], unique=False)
     op.create_index(op.f("ix_conversations_team_id"), "conversations", ["team_id"], unique=False)
 
     # 7. Add columns to messages
-    op.add_column("messages", sa.Column("is_private", sa.Boolean(), nullable=False, server_default="false"))
-    op.add_column("messages", sa.Column("sender_type", sa.String(length=20), nullable=False, server_default="customer"))
-    op.add_column("messages", sa.Column("sender_name", sa.String(length=100), nullable=False, server_default=""))
-    op.add_column("messages", sa.Column("attachments", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default="[]"))
+    op.add_column(
+        "messages", sa.Column("is_private", sa.Boolean(), nullable=False, server_default="false")
+    )
+    op.add_column(
+        "messages",
+        sa.Column("sender_type", sa.String(length=20), nullable=False, server_default="customer"),
+    )
+    op.add_column(
+        "messages",
+        sa.Column("sender_name", sa.String(length=100), nullable=False, server_default=""),
+    )
+    op.add_column(
+        "messages",
+        sa.Column(
+            "attachments",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+            server_default="[]",
+        ),
+    )
 
 
 def downgrade() -> None:

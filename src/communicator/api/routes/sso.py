@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -163,7 +163,7 @@ async def assertion_consumer_service(
             body = await request.json()
             saml_response = body.get("saml_response", "") or body.get("SAMLResponse", "")
             relay_state = body.get("relay_state", "") or body.get("RelayState", "/")
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
     else:
         form_data = await request.form()
@@ -199,7 +199,7 @@ async def assertion_consumer_service(
 <body>
 <p>Authentication successful. Redirecting...</p>
 <script>
-  window.sessionStorage.setItem('sso_user', JSON.stringify({auth_result['user']}));
+  window.sessionStorage.setItem('sso_user', JSON.stringify({auth_result["user"]}));
   window.location.href = '{redirect_target}';
 </script>
 </body>
