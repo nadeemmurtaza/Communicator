@@ -41,7 +41,9 @@ class Broadcast(Base):
     __tablename__ = "broadcasts"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    tenant_key: Mapped[str] = mapped_column(String(100), default="newax", nullable=False, index=True)
+    tenant_key: Mapped[str] = mapped_column(
+        String(100), default="newax", nullable=False, index=True
+    )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
 
     # Business purpose -- e.g. "business_awareness", "operational_discovery",

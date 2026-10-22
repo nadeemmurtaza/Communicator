@@ -138,7 +138,9 @@ async def link_contact_to_customer(
     if customer is None:
         raise HTTPException(status_code=404, detail="Customer not found")
     if customer.tenant_key != contact.tenant_key:
-        raise HTTPException(status_code=400, detail="Contact and customer belong to different tenants")
+        raise HTTPException(
+            status_code=400, detail="Contact and customer belong to different tenants"
+        )
 
     contact.customer_id = customer.id
     await session.flush()

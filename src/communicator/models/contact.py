@@ -53,7 +53,9 @@ class Contact(Base):
     __tablename__ = "contacts"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    tenant_key: Mapped[str] = mapped_column(String(100), default="newax", nullable=False, index=True)
+    tenant_key: Mapped[str] = mapped_column(
+        String(100), default="newax", nullable=False, index=True
+    )
     # The person this channel identity belongs to -- shared across every
     # channel they reach out on within this tenant. See models/customer.py.
     customer_id: Mapped[uuid.UUID | None] = mapped_column(

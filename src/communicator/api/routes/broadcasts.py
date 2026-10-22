@@ -149,9 +149,12 @@ async def _audience_count_for_tags(session: AsyncSession, tag_name: str) -> int:
 
 @router.post("")
 async def create_broadcast(payload: BroadcastIn, session: AsyncSession = Depends(get_db_session)):
-    template_name, template_language, body_preview, template_params = await _resolve_template_fields(
-        session, payload.campaign_template_id, payload
-    )
+    (
+        template_name,
+        template_language,
+        body_preview,
+        template_params,
+    ) = await _resolve_template_fields(session, payload.campaign_template_id, payload)
     audience_count = await _audience_count_for_tags(session, payload.tag_name)
     initial_status = BroadcastStatus.SCHEDULED if payload.scheduled_at else BroadcastStatus.DRAFT
 

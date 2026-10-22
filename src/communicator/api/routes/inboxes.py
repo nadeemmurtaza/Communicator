@@ -20,9 +20,9 @@ from communicator.models.consent import ConsentStatus
 from communicator.models.contact import ChannelType, Contact
 from communicator.models.conversation import Conversation, ConversationState
 from communicator.models.inbox import Inbox
-from communicator.services.integration_settings import get_settings_row
 from communicator.models.lead import Lead
 from communicator.models.message import Message, MessageDirection, MessageStatus
+from communicator.services.integration_settings import get_settings_row
 
 logger = logging.getLogger(__name__)
 

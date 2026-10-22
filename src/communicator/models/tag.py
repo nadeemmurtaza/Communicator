@@ -24,7 +24,9 @@ class Tag(Base):
     __table_args__ = (UniqueConstraint("tenant_key", "name", name="uq_tag_tenant_name"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    tenant_key: Mapped[str] = mapped_column(String(100), default="newax", nullable=False, index=True)
+    tenant_key: Mapped[str] = mapped_column(
+        String(100), default="newax", nullable=False, index=True
+    )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(

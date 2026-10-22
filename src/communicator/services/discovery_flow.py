@@ -94,7 +94,9 @@ def _score_inquiry(inquiry: Inquiry, weights: dict) -> tuple[int, dict]:
     return sum(factors.values()), factors
 
 
-async def _send(session: AsyncSession, contact: Contact, conversation: Conversation, body: str) -> None:
+async def _send(
+    session: AsyncSession, contact: Contact, conversation: Conversation, body: str
+) -> None:
     provider = await get_provider(contact.channel, session)
     await send_outbound_message(session, contact, provider, body)
 
@@ -139,7 +141,7 @@ async def _send_step_question(
             )
         )
         await session.flush()
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.exception("Failed to send discovery step %s", step["key"])
         await _send(session, contact, conversation, step["question"])
 
@@ -150,7 +152,9 @@ def is_discovery_start(payload_id: str | None, body: str) -> bool:
     return body.strip().lower() in {"1", "discuss a business requirement", "discuss requirement"}
 
 
-async def start_discovery(session: AsyncSession, conversation: Conversation, contact: Contact) -> None:
+async def start_discovery(
+    session: AsyncSession, conversation: Conversation, contact: Contact
+) -> None:
     tenant_key = await resolve_tenant_key(session, contact)
     template = await get_template(session, tenant_key)
     if template is None or not template.steps:
@@ -185,7 +189,10 @@ async def start_discovery(session: AsyncSession, conversation: Conversation, con
 
 
 async def _advance_past_prefilled(
-    session: AsyncSession, contact: Contact, conversation: Conversation, template: DiscoveryFlowTemplate
+    session: AsyncSession,
+    contact: Contact,
+    conversation: Conversation,
+    template: DiscoveryFlowTemplate,
 ) -> None:
     state = dict((conversation.custom_attributes or {}).get("discovery") or {})
     prefilled = state.get("prefilled", {})
@@ -273,7 +280,9 @@ async def _finish_discovery(
         org_size_range=answers.get("org_size_range", ""),
         problem_description=problem_text,
         problem_categories=problem_categories,
-        reported_impact=[answers.get("reported_impact", "")] if answers.get("reported_impact") else [],
+        reported_impact=[answers.get("reported_impact", "")]
+        if answers.get("reported_impact")
+        else [],
         frequency=answers.get("frequency", ""),
         desired_outcome=answers.get("desired_outcome", ""),
         capability_mapping=capability_mapping,
@@ -299,5 +308,9 @@ async def _finish_discovery(
 
     logger.info(
         "New inquiry %s (tenant=%s): score=%s org=%s capability=%s",
-        inquiry.id, template.tenant_key, score, inquiry.organization_name, capability_mapping,
+        inquiry.id,
+        template.tenant_key,
+        score,
+        inquiry.organization_name,
+        capability_mapping,
     )

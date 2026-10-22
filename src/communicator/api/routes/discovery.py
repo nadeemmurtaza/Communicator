@@ -7,11 +7,10 @@ from __future__ import annotations
 
 import uuid
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-import httpx
 
 from communicator.api.dependencies import get_db_session
 from communicator.models.campaign_template import CampaignTemplate

@@ -21,7 +21,9 @@ class ContactSegment(Base):
     __table_args__ = (UniqueConstraint("tenant_key", "name", name="uq_segment_tenant_name"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    tenant_key: Mapped[str] = mapped_column(String(100), default="newax", nullable=False, index=True)
+    tenant_key: Mapped[str] = mapped_column(
+        String(100), default="newax", nullable=False, index=True
+    )
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     description: Mapped[str] = mapped_column(Text, default="", nullable=False)
 

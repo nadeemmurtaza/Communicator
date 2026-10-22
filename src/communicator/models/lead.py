@@ -22,7 +22,9 @@ class Lead(Base):
     __tablename__ = "leads"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    tenant_key: Mapped[str] = mapped_column(String(100), default="newax", nullable=False, index=True)
+    tenant_key: Mapped[str] = mapped_column(
+        String(100), default="newax", nullable=False, index=True
+    )
     harvester_institution_id: Mapped[str] = mapped_column(
         String(64), nullable=False, unique=True, index=True
     )

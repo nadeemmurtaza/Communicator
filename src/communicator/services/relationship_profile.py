@@ -28,10 +28,16 @@ from communicator.models.contact_memory import ContactMemory
 from communicator.models.conversation import Conversation, ConversationState
 from communicator.models.inquiry import Inquiry
 
-_ACTIVE_STATES = (ConversationState.NEW, ConversationState.AWAITING_REPLY, ConversationState.ENGAGED)
+_ACTIVE_STATES = (
+    ConversationState.NEW,
+    ConversationState.AWAITING_REPLY,
+    ConversationState.ENGAGED,
+)
 
 
-async def _contact_ids_for_customer(session: AsyncSession, contact_id: uuid.UUID) -> list[uuid.UUID]:
+async def _contact_ids_for_customer(
+    session: AsyncSession, contact_id: uuid.UUID
+) -> list[uuid.UUID]:
     """
     Resolves every channel identity (Contact) belonging to the same
     Customer as the given contact, so the relationship is read across
@@ -91,7 +97,9 @@ async def get_relationship_summary(session: AsyncSession, contact_id: uuid.UUID)
         stage = "new_prospect"
     elif any(c.state == ConversationState.CLOSED_WON for c in conversations):
         stage = "client"
-    elif any(c.state in _ACTIVE_STATES or c.state == ConversationState.HOT_LEAD for c in conversations):
+    elif any(
+        c.state in _ACTIVE_STATES or c.state == ConversationState.HOT_LEAD for c in conversations
+    ):
         stage = "active_prospect"
     else:
         stage = "dormant"
@@ -100,7 +108,9 @@ async def get_relationship_summary(session: AsyncSession, contact_id: uuid.UUID)
     last_conversation = conversations[0] if conversations else None
 
     channel_rows = (
-        await session.execute(select(Contact.channel, Contact.value).where(Contact.id.in_(contact_ids)))
+        await session.execute(
+            select(Contact.channel, Contact.value).where(Contact.id.in_(contact_ids))
+        )
     ).all()
 
     return {
@@ -109,8 +119,12 @@ async def get_relationship_summary(session: AsyncSession, contact_id: uuid.UUID)
         "relationship_stage": stage,
         "total_conversations": len(conversations),
         "total_inquiries": len(inquiries),
-        "last_interaction_at": last_conversation.updated_at.isoformat() if last_conversation else None,
-        "last_interaction_outcome": last_conversation.resolution_type if last_conversation else None,
+        "last_interaction_at": last_conversation.updated_at.isoformat()
+        if last_conversation
+        else None,
+        "last_interaction_outcome": last_conversation.resolution_type
+        if last_conversation
+        else None,
         "latest_inquiry": (
             {
                 "organization_name": latest_inquiry.organization_name,
@@ -125,7 +139,11 @@ async def get_relationship_summary(session: AsyncSession, contact_id: uuid.UUID)
             else None
         ),
         "prior_closed_outcomes": [
-            {"state": c.state.value, "resolution_type": c.resolution_type, "source": "conversation_record"}
+            {
+                "state": c.state.value,
+                "resolution_type": c.resolution_type,
+                "source": "conversation_record",
+            }
             for c in prior_closed[:3]
         ],
         "memories": [
@@ -159,10 +177,14 @@ def render_relationship_context(summary: dict) -> str:
         )
 
     for outcome in summary.get("prior_closed_outcomes", []):
-        lines.append(f"Previous conversation closed as {outcome['state']} -- source: conversation record")
+        lines.append(
+            f"Previous conversation closed as {outcome['state']} -- source: conversation record"
+        )
 
     for mem in summary.get("memories", [])[:5]:
-        lines.append(f"{mem['noted_at'][:10]}: {mem['fact']} [{mem['category']}] -- source: contact memory")
+        lines.append(
+            f"{mem['noted_at'][:10]}: {mem['fact']} [{mem['category']}] -- source: contact memory"
+        )
 
     body = "\n".join(f"- {line}" for line in lines)
     return (

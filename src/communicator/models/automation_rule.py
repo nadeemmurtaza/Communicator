@@ -48,7 +48,9 @@ class AutomationRule(Base):
     __tablename__ = "automation_rules"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    tenant_key: Mapped[str] = mapped_column(String(100), default="newax", nullable=False, index=True)
+    tenant_key: Mapped[str] = mapped_column(
+        String(100), default="newax", nullable=False, index=True
+    )
     # Empty = runs on any channel this tenant has; set to a specific
     # ChannelType value (e.g. "whatsapp") to scope it to one channel.
     channel: Mapped[str] = mapped_column(String(50), default="", nullable=False, index=True)
