@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -192,15 +193,28 @@ async def assertion_consumer_service(
 
     # If it's a browser form POST from the IdP, we can return an HTML script that redirects or stores the session
     if "application/json" not in content_type:
-        redirect_target = auth_result.get("relay_state") or "/"
+        # relay_state is attacker-influenceable (it's POSTed by whoever hits
+        # this endpoint, not verified by the SAML signature) -- only accept
+        # same-origin relative paths to avoid turning it into an open
+        # redirect, and always JSON-encode both values so they're safe JS
+        # string/object literals rather than raw f-string interpolation
+        # (which also broke on dict values containing single quotes).
+        raw_target = auth_result.get("relay_state") or "/"
+        redirect_target = (
+            raw_target if raw_target.startswith("/") and not raw_target.startswith("//") else "/"
+        )
+
+        def _js_safe(value: Any) -> str:
+            return json.dumps(value).replace("</", "<\\/")
+
         html_content = f"""<!DOCTYPE html>
 <html>
 <head><title>Authenticating with Captain AI Enterprise...</title></head>
 <body>
 <p>Authentication successful. Redirecting...</p>
 <script>
-  window.sessionStorage.setItem('sso_user', JSON.stringify({auth_result["user"]}));
-  window.location.href = '{redirect_target}';
+  window.sessionStorage.setItem('sso_user', JSON.stringify({_js_safe(auth_result["user"])}));
+  window.location.href = {_js_safe(redirect_target)};
 </script>
 </body>
 </html>"""

@@ -101,7 +101,7 @@ export function SelfImproving() {
       const pol = await api.getCustomPolicy(jobType)
       setCurrentCustomPolicy(pol)
     } catch (err) {
-      console.error('Failed to load policy for ' + jobType, err)
+      console.error('Failed to load policy for', jobType, err)
     } finally {
       setLoadingPolicy(false)
     }
