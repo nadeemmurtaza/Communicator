@@ -25,7 +25,7 @@ async def send_first_touch(
     harvester_client: HarvesterClient,
     subject: str | None = None,
 ) -> Message:
-    provider = get_provider(contact.channel)
+    provider = await get_provider(contact.channel, session)
     message = await send_outbound_message(session, contact, provider, body, subject=subject)
 
     await harvester_client.push_outreach_outcome(

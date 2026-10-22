@@ -1,12 +1,12 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from communicator.database import Base
-from communicator.models.contact import ChannelType
+from communicator.models.contact import ChannelType, ChannelTypeEnum
 
 
 class FollowUpSequence(Base):
@@ -46,7 +46,7 @@ class SequenceStep(Base):
 
     step_number: Mapped[int] = mapped_column(Integer, nullable=False)
     delay_days: Mapped[int] = mapped_column(Integer, nullable=False)
-    channel: Mapped[ChannelType] = mapped_column(Enum(ChannelType), nullable=False)
+    channel: Mapped[ChannelType] = mapped_column(ChannelTypeEnum, nullable=False)
     template: Mapped[str] = mapped_column(Text, default="", nullable=False)
     # A/B testing: multiple SequenceSteps can share a step_number under
     # different variant labels (e.g. "control" vs "b"). A Conversation is

@@ -36,6 +36,16 @@ class Settings(BaseSettings):
     email_provider_api_key: str = ""
     email_from_address: str = ""
 
+    # WhatsApp provider selection -- "twilio" (session-message only, Phase 2)
+    # or "meta" (direct Graph/Cloud API, ported from the standalone reply
+    # bot). Meta needs its own token/phone-number-id/verify-token below.
+    whatsapp_provider: str = "twilio"
+    meta_whatsapp_access_token: str = ""
+    meta_whatsapp_phone_number_id: str = ""
+    meta_whatsapp_api_version: str = "v21.0"
+    meta_webhook_verify_token: str = ""
+    meta_app_secret: str = ""
+
     # Shared secret Postmark's inbound-webhook URL must include as
     # ?token=... -- Postmark doesn't sign inbound webhook requests, unlike
     # Twilio, so this is the only thing standing between the endpoint and

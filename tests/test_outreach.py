@@ -18,6 +18,10 @@ class FakeProvider(ChannelProvider):
         return SendResult(provider="fake", provider_message_id="fake-1", raw_response={})
 
 
+async def _fake_get_provider(channel, session):
+    return FakeProvider()
+
+
 class FakeHarvesterClient:
     def __init__(self):
         self.pushed: list[dict] = []
@@ -39,7 +43,7 @@ async def test_send_first_touch_sends_and_reports_outcome(db_session, monkeypatc
     await record_consent(db_session, contact.id, ConsentStatus.OPTED_IN, source="test")
     await db_session.flush()
 
-    monkeypatch.setattr(outreach_module, "get_provider", lambda channel: FakeProvider())
+    monkeypatch.setattr(outreach_module, "get_provider", _fake_get_provider)
     harvester_client = FakeHarvesterClient()
 
     message = await send_first_touch(
@@ -68,7 +72,7 @@ async def test_send_first_touch_does_not_report_outcome_without_consent(db_sessi
     await db_session.flush()
     # deliberately no consent record
 
-    monkeypatch.setattr(outreach_module, "get_provider", lambda channel: FakeProvider())
+    monkeypatch.setattr(outreach_module, "get_provider", _fake_get_provider)
     harvester_client = FakeHarvesterClient()
 
     with pytest.raises(NotSendableError):

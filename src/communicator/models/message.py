@@ -3,12 +3,12 @@ import uuid
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, Text
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from communicator.database import Base
-from communicator.models.contact import ChannelType
+from communicator.models.contact import ChannelType, ChannelTypeEnum
 
 if TYPE_CHECKING:
     from communicator.models.conversation import Conversation
@@ -38,8 +38,14 @@ class Message(Base):
     )
 
     direction: Mapped[MessageDirection] = mapped_column(Enum(MessageDirection), nullable=False)
-    channel: Mapped[ChannelType] = mapped_column(Enum(ChannelType), nullable=False)
+    channel: Mapped[ChannelType] = mapped_column(ChannelTypeEnum, nullable=False)
     body: Mapped[str] = mapped_column(Text, default="", nullable=False)
+
+    # Internal Team Note: private messages are visible to agents only and never sent to the customer
+    is_private: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    sender_type: Mapped[str] = mapped_column(String(20), default="customer", nullable=False)
+    sender_name: Mapped[str] = mapped_column(String(100), default="", nullable=False)
+    attachments: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
 
     provider: Mapped[str] = mapped_column(String(50), default="", nullable=False)
     provider_message_id: Mapped[str] = mapped_column(
