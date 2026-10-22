@@ -465,6 +465,62 @@ export interface LiveChatUpdatePayload {
   timezone?: string
 }
 
+export interface WidgetStyling {
+  widget_color: string
+  theme_mode: 'light' | 'dark' | 'system'
+  launcher_style: 'round_bubble' | 'pill_with_text' | 'minimal_tab'
+  launcher_icon: 'chat_bubble' | 'sparkle_ai' | 'headset_support' | 'envelope'
+  launcher_text: string
+  widget_position: 'right' | 'left'
+  greeting_title: string
+  greeting_tagline: string
+  avatar_url: string
+  border_radius: 'rounded_lg' | 'rounded_2xl' | 'rounded_full'
+  play_sound: boolean
+  show_branding: boolean
+  allowed_domains: string
+  pre_chat_form_enabled: boolean
+  identity_validation: boolean
+  hmac_secret: string
+}
+
+export interface WidgetEmbedCodes {
+  html_script: string
+  react_nextjs: string
+  google_tag_manager: string
+  raw_init: string
+}
+
+export interface WidgetCustomizerConfig {
+  inbox_name: string
+  website_domain: string
+  website_token: string
+  styling: WidgetStyling
+  embed_codes: WidgetEmbedCodes
+  preview_url: string
+}
+
+export interface UpdateWidgetCustomizerPayload {
+  inbox_name?: string
+  website_domain?: string
+  widget_color?: string
+  theme_mode?: string
+  launcher_style?: string
+  launcher_icon?: string
+  launcher_text?: string
+  widget_position?: string
+  greeting_title?: string
+  greeting_tagline?: string
+  avatar_url?: string
+  border_radius?: string
+  play_sound?: boolean
+  show_branding?: boolean
+  allowed_domains?: string
+  pre_chat_form_enabled?: boolean
+  identity_validation?: boolean
+  hmac_secret?: string
+}
+
 export interface LiveChatTestVisitorPayload {
   name: string
   email: string
@@ -3230,4 +3286,20 @@ export const api = {
     }),
   getSlackSyncStatus: (conversationId: string) =>
     request<SlackSyncStatus>(`/integrations/trackers/slack/status/${conversationId}`),
+
+  // Gap 4: Live Chat Widget Customizer
+  getWidgetCustomizer: () => request<WidgetCustomizerConfig>('/widget/customizer'),
+  updateWidgetCustomizer: (data: UpdateWidgetCustomizerPayload) =>
+    request<WidgetCustomizerConfig>('/widget/customizer', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  resetWidgetCustomizer: () =>
+    request<WidgetCustomizerConfig>('/widget/customizer/reset', {
+      method: 'POST',
+    }),
+  getWidgetEmbedCode: (token?: string) =>
+    request<{ website_token: string; base_url: string; embed_codes: WidgetEmbedCodes }>(
+      `/widget/customizer/embed-code${token ? `?token=${encodeURIComponent(token)}` : ''}`
+    ),
 }

@@ -34,6 +34,7 @@ from communicator.api.routes import (
     tickets,
     webhooks,
     widget,
+    widget_customizer,
 )
 
 app = FastAPI(
@@ -56,6 +57,7 @@ async def health_check():
 # Webhooks authenticate themselves (Twilio signature / Postmark shared secret)
 app.include_router(webhooks.router, prefix="/api/v1")
 app.include_router(widget.router, prefix="/api/v1")
+app.include_router(widget_customizer.router, prefix="/api/v1")
 app.include_router(inboxes.router, prefix="/api/v1")
 app.include_router(drafts.router, prefix="/api/v1")
 app.include_router(services.router, prefix="/api/v1")
