@@ -139,15 +139,20 @@ async def process_inbound_message(
             pass
 
     if conversation.state not in _TERMINAL_STATES:
-        await _route_reply(
-            session,
-            conversation,
-            contact,
-            body,
-            interactive_payload_id=interactive_payload_id,
-            is_welcome_candidate=is_welcome_candidate,
-            harvester_client=harvester_client,
-        )
+        try:
+            await _route_reply(
+                session,
+                conversation,
+                contact,
+                body,
+                interactive_payload_id=interactive_payload_id,
+                is_welcome_candidate=is_welcome_candidate,
+                harvester_client=harvester_client,
+            )
+        except Exception:  # noqa: BLE001, S110 -- reply dispatch (rules/AI/sends) is
+            # best-effort; a misconfigured provider or any other failure here
+            # must never cost us the inbound message already recorded above.
+            pass
 
     return message
 

@@ -401,7 +401,10 @@ async def dispatch_broadcast(
                 body=message_body,
                 provider="meta_sim",
                 provider_message_id=recipient.provider_message_id,
-                status=MessageStatus.READ,
+                # Message has no READ status (only BroadcastRecipient tracks
+                # read receipts, see recipient.read_at above); DELIVERED is
+                # the closest valid terminal state.
+                status=MessageStatus.DELIVERED,
             )
             session.add(msg)
 
