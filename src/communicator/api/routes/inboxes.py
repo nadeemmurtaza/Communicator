@@ -20,7 +20,7 @@ from communicator.models.consent import ConsentStatus
 from communicator.models.contact import ChannelType, Contact
 from communicator.models.conversation import Conversation, ConversationState
 from communicator.models.inbox import Inbox
-from communicator.models.integration_settings import SINGLETON_ID, IntegrationSettings
+from communicator.services.integration_settings import get_settings_row
 from communicator.models.lead import Lead
 from communicator.models.message import Message, MessageDirection, MessageStatus
 
@@ -668,14 +668,14 @@ async def _get_or_create_whatsapp_inbox(session: AsyncSession) -> Inbox:
 
     if inbox is None:
         # Check if settings row has credentials to seed from
-        int_settings = await session.get(IntegrationSettings, SINGLETON_ID)
+        int_settings = await get_settings_row(session)
         creds = {}
         phone_no = ""
         if int_settings:
             creds = {
                 "phoneNumberId": int_settings.meta_phone_number_id
                 or settings.meta_whatsapp_phone_number_id,
-                "wabaId": int_settings.meta_waba_id or settings.meta_whatsapp_waba_id,
+                "wabaId": int_settings.meta_waba_id,
                 "accessToken": int_settings.meta_access_token
                 or settings.meta_whatsapp_access_token,
                 "appSecret": int_settings.meta_app_secret or settings.meta_whatsapp_app_secret,
@@ -1109,7 +1109,7 @@ async def get_whatsapp_channel(session: AsyncSession = Depends(get_db_session)):
     Dedicated integration settings & health endpoint for WhatsApp Business API channel.
     """
     inbox = await _get_or_create_whatsapp_inbox(session)
-    int_settings = await session.get(IntegrationSettings, SINGLETON_ID)
+    int_settings = await get_settings_row(session)
 
     webhook_callback_url = "https://api.yourdomain.com/api/v1/webhooks/meta/whatsapp"
     verify_token = (inbox.credentials or {}).get("webhookVerifyToken") or "meta_verify_secret_token"
@@ -1143,7 +1143,7 @@ async def update_whatsapp_channel(
 ):
     """Updates WhatsApp connection credentials, webhooks, and automation toggles."""
     inbox = await _get_or_create_whatsapp_inbox(session)
-    int_settings = await session.get(IntegrationSettings, SINGLETON_ID)
+    int_settings = await get_settings_row(session)
 
     current_creds = dict(inbox.credentials or {})
     if payload.phone_number_id:
@@ -1244,7 +1244,7 @@ async def verify_whatsapp_connection(session: AsyncSession = Depends(get_db_sess
     except Exception as e:  # noqa: BLE001
         logger.warning(f"Meta Graph API test check: {e}")
 
-    int_settings = await session.get(IntegrationSettings, SINGLETON_ID)
+    int_settings = await get_settings_row(session)
     if int_settings:
         int_settings.whatsapp_verified_at = now
         int_settings.whatsapp_verified_name = health_result["displayName"]

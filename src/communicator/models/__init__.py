@@ -8,6 +8,7 @@ from .approval import ApprovalStatus, ApprovalType, CopilotApprovalRequest
 from .audit import AuditLog
 from .automation_rule import AutomationRule, RuleActionType, RuleMatchType
 from .broadcast import Broadcast, BroadcastRecipient, BroadcastStatus, RecipientStatus
+from .campaign_template import CampaignTemplate
 from .canned_response import CannedResponse
 from .consent import ConsentRecord, ConsentStatus
 from .contact import ChannelType, Contact
@@ -15,6 +16,8 @@ from .contact_memory import ContactMemory
 from .contact_note import ContactNote
 from .conversation import Conversation, ConversationState
 from .custom_attribute import CustomAttributeDefinition
+from .customer import Customer
+from .discovery_flow_template import DiscoveryFlowTemplate
 from .draft import Draft, DraftStatus
 from .gateway_connection import (
     ChannelGatewayConnection,
@@ -24,6 +27,7 @@ from .gateway_connection import (
     VoiceSIPProvider,
 )
 from .inbox import Inbox
+from .inquiry import Inquiry, InquiryStatus
 from .integration_settings import IntegrationSettings
 from .issue_tracker import (
     IssueTrackerConfig,
@@ -103,6 +107,7 @@ __all__ = [
     "Broadcast",
     "BroadcastRecipient",
     "BroadcastStatus",
+    "CampaignTemplate",
     "CannedResponse",
     "ChannelGatewayConnection",
     "ChannelType",
@@ -116,12 +121,16 @@ __all__ = [
     "ConversationState",
     "CopilotApprovalRequest",
     "CustomAttributeDefinition",
+    "Customer",
+    "DiscoveryFlowTemplate",
     "Draft",
     "DraftStatus",
     "EmailProvider",
     "FollowUpSequence",
     "GatewayType",
     "Inbox",
+    "Inquiry",
+    "InquiryStatus",
     "InsightCategory",
     "InsightStatus",
     "IntegrationSettings",

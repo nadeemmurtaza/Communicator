@@ -34,6 +34,12 @@ from communicator.models.draft import DraftStatus
 from communicator.models.lead import Lead
 from communicator.models.message import Message, MessageDirection, MessageStatus
 from communicator.services.business_hours import is_within_business_hours
+from communicator.services.discovery_flow import (
+    handle_discovery_reply,
+    is_discovery_active,
+    is_discovery_start,
+    start_discovery,
+)
 from communicator.services.draft_actions import approve_and_send
 from communicator.services.integration_settings import get_settings_row
 from communicator.services.memory import extract_contact_memories
@@ -195,6 +201,15 @@ async def _route_reply(
 
     # 4. Human takeover / Auto-reply disabled check
     if conversation.human_takeover or not integration_settings.auto_reply_enabled:
+        return
+
+    # 4b. Business inquiry discovery flow: continue an in-progress flow, or
+    # start one if the visitor just asked to discuss a requirement.
+    if is_discovery_active(conversation):
+        await handle_discovery_reply(session, conversation, contact, body, interactive_payload_id)
+        return
+    if is_discovery_start(interactive_payload_id, body):
+        await start_discovery(session, conversation, contact)
         return
 
     # 5. After-Hours / Business Hours away message

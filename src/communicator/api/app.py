@@ -12,6 +12,7 @@ from communicator.api.routes import (
     conversations,
     copilot_approvals,
     custom_attributes,
+    discovery,
     drafts,
     gateways,
     inboxes,
@@ -70,6 +71,7 @@ app.include_router(roles.router, prefix="/api/v1")
 app.include_router(sso.router, prefix="/api/v1/sso", tags=["sso"])
 app.include_router(translation.router, prefix="/api/v1")
 app.include_router(custom_attributes.router, prefix="/api/v1")
+app.include_router(discovery.router, prefix="/api/v1")
 app.include_router(inboxes.router, prefix="/api/v1")
 app.include_router(drafts.router, prefix="/api/v1")
 app.include_router(services.router, prefix="/api/v1")

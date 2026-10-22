@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Column, DateTime, ForeignKey, String, Table
+from sqlalchemy import Column, DateTime, ForeignKey, String, Table, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -16,12 +16,16 @@ contact_tags = Table(
 
 
 class Tag(Base):
-    """A label contacts can be grouped by -- segmentation for broadcasts."""
+    """A label contacts can be grouped by -- segmentation for broadcasts.
+    Unique per tenant, not globally -- two tenants can each have their own
+    "vip-customers" tag without colliding."""
 
     __tablename__ = "tags"
+    __table_args__ = (UniqueConstraint("tenant_key", "name", name="uq_tag_tenant_name"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+    tenant_key: Mapped[str] = mapped_column(String(100), default="newax", nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
