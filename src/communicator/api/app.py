@@ -16,9 +16,12 @@ from communicator.api.routes import (
     drafts,
     gateways,
     inboxes,
+    instagram_auth,
     issue_trackers,
     knowledge_base,
     macros,
+    nid_auth,
+    organizations,
     outgoing_webhooks,
     prechat,
     presence,
@@ -63,6 +66,9 @@ async def health_check():
 
 # Webhooks authenticate themselves (Twilio signature / Postmark shared secret)
 app.include_router(webhooks.router, prefix="/api/v1")
+app.include_router(instagram_auth.router, prefix="/api/v1")
+app.include_router(nid_auth.router, prefix="/api/v1")
+app.include_router(organizations.router, prefix="/api/v1")
 app.include_router(widget.router, prefix="/api/v1")
 app.include_router(widget_customizer.router, prefix="/api/v1")
 app.include_router(prechat.router, prefix="/api/v1")

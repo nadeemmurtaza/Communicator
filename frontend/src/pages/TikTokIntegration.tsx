@@ -5,6 +5,7 @@ import {
   type TikTokChannelData,
   type SocialEvent,
 } from '../lib/api'
+import { TikTokIcon } from '../components/icons/BrandIcons'
 
 export function TikTokIntegration() {
   const [data, setData] = useState<TikTokChannelData | null>(null)
@@ -237,7 +238,7 @@ export function TikTokIntegration() {
             </Link>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-3xl">🎵</span>
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-black text-white"><TikTokIcon className="h-6 w-6" /></span>
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-bold text-slate-900">TikTok Business Integration</h1>

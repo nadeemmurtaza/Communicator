@@ -69,6 +69,7 @@ from .stripe_integration import (
 from .tag import Tag
 from .team import Team, team_memberships
 from .team_member import TeamMember
+from .tenant import Tenant
 from .ticket import (
     ActivityType,
     Ticket,
@@ -164,6 +165,7 @@ __all__ = [
     "Tag",
     "Team",
     "TeamMember",
+    "Tenant",
     "Ticket",
     "TicketActivity",
     "TicketDepartment",

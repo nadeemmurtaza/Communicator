@@ -5,6 +5,7 @@ import {
   type InstagramChannelData,
   type SocialEvent,
 } from '../lib/api'
+import { InstagramIcon } from '../components/icons/BrandIcons'
 
 export function InstagramIntegration() {
   const [data, setData] = useState<InstagramChannelData | null>(null)
@@ -235,8 +236,8 @@ export function InstagramIntegration() {
             <span className="text-sm font-medium text-gray-500">Instagram Direct</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-yellow-500 via-pink-600 to-purple-600 flex items-center justify-center text-white shadow-sm font-bold text-xl">
-              📸
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-yellow-500 via-pink-600 to-purple-600 flex items-center justify-center text-white shadow-sm">
+              <InstagramIcon className="h-6 w-6" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Instagram Direct Integration</h1>
@@ -373,6 +374,28 @@ export function InstagramIntegration() {
             <p className="text-sm text-gray-500 mt-0.5">
               Connect your Instagram Professional or Business account linked to your Meta Facebook Page.
             </p>
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-4">
+            {data?.health.accountConnected ? (
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-pink-500 to-amber-400 flex items-center justify-center text-white text-sm font-semibold">
+                  {(data.accountProfile.igUsername || '?').replace('@', '').slice(0, 1).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{data.accountProfile.igUsername}</p>
+                  <p className="text-xs text-gray-500 font-mono">{data.accountProfile.igId}</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">No Instagram account connected yet.</p>
+            )}
+            <a
+              href="/api/v1/auth/instagram/start"
+              className="px-4 py-2 bg-gradient-to-tr from-pink-500 to-amber-400 text-white text-sm font-medium rounded-lg hover:opacity-90 transition"
+            >
+              {data?.health.accountConnected ? 'Reconnect Instagram Account' : 'Connect Instagram Account'}
+            </a>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100">

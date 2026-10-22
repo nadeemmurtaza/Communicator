@@ -9,6 +9,7 @@ import {
   type PreChatRoutingRule,
   type PreChatTestIntakeResult,
 } from '../lib/api'
+import { LiveChatIcon } from '../components/icons/BrandIcons'
 
 export function LiveChatIntegration() {
   const [data, setData] = useState<LiveChatChannelData | null>(null)
@@ -507,7 +508,7 @@ export function LiveChatIntegration() {
               className="flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-sm"
               style={{ backgroundColor: widgetColor }}
             >
-              <span className="text-xl">🌐</span>
+              <LiveChatIcon className="h-5 w-5 text-white" />
             </div>
             <div>
               <div className="flex items-center gap-2">

@@ -13,6 +13,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>
 }
 
+export interface OrganizationItem {
+  id: string
+  tenantKey: string
+  name: string
+  createdAt: string
+}
+
 export interface Draft {
   id: string
   conversationId: string
@@ -3686,4 +3693,11 @@ export const api = {
         body: JSON.stringify({ attributes }),
       }
     ),
+  listOrganizations: (accountId?: string) =>
+    request<OrganizationItem[]>(`/organizations${accountId ? `?account_id=${encodeURIComponent(accountId)}` : ''}`),
+  createOrganization: (name: string, accountId: string) =>
+    request<OrganizationItem>('/organizations', {
+      method: 'POST',
+      body: JSON.stringify({ name, account_id: accountId }),
+    }),
 }
