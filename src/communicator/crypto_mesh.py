@@ -113,7 +113,7 @@ class CryptoMeshClient:
             auth_tag_b64,
             ciphertext_b64,
         ])
-        sig = hmac.new(self.auth_secret, canonical_string.encode("utf-8"), hashlib.sha256).digest()
+        sig = hmac.new(self.auth_secret, canonical_string.encode("utf-8"), hashlib.sha512).digest()
         return base64.b64encode(sig).decode("utf-8")
 
     def encrypt_for_relay(self, recipient_id: str, payload: Any) -> EncryptedTransitEnvelope:
