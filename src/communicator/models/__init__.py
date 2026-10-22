@@ -57,6 +57,10 @@ from .sso import (
     SINGLETON_SSO_CONFIG_ID,
     SSOConfig,
 )
+from .translation_settings import (
+    SINGLETON_TRANSLATION_SETTINGS_ID,
+    TranslationSettings,
+)
 from .stripe_integration import (
     SINGLETON_STRIPE_CONFIG_ID,
     StripeBillingActionLog,
@@ -141,6 +145,8 @@ __all__ = [
     "SimulationVerdict",
     "SINGLETON_SSO_CONFIG_ID",
     "SSOConfig",
+    "SINGLETON_TRANSLATION_SETTINGS_ID",
+    "TranslationSettings",
     "SINGLETON_STRIPE_CONFIG_ID",
     "SlackConversationSync",
     "SLAPolicy",

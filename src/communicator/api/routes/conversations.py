@@ -78,6 +78,7 @@ def _serialize_conversation(c: Conversation) -> dict[str, Any]:
         "assignedToName": c.assigned_to.name if c.assigned_to else None,
         "snoozedUntil": c.snoozed_until.isoformat() if c.snoozed_until else None,
         "customAttributes": c.custom_attributes or {},
+        "language": c.contact.language if c.contact and c.contact.language else "en",
         "updatedAt": c.updated_at.isoformat(),
     }
 
@@ -153,6 +154,8 @@ async def get_conversation(
             "senderName": m.sender_name,
             "attachments": m.attachments or [],
             "sentAt": m.sent_at.isoformat(),
+            "translation": (m.provider_metadata or {}).get("translation"),
+            "providerMetadata": m.provider_metadata or {},
         }
         for m in messages
     ]

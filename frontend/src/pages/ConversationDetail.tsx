@@ -18,6 +18,11 @@ export function ConversationDetail() {
   const [cannedSelectedIndex, setCannedSelectedIndex] = useState(0)
   const [conversationTickets, setConversationTickets] = useState<Ticket[]>([])
 
+  // Translation State
+  const [translatingMsgId, setTranslatingMsgId] = useState<string | null>(null)
+  const [showOriginalFor, setShowOriginalFor] = useState<Set<string>>(new Set())
+  const [autoTranslateOutbound, setAutoTranslateOutbound] = useState(true)
+
   function load() {
     if (!id) return
     api
@@ -94,12 +99,58 @@ export function ConversationDetail() {
     setCannedSelectedIndex(0)
   }
 
+  function toggleOriginal(msgId: string) {
+    setShowOriginalFor((prev) => {
+      const next = new Set(prev)
+      if (next.has(msgId)) {
+        next.delete(msgId)
+      } else {
+        next.add(msgId)
+      }
+      return next
+    })
+  }
+
+  async function handleTranslateMessage(msgId: string) {
+    setTranslatingMsgId(msgId)
+    setError(null)
+    try {
+      const res = await api.translateMessage(msgId, 'en')
+      if (res && res.translation) {
+        setConversation((prev) => {
+          if (!prev) return null
+          return {
+            ...prev,
+            messages: prev.messages.map((m) =>
+              m.id === msgId ? { ...m, translation: res.translation } : m
+            ),
+          }
+        })
+      }
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setTranslatingMsgId(null)
+    }
+  }
+
   async function handleSendReply() {
     if (!id || !replyText.trim() || isSending) return
     setIsSending(true)
     setError(null)
     try {
-      await api.sendConversationMessage(id, replyText.trim())
+      let textToSend = replyText.trim()
+      if (autoTranslateOutbound && conversation?.language && conversation.language !== 'en') {
+        try {
+          const trans = await api.prepareOutboundTranslation(id, textToSend, conversation.language)
+          if (trans && trans.translated_text) {
+            textToSend = trans.translated_text
+          }
+        } catch {
+          // fallback to original text if translation fails
+        }
+      }
+      await api.sendConversationMessage(id, textToSend)
       setReplyText('')
       load()
     } catch (e: any) {
@@ -162,6 +213,11 @@ export function ConversationDetail() {
           )}
           {conversation?.humanTakeover && (
             <span className="badge badge-warning">Human handling</span>
+          )}
+          {conversation?.language && conversation.language !== 'en' && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 border border-indigo-200">
+              🌐 Language: {conversation.language.toUpperCase()} • Auto-Translation Active
+            </span>
           )}
         </div>
       </div>
@@ -238,7 +294,38 @@ export function ConversationDetail() {
                     : 'ml-auto border-slate-900 bg-slate-900 text-white'
                 }`}
               >
-                <p className="whitespace-pre-wrap">{m.body}</p>
+                {m.translation && (
+                  <div className="mb-2 flex items-center justify-between gap-2 text-[11px] font-semibold text-blue-700 bg-blue-50/90 rounded-md px-2.5 py-1 border border-blue-200">
+                    <span className="flex items-center gap-1">
+                      <span>🌐</span>
+                      <span>
+                        Translated from {m.translation.source_language.toUpperCase()} ({Math.round(m.translation.confidence * 100)}% match)
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => toggleOriginal(m.id)}
+                      className="text-[10px] text-blue-800 underline hover:text-blue-900 cursor-pointer"
+                    >
+                      {showOriginalFor.has(m.id) ? 'Show English' : 'View Original'}
+                    </button>
+                  </div>
+                )}
+                <p className="whitespace-pre-wrap">
+                  {m.translation && !showOriginalFor.has(m.id)
+                    ? m.translation.translated_text
+                    : m.body}
+                </p>
+                {!m.translation && m.direction === 'inbound' && (
+                  <button
+                    type="button"
+                    onClick={() => handleTranslateMessage(m.id)}
+                    disabled={translatingMsgId === m.id}
+                    className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-800 disabled:opacity-50 cursor-pointer"
+                  >
+                    {translatingMsgId === m.id ? 'Translating...' : '🌐 Translate to English'}
+                  </button>
+                )}
                 <p
                   className={`mt-1 text-xs ${
                     m.direction === 'inbound' ? 'text-slate-400' : 'text-slate-300'
@@ -390,6 +477,17 @@ export function ConversationDetail() {
                     ⚡ Saved Replies (/)
                   </button>
                   <span className="text-[11px] text-slate-400">Ctrl + Enter to send</span>
+                  {conversation?.language && conversation.language !== 'en' && (
+                    <label className="flex items-center gap-1.5 cursor-pointer text-[11px] text-indigo-700 font-semibold bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-200">
+                      <input
+                        type="checkbox"
+                        checked={autoTranslateOutbound}
+                        onChange={(e) => setAutoTranslateOutbound(e.target.checked)}
+                        className="h-3.5 w-3.5 rounded text-indigo-600 border-slate-300"
+                      />
+                      <span>Auto-translate outbound to {conversation.language.toUpperCase()}</span>
+                    </label>
+                  )}
                 </div>
 
                 <button

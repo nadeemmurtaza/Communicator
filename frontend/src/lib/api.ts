@@ -48,6 +48,8 @@ export interface Message {
   intent: string
   status: string
   sentAt: string
+  providerMetadata?: Record<string, any>
+  translation?: TranslationResult
 }
 
 export interface ConversationDetail {
@@ -59,6 +61,7 @@ export interface ConversationDetail {
   contactName?: string
   contactPhone?: string
   channel?: string
+  language?: string
   resolutionType?: string | null
   csatScore?: number | null
   csatComment?: string | null
@@ -2090,6 +2093,17 @@ export interface SSOTestResult {
   sample_parsed?: Record<string, any>
 }
 
+
+export interface TranslationResult {
+  original_text: string
+  translated_text: string
+  source_language: string
+  target_language: string
+  confidence: number
+  provider: string
+  translated_at?: string
+}
+
 export const api = {
   listDrafts: () => request<Draft[]>('/drafts?status=pending_review'),
   approveDraft: (id: string) => request<Draft>(`/drafts/${id}/approve`, { method: 'POST' }),
@@ -3566,5 +3580,38 @@ export const api = {
     }>('/sso/check', {
       method: 'POST',
       body: JSON.stringify({ email }),
+    }),
+  // Gap 9: Bi-Directional Real-Time Auto-Translation
+  getTranslationLanguages: () =>
+    request<{ languages: Array<{ code: string; name: string; native: string; dir: string }>; total: number }>('/translation/languages'),
+  getTranslationSettings: () =>
+    request<{ settings: Record<string, any> }>('/translation/settings').then((r) => r.settings),
+  updateTranslationSettings: (data: Record<string, any>) =>
+    request<{ settings: Record<string, any> }>('/translation/settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }).then((r) => r.settings),
+  detectLanguage: (text: string) =>
+    request<{ language: string; name: string; confidence: number; script: string }>('/translation/detect', {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    }),
+  translateMessage: (messageId: string, targetLanguage = 'en') =>
+    request<{ success: boolean; message_id: string; translation: TranslationResult }>(
+      `/translation/messages/${messageId}/translate?target_language=${encodeURIComponent(targetLanguage)}`,
+      { method: 'POST' }
+    ),
+  prepareOutboundTranslation: (conversationId: string, text: string, targetLanguage?: string) =>
+    request<{
+      conversation_id: string
+      customer_language: string
+      original_text: string
+      translated_text: string
+      source_language: string
+      target_language: string
+      confidence: number
+    }>(`/translation/conversations/${conversationId}/prepare-outbound`, {
+      method: 'POST',
+      body: JSON.stringify({ text, target_language: targetLanguage }),
     }),
 }
