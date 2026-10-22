@@ -239,17 +239,18 @@ async def ingest_live_evidence(
     watermark_verified = True
     verification_score = 1.0
 
-    if watermark_nonce:
-        if not secrets.compare_digest(proof_session.anti_spoof_nonce, watermark_nonce):
-            logger.warning("Watermark nonce mismatch for session %s", session_id)
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Anti-spoofing verification failed: invalid watermark nonce.",
-            )
-    else:
-        # Require nonce in production/live capture
-        watermark_verified = False
-        verification_score = 0.8
+    if not watermark_nonce:
+        logger.warning("Watermark nonce missing for session %s", session_id)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Anti-spoofing verification failed: watermark nonce is required.",
+        )
+    if not secrets.compare_digest(proof_session.anti_spoof_nonce, watermark_nonce):
+        logger.warning("Watermark nonce mismatch for session %s", session_id)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Anti-spoofing verification failed: invalid watermark nonce.",
+        )
 
     # Validate numeric duration for video before any filesystem operations
     duration = None
