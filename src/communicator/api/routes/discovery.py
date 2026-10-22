@@ -140,7 +140,7 @@ async def sync_campaign_template_status(
     Pulls each template's real approval status from Meta's Graph API and
     updates the local rows -- replaces the previous hardcoded stub.
     """
-    config = await get_whatsapp_config(session)
+    config = await get_whatsapp_config(session, tenant_key=tenant_key)
     if not config.access_token or not config.waba_id:
         raise HTTPException(status_code=503, detail="WhatsApp credentials not configured.")
 

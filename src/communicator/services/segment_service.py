@@ -12,12 +12,16 @@ from communicator.models.segment import ContactSegment
 from communicator.models.tag import Tag
 
 
-def build_segment_filter_stmt(filters: dict[str, Any]):
+def build_segment_filter_stmt(filters: dict[str, Any], tenant_key: str = "newax"):
     """
     Constructs a SQLAlchemy select query applying dynamic criteria:
     channels, tags (any/all), search text, and creation date bounds.
+    Always scoped to one tenant -- a segment must never surface another
+    tenant's contacts.
     """
-    stmt = select(Contact).options(selectinload(Contact.tags))
+    stmt = (
+        select(Contact).options(selectinload(Contact.tags)).where(Contact.tenant_key == tenant_key)
+    )
 
     # 1. Filter by channels
     channels = filters.get("channels")
@@ -73,7 +77,7 @@ async def get_segment_contacts(
     session: AsyncSession, segment: ContactSegment, limit: int = 100, offset: int = 0
 ) -> list[Contact]:
     """Retrieves contacts matching the dynamic segment filters."""
-    stmt = build_segment_filter_stmt(segment.filters or {})
+    stmt = build_segment_filter_stmt(segment.filters or {}, tenant_key=segment.tenant_key)
     stmt = stmt.order_by(Contact.created_at.desc()).limit(limit).offset(offset)
     result = await session.execute(stmt)
     return list(result.scalars().unique().all())
@@ -81,7 +85,7 @@ async def get_segment_contacts(
 
 async def count_segment_contacts(session: AsyncSession, segment: ContactSegment) -> int:
     """Calculates total count of contacts matching the segment."""
-    base_stmt = build_segment_filter_stmt(segment.filters or {})
+    base_stmt = build_segment_filter_stmt(segment.filters or {}, tenant_key=segment.tenant_key)
     subq = base_stmt.subquery()
     count_stmt = select(func.count()).select_from(subq)
     result = await session.execute(count_stmt)

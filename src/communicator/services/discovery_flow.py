@@ -29,7 +29,6 @@ from communicator.channels.whatsapp import MetaWhatsAppProvider
 from communicator.models.contact import Contact
 from communicator.models.conversation import Conversation, ConversationState
 from communicator.models.discovery_flow_template import DiscoveryFlowTemplate
-from communicator.models.inbox import Inbox
 from communicator.models.inquiry import Inquiry, InquiryStatus
 from communicator.models.message import Message, MessageDirection, MessageStatus
 from communicator.services.messaging import send_outbound_message
@@ -44,17 +43,12 @@ DEFAULT_TENANT_KEY = "newax"
 
 async def resolve_tenant_key(session: AsyncSession, contact: Contact) -> str:
     """
-    Resolves which tenant's flow should handle this contact. For now that's
-    the tenant configured on the inbox the contact's channel uses; falls
-    back to the default tenant if none is set (single-tenant deployments).
+    Resolves which tenant's flow should handle this contact. Contact.tenant_key
+    is the ground truth -- picking "the first active inbox for this channel"
+    would hand a multi-inbox tenant's contact an unrelated tenant's template
+    whenever more than one inbox shares a channel.
     """
-    stmt = select(Inbox).where(Inbox.channel_type == contact.channel, Inbox.is_active.is_(True))
-    inbox = (await session.execute(stmt)).scalars().first()
-    if inbox is not None:
-        tenant_key = (inbox.credentials or {}).get("tenantKey")
-        if tenant_key:
-            return tenant_key
-    return DEFAULT_TENANT_KEY
+    return contact.tenant_key or DEFAULT_TENANT_KEY
 
 
 async def get_template(session: AsyncSession, tenant_key: str) -> DiscoveryFlowTemplate | None:
@@ -165,7 +159,9 @@ async def start_discovery(
     # Only prefills a step's answer when the field is actually present on
     # record -- a blank/unknown field still gets asked normally.
     prefilled: dict[str, str] = {}
-    relationship = await get_relationship_summary(session, contact.id)
+    relationship = await get_relationship_summary(
+        session, contact.id, exclude_conversation_id=conversation.id
+    )
     prior_inquiry = relationship.get("latest_inquiry")
     if prior_inquiry:
         if prior_inquiry.get("organization_name"):
@@ -269,42 +265,52 @@ async def _finish_discovery(
         f"{problem_text} {answers.get('industry', '')}", template.capability_keywords
     )
 
-    inquiry = Inquiry(
-        tenant_key=template.tenant_key,
-        conversation_id=conversation.id,
-        contact_id=contact.id,
-        lead_id=contact.lead_id,
-        organization_name=answers.get("organization_name", ""),
-        industry=answers.get("industry", ""),
-        contact_role=answers.get("contact_role", ""),
-        org_size_range=answers.get("org_size_range", ""),
-        problem_description=problem_text,
-        problem_categories=problem_categories,
-        reported_impact=[answers.get("reported_impact", "")]
-        if answers.get("reported_impact")
-        else [],
-        frequency=answers.get("frequency", ""),
-        desired_outcome=answers.get("desired_outcome", ""),
-        capability_mapping=capability_mapping,
-        timeline=answers.get("timeline", ""),
-        budget_range=answers.get("budget_range", ""),
-        status=InquiryStatus.AWAITING_REVIEW,
-        next_action="Human discovery discussion",
+    # Inquiry.conversation_id is unique -- a contact who restarts discovery
+    # in the same (non-terminal) conversation updates their existing
+    # Inquiry instead of crashing on a duplicate-key insert.
+    inquiry = (
+        await session.execute(select(Inquiry).where(Inquiry.conversation_id == conversation.id))
+    ).scalar_one_or_none()
+    if inquiry is None:
+        inquiry = Inquiry(conversation_id=conversation.id, contact_id=contact.id)
+        session.add(inquiry)
+
+    inquiry.tenant_key = template.tenant_key
+    inquiry.lead_id = contact.lead_id
+    inquiry.organization_name = answers.get("organization_name", "")
+    inquiry.industry = answers.get("industry", "")
+    inquiry.contact_role = answers.get("contact_role", "")
+    inquiry.org_size_range = answers.get("org_size_range", "")
+    inquiry.problem_description = problem_text
+    inquiry.problem_categories = problem_categories
+    inquiry.reported_impact = (
+        [answers.get("reported_impact", "")] if answers.get("reported_impact") else []
     )
+    inquiry.frequency = answers.get("frequency", "")
+    inquiry.desired_outcome = answers.get("desired_outcome", "")
+    inquiry.capability_mapping = capability_mapping
+    inquiry.timeline = answers.get("timeline", "")
+    inquiry.budget_range = answers.get("budget_range", "")
+    inquiry.status = InquiryStatus.AWAITING_REVIEW
+    inquiry.next_action = "Human discovery discussion"
+
     score, factors = _score_inquiry(inquiry, template.scoring_weights)
     inquiry.qualification_score = score
     inquiry.qualification_factors = factors
-    session.add(inquiry)
 
     conversation.custom_attributes = {**(conversation.custom_attributes or {}), "discovery": None}
-    conversation.state = ConversationState.HOT_LEAD
     conversation.human_takeover = True
     await session.flush()
 
     closing = template.closing_message or (
         "Thanks — that gives us a clear picture. Someone from our team will follow up shortly."
     )
+    # Send before marking HOT_LEAD -- send_outbound_message sets the
+    # conversation to AWAITING_REPLY as a side effect, which would
+    # otherwise overwrite the qualification state we want to end on.
     await _send(session, contact, conversation, closing)
+    conversation.state = ConversationState.HOT_LEAD
+    await session.flush()
 
     logger.info(
         "New inquiry %s (tenant=%s): score=%s org=%s capability=%s",

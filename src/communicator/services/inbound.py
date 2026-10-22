@@ -224,7 +224,13 @@ async def _route_reply(
         return
 
     # 6. Advanced Automation Rules Engine
-    rule = await match_advanced_rule(session, body, payload_id=interactive_payload_id)
+    rule = await match_advanced_rule(
+        session,
+        body,
+        payload_id=interactive_payload_id,
+        tenant_key=contact.tenant_key or "newax",
+        channel=contact.channel.value if hasattr(contact.channel, "value") else contact.channel,
+    )
     if rule is not None:
         try:
             if await execute_rule_action(session, rule, conversation, contact):

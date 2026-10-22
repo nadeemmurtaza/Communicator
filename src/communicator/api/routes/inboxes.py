@@ -67,8 +67,12 @@ def _serialize_inbox(inbox: Inbox) -> dict[str, Any]:
             "app_secret": "••••••••" if (inbox.credentials or {}).get("appSecret") else "",
             "accessToken": "••••••••" if (inbox.credentials or {}).get("accessToken") else "",
             "access_token": "••••••••" if (inbox.credentials or {}).get("accessToken") else "",
-            "webhookVerifyToken": (inbox.credentials or {}).get("webhookVerifyToken", ""),
-            "webhook_verify_token": (inbox.credentials or {}).get("webhookVerifyToken", ""),
+            "webhookVerifyToken": "••••••••"
+            if (inbox.credentials or {}).get("webhookVerifyToken")
+            else "",
+            "webhook_verify_token": "••••••••"
+            if (inbox.credentials or {}).get("webhookVerifyToken")
+            else "",
             "catalogId": (inbox.credentials or {}).get("catalogId", ""),
             "catalog_id": (inbox.credentials or {}).get("catalogId", ""),
             "websiteToken": (inbox.credentials or {}).get("websiteToken", ""),

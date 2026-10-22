@@ -63,7 +63,7 @@ async def list_contacts(
         segment = await session.get(ContactSegment, segment_id)
         if segment is None:
             raise HTTPException(status_code=404, detail="Segment not found")
-        stmt = build_segment_filter_stmt(segment.filters or {})
+        stmt = build_segment_filter_stmt(segment.filters or {}, tenant_key=segment.tenant_key)
     else:
         stmt = select(Contact).options(selectinload(Contact.tags))
 
@@ -468,7 +468,7 @@ async def export_contacts(
         segment = await session.get(ContactSegment, segment_id)
         if segment is None:
             raise HTTPException(status_code=404, detail="Segment not found")
-        stmt = build_segment_filter_stmt(segment.filters or {})
+        stmt = build_segment_filter_stmt(segment.filters or {}, tenant_key=segment.tenant_key)
     else:
         stmt = select(Contact).options(selectinload(Contact.tags))
         if tag:

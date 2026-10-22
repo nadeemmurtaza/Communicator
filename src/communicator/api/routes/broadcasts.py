@@ -121,7 +121,7 @@ async def _resolve_template_fields(
         )
 
     template = await session.get(CampaignTemplate, campaign_template_id)
-    if template is None:
+    if template is None or template.tenant_key != fallback.tenant_key:
         raise HTTPException(status_code=404, detail="Campaign template not found")
     if template.meta_status != "APPROVED":
         raise HTTPException(
@@ -137,10 +137,11 @@ async def _resolve_template_fields(
     )
 
 
-async def _audience_count_for_tags(session: AsyncSession, tag_name: str) -> int:
+async def _audience_count_for_tags(session: AsyncSession, tag_name: str, tenant_key: str) -> int:
     tag_names = [t.strip() for t in tag_name.replace("|", ",").split(",") if t.strip()]
     stmt = (
         select(distinct(Contact.id))
+        .where(Contact.tenant_key == tenant_key)
         .where(Contact.channel == ChannelType.WHATSAPP)
         .where(Contact.tags.any(Contact.tags.property.mapper.class_.name.in_(tag_names)))
     )
@@ -155,7 +156,7 @@ async def create_broadcast(payload: BroadcastIn, session: AsyncSession = Depends
         body_preview,
         template_params,
     ) = await _resolve_template_fields(session, payload.campaign_template_id, payload)
-    audience_count = await _audience_count_for_tags(session, payload.tag_name)
+    audience_count = await _audience_count_for_tags(session, payload.tag_name, payload.tenant_key)
     initial_status = BroadcastStatus.SCHEDULED if payload.scheduled_at else BroadcastStatus.DRAFT
 
     broadcast = Broadcast(
@@ -229,6 +230,7 @@ async def create_broadcast(payload: BroadcastIn, session: AsyncSession = Depends
 @router.get("/audience-preview")
 async def preview_audience(
     tags: str = Query(..., description="Comma-separated tag names"),
+    tenant_key: str = Query("newax"),
     session: AsyncSession = Depends(get_db_session),
 ):
     """
@@ -242,6 +244,7 @@ async def preview_audience(
     stmt = (
         select(Contact)
         .options(selectinload(Contact.tags))
+        .where(Contact.tenant_key == tenant_key)
         .where(Contact.channel == ChannelType.WHATSAPP)
         .where(Contact.tags.any(Contact.tags.property.mapper.class_.name.in_(tag_list)))
     )
@@ -391,9 +394,29 @@ async def reschedule_broadcast(
             status_code=400, detail="Cannot reschedule a campaign that has already started."
         )
 
+    old_scheduled_at = broadcast.scheduled_at
     broadcast.scheduled_at = payload.scheduled_at
     broadcast.status = BroadcastStatus.SCHEDULED if payload.scheduled_at else BroadcastStatus.DRAFT
     await session.flush()
+
+    # Child steps are scheduled relative to this campaign's send time -- move
+    # them by the same delta so the sequence's day-N spacing stays intact.
+    if payload.scheduled_at and old_scheduled_at:
+        delta = payload.scheduled_at - old_scheduled_at
+        children = (
+            (
+                await session.execute(
+                    select(Broadcast).where(Broadcast.parent_campaign_id == broadcast.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        for child in children:
+            if child.status not in (BroadcastStatus.SENDING, BroadcastStatus.COMPLETED):
+                child.scheduled_at = (child.scheduled_at or payload.scheduled_at) + delta
+        await session.flush()
+
     return _serialize(broadcast)
 
 
@@ -415,6 +438,7 @@ async def dispatch_broadcast(
     stmt = (
         select(Contact)
         .options(selectinload(Contact.tags))
+        .where(Contact.tenant_key == broadcast.tenant_key)
         .where(Contact.channel == ChannelType.WHATSAPP)
         .where(Contact.tags.any(Contact.tags.property.mapper.class_.name.in_(tag_list)))
     )
@@ -423,7 +447,7 @@ async def dispatch_broadcast(
     broadcast.status = BroadcastStatus.SENDING
     await session.flush()
 
-    config = await get_whatsapp_config(session)
+    config = await get_whatsapp_config(session, tenant_key=broadcast.tenant_key)
     provider = None
     if config.access_token and config.phone_number_id:
         provider = MetaWhatsAppProvider(
@@ -453,23 +477,46 @@ async def dispatch_broadcast(
         # Stop-on-reply (sequence step): skip anyone who has replied, been
         # taken over by a human, or gone hot since the previous step fired --
         # per the spec's "recheck eligibility immediately before sending".
-        if broadcast.stop_on_reply and broadcast.parent_campaign_id is not None:
+        if broadcast.parent_campaign_id is not None:
             parent = await session.get(Broadcast, broadcast.parent_campaign_id)
-            parent_sent_at = parent.created_at if parent else None
-            engaged_since_parent = (
-                conversation.human_takeover
-                or conversation.state in (ConversationState.HOT_LEAD, ConversationState.HANDED_OFF)
-                or (
-                    parent_sent_at
-                    and conversation.last_inbound_at
-                    and conversation.last_inbound_at > parent_sent_at
+            parent_recipient = (
+                await session.execute(
+                    select(BroadcastRecipient).where(
+                        BroadcastRecipient.broadcast_id == broadcast.parent_campaign_id,
+                        BroadcastRecipient.contact_id == contact.id,
+                    )
                 )
-            )
-            if engaged_since_parent:
+            ).scalar_one_or_none()
+            # Only continue the sequence for contacts the previous step
+            # actually reached -- a contact the prior step skipped/failed
+            # never saw this campaign and shouldn't jump ahead to step N.
+            if parent_recipient is None or parent_recipient.status not in (
+                RecipientStatus.SENT,
+                RecipientStatus.DELIVERED,
+                RecipientStatus.READ,
+            ):
                 recipient.status = RecipientStatus.SKIPPED
-                recipient.error = "Contact replied or was engaged since the previous step"
+                recipient.error = "Previous step in sequence did not send to this contact"
                 broadcast.skipped_count += 1
                 continue
+
+            if broadcast.stop_on_reply:
+                parent_sent_at = parent.created_at if parent else None
+                engaged_since_parent = (
+                    conversation.human_takeover
+                    or conversation.state
+                    in (ConversationState.HOT_LEAD, ConversationState.HANDED_OFF)
+                    or (
+                        parent_sent_at
+                        and conversation.last_inbound_at
+                        and conversation.last_inbound_at > parent_sent_at
+                    )
+                )
+                if engaged_since_parent:
+                    recipient.status = RecipientStatus.SKIPPED
+                    recipient.error = "Contact replied or was engaged since the previous step"
+                    broadcast.skipped_count += 1
+                    continue
 
         conversation.broadcast_id = broadcast.id
 

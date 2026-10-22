@@ -52,7 +52,18 @@ async def _contact_ids_for_customer(
     return list((await session.execute(stmt)).scalars().all())
 
 
-async def get_relationship_summary(session: AsyncSession, contact_id: uuid.UUID) -> dict:
+async def get_relationship_summary(
+    session: AsyncSession,
+    contact_id: uuid.UUID,
+    exclude_conversation_id: uuid.UUID | None = None,
+) -> dict:
+    """
+    exclude_conversation_id should be the conversation the caller is
+    currently acting within, when there is one. By the time this runs on
+    an inbound message, that conversation already has a live state
+    (NEW/ENGAGED/...) -- counting it toward "relationship_stage" makes
+    every first-time contact look like a returning active prospect.
+    """
     contact_ids = await _contact_ids_for_customer(session, contact_id)
 
     conversations = (
@@ -65,6 +76,11 @@ async def get_relationship_summary(session: AsyncSession, contact_id: uuid.UUID)
         )
         .scalars()
         .all()
+    )
+    prior_conversations = (
+        [c for c in conversations if c.id != exclude_conversation_id]
+        if exclude_conversation_id
+        else conversations
     )
     inquiries = (
         (
@@ -91,14 +107,15 @@ async def get_relationship_summary(session: AsyncSession, contact_id: uuid.UUID)
     )
 
     closed_states = {ConversationState.CLOSED_WON, ConversationState.CLOSED_LOST}
-    prior_closed = [c for c in conversations if c.state in closed_states]
+    prior_closed = [c for c in prior_conversations if c.state in closed_states]
 
-    if not conversations:
+    if not prior_conversations:
         stage = "new_prospect"
-    elif any(c.state == ConversationState.CLOSED_WON for c in conversations):
+    elif any(c.state == ConversationState.CLOSED_WON for c in prior_conversations):
         stage = "client"
     elif any(
-        c.state in _ACTIVE_STATES or c.state == ConversationState.HOT_LEAD for c in conversations
+        c.state in _ACTIVE_STATES or c.state == ConversationState.HOT_LEAD
+        for c in prior_conversations
     ):
         stage = "active_prospect"
     else:

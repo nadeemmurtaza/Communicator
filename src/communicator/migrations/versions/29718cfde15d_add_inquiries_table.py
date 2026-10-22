@@ -228,16 +228,33 @@ def upgrade() -> None:
     op.create_index(
         op.f("ix_knowledge_base_entries_topic"), "knowledge_base_entries", ["topic"], unique=False
     )
-    op.add_column("team_members", sa.Column("role", sa.String(length=50), nullable=False))
     op.add_column(
         "team_members",
-        sa.Column("custom_permissions", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column("role", sa.String(length=50), nullable=False, server_default="agent"),
     )
     op.add_column(
-        "team_members", sa.Column("availability_status", sa.String(length=20), nullable=False)
+        "team_members",
+        sa.Column(
+            "custom_permissions",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+            server_default="[]",
+        ),
     )
     op.add_column(
-        "team_members", sa.Column("max_concurrent_conversations", sa.Integer(), nullable=False)
+        "team_members",
+        sa.Column(
+            "availability_status",
+            sa.String(length=20),
+            nullable=False,
+            server_default="available",
+        ),
+    )
+    op.add_column(
+        "team_members",
+        sa.Column(
+            "max_concurrent_conversations", sa.Integer(), nullable=False, server_default="10"
+        ),
     )
     op.add_column(
         "team_members", sa.Column("last_assigned_at", sa.DateTime(timezone=True), nullable=True)

@@ -94,7 +94,12 @@ async def seed_newax_campaign_templates(session: AsyncSession) -> int:
             )
         ).scalar_one_or_none()
         if existing is not None:
+            # meta_status is owned by sync_campaign_template_status (it reflects
+            # Meta's real approval state) -- reseeding must never revert an
+            # APPROVED/REJECTED template back to the seed data's PENDING.
             for field, value in data.items():
+                if field == "meta_status":
+                    continue
                 setattr(existing, field, value)
         else:
             session.add(CampaignTemplate(**data))

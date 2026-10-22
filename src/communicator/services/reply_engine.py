@@ -66,8 +66,9 @@ _ALERT_INTENTS = ("buying_signal", "complaint", "escalate")
 _ALERT_SENTIMENTS = ("negative", "urgent")
 
 
-async def _render_knowledge_base(session: AsyncSession) -> str:
-    entries = (await session.execute(select(KnowledgeBaseEntry))).scalars().all()
+async def _render_knowledge_base(session: AsyncSession, tenant_key: str = "newax") -> str:
+    stmt = select(KnowledgeBaseEntry).where(KnowledgeBaseEntry.tenant_key == tenant_key)
+    entries = (await session.execute(stmt)).scalars().all()
     if not entries:
         return ""
     body = "\n\n".join(f"### {e.title}\n{e.content}" for e in entries)
@@ -89,9 +90,10 @@ async def _build_context(
         (m.body for m in reversed(messages) if m.direction.value == "inbound"), ""
     )
 
-    services = await get_matching_services(session, lead.institution_type)
+    tenant_key = contact.tenant_key or "newax"
+    services = await get_matching_services(session, lead.institution_type, tenant_key=tenant_key)
     service_context = render_service_context(services)
-    knowledge_context = await _render_knowledge_base(session)
+    knowledge_context = await _render_knowledge_base(session, tenant_key=tenant_key)
 
     # Ingest contact memories (Remembers) into prompt
     memories = await get_contact_memories(session, contact.id)
@@ -100,7 +102,9 @@ async def _build_context(
     # Relationship summary -- across ALL of this contact's conversations
     # and prior inquiries, not just the current thread, so the agent
     # responds with awareness of the relationship instead of amnesia.
-    relationship_summary = await get_relationship_summary(session, contact.id)
+    relationship_summary = await get_relationship_summary(
+        session, contact.id, exclude_conversation_id=conversation.id
+    )
     relationship_context = render_relationship_context(relationship_summary)
 
     user_prompt = (
