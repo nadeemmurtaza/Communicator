@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import uuid
 from typing import Annotated
 
@@ -15,12 +16,14 @@ router = APIRouter(tags=["live-proof-ui"])
 
 
 def render_error_page(title: str, message: str) -> HTMLResponse:
-    html = f"""<!DOCTYPE html>
+    safe_title = html.escape(title)
+    safe_message = html.escape(message)
+    rendered_html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>{title} - LiveProof</title>
+  <title>{safe_title} - LiveProof</title>
   <style>
     :root {{
       --bg: #0f172a;
@@ -71,12 +74,12 @@ def render_error_page(title: str, message: str) -> HTMLResponse:
   <div class="card">
     <div class="icon">🔒</div>
     <div class="badge">Verification Notice</div>
-    <h1>{title}</h1>
-    <p>{message}</p>
+    <h1>{safe_title}</h1>
+    <p>{safe_message}</p>
   </div>
 </body>
 </html>"""
-    return HTMLResponse(content=html, status_code=200)
+    return HTMLResponse(content=rendered_html, status_code=200)
 
 
 @router.get("/verify/proof/{session_id}", response_class=HTMLResponse)
@@ -103,12 +106,12 @@ async def live_proof_capture_page(
             f"Live evidence for order #{proof_session.order_id or 'claim'} has already been captured and is being processed by the support team.",
         )
 
-    order_ref = proof_session.order_id or "Claim"
-    tenant_name = proof_session.tenant_id
-    anti_spoof_nonce = proof_session.anti_spoof_nonce
-    max_video_seconds = proof_session.max_video_seconds
+    order_ref = html.escape(str(proof_session.order_id or "Claim"))
+    tenant_name = html.escape(str(proof_session.tenant_id or "default"))
+    anti_spoof_nonce = html.escape(str(proof_session.anti_spoof_nonce))
+    max_video_seconds = int(proof_session.max_video_seconds)
 
-    html = f"""<!DOCTYPE html>
+    page_html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -475,15 +478,27 @@ async def live_proof_capture_page(
         stream.getTracks().forEach(t => t.stop());
       }}
       try {{
-        const constraints = {{
+        const isVideoTab = currentTab === 'video';
+        let constraints = {{
           video: {{
             facingMode: {{ ideal: facingMode }},
             width: {{ ideal: 1920 }},
             height: {{ ideal: 1080 }}
           }},
-          audio: true
+          audio: isVideoTab
         }};
-        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        try {{
+          stream = await navigator.mediaDevices.getUserMedia(constraints);
+        }} catch (mediaErr) {{
+          if (constraints.audio) {{
+            // Fall back to video-only if microphone is missing or permission is denied
+            console.warn("Microphone access failed; retrying with video only", mediaErr);
+            constraints.audio = false;
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
+          }} else {{
+            throw mediaErr;
+          }}
+        }}
         videoEl.srcObject = stream;
       }} catch (err) {{
         console.error("Camera access failed", err);
@@ -676,4 +691,4 @@ async def live_proof_capture_page(
   </script>
 </body>
 </html>"""
-    return HTMLResponse(content=html, status_code=200)
+    return HTMLResponse(content=page_html, status_code=200)

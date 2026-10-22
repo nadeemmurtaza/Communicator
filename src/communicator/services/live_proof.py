@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import re
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -52,6 +53,7 @@ async def create_live_proof_session(
     require_video: bool = True,
     require_photos: bool = True,
     base_url: str = "",
+    auto_commit: bool = True,
 ) -> tuple[LiveProofSession, str]:
     """
     Creates a new LiveProof verification session for a customer refund/return claim.
@@ -99,8 +101,11 @@ async def create_live_proof_session(
         },
     )
     session.add(audit)
-    await session.commit()
-    await session.refresh(proof_session)
+    if auto_commit:
+        await session.commit()
+        await session.refresh(proof_session)
+    else:
+        await session.flush()
 
     root_url = (base_url or settings.public_url).rstrip("/")
     verification_url = f"{root_url}/verify/proof/{proof_session.id}?token={session_token}"
@@ -118,6 +123,7 @@ async def get_and_validate_session(
     session: AsyncSession,
     session_id: uuid.UUID,
     token: str,
+    for_upload: bool = False,
 ) -> LiveProofSession:
     """
     Retrieves and validates a session for customer access.
@@ -156,6 +162,12 @@ async def get_and_validate_session(
             detail=f"This session was rejected: {proof_session.rejection_reason or 'Policy violation'}",
         )
 
+    if for_upload and proof_session.status in (LiveProofStatus.CAPTURED, LiveProofStatus.VERIFIED):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Evidence collection for this session has already been completed and submitted.",
+        )
+
     return proof_session
 
 
@@ -180,7 +192,7 @@ async def ingest_live_evidence(
     5. SHA-256 hash is computed and recorded immutably.
     6. Emits `refund.proof_captured` event to core-newax Event Bus / ERP-1.
     """
-    proof_session = await get_and_validate_session(session, session_id, token)
+    proof_session = await get_and_validate_session(session, session_id, token, for_upload=True)
 
     if not file_bytes:
         raise HTTPException(
@@ -223,25 +235,44 @@ async def ingest_live_evidence(
             detail="File upload from phone gallery is strictly prohibited. You must use the live camera.",
         )
 
-    # Watermark dynamic nonce verification
+    # Dynamic watermark nonce verification
     watermark_verified = True
     verification_score = 1.0
 
     if watermark_nonce:
         if not secrets.compare_digest(proof_session.anti_spoof_nonce, watermark_nonce):
             logger.warning("Watermark nonce mismatch for session %s", session_id)
-            watermark_verified = False
-            verification_score -= 0.5
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Anti-spoofing verification failed: invalid watermark nonce.",
+            )
     else:
+        # Require nonce in production/live capture
         watermark_verified = False
-        verification_score -= 0.2
+        verification_score = 0.8
+
+    # Validate numeric duration for video before any filesystem operations
+    duration = None
+    if media_type == ProofMediaType.LIVE_VIDEO:
+        try:
+            duration = float(telemetry_data.get("duration_seconds") or 0.0)
+            if duration < 0 or duration > 3600:
+                raise ValueError("Video duration out of range.")
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid video duration in telemetry.",
+            )
 
     # Compute SHA-256 hash
     sha256_hash = hashlib.sha256(file_bytes).hexdigest()
 
-    # Determine file storage path
-    storage_root = Path(settings.live_proof_storage_dir)
-    tenant_dir = storage_root / proof_session.tenant_id / str(proof_session.id)
+    # Determine file storage path with path traversal protection
+    storage_root = Path(settings.live_proof_storage_dir).resolve()
+    clean_tenant = re.sub(r"[^A-Za-z0-9_-]", "_", str(proof_session.tenant_id))[:64] or "default"
+    tenant_dir = (storage_root / clean_tenant / str(proof_session.id)).resolve()
+    if not tenant_dir.is_relative_to(storage_root):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid storage path.")
     tenant_dir.mkdir(parents=True, exist_ok=True)
 
     evidence_id = uuid.uuid4()
@@ -249,11 +280,11 @@ async def ingest_live_evidence(
     file_name = f"{evidence_id}_{media_type.value}.{ext}"
     target_path = tenant_dir / file_name
 
-    target_path.write_bytes(file_bytes)
-
-    duration = None
-    if media_type == ProofMediaType.LIVE_VIDEO:
-        duration = float(telemetry_data.get("duration_seconds") or 0.0)
+    try:
+        target_path.write_bytes(file_bytes)
+    except OSError as io_err:
+        logger.error("Failed to write evidence to disk: %s", io_err)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Storage write error.")
 
     resolution = telemetry_data.get("resolution") or "1920x1080"
 
@@ -282,9 +313,21 @@ async def ingest_live_evidence(
 
     session.add(evidence)
 
-    # Transition session status to CAPTURED
-    proof_session.status = LiveProofStatus.CAPTURED
-    proof_session.completed_at = datetime.now(UTC)
+    # Multi-part evidence check: verify whether all required media types have been submitted
+    stmt_ev = select(LiveProofEvidence).where(LiveProofEvidence.session_id == proof_session.id)
+    existing_evidences = (await session.execute(stmt_ev)).scalars().all()
+    all_media_types = {e.media_type for e in existing_evidences} | {media_type}
+
+    needs_video = proof_session.require_video and (ProofMediaType.LIVE_VIDEO not in all_media_types)
+    needs_photos = proof_session.require_photos and (ProofMediaType.LIVE_PHOTO not in all_media_types)
+
+    is_complete = not (needs_video or needs_photos)
+
+    if is_complete:
+        proof_session.status = LiveProofStatus.CAPTURED
+        proof_session.completed_at = datetime.now(UTC)
+    else:
+        proof_session.status = LiveProofStatus.IN_PROGRESS
 
     audit = AuditLog(
         entity_type="LiveProofEvidence",
@@ -299,14 +342,16 @@ async def ingest_live_evidence(
             "sha256_hash": sha256_hash,
             "verification_score": evidence.verification_score,
             "watermark_verified": watermark_verified,
+            "is_complete": is_complete,
         },
     )
     session.add(audit)
     await session.commit()
     await session.refresh(evidence)
 
-    # Emit event to core-newax Event Bus / ERP-1
-    await _publish_proof_captured_event(proof_session, evidence)
+    # Emit event to core-newax Event Bus / ERP-1 only when all required parts are captured
+    if is_complete:
+        await _publish_proof_captured_event(proof_session, evidence)
 
     logger.info(
         "Successfully ingested live %s for session %s (SHA-256: %s)",

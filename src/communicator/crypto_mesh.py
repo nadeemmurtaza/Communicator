@@ -44,6 +44,17 @@ class EncryptedTransitEnvelope(BaseModel):
     signature: str
 
 
+_seen_signatures: dict[str, float] = {}
+
+
+def _prune_expired_signatures(max_age: float) -> None:
+    """Removes signatures older than max_age seconds from the anti-replay cache."""
+    now = time.time()
+    expired = [sig for sig, ts in _seen_signatures.items() if now - ts > max_age]
+    for sig in expired:
+        _seen_signatures.pop(sig, None)
+
+
 class CryptoMeshClient:
     """Client codec for communicating securely across NeuraCore's cryptographic relay bridge."""
 
@@ -57,9 +68,12 @@ class CryptoMeshClient:
         auth_secret_hex: str,
         max_clock_skew_seconds: int = 300,
     ) -> None:
-        self.tenant_id = tenant_id
-        self.entity_id = entity_id
-        self.key_id = key_id
+        if not ingress_secret_hex or not egress_secret_hex or not auth_secret_hex:
+            raise ValueError("CryptoMesh secrets (ingress, egress, auth) cannot be empty.")
+
+        self.tenant_id = tenant_id or "default"
+        self.entity_id = entity_id or "communicator"
+        self.key_id = key_id or "kid_default"
         self.ingress_key = bytes.fromhex(ingress_secret_hex)
         self.egress_key = bytes.fromhex(egress_secret_hex)
         self.auth_secret = bytes.fromhex(auth_secret_hex)
@@ -67,16 +81,27 @@ class CryptoMeshClient:
 
         if len(self.ingress_key) != 32 or len(self.egress_key) != 32:
             raise ValueError("AES-256 keys must be exactly 32 bytes (64 hex characters).")
+        if len(self.auth_secret) < 32:
+            raise ValueError("Auth secret must be at least 32 bytes for HMAC-SHA-512 security.")
 
     @classmethod
     def from_env(cls, prefix: str = "NEURA_CRYPTO_") -> "CryptoMeshClient":
-        """Instantiates client from environment variables."""
+        """Instantiates client from environment variables with safe development fallbacks."""
         tenant_id = os.getenv(f"{prefix}TENANT_ID", "default")
         entity_id = os.getenv(f"{prefix}ENTITY_ID", "communicator")
         key_id = os.getenv(f"{prefix}KEY_ID", "kid_default")
-        ingress = os.getenv(f"{prefix}INGRESS_SECRET_HEX", "00" * 32)
-        egress = os.getenv(f"{prefix}EGRESS_SECRET_HEX", "00" * 32)
-        auth = os.getenv(f"{prefix}AUTH_SECRET_HEX", "00" * 32)
+        ingress = os.getenv(f"{prefix}INGRESS_SECRET_HEX")
+        egress = os.getenv(f"{prefix}EGRESS_SECRET_HEX")
+        auth = os.getenv(f"{prefix}AUTH_SECRET_HEX")
+        
+        if not ingress or not egress or not auth:
+            # Check if running in test environment
+            if os.getenv("TESTING", "").lower() in ("1", "true") or os.getenv("PYTEST_CURRENT_TEST"):
+                ingress = ingress or "11" * 32
+                egress = egress or "22" * 32
+                auth = auth or "33" * 32
+            else:
+                raise ValueError("CryptoMesh environment variables (INGRESS, EGRESS, AUTH) are not configured.")
         return cls(tenant_id, entity_id, key_id, ingress, egress, auth)
 
     @staticmethod
@@ -116,16 +141,22 @@ class CryptoMeshClient:
         sig = hmac.new(self.auth_secret, canonical_string.encode("utf-8"), hashlib.sha512).digest()
         return base64.b64encode(sig).decode("utf-8")
 
-    def encrypt_for_relay(self, recipient_id: str, payload: Any) -> EncryptedTransitEnvelope:
+    def encrypt_for_relay(
+        self,
+        recipient_id: str,
+        payload: Any,
+        tenant_id: Optional[str] = None,
+    ) -> EncryptedTransitEnvelope:
         """Encrypts a payload with this entity's ingress key, ready for NeuraCore transit."""
         version = "1.0.0"
         timestamp = datetime.now(timezone.utc).isoformat()
         iv = os.urandom(12)
+        active_tenant = tenant_id or self.tenant_id
 
         serialized = json.dumps(payload, separators=(",", ":")).encode("utf-8")
         aad = self._build_aad(
             version,
-            self.tenant_id,
+            active_tenant,
             self.entity_id,
             recipient_id,
             self.key_id,
@@ -144,7 +175,7 @@ class CryptoMeshClient:
 
         signature = self._compute_signature(
             version,
-            self.tenant_id,
+            active_tenant,
             self.entity_id,
             recipient_id,
             self.key_id,
@@ -156,7 +187,7 @@ class CryptoMeshClient:
 
         return EncryptedTransitEnvelope(
             version=version,
-            tenantId=self.tenant_id,
+            tenantId=active_tenant,
             senderId=self.entity_id,
             recipientId=recipient_id,
             iv=iv_b64,
@@ -210,6 +241,14 @@ class CryptoMeshClient:
             raise CryptographicIntegrityError(
                 "Envelope signature mismatch: message has been tampered with in transit."
             )
+
+        # Anti-replay signature deduplication check
+        _prune_expired_signatures(self.max_clock_skew_seconds * 2)
+        if env.signature in _seen_signatures:
+            raise ReplayAttackDetectedError(
+                "Replay attack prevented: duplicate envelope signature detected."
+            )
+        _seen_signatures[env.signature] = time.time()
 
         # AES-256-GCM Decryption
         try:

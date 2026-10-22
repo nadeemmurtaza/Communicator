@@ -1,14 +1,7 @@
-"""Zero-Trust Crypto Mesh Ingress Route for Communicator
-
-Receives re-encrypted incoming messages and domain events from NeuraCore Relay Gateway:
-- Verifies HMAC-SHA-512 envelope integrity and anti-replay timestamp.
-- Decrypts AES-256-GCM ciphertext using Communicator's unique egress key ($K_{communicator}$).
-- Dispatches decrypted events to internal domain handlers (orders, refunds, tickets, broadcasts).
-"""
-
 from __future__ import annotations
 
 import logging
+import uuid
 from typing import Any, Dict
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -52,8 +45,20 @@ async def crypto_mesh_ingress(
             detail=f"Cryptographic verification failed: {exc}",
         )
 
+    if not isinstance(decrypted_payload, dict):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Decrypted payload must be a JSON object.",
+        )
+
     event_name = decrypted_payload.get("name") or decrypted_payload.get("event")
     event_data = decrypted_payload.get("payload") or decrypted_payload
+
+    if not isinstance(event_data, dict):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Event data must be a JSON object.",
+        )
 
     logger.info(
         "CryptoMesh Ingress decrypted event '%s' from '%s' (tenant: %s)",
@@ -97,10 +102,28 @@ async def _route_ecosystem_event(
         return "shipping_alert_sent"
 
     elif event_name in ("refund.decision", "return.approved"):
-        session_id = payload.get("sessionId")
-        decision = payload.get("decision", "APPROVED")
-        logger.info("Updated LiveProof refund session %s with decision: %s", session_id, decision)
-        return f"refund_session_{decision.lower()}"
+        session_id_raw = payload.get("sessionId")
+        decision_raw = str(payload.get("decision", "APPROVED")).upper()
+        if session_id_raw:
+            try:
+                sess_uuid = uuid.UUID(str(session_id_raw))
+                from communicator.models.live_proof import LiveProofSession, LiveProofStatus
+                from sqlalchemy import select
+                stmt = select(LiveProofSession).where(
+                    LiveProofSession.id == sess_uuid,
+                    LiveProofSession.tenant_id == tenant_id,
+                )
+                proof_sess = (await session.execute(stmt)).scalar_one_or_none()
+                if proof_sess:
+                    if decision_raw == "APPROVED":
+                        proof_sess.status = LiveProofStatus.VERIFIED
+                    elif decision_raw == "REJECTED":
+                        proof_sess.status = LiveProofStatus.REJECTED
+                    await session.commit()
+                    logger.info("Updated LiveProof refund session %s status to %s", sess_uuid, proof_sess.status)
+            except Exception as exc:
+                logger.warning("Could not update refund session %s: %s", session_id_raw, exc)
+        return f"refund_session_{decision_raw.lower()}"
 
     elif event_name in ("support.ticket.assigned", "ticket.created"):
         ticket_id = payload.get("ticketId") or payload.get("id")

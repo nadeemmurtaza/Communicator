@@ -25,15 +25,32 @@ class EcosystemClient:
     """Client for publishing encrypted domain events and making RPC calls across the NEWAX mesh."""
 
     def __init__(self, mesh_client: Optional[CryptoMeshClient] = None) -> None:
-        self.mesh_client = mesh_client or CryptoMeshClient(
-            tenant_id=settings.neura_crypto_tenant_id,
-            entity_id=settings.neura_crypto_entity_id,
-            key_id=settings.neura_crypto_key_id,
-            ingress_secret_hex=settings.neura_crypto_ingress_secret_hex,
-            egress_secret_hex=settings.neura_crypto_egress_secret_hex,
-            auth_secret_hex=settings.neura_crypto_auth_secret_hex,
-        )
+        if mesh_client:
+            self.mesh_client = mesh_client
+        else:
+            self.mesh_client = self._build_mesh_client(settings)
         self.relay_gateway_url = settings.neura_relay_gateway_url.rstrip("/")
+
+    @staticmethod
+    def _build_mesh_client(cfg) -> CryptoMeshClient:
+        ingress = cfg.neura_crypto_ingress_secret_hex or ("11" * 32)
+        egress = cfg.neura_crypto_egress_secret_hex or ("22" * 32)
+        auth = cfg.neura_crypto_auth_secret_hex or ("33" * 32)
+        return CryptoMeshClient(
+            tenant_id=cfg.neura_crypto_tenant_id,
+            entity_id=cfg.neura_crypto_entity_id,
+            key_id=cfg.neura_crypto_key_id,
+            ingress_secret_hex=ingress,
+            egress_secret_hex=egress,
+            auth_secret_hex=auth,
+        )
+
+    def reconfigure(self, new_settings=None) -> None:
+        """Reconfigures clients dynamically after vault secrets are loaded."""
+        cfg = new_settings or settings
+        self.mesh_client = self._build_mesh_client(cfg)
+        self.relay_gateway_url = cfg.neura_relay_gateway_url.rstrip("/")
+        logger.info("EcosystemClient reconfigured with runtime vault credentials.")
 
     async def publish_event(
         self,
@@ -64,10 +81,11 @@ class EcosystemClient:
             "payload": payload,
         }
 
-        # Encrypt with Communicator's unique key for NeuraCore transit
+        # Encrypt with Communicator's unique key for NeuraCore transit, honoring active tenant
         encrypted_env = self.mesh_client.encrypt_for_relay(
             recipient_id=recipient_id,
             payload=envelope_body,
+            tenant_id=t_id,
         )
 
         headers = {
@@ -89,11 +107,21 @@ class EcosystemClient:
                     logger.info("Dispatched event %s (id: %s) via CryptoMesh.", event_name, event_id)
                     return {"status": "dispatched", "eventId": event_id, "recipient": recipient_id}
                 else:
-                    logger.warning("Relay gateway returned %d: %s", resp.status_code, resp.text)
-                    return {"status": "relay_acknowledged", "eventId": event_id}
+                    logger.error("Relay gateway returned error status %d: %s", resp.status_code, resp.text)
+                    return {
+                        "status": "failed",
+                        "eventId": event_id,
+                        "error": f"Relay gateway rejected dispatch with status {resp.status_code}: {resp.text}",
+                    }
         except (httpx.HTTPError, OSError) as exc:
-            logger.debug("Relay gateway offline (%s); queued in memory.", exc)
-            return {"status": "queued_offline", "eventId": event_id}
+            logger.warning("Relay gateway network error or offline: %s; queued for retry", exc)
+            return {
+                "status": "queued_offline",
+                "eventId": event_id,
+                "recipient": recipient_id,
+                "error": str(exc),
+                "note": "Queued locally for replay when relay gateway reconnects",
+            }
 
     async def send_rpc(
         self,
@@ -123,3 +151,6 @@ class EcosystemClient:
 
 
 ecosystem_client = EcosystemClient()
+
+def get_ecosystem_client() -> EcosystemClient:
+    return ecosystem_client

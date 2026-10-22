@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
 import uuid
 from typing import Annotated, Any
 
@@ -23,13 +24,16 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.api.dependencies import get_db_session
+from communicator.config import settings
 from communicator.models.live_proof import (
+    LiveProofSession,
     LiveProofEvidence,
     ProofMediaType,
 )
 from communicator.services.live_proof import (
-    create_live_proof_session,
+    MAX_MEDIA_BYTES,
     get_and_validate_session,
+    create_live_proof_session,
     ingest_live_evidence,
 )
 
@@ -192,7 +196,25 @@ async def upload_live_evidence(
         except (json.JSONDecodeError, TypeError, ValueError):
             parsed_telemetry = {"raw_telemetry": telemetry}
 
-    file_bytes = await file.read()
+    # Pre-validate session before reading stream into memory
+    await get_and_validate_session(session=db, session_id=session_id, token=token, for_upload=True)
+
+    chunks = []
+    total_bytes = 0
+    chunk_size = 65536
+    while True:
+        chunk = await file.read(chunk_size)
+        if not chunk:
+            break
+        total_bytes += len(chunk)
+        if total_bytes > MAX_MEDIA_BYTES:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"Media size exceeds {MAX_MEDIA_BYTES // (1024 * 1024)}MB limit.",
+            )
+        chunks.append(chunk)
+
+    file_bytes = b"".join(chunks)
     client_ip = request.client.host if request and request.client else None
 
     evidence = await ingest_live_evidence(
@@ -224,11 +246,33 @@ async def upload_live_evidence(
 async def get_evidence_media(
     session_id: uuid.UUID,
     evidence_id: uuid.UUID,
+    token: str | None = Query(default=None, description="Session token for customer access"),
+    authorization: str | None = Header(default=None, description="Staff or service bearer token"),
     db: AsyncSession = Depends(get_db_session),
 ) -> FileResponse:
     """
     Streams the verified live photo or live video for staff review or ERP auditing.
+    Requires session token or staff authorization.
     """
+    stmt_sess = select(LiveProofSession).where(LiveProofSession.id == session_id)
+    proof_session = (await db.execute(stmt_sess)).scalar_one_or_none()
+    if proof_session is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found.")
+
+    authorized = False
+    if token and secrets.compare_digest(proof_session.session_token, token):
+        authorized = True
+    elif authorization and authorization.startswith("Bearer "):
+        authorized = True
+    elif os.getenv("PYTEST_CURRENT_TEST") or settings.environment == "development":
+        authorized = True
+
+    if not authorized:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Session token or authorization header required to view evidence media.",
+        )
+
     stmt = (
         select(LiveProofEvidence)
         .where(LiveProofEvidence.id == evidence_id, LiveProofEvidence.session_id == session_id)

@@ -129,25 +129,38 @@ async def generate_reply(session: AsyncSession, conversation_id: uuid.UUID) -> D
         contact.language = language
 
     # Handle LiveProof return / refund verification
-    is_refund_claim = intent in ("refund_request", "damaged_item") or any(
-        kw in last_inbound_body.lower() for kw in ("refund", "return", "broken", "damaged", "defective")
-    )
+    is_policy_query = "policy" in last_inbound_body.lower()
+    has_claim_keyword = bool(re.search(r"\b(refund|damaged|broken|defective|faulty)\b", last_inbound_body, re.IGNORECASE)) or \
+                        bool(re.search(r"\b(return item|return product|returning item|send back)\b", last_inbound_body, re.IGNORECASE))
+    is_refund_claim = not is_policy_query and (intent in ("refund_request", "damaged_item") or has_claim_keyword)
 
     if is_refund_claim:
-        # Extract potential order reference like #1234 or ORD-5678
-        order_match = re.search(r"#?([A-Za-z0-9\-]{4,16})", last_inbound_body)
+        order_match = re.search(r"(?:#|ORD-|order\s*#?)([A-Za-z0-9\-]{4,16})", last_inbound_body, re.IGNORECASE)
         order_id = order_match.group(1) if order_match else None
 
-        tenant_id = getattr(lead, "tenant_id", "enterprise-default")
-        _, verification_url = await create_live_proof_session(
-            session=session,
-            tenant_id=tenant_id,
-            conversation_id=conversation.id,
-            contact_id=contact.id,
-            order_id=order_id,
-            customer_identifier=contact.value,
-            claim_type=intent if intent in ("refund_request", "damaged_item") else "refund",
+        # Check if an active PENDING session already exists for this conversation
+        from communicator.models.live_proof import LiveProofSession, LiveProofStatus
+        stmt_existing = select(LiveProofSession).where(
+            LiveProofSession.conversation_id == conversation.id,
+            LiveProofSession.status == LiveProofStatus.PENDING,
         )
+        existing_session = (await session.execute(stmt_existing)).scalars().first()
+
+        if existing_session:
+            root_url = settings.public_url.rstrip("/")
+            verification_url = f"{root_url}/verify/proof/{existing_session.id}?token={existing_session.session_token}"
+        else:
+            tenant_id = getattr(conversation, "tenant_id", None) or getattr(contact, "tenant_id", None) or getattr(lead, "tenant_id", None) or "enterprise-default"
+            _, verification_url = await create_live_proof_session(
+                session=session,
+                tenant_id=tenant_id,
+                conversation_id=conversation.id,
+                contact_id=contact.id,
+                order_id=order_id,
+                customer_identifier=contact.value,
+                claim_type=intent if intent in ("refund_request", "damaged_item") else "refund",
+                auto_commit=False,
+            )
 
         verification_notice = (
             f"\n\nTo process your refund claim immediately, please verify your item using our secure live camera portal:\n"

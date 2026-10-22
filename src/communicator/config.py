@@ -73,9 +73,10 @@ class Settings(BaseSettings):
     neura_crypto_tenant_id: str = "default"
     neura_crypto_entity_id: str = "communicator"
     neura_crypto_key_id: str = "kid_communicator_v1"
-    neura_crypto_ingress_secret_hex: str = "aa" * 32
-    neura_crypto_egress_secret_hex: str = "bb" * 32
-    neura_crypto_auth_secret_hex: str = "cc" * 32
+    neura_crypto_ingress_secret_hex: str = ""
+    neura_crypto_egress_secret_hex: str = ""
+    neura_crypto_auth_secret_hex: str = ""
+    nid_allow_mock_auth: bool = False
     neura_relay_gateway_url: str = "http://localhost:3000/api/v1/crypto-mesh/relay"
     erp_api_base_url: str = "http://localhost:3001/api/v1"
     newcom_esp_api_base_url: str = "http://localhost:8081/api/v1"

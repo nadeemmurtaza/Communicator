@@ -386,16 +386,32 @@ async def ecosystem_event_inbound(
     Enables Communicator to handle customer engagement, order notifications,
     and support triggers without direct HTTP coupling to other repos.
     """
-    payload = await request.json()
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Malformed JSON payload.")
+
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payload must be a JSON object.")
+
     event_name = payload.get("name")
-    source = x_newax_source or payload.get("source")
-    tenant_id = x_tenant_id or payload.get("tenantId")
+    if not event_name:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing required 'name' in event payload.")
+
+    source = x_newax_source or payload.get("source") or "ecosystem"
+    tenant_id = x_tenant_id or payload.get("tenantId") or "default"
+    event_data = payload.get("payload") if isinstance(payload.get("payload"), dict) else payload
+
+    # Dispatch to Communicator's native workflows
+    from communicator.api.routes.crypto_mesh import _route_ecosystem_event
+    action = await _route_ecosystem_event(session, event_name, event_data, str(tenant_id))
 
     return {
-        "status": "accepted",
+        "status": "processed",
         "event": str(event_name),
         "source": str(source),
-        "tenant_id": str(tenant_id) if tenant_id else "",
+        "tenant_id": str(tenant_id),
+        "action": action,
     }
 
 

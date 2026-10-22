@@ -81,3 +81,16 @@ def _apply_vault_secrets(secrets_dict: Dict[str, Any]) -> None:
         if hasattr(settings, lower_key):
             setattr(settings, lower_key, val)
         os.environ[key.upper()] = str(val)
+
+    # Reconfigure singletons with loaded vault secrets
+    try:
+        from communicator.services.ecosystem_client import ecosystem_client
+        ecosystem_client.reconfigure()
+    except Exception as exc:
+        logger.debug("EcosystemClient reconfigure skipped: %s", exc)
+
+    try:
+        from communicator.services.nid_client import nid_client
+        nid_client.reconfigure()
+    except Exception as exc:
+        logger.debug("NidClient reconfigure skipped: %s", exc)

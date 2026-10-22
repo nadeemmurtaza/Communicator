@@ -11,6 +11,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import List
 
@@ -143,6 +144,8 @@ def call_claude(prompt: str) -> str:
                 max_tokens=8192,
                 messages=[{"role": "user", "content": prompt}],
             )
+            if hasattr(msg, "stop_reason") and msg.stop_reason == "max_tokens":
+                raise RuntimeError("Claude generation stopped due to max_tokens limit; output truncated.")
             return strip_llm_wrapper(msg.content[0].text.strip())
         except ImportError:
             pass  # anthropic not installed, fall back to CLI
@@ -228,8 +231,8 @@ def compress_file(filepath: Path) -> bool:
     if filepath.stat().st_size > MAX_FILE_SIZE:
         raise ValueError(f"File too large to compress safely (max 500KB): {filepath}")
 
-    # Refuse files that look like they contain secrets or PII. Compressing ships
-    # the raw bytes to the Anthropic API — a third-party boundary — so we fail
+    # Refuse files that look like they contain secrets or PII. Compressing
+    # them ships the raw bytes to the Anthropic API — a third-party boundary — so we fail
     # loudly rather than silently exfiltrate credentials or keys. Override is
     # intentional: the user must rename the file if the heuristic is wrong.
     if is_sensitive_path(filepath):
@@ -258,12 +261,18 @@ def compress_file(filepath: Path) -> bool:
         print("❌ Refusing to compress: file is empty or whitespace-only.")
         return False
 
-    # Check if backup already exists to prevent accidental overwriting
+    # Check if backup already exists - allow rotation/reuse if backup matches original or user reruns
     if backup_path.exists():
-        print(f"⚠️ Backup file already exists: {backup_path}")
-        print("The original backup may contain important content.")
-        print("Aborting to prevent data loss. Please remove or rename the backup file if you want to proceed.")
-        return False
+        existing_backup_text = backup_path.read_text(errors="ignore")
+        if existing_backup_text == original_text:
+            print(f"ℹ️ Reusing existing identical backup file: {backup_path}")
+        else:
+            rotated_backup = backup_dir / f"{filepath.stem}.original.{int(time.time())}.md"
+            try:
+                backup_path.rename(rotated_backup)
+                print(f"ℹ️ Rotated prior backup to: {rotated_backup}")
+            except OSError:
+                pass
 
     # Split YAML frontmatter off before compression. Claude tends to strip or
     # rewrite frontmatter despite preserve-structure rules; we keep it verbatim
@@ -312,31 +321,36 @@ def compress_file(filepath: Path) -> bool:
         return False
     filepath.write_text(compressed)
 
-    # Step 2: Validate + Retry
-    for attempt in range(MAX_RETRIES):
-        print(f"\nValidation attempt {attempt + 1}")
+    # Step 2: Validate + Retry with restoration guard
+    try:
+        for attempt in range(MAX_RETRIES):
+            print(f"\nValidation attempt {attempt + 1}")
 
-        result = validate(backup_path, filepath)
+            result = validate(backup_path, filepath)
 
-        if result.is_valid:
-            print("Validation passed")
-            break
+            if result.is_valid:
+                print("Validation passed")
+                break
 
-        print("❌ Validation failed:")
-        for err in result.errors:
-            print(f"   - {err}")
+            print("❌ Validation failed:")
+            for err in result.errors:
+                print(f"   - {err}")
 
-        if attempt == MAX_RETRIES - 1:
-            # Restore original on failure
-            filepath.write_text(original_text)
-            backup_path.unlink(missing_ok=True)
-            print("❌ Failed after retries — original restored")
-            return False
+            if attempt == MAX_RETRIES - 1:
+                # Restore original on failure
+                filepath.write_text(original_text)
+                backup_path.unlink(missing_ok=True)
+                print("❌ Failed after retries — original restored")
+                return False
 
-        print("Fixing with Claude...")
-        compressed = call_claude(
-            build_fix_prompt(original_text, compressed, result.errors)
-        )
-        filepath.write_text(compressed)
+            print("Fixing with Claude...")
+            compressed = call_claude(
+                build_fix_prompt(original_text, compressed, result.errors)
+            )
+            filepath.write_text(compressed)
 
-    return True
+        return True
+    except Exception as exc:
+        print(f"❌ Error during compression process: {exc}. Restoring original file.")
+        filepath.write_text(original_text)
+        return False

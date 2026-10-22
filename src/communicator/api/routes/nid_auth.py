@@ -13,7 +13,7 @@ from typing import Any, Dict
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from pydantic import BaseModel
 
-from communicator.services.nid_client import nid_client
+from communicator.services.nid_client import nid_client, NidAuthError
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +61,14 @@ async def login_with_nid_callback(
             detail="Missing code or state parameter.",
         )
 
-    claims = await nid_client.exchange_code(code=code, state=state)
+    try:
+        claims = await nid_client.exchange_code(code=code, state=state)
+    except NidAuthError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(exc),
+        )
+
     return LoginCallbackResponse(
         token=claims["access_token"],
         account_id=claims["account_id"],
@@ -84,9 +91,20 @@ async def get_current_user_profile(
             detail="Missing or invalid Bearer authorization header.",
         )
 
-    token = authorization.split("Bearer ", 1)[1]
+    token = authorization.split("Bearer ", 1)[1].strip()
+    session_claims = nid_client.validate_session(token)
+    if not session_claims:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired session token.",
+        )
+
     return {
         "status": "authenticated",
+        "account_id": session_claims.get("account_id"),
+        "email": session_claims.get("email"),
+        "phone": session_claims.get("phone"),
+        "phone_verified": session_claims.get("phone_verified", False),
         "session_token": token[:8] + "...",
         "provider": "nID",
     }
