@@ -44,6 +44,13 @@ class Settings(BaseSettings):
 
     dev_auth_enabled: bool = False
 
+    # LiveProof (Verilo-style live camera verification for returns & refunds)
+    # Enterprise multi-tenant SaaS scoped URL base and storage.
+    public_url: str = "http://localhost:8001"
+    live_proof_storage_dir: str = "var/media/live_proof"
+    ecosystem_event_bus_url: str = ""
+    ecosystem_gateway_key: str = ""
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 

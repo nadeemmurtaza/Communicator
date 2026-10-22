@@ -1,12 +1,21 @@
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 
-from communicator.api.routes import conversations, drafts, scheduler, sequences, services, webhooks
+from communicator.api.routes import (
+    conversations,
+    drafts,
+    live_proof,
+    live_proof_ui,
+    scheduler,
+    sequences,
+    services,
+    webhooks,
+)
 
 app = FastAPI(
     title="Communicator API",
-    description="Multi-channel outreach and conversation engine for NEWAX leads.",
-    version="0.1.0",
+    description="Multi-channel outreach, customer AI live support, and Verilo-style LiveProof return verification.",
+    version="0.2.0",
 )
 
 
@@ -29,3 +38,7 @@ app.include_router(services.router, prefix="/api/v1")
 app.include_router(conversations.router, prefix="/api/v1")
 app.include_router(scheduler.router, prefix="/api/v1")
 app.include_router(sequences.router, prefix="/api/v1")
+
+# LiveProof verification portal and endpoints (WO-Verilo live camera return verification)
+app.include_router(live_proof.router, prefix="/api/v1")
+app.include_router(live_proof_ui.router)
