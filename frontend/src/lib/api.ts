@@ -521,6 +521,43 @@ export interface UpdateWidgetCustomizerPayload {
   hmac_secret?: string
 }
 
+export interface AuditLogItem {
+  id: string
+  created_at: string
+  action: string
+  actor: string
+  actor_email?: string
+  actor_name?: string
+  actor_role?: string
+  entity_type: string
+  entity_id: string
+  severity: 'info' | 'notice' | 'warning' | 'critical'
+  compliance_category: string
+  description: string
+  ip_address: string
+  user_agent?: string
+  details: Record<string, any>
+}
+
+export interface AuditLogsResponse {
+  items: AuditLogItem[]
+  total: number
+  page: number
+  page_size: number
+  total_pages: number
+}
+
+export interface AuditStatistics {
+  total_events: number
+  sample_analyzed: number
+  severity_distribution: Record<string, number>
+  category_distribution: Record<string, number>
+  top_actors: Array<{ actor: string; count: number }>
+  top_actions: Array<{ action: string; count: number }>
+  soc2_compliance_status: string
+  last_audit_event_at: string | null
+}
+
 export interface PreChatField {
   id: string
   name: string
@@ -3362,5 +3399,46 @@ export const api = {
     request<PreChatTestIntakeResult>('/inboxes/channels/live-chat/prechat/test', {
       method: 'POST',
       body: JSON.stringify({ answers }),
+    }),
+// Gap 6: Audit Logs & SOC 2 Compliance
+  getAuditLogs: (params?: {
+    action?: string
+    actor?: string
+    entity_type?: string
+    severity?: string
+    compliance_category?: string
+    search?: string
+    page?: number
+    page_size?: number
+  }) => {
+    const qs = new URLSearchParams()
+    if (params?.action) qs.append('action', params.action)
+    if (params?.actor) qs.append('actor', params.actor)
+    if (params?.entity_type) qs.append('entity_type', params.entity_type)
+    if (params?.severity) qs.append('severity', params.severity)
+    if (params?.compliance_category) qs.append('compliance_category', params.compliance_category)
+    if (params?.search) qs.append('search', params.search)
+    if (params?.page) qs.append('page', String(params.page))
+    if (params?.page_size) qs.append('page_size', String(params.page_size))
+    const qStr = qs.toString() ? `?${qs.toString()}` : ''
+    return request<AuditLogsResponse>(`/audit-logs${qStr}`)
+  },
+  getAuditStats: () => request<AuditStatistics>('/audit-logs/stats'),
+  recordAuditEvent: (data: {
+    action: string
+    entity_type: string
+    entity_id?: string
+    actor?: string
+    actor_email?: string
+    actor_name?: string
+    actor_role?: string
+    severity?: string
+    compliance_category?: string
+    description?: string
+    details?: Record<string, any>
+  }) =>
+    request<{ success: boolean; id: string; action: string }>('/audit-logs', {
+      method: 'POST',
+      body: JSON.stringify(data),
     }),
 }

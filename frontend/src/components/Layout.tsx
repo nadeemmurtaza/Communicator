@@ -18,6 +18,7 @@ const NAV = [
   { to: '/team', label: 'Team' },
   { to: '/connections', label: 'Connections' },
   { to: '/webhooks', label: 'Webhooks' },
+  { to: '/audit-logs', label: 'Audit Logs' },
 ]
 
 export function Layout() {

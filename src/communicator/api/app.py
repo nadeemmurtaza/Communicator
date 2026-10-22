@@ -36,6 +36,7 @@ from communicator.api.routes import (
     widget,
     widget_customizer,
     prechat,
+    audit_logs,
 )
 
 app = FastAPI(
@@ -60,6 +61,7 @@ app.include_router(webhooks.router, prefix="/api/v1")
 app.include_router(widget.router, prefix="/api/v1")
 app.include_router(widget_customizer.router, prefix="/api/v1")
 app.include_router(prechat.router, prefix="/api/v1")
+app.include_router(audit_logs.router, prefix="/api/v1")
 app.include_router(inboxes.router, prefix="/api/v1")
 app.include_router(drafts.router, prefix="/api/v1")
 app.include_router(services.router, prefix="/api/v1")
