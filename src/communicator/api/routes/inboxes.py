@@ -3059,7 +3059,7 @@ async def initiate_voice_call(
         custom_greeting=payload.message,
     )
     call_sid = call_result.get("callSid") or call_result.get(
-        "sid", f"CA{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        "sid", f"CA{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
     )
 
     outbound_msg = Message(

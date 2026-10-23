@@ -5,6 +5,12 @@ import uuid
 from html import escape
 from typing import Any
 
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from communicator.models.contact import ChannelType
+from communicator.models.inbox import Inbox
+
 # Website tokens are always generated as "web_live_<16 hex chars>" (see
 # below) or the "web_token_default" fallback -- never free text -- so any
 # value outside this shape is rejected rather than reflected into HTML/JS.
@@ -17,11 +23,6 @@ def _sanitize_token(token: str) -> str:
     attacker-controlled)."""
     return token if _SAFE_TOKEN_RE.match(token) else "web_token_default"
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from communicator.models.contact import ChannelType
-from communicator.models.inbox import Inbox
 
 DEFAULT_WIDGET_CONFIG: dict[str, Any] = {
     "widget_color": "#1570EF",
