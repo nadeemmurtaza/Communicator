@@ -119,10 +119,17 @@ if (FRONTEND_DIST / "assets").is_dir():
 @app.get("/{full_path:path}", include_in_schema=False)
 async def spa(full_path: str):
     """SPA fallback: any non-API, non-static path serves index.html and lets
-    react-router handle the route client-side."""
+    react-router handle the route client-side.
+
+    index.html references the current build's hashed asset filenames, so it
+    must never be cached (by the browser or by Cloudflare's edge) -- a
+    cached index.html keeps pointing at a stale JS/CSS bundle after every
+    deploy until the cache expires. The hashed files under /assets are safe
+    to cache indefinitely since a new build always gets new filenames.
+    """
     index = FRONTEND_DIST / "index.html"
     if not index.is_file():
         raise HTTPException(
             status_code=404, detail="Frontend build not found. Run `npm run build`."
         )
-    return FileResponse(index)
+    return FileResponse(index, headers={"Cache-Control": "no-store, must-revalidate"})
