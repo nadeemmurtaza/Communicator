@@ -175,14 +175,14 @@ export function Simulations() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--color-ink)]">
               Agent Training & AI Conversation Simulations
             </h1>
             <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800">
               Our Own Agent
             </span>
           </div>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
             Train our autonomous Agent on your SOPs and policies. Use AI-driven Simulations to test fully simulated customer conversations before going live.
           </p>
         </div>
@@ -230,38 +230,38 @@ export function Simulations() {
             <div className="mt-2 text-xs text-blue-700">Adherence, Empathy & Accuracy</div>
           </div>
 
-          <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-4 shadow-sm">
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-accent-soft)]/50 p-4 shadow-sm">
             <div className="text-xs font-medium text-indigo-800 uppercase tracking-wider">
               Trained SOP Policies
             </div>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-2xl font-bold text-indigo-950">{stats.total_policies}</span>
-              <span className="text-xs text-indigo-700">active SOPs</span>
+              <span className="text-xs text-[var(--color-accent)]">active SOPs</span>
             </div>
-            <div className="mt-2 text-xs text-indigo-700">Refunds, Shipping, Returns, VIP</div>
+            <div className="mt-2 text-xs text-[var(--color-accent)]">Refunds, Shipping, Returns, VIP</div>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
+            <div className="text-xs font-medium text-[var(--color-ink-muted)] uppercase tracking-wider">
               Pre-flight Test Scenarios
             </div>
             <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-slate-900">{stats.total_scenarios}</span>
-              <span className="text-xs text-slate-400">scenarios</span>
+              <span className="text-2xl font-bold text-[var(--color-ink)]">{stats.total_scenarios}</span>
+              <span className="text-xs text-[var(--color-ink-faint)]">scenarios</span>
             </div>
-            <div className="mt-2 text-xs text-slate-500">Autonomous & Escalation cases</div>
+            <div className="mt-2 text-xs text-[var(--color-ink-muted)]">Autonomous & Escalation cases</div>
           </div>
         </div>
       )}
 
       {/* Tabs Navigation */}
-      <div className="flex border-b border-slate-200 gap-2">
+      <div className="flex border-b border-[var(--color-border)] gap-2">
         <button
           onClick={() => setActiveTab('sandbox')}
           className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
             activeTab === 'sandbox'
               ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
           }`}
         >
           <span>🧪 Interactive Policy Sandbox</span>
@@ -271,7 +271,7 @@ export function Simulations() {
           className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
             activeTab === 'scenarios'
               ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
           }`}
         >
           <span>🎯 Scenarios & Test Suite ({scenarios.length})</span>
@@ -281,7 +281,7 @@ export function Simulations() {
           className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
             activeTab === 'policies'
               ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
           }`}
         >
           <span>📋 Agent Training SOPs ({policies.length})</span>
@@ -289,7 +289,7 @@ export function Simulations() {
       </div>
 
       {loading ? (
-        <div className="py-12 text-center text-sm text-slate-500">
+        <div className="py-12 text-center text-sm text-[var(--color-ink-muted)]">
           Loading simulation environment...
         </div>
       ) : error ? (
@@ -300,8 +300,8 @@ export function Simulations() {
           {activeTab === 'sandbox' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left 2 Cols: Chat Console */}
-              <div className="lg:col-span-2 flex flex-col h-[580px] rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 bg-slate-50">
+              <div className="lg:col-span-2 flex flex-col h-[580px] rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm overflow-hidden">
+                <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3 bg-[var(--color-page)]">
                   <div className="flex items-center gap-2">
                     <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
                     <span className="text-xs font-bold text-slate-800">
@@ -311,7 +311,7 @@ export function Simulations() {
                   <select
                     value={selectedSandboxPolicy}
                     onChange={(e) => setSelectedSandboxPolicy(e.target.value)}
-                    className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-700 focus:outline-none"
+                    className="rounded-lg border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1 text-xs text-[var(--color-ink)] focus:outline-none"
                   >
                     <option value="">Auto-detect matching SOP</option>
                     {policies.map((p) => (
@@ -323,7 +323,7 @@ export function Simulations() {
                 </div>
 
                 {/* Conversation History */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/30">
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[var(--color-page)]/30">
                   {sandboxHistory.map((item, idx) => (
                     <div
                       key={idx}
@@ -331,14 +331,14 @@ export function Simulations() {
                         item.role === 'customer' ? 'items-end' : 'items-start'
                       }`}
                     >
-                      <span className="text-[10px] font-semibold text-slate-400 mb-1">
+                      <span className="text-[10px] font-semibold text-[var(--color-ink-faint)] mb-1">
                         {item.role === 'customer' ? 'Customer (You in Test Mode)' : 'Captain AI Agent'}
                       </span>
                       <div
                         className={`max-w-lg rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
                           item.role === 'customer'
                             ? 'bg-blue-600 text-white rounded-br-xs'
-                            : 'bg-white border border-slate-200 text-slate-800 shadow-2xs rounded-bl-xs'
+                            : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-slate-800 shadow-2xs rounded-bl-xs'
                         }`}
                       >
                         <p className="whitespace-pre-wrap">{item.text}</p>
@@ -348,14 +348,14 @@ export function Simulations() {
                 </div>
 
                 {/* Quick Test Prompt Shortcuts */}
-                <div className="px-4 py-2 bg-slate-100/70 border-t border-slate-200 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-600">
-                  <span className="font-semibold text-slate-500">Quick Prompts:</span>
+                <div className="px-4 py-2 bg-slate-100/70 border-t border-[var(--color-border)] flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--color-ink-muted)]">
+                  <span className="font-semibold text-[var(--color-ink-muted)]">Quick Prompts:</span>
                   <button
                     type="button"
                     onClick={() =>
                       setSandboxMessage('I need a refund for $35 perfume that arrived broken.')
                     }
-                    className="rounded bg-white border border-slate-200 px-2 py-0.5 hover:bg-slate-50 text-blue-700 font-medium"
+                    className="rounded bg-[var(--color-surface)] border border-[var(--color-border)] px-2 py-0.5 hover:bg-[var(--color-page)] text-blue-700 font-medium"
                   >
                     Refund &lt;$50
                   </button>
@@ -366,7 +366,7 @@ export function Simulations() {
                         'I want a refund for a $280 engraved gold watch from order #ORD-3321.'
                       )
                     }
-                    className="rounded bg-white border border-slate-200 px-2 py-0.5 hover:bg-slate-50 text-blue-700 font-medium"
+                    className="rounded bg-[var(--color-surface)] border border-[var(--color-border)] px-2 py-0.5 hover:bg-[var(--color-page)] text-blue-700 font-medium"
                   >
                     Refund &gt;$150 (Approval)
                   </button>
@@ -375,7 +375,7 @@ export function Simulations() {
                     onClick={() =>
                       setSandboxMessage('My express delivery is 3 days delayed. Can I get a refund?')
                     }
-                    className="rounded bg-white border border-slate-200 px-2 py-0.5 hover:bg-slate-50 text-blue-700 font-medium"
+                    className="rounded bg-[var(--color-surface)] border border-[var(--color-border)] px-2 py-0.5 hover:bg-[var(--color-page)] text-blue-700 font-medium"
                   >
                     Express Shipping Delay
                   </button>
@@ -384,7 +384,7 @@ export function Simulations() {
                 {/* Input form */}
                 <form
                   onSubmit={handleSendSandboxMessage}
-                  className="p-3 border-t border-slate-200 bg-white flex gap-2"
+                  className="p-3 border-t border-[var(--color-border)] bg-[var(--color-surface)] flex gap-2"
                 >
                   <input
                     type="text"
@@ -404,12 +404,12 @@ export function Simulations() {
               </div>
 
               {/* Right Col: Real-time Agent Policy Inspector */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
                   <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                     <span>🔍 Real-time Policy Inspector</span>
                   </h3>
-                  <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                  <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-[var(--color-ink-muted)]">
                     Live Diagnostics
                   </span>
                 </div>
@@ -417,7 +417,7 @@ export function Simulations() {
                 {latestSandboxResult ? (
                   <div className="space-y-3 text-xs">
                     <div>
-                      <span className="text-slate-400 font-medium block mb-1">
+                      <span className="text-[var(--color-ink-faint)] font-medium block mb-1">
                         Matched SOP Policy:
                       </span>
                       <div className="rounded-lg bg-blue-50 border border-blue-200 p-2.5 font-semibold text-blue-900">
@@ -426,14 +426,14 @@ export function Simulations() {
                     </div>
 
                     <div>
-                      <span className="text-slate-400 font-medium block mb-1">
+                      <span className="text-[var(--color-ink-faint)] font-medium block mb-1">
                         Active Rules Triggered:
                       </span>
                       <div className="space-y-1">
                         {latestSandboxResult.matched_rules.map((rule, i) => (
                           <div
                             key={i}
-                            className="rounded bg-slate-50 border border-slate-200 p-2 text-slate-800 font-medium"
+                            className="rounded bg-[var(--color-page)] border border-[var(--color-border)] p-2 text-slate-800 font-medium"
                           >
                             ✓ {rule}
                           </div>
@@ -442,7 +442,7 @@ export function Simulations() {
                     </div>
 
                     <div>
-                      <span className="text-slate-400 font-medium block mb-1">
+                      <span className="text-[var(--color-ink-faint)] font-medium block mb-1">
                         Guardrails Enforced:
                       </span>
                       <div className="space-y-1">
@@ -458,7 +458,7 @@ export function Simulations() {
                     </div>
 
                     <div>
-                      <span className="text-slate-400 font-medium block mb-1">
+                      <span className="text-[var(--color-ink-faint)] font-medium block mb-1">
                         Escalation Flag:
                       </span>
                       <span
@@ -475,7 +475,7 @@ export function Simulations() {
                     </div>
                   </div>
                 ) : (
-                  <div className="py-12 text-center text-xs text-slate-400">
+                  <div className="py-12 text-center text-xs text-[var(--color-ink-faint)]">
                     Send a test message on the left to see live policy evaluation and guardrails.
                   </div>
                 )}
@@ -488,10 +488,10 @@ export function Simulations() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">
+                  <h3 className="text-sm font-bold text-[var(--color-ink)]">
                     Pre-flight AI Simulation Scenarios
                   </h3>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-[var(--color-ink-muted)]">
                     Test full customer dialogues end-to-end to verify resolution accuracy before going live.
                   </p>
                 </div>
@@ -508,14 +508,14 @@ export function Simulations() {
                 {scenarios.map((s) => (
                   <div
                     key={s.id}
-                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3"
+                    className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm space-y-3"
                   >
                     <div className="flex items-start justify-between">
                       <div>
-                        <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600 uppercase">
+                        <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-[var(--color-ink-muted)] uppercase">
                           {s.category}
                         </span>
-                        <h4 className="mt-1 text-sm font-bold text-slate-900">{s.name}</h4>
+                        <h4 className="mt-1 text-sm font-bold text-[var(--color-ink)]">{s.name}</h4>
                       </div>
                       {s.latest_run && (
                         <span
@@ -530,11 +530,11 @@ export function Simulations() {
                       )}
                     </div>
 
-                    <p className="text-xs text-slate-600 leading-relaxed">{s.description}</p>
+                    <p className="text-xs text-[var(--color-ink-muted)] leading-relaxed">{s.description}</p>
 
                     {/* Customer Persona Box */}
-                    <div className="rounded-xl bg-slate-50 p-3 border border-slate-200 text-xs space-y-1">
-                      <div className="flex items-center justify-between text-slate-500">
+                    <div className="rounded-xl bg-[var(--color-page)] p-3 border border-[var(--color-border)] text-xs space-y-1">
+                      <div className="flex items-center justify-between text-[var(--color-ink-muted)]">
                         <span>
                           Customer Persona:{' '}
                           <strong className="text-slate-800">{s.customer_persona.name}</strong>
@@ -543,24 +543,24 @@ export function Simulations() {
                           Sentiment: <strong>{s.customer_persona.sentiment}</strong>
                         </span>
                       </div>
-                      <div className="text-[11px] text-slate-400">
+                      <div className="text-[11px] text-[var(--color-ink-faint)]">
                         Expected Outcome:{' '}
-                        <span className="font-mono text-slate-700">{s.expected_outcome}</span>
+                        <span className="font-mono text-[var(--color-ink)]">{s.expected_outcome}</span>
                       </div>
                     </div>
 
                     {/* Multi-turn Prompts preview */}
                     <div className="space-y-1 text-xs">
-                      <span className="text-[11px] font-semibold text-slate-500">
+                      <span className="text-[11px] font-semibold text-[var(--color-ink-muted)]">
                         Multi-turn Prompts ({s.customer_messages.length}):
                       </span>
-                      <div className="rounded bg-slate-50 p-2 text-slate-700 line-clamp-2 italic text-[11px]">
+                      <div className="rounded bg-[var(--color-page)] p-2 text-[var(--color-ink)] line-clamp-2 italic text-[11px]">
                         "{s.customer_messages[0]}"
                       </div>
                     </div>
 
-                    <div className="pt-2 flex items-center justify-between border-t border-slate-100">
-                      <span className="text-[11px] text-slate-400">
+                    <div className="pt-2 flex items-center justify-between border-t border-[var(--color-border)]">
+                      <span className="text-[11px] text-[var(--color-ink-faint)]">
                         Target Policy: {s.policy_name || 'Autonomous Default'}
                       </span>
                       <button
@@ -582,10 +582,10 @@ export function Simulations() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">
+                  <h3 className="text-sm font-bold text-[var(--color-ink)]">
                     Agent Training Guidelines & SOPs
                   </h3>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-[var(--color-ink-muted)]">
                     Defines process steps, numeric thresholds, and guardrails for our autonomous Agent.
                   </p>
                 </div>
@@ -601,15 +601,15 @@ export function Simulations() {
                 {policies.map((p) => (
                   <div
                     key={p.id}
-                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4"
+                    className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm space-y-4"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="rounded bg-blue-100 px-2 py-0.5 text-xs font-bold text-blue-800">
                           {p.version}
                         </span>
-                        <h4 className="text-base font-bold text-slate-900">{p.name}</h4>
-                        <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 uppercase">
+                        <h4 className="text-base font-bold text-[var(--color-ink)]">{p.name}</h4>
+                        <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-[var(--color-ink-muted)] uppercase">
                           {p.category}
                         </span>
                       </div>
@@ -618,7 +618,7 @@ export function Simulations() {
                       </span>
                     </div>
 
-                    <p className="text-xs text-slate-600">{p.description}</p>
+                    <p className="text-xs text-[var(--color-ink-muted)]">{p.description}</p>
 
                     {/* Step-by-Step Procedure */}
                     <div>
@@ -629,12 +629,12 @@ export function Simulations() {
                         {p.process_steps.map((st) => (
                           <div
                             key={st.step}
-                            className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs"
+                            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-page)] p-2.5 text-xs"
                           >
                             <span className="font-bold text-blue-700 block mb-0.5">
                               Step {st.step}: {st.title}
                             </span>
-                            <p className="text-slate-600 text-[11px] leading-relaxed">
+                            <p className="text-[var(--color-ink-muted)] text-[11px] leading-relaxed">
                               {st.instruction}
                             </p>
                           </div>
@@ -668,12 +668,12 @@ export function Simulations() {
 
       {/* Simulation Result Modal */}
       {activeRunResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-accent)]/40 backdrop-blur-xs p-4">
+          <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-[var(--color-surface)] shadow-2xl overflow-hidden">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 bg-slate-50">
+            <div className="flex items-center justify-between border-b border-[var(--color-border)] px-6 py-4 bg-[var(--color-page)]">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-slate-900">
+                <span className="text-sm font-bold text-[var(--color-ink)]">
                   Simulation Run Evaluation
                 </span>
                 <span
@@ -688,7 +688,7 @@ export function Simulations() {
               </div>
               <button
                 onClick={() => setActiveRunResult(null)}
-                className="text-slate-400 hover:text-slate-600 font-bold"
+                className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] font-bold"
               >
                 ✕
               </button>
@@ -698,27 +698,27 @@ export function Simulations() {
             <div className="flex-1 overflow-y-auto p-6 space-y-5">
               {/* Scorecard */}
               <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <div className="text-[10px] font-semibold text-slate-500 uppercase">
+                <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-page)] p-3">
+                  <div className="text-[10px] font-semibold text-[var(--color-ink-muted)] uppercase">
                     Policy Adherence
                   </div>
-                  <div className="text-xl font-bold text-slate-900 mt-1">
+                  <div className="text-xl font-bold text-[var(--color-ink)] mt-1">
                     {activeRunResult.policy_adherence_score}%
                   </div>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <div className="text-[10px] font-semibold text-slate-500 uppercase">
+                <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-page)] p-3">
+                  <div className="text-[10px] font-semibold text-[var(--color-ink-muted)] uppercase">
                     Empathy & Tone
                   </div>
-                  <div className="text-xl font-bold text-slate-900 mt-1">
+                  <div className="text-xl font-bold text-[var(--color-ink)] mt-1">
                     {activeRunResult.empathy_score}%
                   </div>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <div className="text-[10px] font-semibold text-slate-500 uppercase">
+                <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-page)] p-3">
+                  <div className="text-[10px] font-semibold text-[var(--color-ink-muted)] uppercase">
                     Factual Accuracy
                   </div>
-                  <div className="text-xl font-bold text-slate-900 mt-1">
+                  <div className="text-xl font-bold text-[var(--color-ink)] mt-1">
                     {activeRunResult.accuracy_score}%
                   </div>
                 </div>
@@ -732,26 +732,26 @@ export function Simulations() {
 
               {/* Turn-by-turn Transcript */}
               <div className="space-y-3">
-                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                <h4 className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">
                   Turn-by-Turn Simulated Dialogue ({activeRunResult.transcript.length} turns)
                 </h4>
-                <div className="space-y-2 border border-slate-200 rounded-xl p-3 bg-slate-50/30 max-h-72 overflow-y-auto">
+                <div className="space-y-2 border border-[var(--color-border)] rounded-xl p-3 bg-[var(--color-page)]/30 max-h-72 overflow-y-auto">
                   {activeRunResult.transcript.map((t, idx) => (
                     <div
                       key={idx}
                       className={`rounded-lg p-3 text-xs ${
                         t.role === 'customer'
                           ? 'bg-blue-50/60 border border-blue-100 text-blue-950'
-                          : 'bg-white border border-slate-200 text-slate-800'
+                          : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-slate-800'
                       }`}
                     >
-                      <div className="flex items-center justify-between text-[11px] font-semibold mb-1 text-slate-500">
+                      <div className="flex items-center justify-between text-[11px] font-semibold mb-1 text-[var(--color-ink-muted)]">
                         <span>{t.speaker}</span>
                         <span>Turn {t.turn}</span>
                       </div>
                       <p className="whitespace-pre-wrap">{t.content}</p>
                       {t.policy_check && (
-                        <div className="mt-1.5 pt-1.5 border-t border-slate-100 text-[10.5px] text-emerald-700 font-medium">
+                        <div className="mt-1.5 pt-1.5 border-t border-[var(--color-border)] text-[10.5px] text-emerald-700 font-medium">
                           ✓ {t.policy_check}
                         </div>
                       )}
@@ -763,8 +763,8 @@ export function Simulations() {
               {/* Recommendations */}
               {activeRunResult.recommendations.length > 0 && (
                 <div className="space-y-1">
-                  <span className="text-xs font-bold text-slate-900">Coaching Takeaways:</span>
-                  <ul className="list-disc list-inside text-xs text-slate-600 space-y-0.5">
+                  <span className="text-xs font-bold text-[var(--color-ink)]">Coaching Takeaways:</span>
+                  <ul className="list-disc list-inside text-xs text-[var(--color-ink-muted)] space-y-0.5">
                     {activeRunResult.recommendations.map((rec, i) => (
                       <li key={i}>{rec}</li>
                     ))}
@@ -773,10 +773,10 @@ export function Simulations() {
               )}
             </div>
 
-            <div className="border-t border-slate-200 px-6 py-3 bg-slate-50 flex justify-end">
+            <div className="border-t border-[var(--color-border)] px-6 py-3 bg-[var(--color-page)] flex justify-end">
               <button
                 onClick={() => setActiveRunResult(null)}
-                className="rounded-lg bg-slate-900 px-4 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+                className="rounded-lg bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)]"
               >
                 Close Evaluation
               </button>
@@ -787,13 +787,13 @@ export function Simulations() {
 
       {/* Create Policy Modal */}
       {showCreatePolicyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-              <h3 className="text-lg font-bold text-slate-900">Create Agent SOP Policy</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-accent)]/40 backdrop-blur-xs p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-[var(--color-surface)] p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
+              <h3 className="text-lg font-bold text-[var(--color-ink)]">Create Agent SOP Policy</h3>
               <button
                 onClick={() => setShowCreatePolicyModal(false)}
-                className="text-slate-400 hover:text-slate-600 font-bold"
+                className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] font-bold"
               >
                 ✕
               </button>
@@ -801,7 +801,7 @@ export function Simulations() {
 
             <form onSubmit={handleCreatePolicy} className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                <label className="text-xs font-semibold text-[var(--color-ink)] block mb-1">
                   Policy Name:
                 </label>
                 <input
@@ -816,13 +816,13 @@ export function Simulations() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  <label className="text-xs font-semibold text-[var(--color-ink)] block mb-1">
                     Category:
                   </label>
                   <select
                     value={policyCategory}
                     onChange={(e) => setPolicyCategory(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded-lg border border-slate-300 bg-[var(--color-surface)] p-2 text-xs focus:border-blue-500 focus:outline-none"
                   >
                     <option value="refunds">Refunds & Returns</option>
                     <option value="shipping">Shipping & Delays</option>
@@ -831,7 +831,7 @@ export function Simulations() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  <label className="text-xs font-semibold text-[var(--color-ink)] block mb-1">
                     Version:
                   </label>
                   <input
@@ -845,7 +845,7 @@ export function Simulations() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                <label className="text-xs font-semibold text-[var(--color-ink)] block mb-1">
                   Description:
                 </label>
                 <textarea
@@ -858,7 +858,7 @@ export function Simulations() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                <label className="text-xs font-semibold text-[var(--color-ink)] block mb-1">
                   Guardrails & Negative Constraints (one per line):
                 </label>
                 <textarea
@@ -870,11 +870,11 @@ export function Simulations() {
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--color-border)]">
                 <button
                   type="button"
                   onClick={() => setShowCreatePolicyModal(false)}
-                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-[var(--color-ink-muted)] hover:bg-slate-100"
                 >
                   Cancel
                 </button>

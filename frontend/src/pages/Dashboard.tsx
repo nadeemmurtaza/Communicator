@@ -1877,7 +1877,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
   })
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-white text-slate-800 antialiased font-sans select-none">
+    <div className="flex h-screen w-screen overflow-hidden bg-[var(--color-surface)] text-[var(--color-ink)] antialiased font-sans select-none">
       {/* ========================================================================= */}
       {/* COLUMN 1: LEFT NAVIGATION SIDEBAR                                        */}
       {/* ========================================================================= */}
@@ -1889,13 +1889,13 @@ Ticket Context: Conversation ID ${activeConv.id}`
             <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#1570ef] text-white shadow-xs">
               <div className="h-2.5 w-2.5 rounded-full border-2 border-white" />
             </div>
-            <span className="font-semibold text-slate-900 tracking-tight text-[13.5px]">Bay Works</span>
-            <span className="text-slate-400 text-xs">⌄</span>
+            <span className="font-semibold text-[var(--color-ink)] tracking-tight text-[13.5px]">Bay Works</span>
+            <span className="text-[var(--color-ink-faint)] text-xs">⌄</span>
           </div>
           <Link
             to="/connections"
             title="Workspace Settings"
-            className="text-slate-400 hover:text-slate-600 p-1"
+            className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] p-1"
           >
             ⚙️
           </Link>
@@ -1905,18 +1905,18 @@ Ticket Context: Conversation ID ${activeConv.id}`
         <div className="px-3 py-2.5">
           <div className="flex items-center gap-1.5">
             <div className="relative flex-1">
-              <span className="absolute left-2.5 top-2 text-slate-400 text-xs">🔍</span>
+              <span className="absolute left-2.5 top-2 text-[var(--color-ink-faint)] text-xs">🔍</span>
               <input
                 type="text"
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-md border border-[#eaecf0] bg-white py-1.5 pl-7 pr-2 text-xs text-slate-700 placeholder-slate-400 focus:border-blue-500 focus:outline-hidden"
+                className="w-full rounded-md border border-[#eaecf0] bg-[var(--color-surface)] py-1.5 pl-7 pr-2 text-xs text-[var(--color-ink)] placeholder-slate-400 focus:border-blue-500 focus:outline-hidden"
               />
             </div>
             <button
               title="Compose message"
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[#eaecf0] bg-white text-slate-600 hover:bg-slate-50 shadow-xs"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[#eaecf0] bg-[var(--color-surface)] text-[var(--color-ink-muted)] hover:bg-[var(--color-page)] shadow-xs"
             >
               ✏️
             </button>
@@ -1930,31 +1930,31 @@ Ticket Context: Conversation ID ${activeConv.id}`
             <button
               onClick={() => setActiveTab('Mine')}
               className={`flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left font-medium transition-colors ${
-                activeTab === 'Mine' ? 'bg-[#f2f4f7] text-slate-900' : 'text-slate-600 hover:bg-[#f2f4f7]'
+                activeTab === 'Mine' ? 'bg-[#f2f4f7] text-[var(--color-ink)]' : 'text-[var(--color-ink-muted)] hover:bg-[#f2f4f7]'
               }`}
             >
               <div className="flex items-center gap-2">
                 <span>📥</span>
                 <span>My Inbox</span>
               </div>
-              <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+              <span className="rounded-full bg-[var(--color-border)]/80 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-ink-muted)]">
                 3
               </span>
             </button>
 
             {/* Conversations Tree */}
             <div className="pt-1">
-              <div className="flex items-center gap-2 px-2.5 py-1 text-slate-700 font-medium">
+              <div className="flex items-center gap-2 px-2.5 py-1 text-[var(--color-ink)] font-medium">
                 <span>💬</span>
                 <span>Conversations</span>
               </div>
-              <div className="ml-4 pl-2 border-l border-slate-200/80 space-y-0.5 pt-0.5">
+              <div className="ml-4 pl-2 border-l border-[var(--color-border)]/80 space-y-0.5 pt-0.5">
                 <button
                   onClick={() => setActiveTab('All')}
                   className={`flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-xs transition-colors ${
                     activeTab === 'All'
-                      ? 'bg-[#eaecf0] font-semibold text-slate-900'
-                      : 'text-slate-600 hover:bg-[#f2f4f7]'
+                      ? 'bg-[#eaecf0] font-semibold text-[var(--color-ink)]'
+                      : 'text-[var(--color-ink-muted)] hover:bg-[#f2f4f7]'
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -1964,21 +1964,21 @@ Ticket Context: Conversation ID ${activeConv.id}`
                 </button>
                 <button
                   onClick={() => setActiveTab('Mine')}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-slate-600 hover:bg-[#f2f4f7]"
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-[var(--color-ink-muted)] hover:bg-[#f2f4f7]"
                 >
                   <span>@</span>
                   <span>Mentions</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('Mine')}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-slate-600 hover:bg-[#f2f4f7]"
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-[var(--color-ink-muted)] hover:bg-[#f2f4f7]"
                 >
                   <span>👥</span>
                   <span>Participating</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('Unassigned')}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-slate-600 hover:bg-[#f2f4f7]"
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-[var(--color-ink-muted)] hover:bg-[#f2f4f7]"
                 >
                   <span>⏳</span>
                   <span>Unattended</span>
@@ -1991,7 +1991,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
           <div>
             <div
               onClick={() => setShowNavFolders((v) => !v)}
-              className="flex items-center justify-between px-2.5 py-1 text-slate-500 font-semibold text-[11.5px] uppercase tracking-wider cursor-pointer hover:text-slate-800"
+              className="flex items-center justify-between px-2.5 py-1 text-[var(--color-ink-muted)] font-semibold text-[11.5px] uppercase tracking-wider cursor-pointer hover:text-[var(--color-ink)]"
             >
               <div className="flex items-center gap-1.5">
                 <span>📁</span>
@@ -2011,7 +2011,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                 ].map((f) => (
                   <button
                     key={f.name}
-                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-1 text-left text-xs text-slate-600 hover:bg-[#f2f4f7]"
+                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-1 text-left text-xs text-[var(--color-ink-muted)] hover:bg-[#f2f4f7]"
                   >
                     <span>{f.icon}</span>
                     <span>{f.name}</span>
@@ -2025,7 +2025,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
           <div>
             <div
               onClick={() => setShowNavTeams((v) => !v)}
-              className="flex items-center justify-between px-2.5 py-1 text-slate-500 font-semibold text-[11.5px] uppercase tracking-wider cursor-pointer hover:text-slate-800"
+              className="flex items-center justify-between px-2.5 py-1 text-[var(--color-ink-muted)] font-semibold text-[11.5px] uppercase tracking-wider cursor-pointer hover:text-[var(--color-ink)]"
             >
               <div className="flex items-center gap-1.5">
                 <span>👥</span>
@@ -2042,7 +2042,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                 ].map((t) => (
                   <button
                     key={t.name}
-                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-1 text-left text-xs text-slate-600 hover:bg-[#f2f4f7]"
+                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-1 text-left text-xs text-[var(--color-ink-muted)] hover:bg-[#f2f4f7]"
                   >
                     <span>{t.icon}</span>
                     <span>{t.name}</span>
@@ -2056,7 +2056,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
           <div>
             <div
               onClick={() => setShowNavChannels((v) => !v)}
-              className="flex items-center justify-between px-2.5 py-1 text-slate-500 font-semibold text-[11.5px] uppercase tracking-wider cursor-pointer hover:text-slate-800"
+              className="flex items-center justify-between px-2.5 py-1 text-[var(--color-ink-muted)] font-semibold text-[11.5px] uppercase tracking-wider cursor-pointer hover:text-[var(--color-ink)]"
             >
               <div className="flex items-center gap-1.5">
                 <span>📡</span>
@@ -2168,34 +2168,34 @@ Ticket Context: Conversation ID ${activeConv.id}`
 
           {/* Management Shortcuts to other views */}
           <div className="border-t border-[#eaecf0] pt-2">
-            <div className="px-2.5 py-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+            <div className="px-2.5 py-1 text-[11px] font-semibold text-[var(--color-ink-faint)] uppercase tracking-wider">
               Management
             </div>
             <div className="space-y-0.5">
               <Link
                 to="/automation"
-                className="flex items-center gap-2 rounded-md px-2.5 py-1 text-xs text-slate-600 hover:bg-[#f2f4f7]"
+                className="flex items-center gap-2 rounded-md px-2.5 py-1 text-xs text-[var(--color-ink-muted)] hover:bg-[#f2f4f7]"
               >
                 <span>⚡</span>
                 <span>Automations</span>
               </Link>
               <Link
                 to="/broadcasts"
-                className="flex items-center gap-2 rounded-md px-2.5 py-1 text-xs text-slate-600 hover:bg-[#f2f4f7]"
+                className="flex items-center gap-2 rounded-md px-2.5 py-1 text-xs text-[var(--color-ink-muted)] hover:bg-[#f2f4f7]"
               >
                 <span>📢</span>
                 <span>Broadcasts</span>
               </Link>
               <Link
                 to="/contacts"
-                className="flex items-center gap-2 rounded-md px-2.5 py-1 text-xs text-slate-600 hover:bg-[#f2f4f7]"
+                className="flex items-center gap-2 rounded-md px-2.5 py-1 text-xs text-[var(--color-ink-muted)] hover:bg-[#f2f4f7]"
               >
                 <span>📇</span>
                 <span>Contacts</span>
               </Link>
               <Link
                 to="/connections"
-                className="flex items-center gap-2 rounded-md px-2.5 py-1 text-xs text-slate-600 hover:bg-[#f2f4f7]"
+                className="flex items-center gap-2 rounded-md px-2.5 py-1 text-xs text-[var(--color-ink-muted)] hover:bg-[#f2f4f7]"
               >
                 <span>🔌</span>
                 <span>Connections</span>
@@ -2233,7 +2233,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
               </button>
               <Link
                 to="/reports"
-                className="flex items-center gap-2 rounded-md px-2.5 py-1 text-xs text-slate-600 hover:bg-[#f2f4f7]"
+                className="flex items-center gap-2 rounded-md px-2.5 py-1 text-xs text-[var(--color-ink-muted)] hover:bg-[#f2f4f7]"
               >
                 <span>📊</span>
                 <span>Reports &amp; Analytics</span>
@@ -2243,13 +2243,13 @@ Ticket Context: Conversation ID ${activeConv.id}`
         </div>
 
         {/* Bottom Current Agent Account Card */}
-        <div className="border-t border-[#eaecf0] p-3 bg-white">
+        <div className="border-t border-[#eaecf0] p-3 bg-[var(--color-surface)]">
           <div className="flex items-center gap-2.5">
             <div className="relative">
               <img
                 src="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80"
                 alt="Riley Brooks"
-                className="h-8 w-8 rounded-full object-cover ring-1 ring-slate-200"
+                className="h-8 w-8 rounded-full object-cover ring-1 ring-[var(--color-border)]"
               />
               <span
                 className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-white ${
@@ -2263,11 +2263,11 @@ Ticket Context: Conversation ID ${activeConv.id}`
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between">
-                <p className="truncate text-xs font-semibold text-slate-900 leading-tight">Riley Brooks</p>
+                <p className="truncate text-xs font-semibold text-[var(--color-ink)] leading-tight">Riley Brooks</p>
                 <select
                   value={myAgentStatus}
                   onChange={(e) => handleUpdateMyStatus(e.target.value as any)}
-                  className="text-[10px] bg-transparent font-medium text-slate-600 border border-slate-200 rounded px-1 py-0.2 focus:outline-hidden cursor-pointer"
+                  className="text-[10px] bg-transparent font-medium text-[var(--color-ink-muted)] border border-[var(--color-border)] rounded px-1 py-0.2 focus:outline-hidden cursor-pointer"
                 >
                   <option value="online">🟢 Online</option>
                   <option value="busy">🟡 Busy</option>
@@ -2275,7 +2275,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                 </select>
               </div>
               <div className="flex items-center justify-between mt-0.5">
-                <p className="truncate text-[10.5px] text-slate-500">
+                <p className="truncate text-[10.5px] text-[var(--color-ink-muted)]">
                   Capacity: {routingAgents.find((a) => a.name === 'Riley Brooks')?.activeConversationsCount || 1}/
                   {routingAgents.find((a) => a.name === 'Riley Brooks')?.maxCapacity || 5}
                 </p>
@@ -2295,24 +2295,24 @@ Ticket Context: Conversation ID ${activeConv.id}`
       {/* ========================================================================= */}
       {/* COLUMN 2: CONVERSATIONS LIST PANE                                        */}
       {/* ========================================================================= */}
-      <section className="flex w-[320px] shrink-0 flex-col border-r border-[#eaecf0] bg-white text-[13px]">
+      <section className="flex w-[320px] shrink-0 flex-col border-r border-[#eaecf0] bg-[var(--color-surface)] text-[13px]">
         {/* Top Header Controls */}
         <div className="border-b border-[#eaecf0] px-3.5 pt-3.5 pb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h2 className="font-semibold text-slate-900 text-[15px]">Conversations</h2>
-              <span className="inline-flex items-center gap-1 rounded bg-[#f2f4f7] px-2 py-0.5 text-[11px] font-medium text-slate-700">
+              <h2 className="font-semibold text-[var(--color-ink)] text-[15px]">Conversations</h2>
+              <span className="inline-flex items-center gap-1 rounded bg-[#f2f4f7] px-2 py-0.5 text-[11px] font-medium text-[var(--color-ink)]">
                 Open ⌄
               </span>
             </div>
-            <div className="flex items-center gap-2 text-slate-400">
-              <button title="Filter" className="hover:text-slate-600">
+            <div className="flex items-center gap-2 text-[var(--color-ink-faint)]">
+              <button title="Filter" className="hover:text-[var(--color-ink-muted)]">
                 ⚡
               </button>
-              <button title="Sort" className="hover:text-slate-600">
+              <button title="Sort" className="hover:text-[var(--color-ink-muted)]">
                 ⇅
               </button>
-              <button title="Toggle view" className="hover:text-slate-600">
+              <button title="Toggle view" className="hover:text-[var(--color-ink-muted)]">
                 ⊞
               </button>
             </div>
@@ -2325,27 +2325,27 @@ Ticket Context: Conversation ID ${activeConv.id}`
               className={`pb-1.5 transition-colors ${
                 activeTab === 'Mine'
                   ? 'border-b-2 border-blue-600 font-semibold text-blue-600'
-                  : 'text-slate-500 hover:text-slate-800'
+                  : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
               }`}
             >
-              Mine <span className="font-normal text-slate-400">2</span>
+              Mine <span className="font-normal text-[var(--color-ink-faint)]">2</span>
             </button>
             <button
               onClick={() => setActiveTab('Unassigned')}
               className={`pb-1.5 transition-colors ${
                 activeTab === 'Unassigned'
                   ? 'border-b-2 border-blue-600 font-semibold text-blue-600'
-                  : 'text-slate-500 hover:text-slate-800'
+                  : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
               }`}
             >
-              Unassigned <span className="font-normal text-slate-400">0</span>
+              Unassigned <span className="font-normal text-[var(--color-ink-faint)]">0</span>
             </button>
             <button
               onClick={() => setActiveTab('All')}
               className={`pb-1.5 transition-colors ${
                 activeTab === 'All'
                   ? 'border-b-2 border-blue-600 font-semibold text-blue-600'
-                  : 'text-slate-500 hover:text-slate-800'
+                  : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
               }`}
             >
               All <span className="font-semibold text-blue-600">20</span>
@@ -2355,7 +2355,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
               className={`pb-1.5 transition-colors flex items-center gap-1 ${
                 activeTab === 'Autonomous'
                   ? 'border-b-2 border-emerald-600 font-semibold text-emerald-700'
-                  : 'text-slate-500 hover:text-slate-800'
+                  : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
               }`}
             >
               <span>✨ Autonomous</span>
@@ -2365,7 +2365,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
               className={`pb-1.5 transition-colors flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'Approvals'
                   ? 'border-b-2 border-amber-600 font-bold text-amber-700'
-                  : 'text-slate-500 hover:text-slate-800'
+                  : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
               }`}
             >
               <span>🤝 Approvals</span>
@@ -2391,7 +2391,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                 }`}
               >
                 {/* Meta Row: Channel + Assigned Agent */}
-                <div className="flex items-center justify-between text-[11px] text-slate-500">
+                <div className="flex items-center justify-between text-[11px] text-[var(--color-ink-muted)]">
                   <div className="flex items-center gap-1.5 truncate">
                     <span>
                       {item.channelType === 'facebook'
@@ -2416,7 +2416,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <span className="text-[10px]">👤</span>
-                    <span className="truncate text-slate-600 font-medium">{item.assignedAgent}</span>
+                    <span className="truncate text-[var(--color-ink-muted)] font-medium">{item.assignedAgent}</span>
                     {item.channelType === 'website' && <span className="text-amber-500 text-[10px]">📶</span>}
                   </div>
                 </div>
@@ -2426,16 +2426,16 @@ Ticket Context: Conversation ID ${activeConv.id}`
                   <img
                     src={item.avatar}
                     alt={item.name}
-                    className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-slate-100"
+                    className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-[var(--color-border)]"
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-slate-900 text-xs truncate leading-tight">
+                      <span className="font-semibold text-[var(--color-ink)] text-xs truncate leading-tight">
                         {item.name}
                       </span>
-                      <span className="text-[11px] text-slate-400 shrink-0 font-normal">{item.timeAgo}</span>
+                      <span className="text-[11px] text-[var(--color-ink-faint)] shrink-0 font-normal">{item.timeAgo}</span>
                     </div>
-                    <p className="mt-0.5 truncate text-xs text-slate-600">{item.preview}</p>
+                    <p className="mt-0.5 truncate text-xs text-[var(--color-ink-muted)]">{item.preview}</p>
                   </div>
                   {item.unreadCount ? (
                     <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-bold text-white">
@@ -2459,7 +2459,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                           ? 'bg-rose-50 text-rose-700 border-rose-300 animate-pulse'
                           : item.slaData?.nearingBreach || item.sla.toLowerCase().includes('warning')
                           ? 'bg-amber-50 text-amber-800 border-amber-300'
-                          : 'bg-slate-50 text-slate-700 border-slate-200'
+                          : 'bg-[var(--color-page)] text-[var(--color-ink)] border-[var(--color-border)]'
                       }`}
                     >
                       <span>
@@ -2475,7 +2475,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                   {item.tags.map((t) => (
                     <span
                       key={t.name}
-                      className="inline-flex items-center gap-1 rounded bg-[#f2f4f7] px-2 py-0.5 text-slate-700 font-medium text-[11px]"
+                      className="inline-flex items-center gap-1 rounded bg-[#f2f4f7] px-2 py-0.5 text-[var(--color-ink)] font-medium text-[11px]"
                     >
                       <span className={`h-1.5 w-1.5 rounded-full ${t.color}`} />
                       <span>{t.name}</span>
@@ -2491,22 +2491,22 @@ Ticket Context: Conversation ID ${activeConv.id}`
       {/* ========================================================================= */}
       {/* COLUMN 3: ACTIVE CONVERSATION WORKSPACE                                   */}
       {/* ========================================================================= */}
-      <main className="flex flex-1 flex-col overflow-hidden bg-white">
+      <main className="flex flex-1 flex-col overflow-hidden bg-[var(--color-surface)]">
         {/* Top Header of Chat Area */}
         <header className="flex h-14 shrink-0 items-center justify-between border-b border-[#eaecf0] px-6">
           <div className="flex items-center gap-3">
             <img
               src={activeConv.avatar}
               alt={activeConv.name}
-              className="h-9 w-9 rounded-full object-cover ring-1 ring-slate-200"
+              className="h-9 w-9 rounded-full object-cover ring-1 ring-[var(--color-border)]"
             />
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="font-semibold text-slate-900 text-sm">{activeConv.name}</h2>
+                <h2 className="font-semibold text-[var(--color-ink)] text-sm">{activeConv.name}</h2>
 
                 {/* Live Teammates Presence Avatars */}
                 {activePresences.filter((p) => p.agentName !== 'Riley Brooks').length > 0 && (
-                  <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-slate-200">
+                  <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-[var(--color-border)]">
                     <div className="flex -space-x-1.5 overflow-hidden">
                       {activePresences
                         .filter((p) => p.agentName !== 'Riley Brooks')
@@ -2535,7 +2535,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                           </div>
                         ))}
                     </div>
-                    <span className="text-[11px] font-semibold text-slate-600">
+                    <span className="text-[11px] font-semibold text-[var(--color-ink-muted)]">
                       {activePresences
                         .filter((p) => p.agentName !== 'Riley Brooks')
                         .map((p) => p.agentName.split(' ')[0])
@@ -2549,15 +2549,15 @@ Ticket Context: Conversation ID ${activeConv.id}`
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-2 text-xs text-slate-500">
+              <div className="flex items-center gap-2 text-xs text-[var(--color-ink-muted)]">
                 <span>#1 · {activeConv.channel}</span>
 
                 {/* Presence Simulation Pill for quick verification */}
-                <div className="inline-flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 border border-slate-200">
-                  <span className="text-slate-400">Simulate:</span>
+                <div className="inline-flex items-center gap-1 rounded bg-[var(--color-accent-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-ink-muted)] border border-[var(--color-border)]">
+                  <span className="text-[var(--color-ink-faint)]">Simulate:</span>
                   <button
                     onClick={() => simulateTeammate('viewing')}
-                    className="hover:text-slate-900 transition-colors font-semibold"
+                    className="hover:text-[var(--color-ink)] transition-colors font-semibold"
                     title="Simulate Jamie Cole viewing this conversation"
                   >
                     👀 View
@@ -2594,34 +2594,34 @@ Ticket Context: Conversation ID ${activeConv.id}`
             <div className="relative">
               <button
                 onClick={() => setSnoozeMenuOpen((v) => !v)}
-                className="inline-flex items-center gap-1.5 rounded-md border border-[#d0d5dd] bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50"
+                className="inline-flex items-center gap-1.5 rounded-md border border-[#d0d5dd] bg-[var(--color-surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--color-ink)] shadow-xs hover:bg-[var(--color-page)]"
               >
                 <span>⏰ Snooze</span>
-                <span className="text-[10px] text-slate-400">⌄</span>
+                <span className="text-[10px] text-[var(--color-ink-faint)]">⌄</span>
               </button>
               {snoozeMenuOpen && (
-                <div className="absolute right-0 top-9 z-30 w-48 rounded-lg border border-slate-200 bg-white py-1 shadow-lg text-xs">
+                <div className="absolute right-0 top-9 z-30 w-48 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] py-1 shadow-lg text-xs">
                   <button
                     onClick={() => handleSnooze('1 hour')}
-                    className="flex w-full items-center px-3 py-1.5 text-slate-700 hover:bg-slate-50"
+                    className="flex w-full items-center px-3 py-1.5 text-[var(--color-ink)] hover:bg-[var(--color-page)]"
                   >
                     ⏰ Snooze for 1 hour
                   </button>
                   <button
                     onClick={() => handleSnooze('4 hours')}
-                    className="flex w-full items-center px-3 py-1.5 text-slate-700 hover:bg-slate-50"
+                    className="flex w-full items-center px-3 py-1.5 text-[var(--color-ink)] hover:bg-[var(--color-page)]"
                   >
                     ⏰ Snooze for 4 hours
                   </button>
                   <button
                     onClick={() => handleSnooze('tomorrow 9:00 AM')}
-                    className="flex w-full items-center px-3 py-1.5 text-slate-700 hover:bg-slate-50"
+                    className="flex w-full items-center px-3 py-1.5 text-[var(--color-ink)] hover:bg-[var(--color-page)]"
                   >
                     ⏰ Snooze until tomorrow 9 AM
                   </button>
                   <button
                     onClick={() => handleSnooze('next Monday')}
-                    className="flex w-full items-center px-3 py-1.5 text-slate-700 hover:bg-slate-50"
+                    className="flex w-full items-center px-3 py-1.5 text-[var(--color-ink)] hover:bg-[var(--color-page)]"
                   >
                     ⏰ Snooze until next Monday
                   </button>
@@ -2662,22 +2662,22 @@ Ticket Context: Conversation ID ${activeConv.id}`
                 <span>{isAutoAssigning ? 'Routing...' : 'Auto-Assign'}</span>
                 <span className="text-[10px] text-teal-600">⌄</span>
               </button>
-              <div className="absolute right-0 top-9 z-30 hidden group-hover:block w-48 rounded-lg border border-slate-200 bg-white py-1 shadow-lg text-xs">
+              <div className="absolute right-0 top-9 z-30 hidden group-hover:block w-48 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] py-1 shadow-lg text-xs">
                 <button
                   type="button"
                   onClick={() => handleAutoAssign('capacity_based')}
-                  className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-slate-700 flex flex-col cursor-pointer"
+                  className="w-full text-left px-3 py-1.5 hover:bg-[var(--color-page)] text-[var(--color-ink)] flex flex-col cursor-pointer"
                 >
-                  <span className="font-semibold text-slate-900">Capacity Routing</span>
-                  <span className="text-[10px] text-slate-500">Least-loaded agent gets next ticket</span>
+                  <span className="font-semibold text-[var(--color-ink)]">Capacity Routing</span>
+                  <span className="text-[10px] text-[var(--color-ink-muted)]">Least-loaded agent gets next ticket</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleAutoAssign('round_robin')}
-                  className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-slate-700 flex flex-col border-t border-slate-100 cursor-pointer"
+                  className="w-full text-left px-3 py-1.5 hover:bg-[var(--color-page)] text-[var(--color-ink)] flex flex-col border-t border-[var(--color-border)] cursor-pointer"
                 >
-                  <span className="font-semibold text-slate-900">Round-Robin Rotation</span>
-                  <span className="text-[10px] text-slate-500">Even circular distribution</span>
+                  <span className="font-semibold text-[var(--color-ink)]">Round-Robin Rotation</span>
+                  <span className="text-[10px] text-[var(--color-ink-muted)]">Even circular distribution</span>
                 </button>
               </div>
             </div>
@@ -2689,16 +2689,16 @@ Ticket Context: Conversation ID ${activeConv.id}`
                   prev.map((c) => (c.id === activeConv.id ? { ...c, status: next } : c))
                 )
               }}
-              className="inline-flex items-center gap-1.5 rounded-md border border-[#d0d5dd] bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50"
+              className="inline-flex items-center gap-1.5 rounded-md border border-[#d0d5dd] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] shadow-xs hover:bg-[var(--color-page)]"
             >
               <span>{activeConv.status === 'Resolved' ? 'Re-open' : 'Resolve'}</span>
-              <span className="text-[10px] text-slate-400">⌄</span>
+              <span className="text-[10px] text-[var(--color-ink-faint)]">⌄</span>
             </button>
 
             <button
               onClick={() => setShowRightSidebar((v) => !v)}
               title="Toggle right contact sidebar"
-              className="text-slate-400 hover:text-slate-600 p-1 font-bold text-sm"
+              className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] p-1 font-bold text-sm"
             >
               ⋮
             </button>
@@ -2724,14 +2724,14 @@ Ticket Context: Conversation ID ${activeConv.id}`
               {collisionInfo.severity === 'danger' && (
                 <button
                   onClick={() => setComposerMode('note')}
-                  className="rounded border border-rose-300 bg-white px-2 py-0.5 text-[11px] font-bold text-rose-800 hover:bg-rose-100 shadow-2xs"
+                  className="rounded border border-rose-300 bg-[var(--color-surface)] px-2 py-0.5 text-[11px] font-bold text-rose-800 hover:bg-rose-100 shadow-2xs"
                 >
                   Switch to Private Note 🔒
                 </button>
               )}
               <button
                 onClick={() => setCollisionWarningDismissed(true)}
-                className="text-slate-500 hover:text-slate-800 font-bold px-1"
+                className="text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] font-bold px-1"
                 title="Dismiss warning"
               >
                 ✕
@@ -2787,7 +2787,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
             </div>
             <button
               onClick={() => setRoutingToast(null)}
-              className="text-slate-500 hover:text-slate-800 font-bold px-1 cursor-pointer"
+              className="text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] font-bold px-1 cursor-pointer"
               title="Dismiss"
             >
               ✕
@@ -2801,7 +2801,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
             <button className="border-b-2 border-blue-600 pb-2 text-blue-600 font-semibold">
               Messages
             </button>
-            <button className="pb-2 text-slate-500 hover:text-slate-800">
+            <button className="pb-2 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]">
               Customer Dashboard
             </button>
             {activeConv.channelType === 'whatsapp' && (
@@ -2823,7 +2823,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                       setReplyText('849201 is your one-time verification code. For your security, do not share this code.')
                     }
                   }}
-                  className="rounded border border-slate-300 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                  className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)]"
                   title="Send an Approved WhatsApp Template (required after 24h window expires)"
                 >
                   📋 Re-engagement Template
@@ -2831,18 +2831,18 @@ Ticket Context: Conversation ID ${activeConv.id}`
               </div>
             )}
           </div>
-          <div className="flex items-center gap-3 pb-2 text-slate-400 text-xs">
-            <button title="Customer Info" className="hover:text-slate-600">
+          <div className="flex items-center gap-3 pb-2 text-[var(--color-ink-faint)] text-xs">
+            <button title="Customer Info" className="hover:text-[var(--color-ink-muted)]">
               👤
             </button>
-            <button title="Video Call" className="hover:text-slate-600">
+            <button title="Video Call" className="hover:text-[var(--color-ink-muted)]">
               📹
             </button>
           </div>
         </div>
 
         {/* Chat Stream Timeline */}
-        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 bg-white">
+        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 bg-[var(--color-surface)]">
           {/* Pinned WhatsApp Campaign Info Banner */}
           {activeConv.campaign && (
             <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-3.5 text-xs text-blue-950 flex items-center justify-between shadow-xs">
@@ -2850,7 +2850,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                 <span className="text-2xl">📢</span>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-900">
+                    <span className="font-bold text-[var(--color-ink)]">
                       WhatsApp Campaign: {activeConv.campaign.name}
                     </span>
                     <span className="rounded bg-blue-100 text-blue-800 px-1.5 py-0.5 text-[10px] font-semibold">
@@ -2864,7 +2864,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
               </div>
               <Link
                 to="/broadcasts"
-                className="rounded-md border border-blue-300 bg-white px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50 shadow-xs"
+                className="rounded-md border border-blue-300 bg-[var(--color-surface)] px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50 shadow-xs"
               >
                 View Campaign Analytics ↗
               </Link>
@@ -2891,10 +2891,10 @@ Ticket Context: Conversation ID ${activeConv.id}`
               return (
                 <div key={msg.id} className="flex items-end justify-end gap-2">
                   <div className="max-w-[520px]">
-                    <div className="rounded-2xl rounded-br-xs bg-[#e0f2fe] px-4 py-3 text-[13.5px] leading-relaxed text-slate-900 shadow-xs">
+                    <div className="rounded-2xl rounded-br-xs bg-[#e0f2fe] px-4 py-3 text-[13.5px] leading-relaxed text-[var(--color-ink)] shadow-xs">
                       {msg.text}
                     </div>
-                    <div className="mt-1 flex items-center justify-end gap-1.5 text-[11px] text-slate-400">
+                    <div className="mt-1 flex items-center justify-end gap-1.5 text-[11px] text-[var(--color-ink-faint)]">
                       <span>{msg.time}</span>
                       <span className="text-blue-600 font-bold">✓✓</span>
                     </div>
@@ -2912,10 +2912,10 @@ Ticket Context: Conversation ID ${activeConv.id}`
             return (
               <div key={msg.id} className="flex items-end justify-start gap-2">
                 <div className="max-w-[520px]">
-                  <div className="rounded-2xl rounded-bl-xs bg-[#f2f4f7] px-4 py-3 text-[13.5px] leading-relaxed text-slate-900 shadow-xs">
+                  <div className="rounded-2xl rounded-bl-xs bg-[#f2f4f7] px-4 py-3 text-[13.5px] leading-relaxed text-[var(--color-ink)] shadow-xs">
                     {msg.text}
                   </div>
-                  <div className="mt-1 text-[11px] text-slate-400">{msg.time}</div>
+                  <div className="mt-1 text-[11px] text-[var(--color-ink-faint)]">{msg.time}</div>
                 </div>
               </div>
             )
@@ -2923,7 +2923,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
         </div>
 
         {/* Message Composer Area */}
-        <div className="p-4 pt-0 bg-white">
+        <div className="p-4 pt-0 bg-[var(--color-surface)]">
           {activeConv.captainDraft && (
             <div className="mb-2.5 rounded-xl border border-purple-200 bg-purple-50/80 p-3 text-xs text-purple-950 shadow-xs">
               <div className="flex items-center justify-between mb-1.5">
@@ -2937,7 +2937,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setReplyText(activeConv.captainDraft || '')}
-                    className="rounded border border-purple-300 bg-white px-2 py-0.5 font-semibold text-purple-700 hover:bg-purple-100"
+                    className="rounded border border-purple-300 bg-[var(--color-surface)] px-2 py-0.5 font-semibold text-purple-700 hover:bg-purple-100"
                   >
                     Insert Draft
                   </button>
@@ -2971,7 +2971,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                   </button>
                 </div>
               </div>
-              <p className="rounded-md border border-purple-100 bg-white/95 p-2 text-xs font-medium text-slate-800">
+              <p className="rounded-md border border-purple-100 bg-[var(--color-surface)]/95 p-2 text-xs font-medium text-[var(--color-ink)]">
                 "{activeConv.captainDraft}"
               </p>
             </div>
@@ -3010,23 +3010,23 @@ Ticket Context: Conversation ID ${activeConv.id}`
               </div>
 
               {/* Action Context Breakdown */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] bg-white/80 rounded-xl p-2.5 border border-amber-200/60">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] bg-[var(--color-surface)]/80 rounded-xl p-2.5 border border-amber-200/60">
                 <div>
-                  <span className="font-bold text-slate-500 uppercase text-[9.5px] block">Action Context:</span>
-                  <p className="text-slate-800 font-medium">
+                  <span className="font-bold text-[var(--color-ink-muted)] uppercase text-[9.5px] block">Action Context:</span>
+                  <p className="text-[var(--color-ink)] font-medium">
                     {activeApproval.internalNote || activeApproval.internal_note}
                   </p>
                 </div>
                 <div>
-                  <span className="font-bold text-slate-500 uppercase text-[9.5px] block">Details &amp; Policy:</span>
-                  <div className="text-slate-700 space-y-0.5 font-mono text-[10.5px]">
+                  <span className="font-bold text-[var(--color-ink-muted)] uppercase text-[9.5px] block">Details &amp; Policy:</span>
+                  <div className="text-[var(--color-ink)] space-y-0.5 font-mono text-[10.5px]">
                     {activeApproval.actionData?.amount && (
                       <span className="inline-block bg-amber-100 text-amber-900 font-bold px-1.5 py-0.2 rounded mr-1">
                         Amount: ${Number(activeApproval.actionData.amount).toFixed(2)}
                       </span>
                     )}
                     {activeApproval.actionData?.order_id && (
-                      <span className="inline-block bg-slate-100 text-slate-800 px-1.5 py-0.2 rounded mr-1">
+                      <span className="inline-block bg-[var(--color-accent-soft)] text-[var(--color-ink)] px-1.5 py-0.2 rounded mr-1">
                         Order #{activeApproval.actionData.order_id}
                       </span>
                     )}
@@ -3057,7 +3057,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                           handleProvideTeammateInfo(activeApproval.id, teammateInfoInput)
                         }
                       }}
-                      className="flex-1 bg-white border border-amber-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-hidden focus:border-amber-500"
+                      className="flex-1 bg-[var(--color-surface)] border border-amber-300 rounded-lg px-2.5 py-1.5 text-xs text-[var(--color-ink)] focus:outline-hidden focus:border-amber-500"
                     />
                     <button
                       type="button"
@@ -3096,13 +3096,13 @@ Ticket Context: Conversation ID ${activeConv.id}`
                         rows={3}
                         value={editedApprovalReply}
                         onChange={(e) => setEditedApprovalReply(e.target.value)}
-                        className="w-full text-xs border border-amber-400 bg-white rounded-xl p-2.5 text-slate-800 focus:outline-hidden"
+                        className="w-full text-xs border border-amber-400 bg-[var(--color-surface)] rounded-xl p-2.5 text-[var(--color-ink)] focus:outline-hidden"
                       />
                       <div className="flex items-center justify-end gap-2">
                         <button
                           type="button"
                           onClick={() => setEditingApprovalReplyId(null)}
-                          className="px-2.5 py-1 text-xs text-slate-600 hover:text-slate-800"
+                          className="px-2.5 py-1 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
                         >
                           Cancel
                         </button>
@@ -3117,7 +3117,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                       </div>
                     </div>
                   ) : (
-                    <div className="p-3 bg-white rounded-xl border border-amber-200/80 text-xs text-slate-800 leading-relaxed font-normal">
+                    <div className="p-3 bg-[var(--color-surface)] rounded-xl border border-amber-200/80 text-xs text-[var(--color-ink)] leading-relaxed font-normal">
                       "{activeApproval.proposedReply || activeApproval.proposed_reply}"
                     </div>
                   )}
@@ -3133,13 +3133,13 @@ Ticket Context: Conversation ID ${activeConv.id}`
                         placeholder="e.g. Return window expired, request photos first..."
                         value={rejectionFeedback}
                         onChange={(e) => setRejectionFeedback(e.target.value)}
-                        className="w-full text-xs border border-rose-300 bg-white rounded-lg px-2.5 py-1.5 text-slate-800 focus:outline-hidden"
+                        className="w-full text-xs border border-rose-300 bg-[var(--color-surface)] rounded-lg px-2.5 py-1.5 text-[var(--color-ink)] focus:outline-hidden"
                       />
                       <div className="flex justify-end gap-2">
                         <button
                           type="button"
                           onClick={() => setRejectingApprovalId(null)}
-                          className="px-2.5 py-1 text-xs text-slate-600"
+                          className="px-2.5 py-1 text-xs text-[var(--color-ink-muted)]"
                         >
                           Cancel
                         </button>
@@ -3184,16 +3184,16 @@ Ticket Context: Conversation ID ${activeConv.id}`
           <div className="relative">
             {/* Canned Responses Floating Autocomplete Menu */}
             {(isTypingSlash || showCannedPicker) && (
-              <div className="absolute bottom-full mb-2 left-0 right-0 z-40 max-h-80 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-150 flex flex-col">
+              <div className="absolute bottom-full mb-2 left-0 right-0 z-40 max-h-80 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-150 flex flex-col">
                 {/* Header & Category Filter Tabs */}
-                <div className="bg-slate-50/90 border-b border-slate-200/80 px-3 py-2 flex flex-col gap-1.5 shrink-0">
+                <div className="bg-[var(--color-page)]/90 border-b border-[var(--color-border)]/80 px-3 py-2 flex flex-col gap-1.5 shrink-0">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800">
+                    <div className="flex items-center gap-1.5 font-bold text-xs text-[var(--color-ink)]">
                       <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-xs">
                         /
                       </span>
                       <span>Slash Commands &amp; Canned Replies</span>
-                      <span className="text-[11px] font-normal text-slate-400">
+                      <span className="text-[11px] font-normal text-[var(--color-ink-faint)]">
                         ({filteredCanned.length} available)
                       </span>
                     </div>
@@ -3218,7 +3218,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                         className={`px-2 py-0.5 rounded-full text-[10.5px] font-semibold capitalize transition-all shrink-0 cursor-pointer ${
                           cannedCategory === cat
                             ? 'bg-blue-600 text-white shadow-xs'
-                            : 'bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200'
+                            : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] hover:bg-[var(--color-border)]/70 border border-[var(--color-border)]'
                         }`}
                       >
                         {cat}
@@ -3228,11 +3228,11 @@ Ticket Context: Conversation ID ${activeConv.id}`
                 </div>
 
                 {/* Autocomplete Suggestions List */}
-                <div className="max-h-52 overflow-y-auto divide-y divide-slate-100/80 p-1">
+                <div className="max-h-52 overflow-y-auto divide-y divide-[var(--color-border)]/80 p-1">
                   {filteredCanned.length === 0 ? (
                     <div className="py-5 px-4 text-center">
-                      <p className="text-xs text-slate-500 font-medium">
-                        No canned replies match <span className="font-mono text-slate-800 font-bold">/{slashQuery}</span>
+                      <p className="text-xs text-[var(--color-ink-muted)] font-medium">
+                        No canned replies match <span className="font-mono text-[var(--color-ink)] font-bold">/{slashQuery}</span>
                         {cannedCategory !== 'all' ? ` in ${cannedCategory}` : ''}
                       </p>
                       <button
@@ -3259,7 +3259,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                           className={`flex w-full flex-col items-start gap-1 rounded-xl p-2.5 text-left transition-all cursor-pointer ${
                             isSelected
                               ? 'bg-blue-50/90 border-l-4 border-blue-600 shadow-xs'
-                              : 'hover:bg-slate-50/80 border-l-4 border-transparent'
+                              : 'hover:bg-[var(--color-page)]/80 border-l-4 border-transparent'
                           }`}
                         >
                           <div className="flex items-center justify-between w-full">
@@ -3267,7 +3267,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                               <span className="font-mono text-xs font-black text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded-md">
                                 /{c.shortCode || c.short_code}
                               </span>
-                              <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                              <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-[var(--color-accent-soft)] text-[var(--color-ink-muted)] border border-[var(--color-border)]">
                                 {c.category || 'general'}
                               </span>
                             </div>
@@ -3277,7 +3277,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-slate-700 line-clamp-2 w-full mt-0.5 font-normal">
+                          <p className="text-xs text-[var(--color-ink)] line-clamp-2 w-full mt-0.5 font-normal">
                             {resolvedPreview}
                           </p>
                         </button>
@@ -3287,11 +3287,11 @@ Ticket Context: Conversation ID ${activeConv.id}`
                 </div>
 
                 {/* Footer hints */}
-                <div className="bg-slate-50 px-3 py-1.5 border-t border-slate-200/80 flex items-center justify-between text-[10.5px] text-slate-500 shrink-0 font-medium">
+                <div className="bg-[var(--color-page)] px-3 py-1.5 border-t border-[var(--color-border)]/80 flex items-center justify-between text-[10.5px] text-[var(--color-ink-muted)] shrink-0 font-medium">
                   <span>
-                    💡 Type <code className="bg-slate-200 px-1 py-0.5 rounded text-slate-800 font-mono text-[10px]">/</code> to trigger autocomplete
+                    💡 Type <code className="bg-[var(--color-border)] px-1 py-0.5 rounded text-[var(--color-ink)] font-mono text-[10px]">/</code> to trigger autocomplete
                   </span>
-                  <div className="flex items-center gap-2 text-slate-400">
+                  <div className="flex items-center gap-2 text-[var(--color-ink-faint)]">
                     <span>↑↓ navigate</span>
                     <span>•</span>
                     <span>↵ / Tab insert</span>
@@ -3306,7 +3306,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
               className={`rounded-xl border shadow-xs transition-colors ${
                 composerMode === 'note'
                   ? 'border-amber-300 bg-amber-50/40 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500'
-                  : 'border-[#d0d5dd] bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500'
+                  : 'border-[#d0d5dd] bg-[var(--color-surface)] focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500'
               }`}
             >
               {/* Top Composer Control Tabs */}
@@ -3315,7 +3315,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                   <button
                     onClick={() => setComposerMode('reply')}
                     className={`rounded px-2.5 py-1 transition-colors ${
-                      composerMode === 'reply' ? 'bg-white text-slate-900 shadow-xs font-semibold' : 'text-slate-600'
+                      composerMode === 'reply' ? 'bg-[var(--color-surface)] text-[var(--color-ink)] shadow-xs font-semibold' : 'text-[var(--color-ink-muted)]'
                     }`}
                   >
                     Reply
@@ -3323,14 +3323,14 @@ Ticket Context: Conversation ID ${activeConv.id}`
                   <button
                     onClick={() => setComposerMode('note')}
                     className={`rounded px-2.5 py-1 transition-colors ${
-                      composerMode === 'note' ? 'bg-amber-200 text-amber-950 shadow-xs font-bold' : 'text-slate-600'
+                      composerMode === 'note' ? 'bg-amber-200 text-amber-950 shadow-xs font-bold' : 'text-[var(--color-ink-muted)]'
                     }`}
                   >
                     Private Note 🔒
                   </button>
                 </div>
 
-                <div className="flex items-center gap-2 text-slate-400">
+                <div className="flex items-center gap-2 text-[var(--color-ink-faint)]">
                   <button
                     onClick={handleAIDraft}
                     title="Generate AI reply draft"
@@ -3347,7 +3347,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                     <span>💳</span>
                     <span>Ask Refund Approval</span>
                   </button>
-                  <button title="Expand editor" className="rounded p-1 hover:text-slate-600">
+                  <button title="Expand editor" className="rounded p-1 hover:text-[var(--color-ink-muted)]">
                     ⤢
                   </button>
                 </div>
@@ -3404,28 +3404,28 @@ Ticket Context: Conversation ID ${activeConv.id}`
                     ? 'Write an internal team note... (Mention teammates or note customer details)'
                     : "Shift + enter for new line. Start with '/' to select a Canned Response."
                 }
-                className={`w-full resize-none px-3.5 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden ${
+                className={`w-full resize-none px-3.5 py-2.5 text-xs text-[var(--color-ink)] placeholder-slate-400 focus:outline-hidden ${
                   composerMode === 'note' ? 'bg-amber-50/20' : 'bg-transparent'
                 }`}
               />
 
               {/* Bottom Toolbar & Send Button */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between border-t border-[#f2f4f7] px-3 py-2 gap-2">
-                <div className="flex items-center gap-2 text-slate-400 text-sm">
-                  <button title="Insert emoji" className="hover:text-slate-600">
+                <div className="flex items-center gap-2 text-[var(--color-ink-faint)] text-sm">
+                  <button title="Insert emoji" className="hover:text-[var(--color-ink-muted)]">
                     😊
                   </button>
-                  <button title="Attach file" className="hover:text-slate-600">
+                  <button title="Attach file" className="hover:text-[var(--color-ink-muted)]">
                     📎
                   </button>
-                  <button title="Record voice note" className="hover:text-slate-600">
+                  <button title="Record voice note" className="hover:text-[var(--color-ink-muted)]">
                     🎙️
                   </button>
                   <button
                     onClick={() => setShowCannedPicker((v) => !v)}
                     title="Canned responses (Saved replies)"
                     className={`rounded p-1 transition-colors ${
-                      showCannedPicker ? 'bg-blue-100 text-blue-700' : 'hover:text-slate-600'
+                      showCannedPicker ? 'bg-blue-100 text-blue-700' : 'hover:text-[var(--color-ink-muted)]'
                     }`}
                   >
                     ⚡
@@ -3444,11 +3444,11 @@ Ticket Context: Conversation ID ${activeConv.id}`
                 {/* Tone Rewriter Pills when text is typed */}
                 {replyText.trim() && (
                   <div className="flex items-center gap-1 text-[11px] overflow-x-auto py-0.5">
-                    <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Rewrite:</span>
+                    <span className="text-[var(--color-ink-faint)] text-[10px] font-bold uppercase tracking-wider">Rewrite:</span>
                     <button
                       onClick={() => handleRewriteTone('professional')}
                       disabled={isRewriting}
-                      className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-700 hover:bg-slate-200 font-medium transition-colors"
+                      className="rounded bg-[var(--color-accent-soft)] px-1.5 py-0.5 text-[var(--color-ink)] hover:bg-[var(--color-border)] font-medium transition-colors"
                       title="Make more professional"
                     >
                       👔 Formal
@@ -3456,7 +3456,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                     <button
                       onClick={() => handleRewriteTone('friendly')}
                       disabled={isRewriting}
-                      className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-700 hover:bg-slate-200 font-medium transition-colors"
+                      className="rounded bg-[var(--color-accent-soft)] px-1.5 py-0.5 text-[var(--color-ink)] hover:bg-[var(--color-border)] font-medium transition-colors"
                       title="Make friendlier"
                     >
                       😊 Warm
@@ -3464,7 +3464,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                     <button
                       onClick={() => handleRewriteTone('shorten')}
                       disabled={isRewriting}
-                      className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-700 hover:bg-slate-200 font-medium transition-colors"
+                      className="rounded bg-[var(--color-accent-soft)] px-1.5 py-0.5 text-[var(--color-ink)] hover:bg-[var(--color-border)] font-medium transition-colors"
                       title="Shorten and simplify"
                     >
                       ✂️ Short
@@ -3472,7 +3472,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                     <button
                       onClick={() => handleRewriteTone('fix_spelling')}
                       disabled={isRewriting}
-                      className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-700 hover:bg-slate-200 font-medium transition-colors"
+                      className="rounded bg-[var(--color-accent-soft)] px-1.5 py-0.5 text-[var(--color-ink)] hover:bg-[var(--color-border)] font-medium transition-colors"
                       title="Fix spelling and grammar"
                     >
                       📝 Grammar
@@ -3501,13 +3501,13 @@ Ticket Context: Conversation ID ${activeConv.id}`
       {/* COLUMN 4: CONTACT & CONVERSATION DETAILS SIDEBAR                         */}
       {/* ========================================================================= */}
       {showRightSidebar && (
-        <aside className="flex w-[330px] shrink-0 flex-col border-l border-[#eaecf0] bg-white text-[13px] overflow-y-auto">
+        <aside className="flex w-[330px] shrink-0 flex-col border-l border-[#eaecf0] bg-[var(--color-surface)] text-[13px] overflow-y-auto">
           {/* Header */}
           <div className="flex h-14 shrink-0 items-center justify-between border-b border-[#eaecf0] px-5">
-            <h3 className="font-semibold text-slate-900 text-sm">Contact & Profile</h3>
+            <h3 className="font-semibold text-[var(--color-ink)] text-sm">Contact & Profile</h3>
             <button
               onClick={() => setShowRightSidebar(false)}
-              className="text-slate-400 hover:text-slate-600 font-bold"
+              className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] font-bold"
             >
               ✕
             </button>
@@ -3520,7 +3520,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
               className={`pb-2 border-b-2 transition-colors ${
                 contactSidebarTab === 'overview'
                   ? 'border-blue-600 font-semibold text-blue-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
+                  : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
               }`}
             >
               Overview
@@ -3530,11 +3530,11 @@ Ticket Context: Conversation ID ${activeConv.id}`
               className={`pb-2 border-b-2 transition-colors flex items-center gap-1 ${
                 contactSidebarTab === 'notes'
                   ? 'border-blue-600 font-semibold text-blue-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
+                  : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
               }`}
             >
               <span>Notes</span>
-              <span className="rounded-full bg-slate-100 px-1.5 text-[10px]">
+              <span className="rounded-full bg-[var(--color-accent-soft)] px-1.5 text-[10px]">
                 {(contactNotes[activeConv.id] || []).length}
               </span>
             </button>
@@ -3543,7 +3543,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
               className={`pb-2 border-b-2 transition-colors ${
                 contactSidebarTab === 'attributes'
                   ? 'border-blue-600 font-semibold text-blue-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
+                  : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
               }`}
             >
               Attributes
@@ -3553,7 +3553,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
               className={`pb-2 border-b-2 transition-colors ${
                 contactSidebarTab === 'history'
                   ? 'border-blue-600 font-semibold text-blue-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
+                  : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
               }`}
             >
               History
@@ -3563,7 +3563,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
               className={`pb-2 border-b-2 transition-colors flex items-center gap-1 ${
                 contactSidebarTab === 'billing'
                   ? 'border-indigo-600 font-semibold text-indigo-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
+                  : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
               }`}
             >
               <span>💳 Billing</span>
@@ -3584,33 +3584,33 @@ Ticket Context: Conversation ID ${activeConv.id}`
                   <img
                     src={activeConv.avatar}
                     alt={activeConv.name}
-                    className="h-18 w-18 rounded-full object-cover ring-2 ring-slate-100 shadow-xs"
+                    className="h-18 w-18 rounded-full object-cover ring-2 ring-[var(--color-border)] shadow-xs"
                   />
                   <div className="mt-3 flex items-center gap-1.5">
-                    <h4 className="font-bold text-slate-900 text-[15px]">{activeConv.name}</h4>
-                    <button title="Information" className="text-slate-400 hover:text-slate-600 text-xs">
+                    <h4 className="font-bold text-[var(--color-ink)] text-[15px]">{activeConv.name}</h4>
+                    <button title="Information" className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] text-xs">
                       ⓘ
                     </button>
-                    <button title="Open CRM record" className="text-slate-400 hover:text-slate-600 text-xs">
+                    <button title="Open CRM record" className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] text-xs">
                       ↗
                     </button>
                   </div>
-                  <p className="mt-2 text-xs text-slate-600 leading-relaxed max-w-[260px]">
+                  <p className="mt-2 text-xs text-[var(--color-ink-muted)] leading-relaxed max-w-[260px]">
                     {activeConv.bio}
                   </p>
                 </div>
 
                 {/* Contact Details List */}
-                <div className="space-y-2.5 text-xs text-slate-700">
+                <div className="space-y-2.5 text-xs text-[var(--color-ink)]">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 truncate">
-                      <span className="text-slate-400">✉️</span>
+                      <span className="text-[var(--color-ink-faint)]">✉️</span>
                       <span className="truncate">{activeConv.email}</span>
                     </div>
                     <button
                       onClick={() => handleCopy(activeConv.email, 'email')}
                       title="Copy email"
-                      className="text-slate-400 hover:text-slate-600 shrink-0"
+                      className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] shrink-0"
                     >
                       {copiedField === 'email' ? '✓' : '📋'}
                     </button>
@@ -3618,54 +3618,54 @@ Ticket Context: Conversation ID ${activeConv.id}`
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 truncate">
-                      <span className="text-slate-400">📞</span>
+                      <span className="text-[var(--color-ink-faint)]">📞</span>
                       <span>{activeConv.phone}</span>
                     </div>
                     <button
                       onClick={() => handleCopy(activeConv.phone, 'phone')}
                       title="Copy phone"
-                      className="text-slate-400 hover:text-slate-600 shrink-0"
+                      className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] shrink-0"
                     >
                       {copiedField === 'phone' ? '✓' : '📋'}
                     </button>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="text-slate-400">🏢</span>
+                    <span className="text-[var(--color-ink-faint)]">🏢</span>
                     <span>{activeConv.company}</span>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="text-slate-400">📍</span>
+                    <span className="text-[var(--color-ink-faint)]">📍</span>
                     <span>{activeConv.location}</span>
                   </div>
                 </div>
 
                 {/* Social Links Row */}
-                <div className="flex items-center justify-center gap-3 text-slate-400 text-sm">
-                  <button title="Twitter" className="hover:text-slate-600">
+                <div className="flex items-center justify-center gap-3 text-[var(--color-ink-faint)] text-sm">
+                  <button title="Twitter" className="hover:text-[var(--color-ink-muted)]">
                     🐦
                   </button>
-                  <button title="LinkedIn" className="hover:text-slate-600">
+                  <button title="LinkedIn" className="hover:text-[var(--color-ink-muted)]">
                     💼
                   </button>
-                  <button title="GitHub" className="hover:text-slate-600">
+                  <button title="GitHub" className="hover:text-[var(--color-ink-muted)]">
                     🐙
                   </button>
-                  <button title="Instagram" className="hover:text-slate-600">
+                  <button title="Instagram" className="hover:text-[var(--color-ink-muted)]">
                     📸
                   </button>
                 </div>
 
                 {/* Quick Actions Buttons Row */}
                 <div className="flex items-center justify-center gap-2">
-                  <button title="Start chat" className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#eaecf0] hover:bg-slate-50 text-slate-600">
+                  <button title="Start chat" className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#eaecf0] hover:bg-[var(--color-page)] text-[var(--color-ink-muted)]">
                     💬
                   </button>
-                  <button title="Edit contact" className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#eaecf0] hover:bg-slate-50 text-slate-600">
+                  <button title="Edit contact" className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#eaecf0] hover:bg-[var(--color-page)] text-[var(--color-ink-muted)]">
                     ✏️
                   </button>
-                  <button title="Filter by contact" className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#eaecf0] hover:bg-slate-50 text-slate-600">
+                  <button title="Filter by contact" className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#eaecf0] hover:bg-[var(--color-page)] text-[var(--color-ink-muted)]">
                     ⚡
                   </button>
                   <button title="Delete" className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#eaecf0] hover:bg-rose-50 text-rose-500">
@@ -3674,11 +3674,11 @@ Ticket Context: Conversation ID ${activeConv.id}`
                 </div>
 
                 {/* Gap 3: Issue Trackers (Linear / GitHub / Jira) Card */}
-                <div className="rounded-xl border border-purple-100 bg-gradient-to-br from-purple-50/60 via-white to-slate-50 p-3 shadow-2xs space-y-2.5">
+                <div className="rounded-xl border border-purple-100 bg-gradient-to-br from-purple-50/60 via-white to-[var(--color-page)] p-3 shadow-2xs space-y-2.5">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm">🎯</span>
-                      <span className="font-bold text-xs text-slate-900">Issue Trackers</span>
+                      <span className="font-bold text-xs text-[var(--color-ink)]">Issue Trackers</span>
                       <div className="flex items-center gap-1 ml-1 text-[11px]">
                         <span title="Linear">🟣</span>
                         <span title="GitHub">🐙</span>
@@ -3698,7 +3698,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                       {linkedIssues.map((issue) => (
                         <div
                           key={issue.id}
-                          className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-2 text-xs shadow-2xs"
+                          className="flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-2 text-xs shadow-2xs"
                         >
                           <div className="flex items-center gap-2 truncate">
                             <span>
@@ -3712,25 +3712,25 @@ Ticket Context: Conversation ID ${activeConv.id}`
                             >
                               {issue.issue_key}
                             </a>
-                            <span className="text-slate-600 truncate text-[11px]" title={issue.title}>
+                            <span className="text-[var(--color-ink-muted)] truncate text-[11px]" title={issue.title}>
                               {issue.title}
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                            <span className="rounded bg-slate-100 px-1.5 py-0.2 text-[9px] font-bold text-slate-700">
+                            <span className="rounded bg-[var(--color-accent-soft)] px-1.5 py-0.2 text-[9px] font-bold text-[var(--color-ink)]">
                               {issue.status}
                             </span>
                             <button
                               onClick={() => handleSyncIssueStatus(issue.id)}
                               title="Sync status"
-                              className="text-slate-400 hover:text-slate-700 text-xs font-bold cursor-pointer"
+                              className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] text-xs font-bold cursor-pointer"
                             >
                               ↻
                             </button>
                             <button
                               onClick={() => handleUnlinkIssue(issue.id)}
                               title="Unlink issue"
-                              className="text-slate-400 hover:text-rose-600 text-xs font-bold cursor-pointer"
+                              className="text-[var(--color-ink-faint)] hover:text-rose-600 text-xs font-bold cursor-pointer"
                             >
                               ×
                             </button>
@@ -3739,18 +3739,18 @@ Ticket Context: Conversation ID ${activeConv.id}`
                       ))}
                     </div>
                   ) : (
-                    <p className="text-[11px] text-slate-500">
+                    <p className="text-[11px] text-[var(--color-ink-muted)]">
                       No engineering bugs or feature requests linked. Push to Linear, GitHub, or Jira with 1 click.
                     </p>
                   )}
                 </div>
 
                 {/* Gap 3: Slack Conversation Sync Card */}
-                <div className="rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50/60 via-white to-slate-50 p-3 shadow-2xs space-y-2">
+                <div className="rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50/60 via-white to-[var(--color-page)] p-3 shadow-2xs space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm">💬</span>
-                      <span className="font-bold text-xs text-slate-900">Slack Team Sync</span>
+                      <span className="font-bold text-xs text-[var(--color-ink)]">Slack Team Sync</span>
                       {slackSync?.is_synced && (
                         <span className="rounded-full bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 text-[9px]">
                           Live Synced
@@ -3777,7 +3777,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                       </button>
                     )}
                   </div>
-                  <div className="flex items-center justify-between text-[11px] text-slate-500">
+                  <div className="flex items-center justify-between text-[11px] text-[var(--color-ink-muted)]">
                     <span>Channel: {slackSync?.slack_channel_name || '#customer-escalations'}</span>
                     <button
                       onClick={handleSyncToSlack}
@@ -3790,11 +3790,11 @@ Ticket Context: Conversation ID ${activeConv.id}`
                 </div>
 
                 {/* Stripe Billing Quick Overview Card */}
-                <div className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 via-white to-slate-50 p-3 shadow-2xs">
+                <div className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 via-white to-[var(--color-page)] p-3 shadow-2xs">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm">💳</span>
-                      <span className="font-bold text-xs text-slate-900">Stripe Billing</span>
+                      <span className="font-bold text-xs text-[var(--color-ink)]">Stripe Billing</span>
                       {stripeBilling?.subscription?.status === 'active' && (
                         <span className="rounded-full bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 text-[9px]">
                           Active
@@ -3810,38 +3810,38 @@ Ticket Context: Conversation ID ${activeConv.id}`
                   </div>
 
                   {stripeLoading ? (
-                    <div className="py-2 text-center text-xs text-slate-400 animate-pulse">
+                    <div className="py-2 text-center text-xs text-[var(--color-ink-faint)] animate-pulse">
                       Loading customer billing...
                     </div>
                   ) : stripeBilling ? (
                     <div className="space-y-1.5 text-xs">
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-500 font-medium">Plan</span>
-                        <span className="font-semibold text-slate-900">{stripeBilling.subscription?.plan_name || 'Enterprise Scale'}</span>
+                        <span className="text-[var(--color-ink-muted)] font-medium">Plan</span>
+                        <span className="font-semibold text-[var(--color-ink)]">{stripeBilling.subscription?.plan_name || 'Enterprise Scale'}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-500 font-medium">MRR / Spend</span>
+                        <span className="text-[var(--color-ink-muted)] font-medium">MRR / Spend</span>
                         <div className="flex items-center gap-1">
                           <span className="font-bold text-emerald-600">{stripeBilling.mrr_formatted}</span>
-                          <span className="text-[10px] text-slate-400">({stripeBilling.ltv_formatted} LTV)</span>
+                          <span className="text-[10px] text-[var(--color-ink-faint)]">({stripeBilling.ltv_formatted} LTV)</span>
                         </div>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-500 font-medium">Payment Method</span>
-                        <span className="font-medium text-slate-700 flex items-center gap-1">
-                          <span className="uppercase text-[9px] bg-slate-100 px-1 rounded font-bold text-slate-600">{stripeBilling.payment_method?.brand || 'VISA'}</span>
+                        <span className="text-[var(--color-ink-muted)] font-medium">Payment Method</span>
+                        <span className="font-medium text-[var(--color-ink)] flex items-center gap-1">
+                          <span className="uppercase text-[9px] bg-[var(--color-accent-soft)] px-1 rounded font-bold text-[var(--color-ink-muted)]">{stripeBilling.payment_method?.brand || 'VISA'}</span>
                           •••• {stripeBilling.payment_method?.last4 || '4242'}
                         </span>
                       </div>
                       <div className="pt-2 border-t border-indigo-100/60 flex items-center justify-between text-[11px]">
-                        <span className="text-slate-500">Renews</span>
-                        <span className="text-slate-700 font-medium">
+                        <span className="text-[var(--color-ink-muted)]">Renews</span>
+                        <span className="text-[var(--color-ink)] font-medium">
                           {stripeBilling.subscription?.current_period_end ? new Date(stripeBilling.subscription.current_period_end).toLocaleDateString() : 'Next Month'}
                         </span>
                       </div>
                     </div>
                   ) : (
-                    <div className="py-1 text-xs text-slate-400">
+                    <div className="py-1 text-xs text-[var(--color-ink-faint)]">
                       No Stripe subscription data available.
                     </div>
                   )}
@@ -3851,7 +3851,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                 <div className="border-t border-[#eaecf0] pt-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-slate-900 text-xs">🧠 Memory & Preferences</span>
+                      <span className="font-semibold text-[var(--color-ink)] text-xs">🧠 Memory & Preferences</span>
                       <span className="rounded bg-indigo-50 text-indigo-700 font-bold px-1.5 py-0.2 text-[10px]">
                         Remembers
                       </span>
@@ -3868,7 +3868,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                       + Add
                     </button>
                   </div>
-                  <p className="text-[11px] text-slate-500 mb-2.5">
+                  <p className="text-[11px] text-[var(--color-ink-muted)] mb-2.5">
                     Durable facts learned by AI. Injected into every reply prompt so the agent respects them.
                   </p>
 
@@ -3882,7 +3882,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                           <div className="flex items-center justify-between text-[10px] text-indigo-600 font-bold mb-1">
                             <span>Noted · {m.notedAt}</span>
                             <div className="flex items-center gap-1.5">
-                              <span className="uppercase text-[9px] bg-white px-1.5 py-0.5 rounded border border-indigo-200">
+                              <span className="uppercase text-[9px] bg-[var(--color-surface)] px-1.5 py-0.5 rounded border border-indigo-200">
                                 {m.category.replace('_', ' ')}
                               </span>
                               <button
@@ -3894,11 +3894,11 @@ Ticket Context: Conversation ID ${activeConv.id}`
                               </button>
                             </div>
                           </div>
-                          <p className="font-medium text-slate-800 leading-snug">{m.fact}</p>
+                          <p className="font-medium text-[var(--color-ink)] leading-snug">{m.fact}</p>
                         </div>
                       ))
                     ) : (
-                      <div className="rounded-lg bg-slate-50 p-3 text-center text-xs text-slate-400 border border-dashed border-slate-200">
+                      <div className="rounded-lg bg-[var(--color-page)] p-3 text-center text-xs text-[var(--color-ink-faint)] border border-dashed border-[var(--color-border)]">
                         No memories noted yet. AI automatically listens to conversations and captures preferences.
                       </div>
                     )}
@@ -3910,14 +3910,14 @@ Ticket Context: Conversation ID ${activeConv.id}`
             {/* SUBTAB 2: INTERNAL NOTES */}
             {contactSidebarTab === 'notes' && (
               <div className="space-y-4">
-                <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-2xs">
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Add Contact Profile Note</label>
+                <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-2xs">
+                  <label className="block text-[11px] font-bold text-[var(--color-ink)] mb-1">Add Contact Profile Note</label>
                   <textarea
                     rows={3}
                     value={newNoteText}
                     onChange={(e) => setNewNoteText(e.target.value)}
                     placeholder="Record durable internal context about this person..."
-                    className="w-full resize-none text-xs text-slate-800 placeholder-slate-400 p-2 border border-slate-200 rounded-md focus:border-blue-500 focus:outline-hidden"
+                    className="w-full resize-none text-xs text-[var(--color-ink)] placeholder-slate-400 p-2 border border-[var(--color-border)] rounded-md focus:border-blue-500 focus:outline-hidden"
                   />
                   <div className="flex justify-end mt-2">
                     <button
@@ -3932,16 +3932,16 @@ Ticket Context: Conversation ID ${activeConv.id}`
 
                 <div className="space-y-2.5">
                   {(contactNotes[activeConv.id] || []).map((n) => (
-                    <div key={n.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs shadow-2xs">
-                      <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700 mb-1">
+                    <div key={n.id} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-page)] p-3 text-xs shadow-2xs">
+                      <div className="flex items-center justify-between text-[11px] font-semibold text-[var(--color-ink)] mb-1">
                         <span>👤 {n.author}</span>
-                        <span className="font-normal text-slate-400">{n.time}</span>
+                        <span className="font-normal text-[var(--color-ink-faint)]">{n.time}</span>
                       </div>
-                      <p className="text-slate-800 leading-relaxed">{n.body}</p>
+                      <p className="text-[var(--color-ink)] leading-relaxed">{n.body}</p>
                     </div>
                   ))}
                   {!(contactNotes[activeConv.id] || []).length && (
-                    <div className="p-6 text-center text-xs text-slate-400 border border-dashed rounded-lg bg-slate-50/50">
+                    <div className="p-6 text-center text-xs text-[var(--color-ink-faint)] border border-dashed rounded-lg bg-[var(--color-page)]/50">
                       No internal notes recorded for this contact yet.
                     </div>
                   )}
@@ -3953,7 +3953,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
             {contactSidebarTab === 'attributes' && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-xs text-slate-900">CRM Custom Fields</span>
+                  <span className="font-bold text-xs text-[var(--color-ink)]">CRM Custom Fields</span>
                   <button
                     onClick={() => {
                       const key = prompt('Attribute name (e.g. loyalty_tier, billing_cycle):')
@@ -3971,11 +3971,11 @@ Ticket Context: Conversation ID ${activeConv.id}`
                   </button>
                 </div>
 
-                <div className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white shadow-2xs overflow-hidden">
+                <div className="divide-y divide-[var(--color-border)] rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xs overflow-hidden">
                   {Object.entries(contactAttributes[activeConv.id] || {}).map(([k, v]) => (
                     <div key={k} className="flex items-center justify-between px-3 py-2 text-xs">
-                      <span className="font-medium text-slate-500 capitalize">{k.replace('_', ' ')}</span>
-                      <span className="font-semibold text-slate-900">{v}</span>
+                      <span className="font-medium text-[var(--color-ink-muted)] capitalize">{k.replace('_', ' ')}</span>
+                      <span className="font-semibold text-[var(--color-ink)]">{v}</span>
                     </div>
                   ))}
                 </div>
@@ -3985,22 +3985,22 @@ Ticket Context: Conversation ID ${activeConv.id}`
             {/* SUBTAB 4: OMNICHANNEL HISTORY */}
             {contactSidebarTab === 'history' && (
               <div className="space-y-3">
-                <div className="font-bold text-xs text-slate-900">Omnichannel Touchpoints</div>
-                <div className="relative pl-4 space-y-4 border-l-2 border-slate-200 text-xs">
+                <div className="font-bold text-xs text-[var(--color-ink)]">Omnichannel Touchpoints</div>
+                <div className="relative pl-4 space-y-4 border-l-2 border-[var(--color-border)] text-xs">
                   <div className="relative">
                     <span className="absolute -left-[21px] top-0.5 flex h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
-                    <p className="font-semibold text-slate-900">WhatsApp Campaign Response</p>
-                    <p className="text-slate-500 text-[11px]">Today · Replied to Spring Sale early access</p>
+                    <p className="font-semibold text-[var(--color-ink)]">WhatsApp Campaign Response</p>
+                    <p className="text-[var(--color-ink-muted)] text-[11px]">Today · Replied to Spring Sale early access</p>
                   </div>
                   <div className="relative">
                     <span className="absolute -left-[21px] top-0.5 flex h-2.5 w-2.5 rounded-full bg-blue-500 ring-2 ring-white" />
-                    <p className="font-semibold text-slate-900">WhatsApp Broadcast Delivered</p>
-                    <p className="text-slate-500 text-[11px]">Today, 10:00 AM · Message read receipt confirmed</p>
+                    <p className="font-semibold text-[var(--color-ink)]">WhatsApp Broadcast Delivered</p>
+                    <p className="text-[var(--color-ink-muted)] text-[11px]">Today, 10:00 AM · Message read receipt confirmed</p>
                   </div>
                   <div className="relative">
                     <span className="absolute -left-[21px] top-0.5 flex h-2.5 w-2.5 rounded-full bg-purple-500 ring-2 ring-white" />
-                    <p className="font-semibold text-slate-900">Website Live Chat Session</p>
-                    <p className="text-slate-500 text-[11px]">Feb 26, 4:00 PM · Inquired about catalog items</p>
+                    <p className="font-semibold text-[var(--color-ink)]">Website Live Chat Session</p>
+                    <p className="text-[var(--color-ink-muted)] text-[11px]">Feb 26, 4:00 PM · Inquired about catalog items</p>
                   </div>
                 </div>
               </div>
@@ -4028,18 +4028,18 @@ Ticket Context: Conversation ID ${activeConv.id}`
                 )}
 
                 {stripeLoading ? (
-                  <div className="p-8 text-center text-xs text-slate-400 space-y-2">
+                  <div className="p-8 text-center text-xs text-[var(--color-ink-faint)] space-y-2">
                     <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
                     <p>Loading Stripe customer billing...</p>
                   </div>
                 ) : (
                   <>
                     {/* Subscription & Customer Profile Card */}
-                    <div className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/60 via-white to-slate-50 p-4 shadow-2xs space-y-3">
+                    <div className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/60 via-white to-[var(--color-page)] p-4 shadow-2xs space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
                           <span className="text-base">💳</span>
-                          <span className="font-bold text-xs text-slate-900">
+                          <span className="font-bold text-xs text-[var(--color-ink)]">
                             {stripeBilling?.subscription?.plan_name || 'Enterprise Scale'}
                           </span>
                         </div>
@@ -4055,29 +4055,29 @@ Ticket Context: Conversation ID ${activeConv.id}`
                       </div>
 
                       <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
-                        <div className="rounded-lg bg-white/80 p-2.5 border border-slate-100">
-                          <div className="text-[10px] text-slate-500 font-medium">Monthly MRR</div>
+                        <div className="rounded-lg bg-[var(--color-surface)]/80 p-2.5 border border-[var(--color-border)]">
+                          <div className="text-[10px] text-[var(--color-ink-muted)] font-medium">Monthly MRR</div>
                           <div className="text-sm font-bold text-emerald-600 mt-0.5">
                             {stripeBilling?.mrr_formatted || '$299.00/mo'}
                           </div>
                         </div>
-                        <div className="rounded-lg bg-white/80 p-2.5 border border-slate-100">
-                          <div className="text-[10px] text-slate-500 font-medium">Lifetime Spend</div>
-                          <div className="text-sm font-bold text-slate-800 mt-0.5">
+                        <div className="rounded-lg bg-[var(--color-surface)]/80 p-2.5 border border-[var(--color-border)]">
+                          <div className="text-[10px] text-[var(--color-ink-muted)] font-medium">Lifetime Spend</div>
+                          <div className="text-sm font-bold text-[var(--color-ink)] mt-0.5">
                             {stripeBilling?.ltv_formatted || '$2,392.00'}
                           </div>
                         </div>
                       </div>
 
-                      <div className="space-y-1.5 pt-2 border-t border-slate-100 text-xs">
+                      <div className="space-y-1.5 pt-2 border-t border-[var(--color-border)] text-xs">
                         <div className="flex items-center justify-between">
-                          <span className="text-slate-500">Payment Card</span>
-                          <span className="font-medium text-slate-700 flex items-center gap-1">
-                            <span className="uppercase text-[9px] bg-slate-100 px-1 rounded font-bold text-slate-600">
+                          <span className="text-[var(--color-ink-muted)]">Payment Card</span>
+                          <span className="font-medium text-[var(--color-ink)] flex items-center gap-1">
+                            <span className="uppercase text-[9px] bg-[var(--color-accent-soft)] px-1 rounded font-bold text-[var(--color-ink-muted)]">
                               {stripeBilling?.payment_method?.brand || 'VISA'}
                             </span>
                             •••• {stripeBilling?.payment_method?.last4 || '4242'}
-                            <span className="text-[10px] text-slate-400">
+                            <span className="text-[10px] text-[var(--color-ink-faint)]">
                               (Exp {stripeBilling?.payment_method?.exp_month || 12}/
                               {stripeBilling?.payment_method?.exp_year || 2028})
                             </span>
@@ -4085,8 +4085,8 @@ Ticket Context: Conversation ID ${activeConv.id}`
                         </div>
 
                         <div className="flex items-center justify-between">
-                          <span className="text-slate-500">Next Renewal</span>
-                          <span className="font-medium text-slate-800">
+                          <span className="text-[var(--color-ink-muted)]">Next Renewal</span>
+                          <span className="font-medium text-[var(--color-ink)]">
                             {stripeBilling?.subscription?.current_period_end
                               ? new Date(stripeBilling.subscription.current_period_end).toLocaleDateString()
                               : 'In 24 days'}
@@ -4094,7 +4094,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                         </div>
 
                         <div className="flex items-center justify-between pt-1 text-[11px]">
-                          <span className="text-slate-400">Customer ID</span>
+                          <span className="text-[var(--color-ink-faint)]">Customer ID</span>
                           <button
                             onClick={() => {
                               if (stripeBilling?.customer_id) {
@@ -4137,10 +4137,10 @@ Ticket Context: Conversation ID ${activeConv.id}`
                     {/* Invoices List */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-slate-900 flex items-center gap-1">
+                        <span className="font-bold text-xs text-[var(--color-ink)] flex items-center gap-1">
                           <span>🧾</span>
                           <span>Invoices & Receipts</span>
-                          <span className="text-[10px] text-slate-400 font-normal">
+                          <span className="text-[10px] text-[var(--color-ink-faint)] font-normal">
                             ({stripeInvoices.length})
                           </span>
                         </span>
@@ -4150,23 +4150,23 @@ Ticket Context: Conversation ID ${activeConv.id}`
                         {stripeInvoices.map((inv) => (
                           <div
                             key={inv.id}
-                            className="rounded-lg border border-slate-200 bg-white p-3 text-xs shadow-2xs hover:border-slate-300 transition-colors"
+                            className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3 text-xs shadow-2xs hover:border-[var(--color-border)] transition-colors"
                           >
                             <div className="flex items-center justify-between mb-1.5">
-                              <span className="font-bold text-slate-900">{inv.number}</span>
+                              <span className="font-bold text-[var(--color-ink)]">{inv.number}</span>
                               <span className="rounded bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.2 text-[10px] font-bold">
                                 {inv.status.toUpperCase()}
                               </span>
                             </div>
 
-                            <div className="flex items-center justify-between text-slate-500 text-[11px] mb-2">
+                            <div className="flex items-center justify-between text-[var(--color-ink-muted)] text-[11px] mb-2">
                               <span>{new Date(inv.created_at).toLocaleDateString()}</span>
-                              <span className="font-bold text-slate-900 text-xs">
+                              <span className="font-bold text-[var(--color-ink)] text-xs">
                                 {inv.amount_paid_formatted}
                               </span>
                             </div>
 
-                            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                            <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]">
                               <div className="flex items-center gap-2">
                                 <a
                                   href={inv.hosted_invoice_url}
@@ -4181,7 +4181,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                                   href={inv.invoice_pdf_url}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-0.5"
+                                  className="text-[11px] font-semibold text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] flex items-center gap-0.5"
                                 >
                                   <span>PDF</span>
                                   <span>⬇</span>
@@ -4203,7 +4203,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                         ))}
 
                         {stripeInvoices.length === 0 && (
-                          <div className="rounded-lg border border-dashed border-slate-200 p-4 text-center text-xs text-slate-400">
+                          <div className="rounded-lg border border-dashed border-[var(--color-border)] p-4 text-center text-xs text-[var(--color-ink-faint)]">
                             No billing invoices found.
                           </div>
                         )}
@@ -4212,23 +4212,23 @@ Ticket Context: Conversation ID ${activeConv.id}`
 
                     {/* Billing Audit Trail */}
                     {stripeLogs.length > 0 && (
-                      <div className="space-y-2 pt-2 border-t border-slate-100">
-                        <span className="font-bold text-xs text-slate-900">
+                      <div className="space-y-2 pt-2 border-t border-[var(--color-border)]">
+                        <span className="font-bold text-xs text-[var(--color-ink)]">
                           Billing Action Audit Trail
                         </span>
                         <div className="space-y-1.5">
                           {stripeLogs.slice(0, 5).map((log) => (
                             <div
                               key={log.id}
-                              className="rounded-md border border-slate-100 bg-slate-50 p-2 text-[11px]"
+                              className="rounded-md border border-[var(--color-border)] bg-[var(--color-page)] p-2 text-[11px]"
                             >
-                              <div className="flex items-center justify-between font-semibold text-slate-800">
+                              <div className="flex items-center justify-between font-semibold text-[var(--color-ink)]">
                                 <span className="capitalize">{log.action_type.replace('_', ' ')}</span>
                                 <span className="text-emerald-600 font-bold">
                                   {log.amount_cents > 0 ? log.amount_formatted : 'Success'}
                                 </span>
                               </div>
-                              <div className="flex items-center justify-between text-slate-400 text-[10px] mt-0.5">
+                              <div className="flex items-center justify-between text-[var(--color-ink-faint)] text-[10px] mt-0.5">
                                 <span>By {log.actor_email}</span>
                                 <span>{new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                               </div>
@@ -4248,8 +4248,8 @@ Ticket Context: Conversation ID ${activeConv.id}`
                 onClick={() => setShowActionsAccordion((v) => !v)}
                 className="flex items-center justify-between cursor-pointer"
               >
-                <span className="font-semibold text-slate-900 text-xs">Conversation Actions</span>
-                <span className="text-slate-400 font-bold">{showActionsAccordion ? '−' : '+'}</span>
+                <span className="font-semibold text-[var(--color-ink)] text-xs">Conversation Actions</span>
+                <span className="text-[var(--color-ink-faint)] font-bold">{showActionsAccordion ? '−' : '+'}</span>
               </div>
 
               {showActionsAccordion && (
@@ -4263,7 +4263,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                       <button
                         onClick={() => handleRunTriage(true)}
                         disabled={isTriaging}
-                        className="text-[11px] font-bold text-purple-700 bg-white border border-purple-300 px-2 py-0.5 rounded shadow-2xs hover:bg-purple-100 disabled:opacity-50 transition-colors"
+                        className="text-[11px] font-bold text-purple-700 bg-[var(--color-surface)] border border-purple-300 px-2 py-0.5 rounded shadow-2xs hover:bg-purple-100 disabled:opacity-50 transition-colors"
                       >
                         {isTriaging ? 'Analyzing...' : 'Run Triage'}
                       </button>
@@ -4291,7 +4291,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                   {/* Assigned Agent Selector */}
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="text-slate-500 font-medium">Assigned Agent</label>
+                      <label className="text-[var(--color-ink-muted)] font-medium">Assigned Agent</label>
                       <button
                         type="button"
                         onClick={() => handleAutoAssign('capacity_based')}
@@ -4304,7 +4304,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                     <select
                       value={activeConv.assignedAgent}
                       onChange={(e) => handleAgentChange(e.target.value)}
-                      className="w-full rounded-md border border-[#d0d5dd] bg-white px-2.5 py-1.5 text-xs font-medium text-slate-800 shadow-xs focus:border-blue-500 focus:outline-hidden"
+                      className="w-full rounded-md border border-[#d0d5dd] bg-[var(--color-surface)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-ink)] shadow-xs focus:border-blue-500 focus:outline-hidden"
                     >
                       <option value="Captain (AI Agent)">✨ Captain (AI Agent)</option>
                       {routingAgents.length > 0 ? (
@@ -4328,11 +4328,11 @@ Ticket Context: Conversation ID ${activeConv.id}`
 
                   {/* Assigned Team Selector */}
                   <div>
-                    <label className="block text-slate-500 font-medium mb-1">Assigned Team</label>
+                    <label className="block text-[var(--color-ink-muted)] font-medium mb-1">Assigned Team</label>
                     <select
                       value={activeConv.team}
                       onChange={(e) => handleTeamChange(e.target.value)}
-                      className="w-full rounded-md border border-[#d0d5dd] bg-white px-2.5 py-1.5 text-xs font-medium text-slate-800 shadow-xs focus:border-blue-500 focus:outline-hidden"
+                      className="w-full rounded-md border border-[#d0d5dd] bg-[var(--color-surface)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-ink)] shadow-xs focus:border-blue-500 focus:outline-hidden"
                     >
                       <option value="customer support">🤝 Customer Support</option>
                       <option value="sales & outreach">💼 Sales & Outreach</option>
@@ -4344,11 +4344,11 @@ Ticket Context: Conversation ID ${activeConv.id}`
 
                   {/* Priority Urgency Selector */}
                   <div>
-                    <label className="block text-slate-500 font-medium mb-1">Priority</label>
+                    <label className="block text-[var(--color-ink-muted)] font-medium mb-1">Priority</label>
                     <select
                       value={activeConv.priority}
                       onChange={(e) => handlePriorityChange(e.target.value as any)}
-                      className="w-full rounded-md border border-[#d0d5dd] bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 shadow-xs focus:border-blue-500 focus:outline-hidden"
+                      className="w-full rounded-md border border-[#d0d5dd] bg-[var(--color-surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--color-ink)] shadow-xs focus:border-blue-500 focus:outline-hidden"
                     >
                       <option value="Urgent">🔴 Urgent</option>
                       <option value="High">🟠 High</option>
@@ -4359,7 +4359,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
 
                   {/* Conversation Labels */}
                   <div>
-                    <label className="block text-slate-500 font-medium mb-1.5">Conversation Labels</label>
+                    <label className="block text-[var(--color-ink-muted)] font-medium mb-1.5">Conversation Labels</label>
                     <div className="flex flex-wrap items-center gap-1.5">
                       <button
                         onClick={handleAddLabel}
@@ -4395,8 +4395,8 @@ Ticket Context: Conversation ID ${activeConv.id}`
                 className="flex items-center justify-between cursor-pointer group"
               >
                 <div className="flex items-center gap-1.5">
-                  <span className="font-semibold text-slate-900 text-xs">Macros</span>
-                  <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full font-medium">
+                  <span className="font-semibold text-[var(--color-ink)] text-xs">Macros</span>
+                  <span className="text-[10px] bg-[var(--color-accent-soft)] text-[var(--color-ink-muted)] px-1.5 py-0.5 rounded-full font-medium">
                     {macros.length}
                   </span>
                 </div>
@@ -4411,7 +4411,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                   >
                     + Create
                   </button>
-                  <span className="text-slate-400 font-bold group-hover:text-slate-600">
+                  <span className="text-[var(--color-ink-faint)] font-bold group-hover:text-[var(--color-ink-muted)]">
                     {showMacrosAccordion ? '−' : '+'}
                   </span>
                 </div>
@@ -4422,15 +4422,15 @@ Ticket Context: Conversation ID ${activeConv.id}`
                   {macros.map((macro) => (
                     <div
                       key={macro.id}
-                      className="p-2.5 rounded-lg border border-slate-200/80 bg-white hover:border-brand-300 hover:shadow-xs transition-all space-y-1.5"
+                      className="p-2.5 rounded-lg border border-[var(--color-border)]/80 bg-[var(--color-surface)] hover:border-brand-300 hover:shadow-xs transition-all space-y-1.5"
                     >
                       <div className="flex items-start justify-between gap-1.5">
-                        <span className="font-semibold text-slate-900 leading-snug">
+                        <span className="font-semibold text-[var(--color-ink)] leading-snug">
                           ⚡ {macro.name}
                         </span>
                       </div>
                       {macro.description && (
-                        <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
+                        <p className="text-[11px] text-[var(--color-ink-muted)] line-clamp-2 leading-relaxed">
                           {macro.description}
                         </p>
                       )}
@@ -4438,7 +4438,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                         {macro.actions.map((act, idx) => (
                           <span
                             key={idx}
-                            className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 uppercase tracking-wider"
+                            className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-[var(--color-accent-soft)] text-[var(--color-ink-muted)] uppercase tracking-wider"
                           >
                             {act.type.replace(/_/g, ' ')}
                           </span>
@@ -4449,7 +4449,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                           type="button"
                           disabled={macroLoading}
                           onClick={() => handleExecuteMacro(macro)}
-                          className="px-2.5 py-1 text-[11px] font-semibold rounded bg-slate-900 hover:bg-slate-800 text-white shadow-xs transition-colors disabled:opacity-50 flex items-center gap-1 cursor-pointer"
+                          className="px-2.5 py-1 text-[11px] font-semibold rounded bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white shadow-xs transition-colors disabled:opacity-50 flex items-center gap-1 cursor-pointer"
                         >
                           {activeExecutingMacroId === macro.id ? (
                             <>
@@ -4479,7 +4479,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                 className="flex items-center justify-between cursor-pointer group"
               >
                 <div className="flex items-center gap-1.5">
-                  <span className="font-semibold text-slate-900 text-xs">SLA &amp; Deadlines</span>
+                  <span className="font-semibold text-[var(--color-ink)] text-xs">SLA &amp; Deadlines</span>
                   {activeConv.slaData?.isBreached ? (
                     <span className="text-[10px] bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-bold">
                       Breached
@@ -4505,7 +4505,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                   >
                     Monitor
                   </button>
-                  <span className="text-slate-400 font-bold group-hover:text-slate-600">
+                  <span className="text-[var(--color-ink-faint)] font-bold group-hover:text-[var(--color-ink-muted)]">
                     {showSLAAccordion ? '−' : '+'}
                   </span>
                 </div>
@@ -4514,10 +4514,10 @@ Ticket Context: Conversation ID ${activeConv.id}`
               {showSLAAccordion && (
                 <div className="mt-2.5 space-y-2.5 text-xs">
                   {/* Active Policy Header */}
-                  <div className="p-2 rounded bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+                  <div className="p-2 rounded bg-[var(--color-page)] border border-[var(--color-border)]/80 flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] text-slate-400 uppercase font-semibold">Matched SLA Policy</p>
-                      <p className="font-bold text-slate-900 text-xs truncate">
+                      <p className="text-[10px] text-[var(--color-ink-faint)] uppercase font-semibold">Matched SLA Policy</p>
+                      <p className="font-bold text-[var(--color-ink)] text-xs truncate">
                         {activeConv.slaData?.policyName ||
                           (activeConv.priority === 'Urgent'
                             ? 'Critical VIP Escalation SLA'
@@ -4532,14 +4532,14 @@ Ticket Context: Conversation ID ${activeConv.id}`
                   {/* First Response Target Progress */}
                   <div className="space-y-1">
                     <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-slate-600 font-medium">First Response:</span>
+                      <span className="text-[var(--color-ink-muted)] font-medium">First Response:</span>
                       <span
                         className={`font-semibold ${
                           activeConv.slaData?.firstResponseStatus === 'fulfilled'
                             ? 'text-emerald-700'
                             : activeConv.slaData?.firstResponseBreached
                             ? 'text-rose-700'
-                            : 'text-slate-800'
+                            : 'text-[var(--color-ink)]'
                         }`}
                       >
                         {activeConv.slaData?.firstResponseStatus === 'fulfilled'
@@ -4549,7 +4549,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                           : activeConv.sla || 'Active (within target)'}
                       </span>
                     </div>
-                    <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                    <div className="w-full bg-[var(--color-accent-soft)] h-1.5 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all ${
                           activeConv.slaData?.firstResponseStatus === 'fulfilled'
@@ -4565,14 +4565,14 @@ Ticket Context: Conversation ID ${activeConv.id}`
                   {/* Resolution Target Progress */}
                   <div className="space-y-1">
                     <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-slate-600 font-medium">Ticket Resolution:</span>
+                      <span className="text-[var(--color-ink-muted)] font-medium">Ticket Resolution:</span>
                       <span
                         className={`font-semibold ${
                           activeConv.status === 'Resolved' || activeConv.slaData?.resolutionStatus === 'fulfilled'
                             ? 'text-emerald-700'
                             : activeConv.slaData?.resolutionBreached
                             ? 'text-rose-700'
-                            : 'text-slate-800'
+                            : 'text-[var(--color-ink)]'
                         }`}
                       >
                         {activeConv.status === 'Resolved' || activeConv.slaData?.resolutionStatus === 'fulfilled'
@@ -4582,7 +4582,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                           : 'Target 24h'}
                       </span>
                     </div>
-                    <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                    <div className="w-full bg-[var(--color-accent-soft)] h-1.5 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all ${
                           activeConv.status === 'Resolved' || activeConv.slaData?.resolutionStatus === 'fulfilled'
@@ -4601,14 +4601,14 @@ Ticket Context: Conversation ID ${activeConv.id}`
                       type="button"
                       disabled={isEvaluatingSLA}
                       onClick={() => handleEvaluateSLA()}
-                      className="flex-1 py-1 px-2 rounded border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-700 shadow-2xs flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                      className="flex-1 py-1 px-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-page)] text-[11px] font-semibold text-[var(--color-ink)] shadow-2xs flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
                     >
                       {isEvaluatingSLA ? 'Evaluating...' : '⏱️ Check Deadlines'}
                     </button>
                     <button
                       type="button"
                       onClick={openSLAMonitorModal}
-                      className="py-1 px-2 rounded border border-slate-200 bg-white hover:bg-slate-50 text-[11px] font-semibold text-slate-700 shadow-2xs flex items-center gap-1 cursor-pointer"
+                      className="py-1 px-2 rounded border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-page)] text-[11px] font-semibold text-[var(--color-ink)] shadow-2xs flex items-center gap-1 cursor-pointer"
                       title="View aggregated SLA metrics & breached tickets"
                     >
                       📊
@@ -4625,21 +4625,21 @@ Ticket Context: Conversation ID ${activeConv.id}`
       {/* CAPTAIN AI THREAD SUMMARY MODAL                                           */}
       {/* ========================================================================= */}
       {showSummaryModal && captainSummary && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-4 animate-in fade-in zoom-in-95">
-            <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-ink)]/40 backdrop-blur-xs p-4">
+          <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl max-w-lg w-full p-6 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-start justify-between border-b border-[var(--color-border)] pb-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-sm">
                   ✨
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-base">Captain AI Thread Summary</h3>
-                  <p className="text-xs text-slate-500">Executive takeaways for {activeConv.name}</p>
+                  <h3 className="font-bold text-[var(--color-ink)] text-base">Captain AI Thread Summary</h3>
+                  <p className="text-xs text-[var(--color-ink-muted)]">Executive takeaways for {activeConv.name}</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowSummaryModal(false)}
-                className="text-slate-400 hover:text-slate-600 font-bold text-sm p-1"
+                className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] font-bold text-sm p-1"
               >
                 ✕
               </button>
@@ -4648,7 +4648,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
             {/* Sentiment & Topics Row */}
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
               <div className="flex items-center gap-1.5">
-                <span className="text-slate-500 font-medium">Sentiment:</span>
+                <span className="text-[var(--color-ink-muted)] font-medium">Sentiment:</span>
                 <span
                   className={`px-2 py-0.5 rounded font-bold uppercase text-[10px] ${
                     captainSummary.sentiment === 'positive'
@@ -4657,7 +4657,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                       ? 'bg-rose-100 text-rose-800'
                       : captainSummary.sentiment === 'negative'
                       ? 'bg-amber-100 text-amber-800'
-                      : 'bg-slate-100 text-slate-700'
+                      : 'bg-[var(--color-accent-soft)] text-[var(--color-ink)]'
                   }`}
                 >
                   {captainSummary.sentiment}
@@ -4673,9 +4673,9 @@ Ticket Context: Conversation ID ${activeConv.id}`
             </div>
 
             {/* Bullet Points */}
-            <div className="space-y-2 bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs text-slate-800">
-              <span className="font-semibold text-slate-900 text-xs block">Key Discussion Highlights:</span>
-              <ul className="space-y-1.5 list-disc pl-4 text-slate-700">
+            <div className="space-y-2 bg-[var(--color-page)] p-3.5 rounded-xl border border-[var(--color-border)] text-xs text-[var(--color-ink)]">
+              <span className="font-semibold text-[var(--color-ink)] text-xs block">Key Discussion Highlights:</span>
+              <ul className="space-y-1.5 list-disc pl-4 text-[var(--color-ink)]">
                 {captainSummary.bulletPoints.map((bullet, idx) => (
                   <li key={idx} className="leading-relaxed">
                     {bullet}
@@ -4685,13 +4685,13 @@ Ticket Context: Conversation ID ${activeConv.id}`
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--color-border)]">
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(captainSummary.summary)
                   alert('Thread summary copied to clipboard!')
                 }}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs"
+                className="px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-xs"
               >
                 Copy Summary
               </button>
@@ -4724,24 +4724,24 @@ Ticket Context: Conversation ID ${activeConv.id}`
       {/* CAPTAIN MONITORS & TOPIC INTELLIGENCE DRAWER                              */}
       {/* ========================================================================= */}
       {showMonitorsDrawer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-900/40 backdrop-blur-xs">
-          <div className="bg-white h-full w-full max-w-xl shadow-2xl p-6 overflow-y-auto space-y-6 flex flex-col animate-in slide-in-from-right duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-end bg-[var(--color-ink)]/40 backdrop-blur-xs">
+          <div className="bg-[var(--color-surface)] h-full w-full max-w-xl shadow-2xl p-6 overflow-y-auto space-y-6 flex flex-col animate-in slide-in-from-right duration-200">
             {/* Header */}
-            <div className="flex items-start justify-between border-b border-slate-200 pb-4">
+            <div className="flex items-start justify-between border-b border-[var(--color-border)] pb-4">
               <div>
                 <div className="flex items-center gap-2">
                   <span className="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-sm">
                     ✨
                   </span>
-                  <h2 className="text-lg font-bold text-slate-900">Captain Monitors &amp; Intelligence</h2>
+                  <h2 className="text-lg font-bold text-[var(--color-ink)]">Captain Monitors &amp; Intelligence</h2>
                 </div>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-[var(--color-ink-muted)] mt-1">
                   Automated topic spike detection, emerging customer conversation themes, and real-time sentiment telemetry.
                 </p>
               </div>
               <button
                 onClick={() => setShowMonitorsDrawer(false)}
-                className="text-slate-400 hover:text-slate-600 font-bold text-sm p-1"
+                className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] font-bold text-sm p-1"
               >
                 ✕
               </button>
@@ -4749,12 +4749,12 @@ Ticket Context: Conversation ID ${activeConv.id}`
 
             {/* Sentiment Telemetry Heatmap */}
             {monitorsData && (
-              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-3">
-                <div className="flex items-center justify-between text-xs font-semibold text-slate-900">
+              <div className="bg-[var(--color-page)] rounded-xl p-4 border border-[var(--color-border)] space-y-3">
+                <div className="flex items-center justify-between text-xs font-semibold text-[var(--color-ink)]">
                   <span>Customer Sentiment Breakdown</span>
-                  <span className="text-slate-500 text-[11px] font-normal">{monitorsData.totalMonitoredConversations} Analyzed</span>
+                  <span className="text-[var(--color-ink-muted)] text-[11px] font-normal">{monitorsData.totalMonitoredConversations} Analyzed</span>
                 </div>
-                <div className="h-3 w-full rounded-full bg-slate-200 overflow-hidden flex">
+                <div className="h-3 w-full rounded-full bg-[var(--color-border)] overflow-hidden flex">
                   <div
                     className="bg-emerald-500 h-full"
                     style={{ width: `${monitorsData.sentimentTelemetry.positive || 60}%` }}
@@ -4776,9 +4776,9 @@ Ticket Context: Conversation ID ${activeConv.id}`
                     title={`Urgent: ${monitorsData.sentimentTelemetry.urgent}%`}
                   />
                 </div>
-                <div className="flex justify-between text-[11px] text-slate-600 font-medium">
+                <div className="flex justify-between text-[11px] text-[var(--color-ink-muted)] font-medium">
                   <span className="text-emerald-700">● Positive {monitorsData.sentimentTelemetry.positive}%</span>
-                  <span className="text-slate-600">● Neutral {monitorsData.sentimentTelemetry.neutral}%</span>
+                  <span className="text-[var(--color-ink-muted)]">● Neutral {monitorsData.sentimentTelemetry.neutral}%</span>
                   <span className="text-amber-700">● Negative {monitorsData.sentimentTelemetry.negative}%</span>
                   <span className="text-rose-700">● Urgent {monitorsData.sentimentTelemetry.urgent}%</span>
                 </div>
@@ -4788,23 +4788,23 @@ Ticket Context: Conversation ID ${activeConv.id}`
             {/* Emerging Themes */}
             {monitorsData && (
               <div className="space-y-3">
-                <h3 className="font-bold text-sm text-slate-900 flex items-center justify-between">
+                <h3 className="font-bold text-sm text-[var(--color-ink)] flex items-center justify-between">
                   <span>Emerging Conversation Themes</span>
                   <span className="text-xs text-purple-600 font-semibold">Live Feed</span>
                 </h3>
                 <div className="space-y-2.5">
                   {monitorsData.emergingThemes.map((theme, idx) => (
-                    <div key={idx} className="p-3.5 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-2">
+                    <div key={idx} className="p-3.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xs space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="font-semibold text-slate-900 text-xs">{theme.theme}</span>
+                        <span className="font-semibold text-[var(--color-ink)] text-xs">{theme.theme}</span>
                         <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                           {theme.growth}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-600 italic">"{theme.sampleQuote}"</p>
-                      <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
+                      <p className="text-xs text-[var(--color-ink-muted)] italic">"{theme.sampleQuote}"</p>
+                      <div className="flex items-center justify-between text-[11px] text-[var(--color-ink-muted)] pt-1 border-t border-[var(--color-border)]">
                         <span>💡 {theme.recommendedAction}</span>
-                        <span className="font-semibold text-slate-800">{theme.volume} chats</span>
+                        <span className="font-semibold text-[var(--color-ink)]">{theme.volume} chats</span>
                       </div>
                     </div>
                   ))}
@@ -4815,12 +4815,12 @@ Ticket Context: Conversation ID ${activeConv.id}`
             {/* Active Topic Monitors */}
             {monitorsData && (
               <div className="space-y-3">
-                <h3 className="font-bold text-sm text-slate-900">Active Topic Monitors &amp; Spike Detectors</h3>
+                <h3 className="font-bold text-sm text-[var(--color-ink)]">Active Topic Monitors &amp; Spike Detectors</h3>
                 <div className="space-y-2.5">
                   {monitorsData.activeMonitors.map((mon) => (
-                    <div key={mon.id} className="p-3.5 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-1.5">
+                    <div key={mon.id} className="p-3.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xs space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <span className="font-semibold text-slate-900 text-xs">{mon.name}</span>
+                        <span className="font-semibold text-[var(--color-ink)] text-xs">{mon.name}</span>
                         <span
                           className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
                             mon.status === 'triggered'
@@ -4831,10 +4831,10 @@ Ticket Context: Conversation ID ${activeConv.id}`
                           {mon.status}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-600 leading-snug">{mon.insight}</p>
+                      <p className="text-xs text-[var(--color-ink-muted)] leading-snug">{mon.insight}</p>
                       <div className="flex flex-wrap gap-1 pt-1">
                         {mon.keywords.map((kw, i) => (
-                          <span key={i} className="px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 text-[10px]">
+                          <span key={i} className="px-1.5 py-0.2 rounded bg-[var(--color-accent-soft)] text-[var(--color-ink-muted)] text-[10px]">
                             #{kw}
                           </span>
                         ))}
@@ -4846,27 +4846,27 @@ Ticket Context: Conversation ID ${activeConv.id}`
             )}
 
             {/* Create Custom Monitor Form */}
-            <div className="border-t border-slate-200 pt-4 space-y-3">
-              <h3 className="font-bold text-xs text-slate-900 uppercase tracking-wider text-slate-500">
+            <div className="border-t border-[var(--color-border)] pt-4 space-y-3">
+              <h3 className="font-bold text-xs text-[var(--color-ink)] uppercase tracking-wider text-[var(--color-ink-muted)]">
                 + Add Custom Topic Monitor
               </h3>
               <div className="space-y-2 text-xs">
                 <div>
-                  <label className="block text-slate-600 font-medium mb-1">Monitor Name</label>
+                  <label className="block text-[var(--color-ink-muted)] font-medium mb-1">Monitor Name</label>
                   <input
                     type="text"
                     placeholder="e.g. Refund Escalation Guard"
                     value={newMonitorName}
                     onChange={(e) => setNewMonitorName(e.target.value)}
-                    className="w-full rounded-md border border-slate-300 p-2 text-xs focus:border-purple-500 focus:outline-hidden"
+                    className="w-full rounded-md border border-[var(--color-border)] p-2 text-xs focus:border-purple-500 focus:outline-hidden"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-600 font-medium mb-1">Topic Category</label>
+                  <label className="block text-[var(--color-ink-muted)] font-medium mb-1">Topic Category</label>
                   <select
                     value={newMonitorTopic}
                     onChange={(e) => setNewMonitorTopic(e.target.value)}
-                    className="w-full rounded-md border border-slate-300 p-2 text-xs focus:border-purple-500 focus:outline-hidden"
+                    className="w-full rounded-md border border-[var(--color-border)] p-2 text-xs focus:border-purple-500 focus:outline-hidden"
                   >
                     <option value="support">Customer Support</option>
                     <option value="billing">Billing &amp; Refunds</option>
@@ -4875,13 +4875,13 @@ Ticket Context: Conversation ID ${activeConv.id}`
                   </select>
                 </div>
                 <div>
-                  <label className="block text-slate-600 font-medium mb-1">Keywords (comma-separated)</label>
+                  <label className="block text-[var(--color-ink-muted)] font-medium mb-1">Keywords (comma-separated)</label>
                   <input
                     type="text"
                     placeholder="refund, dispute, chargeback, cancel"
                     value={newMonitorKeywords}
                     onChange={(e) => setNewMonitorKeywords(e.target.value)}
-                    className="w-full rounded-md border border-slate-300 p-2 text-xs focus:border-purple-500 focus:outline-hidden"
+                    className="w-full rounded-md border border-[var(--color-border)] p-2 text-xs focus:border-purple-500 focus:outline-hidden"
                   />
                 </div>
                 <button
@@ -4901,27 +4901,27 @@ Ticket Context: Conversation ID ${activeConv.id}`
       {/* REAL-TIME COLLISION SEND INTERLOCK MODAL                                 */}
       {/* ========================================================================= */}
       {showCollisionInterlock && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-rose-200 shadow-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-ink)]/50 backdrop-blur-xs p-4">
+          <div className="bg-[var(--color-surface)] rounded-2xl border border-rose-200 shadow-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-lg">
                 ⚠️
               </div>
               <div>
-                <h3 className="font-bold text-slate-900 text-base">Overlapping Reply Warning</h3>
+                <h3 className="font-bold text-[var(--color-ink)] text-base">Overlapping Reply Warning</h3>
                 <p className="text-xs text-rose-600 font-semibold">Active Teammate Composing Response</p>
               </div>
             </div>
 
-            <p className="text-xs text-slate-600 leading-relaxed">
+            <p className="text-xs text-[var(--color-ink-muted)] leading-relaxed">
               {collisionInfo?.warningMessage || 'Another teammate is currently typing a reply to this customer.'}{' '}
               Sending your message now may result in contradictory or double customer replies.
             </p>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--color-border)]">
               <button
                 onClick={() => setShowCollisionInterlock(false)}
-                className="px-3.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs"
+                className="px-3.5 py-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-xs"
               >
                 Cancel &amp; Coordinate
               </button>

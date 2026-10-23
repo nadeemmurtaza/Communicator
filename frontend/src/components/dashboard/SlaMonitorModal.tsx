@@ -18,25 +18,25 @@ export function SlaMonitorModal(props: SlaMonitorModalProps) {
   } = props
 
   return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-2xl w-full p-6 space-y-5 animate-in fade-in zoom-in-95 max-h-[85vh] overflow-y-auto">
-            <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-ink)]/40 backdrop-blur-xs p-4">
+          <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl max-w-2xl w-full p-6 space-y-5 animate-in fade-in zoom-in-95 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-start justify-between border-b border-[var(--color-border)] pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-sm">
                   ⏱️
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-base">SLA Compliance &amp; Breach Monitor</h3>
-                  <p className="text-xs text-slate-500">Service level agreements, automated breach alerts, and real-time fulfillment rates</p>
+                  <h3 className="font-bold text-[var(--color-ink)] text-base">SLA Compliance &amp; Breach Monitor</h3>
+                  <p className="text-xs text-[var(--color-ink-muted)]">Service level agreements, automated breach alerts, and real-time fulfillment rates</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <Link to="/sla" className="text-xs font-semibold text-slate-600 hover:text-slate-900 underline">
+                <Link to="/sla" className="text-xs font-semibold text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] underline">
                   Open full page →
                 </Link>
                 <button
                   onClick={() => setShowSLAMonitorModal(false)}
-                  className="text-slate-400 hover:text-slate-600 font-bold text-sm p-1 cursor-pointer"
+                  className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] font-bold text-sm p-1 cursor-pointer"
                 >
                   ✕
                 </button>
@@ -45,9 +45,9 @@ export function SlaMonitorModal(props: SlaMonitorModalProps) {
 
             {/* Top 4 KPI Metrics */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
-                <span className="text-[10px] font-semibold text-slate-500 uppercase">Tracked Tickets</span>
-                <p className="text-lg font-bold text-slate-900 mt-0.5">{slaMetrics?.totalTracked ?? 12}</p>
+              <div className="p-3 rounded-xl bg-[var(--color-page)] border border-[var(--color-border)]/80">
+                <span className="text-[10px] font-semibold text-[var(--color-ink-muted)] uppercase">Tracked Tickets</span>
+                <p className="text-lg font-bold text-[var(--color-ink)] mt-0.5">{slaMetrics?.totalTracked ?? 12}</p>
               </div>
               <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200/80">
                 <span className="text-[10px] font-semibold text-emerald-700 uppercase">1st Resp Rate</span>
@@ -65,19 +65,19 @@ export function SlaMonitorModal(props: SlaMonitorModalProps) {
 
             {/* Configured SLA Policies */}
             <div>
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2 flex items-center justify-between">
+              <h4 className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider mb-2 flex items-center justify-between">
                 <span>Active SLA Policies</span>
-                <span className="text-[11px] font-normal text-slate-500">{slaPolicies.length} configured</span>
+                <span className="text-[11px] font-normal text-[var(--color-ink-muted)]">{slaPolicies.length} configured</span>
               </h4>
               <div className="space-y-2">
                 {slaPolicies.map((policy: any) => (
                   <div
                     key={policy.id}
-                    className="p-3 rounded-lg border border-slate-200/80 bg-white hover:border-slate-300 transition-all flex items-center justify-between gap-3 text-xs"
+                    className="p-3 rounded-lg border border-[var(--color-border)]/80 bg-[var(--color-surface)] hover:border-[var(--color-border)] transition-all flex items-center justify-between gap-3 text-xs"
                   >
                     <div>
-                      <p className="font-semibold text-slate-900">{policy.name}</p>
-                      <p className="text-[11px] text-slate-500 line-clamp-1">{policy.description}</p>
+                      <p className="font-semibold text-[var(--color-ink)]">{policy.name}</p>
+                      <p className="text-[11px] text-[var(--color-ink-muted)] line-clamp-1">{policy.description}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-bold">
@@ -87,7 +87,7 @@ export function SlaMonitorModal(props: SlaMonitorModalProps) {
                         Res: {policy.resolutionTimeThreshold >= 60 ? `${Math.round(policy.resolutionTimeThreshold / 60)}h` : `${policy.resolutionTimeThreshold}m`}
                       </span>
                       {policy.priorities.map((p: any) => (
-                        <span key={p} className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[9px] font-medium uppercase">
+                        <span key={p} className="px-1.5 py-0.5 rounded bg-[var(--color-accent-soft)] text-[var(--color-ink)] text-[9px] font-medium uppercase">
                           {p}
                         </span>
                       ))}
@@ -99,26 +99,26 @@ export function SlaMonitorModal(props: SlaMonitorModalProps) {
 
             {/* Active Breaches & At-Risk Conversations */}
             <div>
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2 flex items-center justify-between">
+              <h4 className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider mb-2 flex items-center justify-between">
                 <span>Active Breaches &amp; At-Risk Conversations</span>
-                <span className="text-[11px] font-normal text-slate-500">{slaBreaches.length} tickets</span>
+                <span className="text-[11px] font-normal text-[var(--color-ink-muted)]">{slaBreaches.length} tickets</span>
               </h4>
               {slaBreaches.length === 0 ? (
                 <div className="p-4 rounded-lg bg-emerald-50/50 border border-emerald-200 text-center text-xs text-emerald-800">
                   🎉 No active SLA breaches! All response and resolution targets are currently fulfilled.
                 </div>
               ) : (
-                <div className="border border-slate-200 rounded-lg overflow-hidden divide-y divide-slate-100 text-xs">
+                <div className="border border-[var(--color-border)] rounded-lg overflow-hidden divide-y divide-[var(--color-border)] text-xs">
                   {slaBreaches.map((b: any) => (
                     <div
                       key={b.conversationId}
-                      className="p-2.5 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                      className="p-2.5 flex items-center justify-between hover:bg-[var(--color-page)] transition-colors"
                     >
                       <div className="flex items-center gap-2">
                         <span className="text-base">{b.isBreached ? '⚠️' : '⏰'}</span>
                         <div>
-                          <p className="font-semibold text-slate-900">{b.contactName}</p>
-                          <p className="text-[10px] text-slate-500">{b.channel} · Priority: {b.priority}</p>
+                          <p className="font-semibold text-[var(--color-ink)]">{b.contactName}</p>
+                          <p className="text-[10px] text-[var(--color-ink-muted)]">{b.channel} · Priority: {b.priority}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -133,7 +133,7 @@ export function SlaMonitorModal(props: SlaMonitorModalProps) {
                             setSelectedId(b.conversationId)
                             setShowSLAMonitorModal(false)
                           }}
-                          className="px-2 py-1 text-[11px] rounded bg-slate-900 text-white font-semibold hover:bg-slate-800 cursor-pointer"
+                          className="px-2 py-1 text-[11px] rounded bg-[var(--color-accent)] text-[var(--color-on-accent)] font-semibold hover:bg-[var(--color-accent-hover)] cursor-pointer"
                         >
                           Open Thread →
                         </button>
@@ -144,11 +144,11 @@ export function SlaMonitorModal(props: SlaMonitorModalProps) {
               )}
             </div>
 
-            <div className="flex items-center justify-end pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-end pt-2 border-t border-[var(--color-border)]">
               <button
                 type="button"
                 onClick={() => setShowSLAMonitorModal(false)}
-                className="px-4 py-1.5 text-xs bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-semibold shadow-xs transition-colors cursor-pointer"
+                className="px-4 py-1.5 text-xs bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white rounded-lg font-semibold shadow-xs transition-colors cursor-pointer"
               >
                 Close
               </button>

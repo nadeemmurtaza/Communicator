@@ -29,21 +29,21 @@ export function RefundModal(props: RefundModalProps) {
   } = props
 
   return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-ink)]/40 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-2xl bg-[var(--color-surface)] p-6 shadow-2xl border border-[var(--color-border)] space-y-4">
+            <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
               <div className="flex items-center gap-2">
                 <span className="text-xl">⚡</span>
                 <div>
-                  <h3 className="font-bold text-sm text-slate-900">Issue Stripe Customer Refund</h3>
-                  <p className="text-[11px] text-slate-500">
+                  <h3 className="font-bold text-sm text-[var(--color-ink)]">Issue Stripe Customer Refund</h3>
+                  <p className="text-[11px] text-[var(--color-ink-muted)]">
                     Target: {activeConv?.name || 'Customer'} ({activeConv?.email || 'email'})
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setRefundModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer"
+                className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] text-lg font-bold cursor-pointer"
               >
                 ✕
               </button>
@@ -51,7 +51,7 @@ export function RefundModal(props: RefundModalProps) {
 
             <div className="space-y-3 text-xs">
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                <label className="block text-[11px] font-bold text-[var(--color-ink)] mb-1">
                   Select Target Invoice / Charge
                 </label>
                 <select
@@ -60,7 +60,7 @@ export function RefundModal(props: RefundModalProps) {
                     const inv = stripeInvoices.find((i: any) => i.id === e.target.value)
                     setSelectedInvoiceForRefund(inv || null)
                   }}
-                  className="w-full rounded-lg border border-slate-200 p-2 text-xs text-slate-800 focus:border-indigo-500 focus:outline-hidden"
+                  className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-hidden"
                 >
                   {stripeInvoices.map((inv: any) => (
                     <option key={inv.id} value={inv.id}>
@@ -75,7 +75,7 @@ export function RefundModal(props: RefundModalProps) {
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-[11px] font-bold text-slate-700">Refund Amount ($)</label>
+                  <label className="text-[11px] font-bold text-[var(--color-ink)]">Refund Amount ($)</label>
                   <button
                     type="button"
                     onClick={() => {
@@ -98,21 +98,21 @@ export function RefundModal(props: RefundModalProps) {
                   }
                   value={refundAmountInput}
                   onChange={(e) => setRefundAmountInput(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 p-2 text-xs text-slate-800 focus:border-indigo-500 focus:outline-hidden"
+                  className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-hidden"
                 />
-                <p className="text-[10px] text-slate-400 mt-1">
+                <p className="text-[10px] text-[var(--color-ink-faint)] mt-1">
                   Leave blank to refund the full paid amount.
                 </p>
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                <label className="block text-[11px] font-bold text-[var(--color-ink)] mb-1">
                   Refund Reason
                 </label>
                 <select
                   value={refundReason}
                   onChange={(e) => setRefundReason(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 p-2 text-xs text-slate-800 focus:border-indigo-500 focus:outline-hidden"
+                  className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-hidden"
                 >
                   <option value="requested_by_customer">Customer Request / Satisfaction Guarantee</option>
                   <option value="duplicate">Accidental Duplicate Charge</option>
@@ -126,11 +126,11 @@ export function RefundModal(props: RefundModalProps) {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--color-border)]">
               <button
                 type="button"
                 onClick={() => setRefundModalOpen(false)}
-                className="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-800 font-semibold cursor-pointer"
+                className="px-3 py-1.5 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] font-semibold cursor-pointer"
               >
                 Cancel
               </button>
