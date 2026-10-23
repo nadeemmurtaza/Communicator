@@ -11,12 +11,12 @@ from __future__ import annotations
 import re
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from communicator.api.dependencies import get_db_session
+from communicator.api.dependencies import get_current_account_id, get_db_session
 from communicator.models.tenant import Tenant
 
 router = APIRouter(prefix="/organizations", tags=["Organizations"])
@@ -38,23 +38,26 @@ def _serialize(t: Tenant) -> dict:
 
 class OrganizationIn(BaseModel):
     name: str
-    account_id: str = ""
 
 
 @router.get("")
 async def list_organizations(
-    account_id: str | None = Query(default=None), session: AsyncSession = Depends(get_db_session)
+    account_id: str = Depends(get_current_account_id),
+    session: AsyncSession = Depends(get_db_session),
 ):
-    stmt = select(Tenant).order_by(Tenant.created_at)
-    if account_id:
-        stmt = stmt.where(Tenant.owner_account_id == account_id)
+    # Scoped to the *authenticated* account, not a caller-supplied
+    # account_id -- an anonymous or arbitrary account_id query param
+    # previously let anyone enumerate every tenant's name and key.
+    stmt = select(Tenant).where(Tenant.owner_account_id == account_id).order_by(Tenant.created_at)
     tenants = (await session.execute(stmt)).scalars().all()
     return [_serialize(t) for t in tenants]
 
 
 @router.post("")
 async def create_organization(
-    payload: OrganizationIn, session: AsyncSession = Depends(get_db_session)
+    payload: OrganizationIn,
+    account_id: str = Depends(get_current_account_id),
+    session: AsyncSession = Depends(get_db_session),
 ):
     if not payload.name.strip():
         raise HTTPException(status_code=400, detail="Organization name is required.")
@@ -68,9 +71,10 @@ async def create_organization(
         suffix += 1
         tenant_key = f"{base_key}-{suffix}"
 
-    tenant = Tenant(
-        tenant_key=tenant_key, name=payload.name.strip(), owner_account_id=payload.account_id
-    )
+    # owner_account_id always comes from the validated session, never the
+    # request body -- a client-supplied owner_account_id let anyone create
+    # an organization attributed to an arbitrary account.
+    tenant = Tenant(tenant_key=tenant_key, name=payload.name.strip(), owner_account_id=account_id)
     session.add(tenant)
     await session.flush()
     return _serialize(tenant)

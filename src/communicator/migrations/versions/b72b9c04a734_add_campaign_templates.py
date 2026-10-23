@@ -27,6 +27,7 @@ def upgrade() -> None:
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("tenant_key", sa.String(length=100), nullable=False),
         sa.Column("key", sa.String(length=100), nullable=False),
+        sa.Column("channel", sa.String(length=50), nullable=False, server_default=""),
         sa.Column("name", sa.String(length=255), nullable=False),
         sa.Column("purpose", sa.String(length=500), nullable=False),
         sa.Column("meta_template_name", sa.String(length=255), nullable=False),
@@ -42,6 +43,9 @@ def upgrade() -> None:
     )
     op.create_index(
         op.f("ix_campaign_templates_tenant_key"), "campaign_templates", ["tenant_key"], unique=False
+    )
+    op.create_index(
+        op.f("ix_campaign_templates_channel"), "campaign_templates", ["channel"], unique=False
     )
     # ### end Alembic commands ###
 

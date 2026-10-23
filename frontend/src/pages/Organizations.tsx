@@ -15,7 +15,7 @@ export function Organizations() {
   useEffect(() => {
     if (!session) return
     api
-      .listOrganizations(session.accountId)
+      .listOrganizations()
       .then(setOrgs)
       .finally(() => setLoading(false))
   }, [session])
@@ -31,7 +31,7 @@ export function Organizations() {
     setCreating(true)
     setError(null)
     try {
-      const org = await api.createOrganization(name.trim(), session.accountId)
+      const org = await api.createOrganization(name.trim())
       enter(org)
     } catch {
       setError('Could not create organization. Try a different name.')

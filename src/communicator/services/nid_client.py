@@ -10,6 +10,7 @@ import logging
 import secrets
 import time
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -54,15 +55,35 @@ class NidClient:
         self.client_secret = client_secret or settings.nid_client_secret or "secret_comm_default"
         self.redirect_uri = redirect_uri or settings.nid_redirect_uri
 
+    def _is_allowed_redirect_uri(self, candidate: str) -> bool:
+        """The anonymous /auth/nid/start endpoint lets a caller name a custom
+        redirect_uri (so the frontend's own callback page, not just the
+        backend's, can receive the code) -- a plain string-prefix check
+        like `startswith("http://localhost")` is bypassed by
+        `http://localhost.attacker.com`, which also starts with that
+        string. Parse the URI and compare scheme/hostname/port exactly."""
+        try:
+            parsed = urlsplit(candidate)
+        except ValueError:
+            return False
+        if parsed.hostname is None:
+            return False
+        if parsed.hostname == "localhost" and parsed.scheme in ("http", "https"):
+            return True
+        configured = urlsplit(self.redirect_uri)
+        return (
+            parsed.scheme == configured.scheme
+            and parsed.hostname == configured.hostname
+            and parsed.port == configured.port
+        )
+
     async def start_login(self, custom_redirect_uri: str | None = None) -> dict[str, str]:
         """Initiates a 'Login with nID' session and returns the authorize URL."""
         _prune_expired_states()
         state = secrets.token_hex(16)
 
         redirect_uri = self.redirect_uri
-        if custom_redirect_uri and custom_redirect_uri.startswith(
-            ("http://localhost", "https://localhost", self.redirect_uri)
-        ):
+        if custom_redirect_uri and self._is_allowed_redirect_uri(custom_redirect_uri):
             redirect_uri = custom_redirect_uri
 
         req_payload = {"clientId": self.client_id, "redirectUri": redirect_uri, "state": state}

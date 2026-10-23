@@ -17,7 +17,11 @@ interface AuthContextValue {
   organization: Organization | null
   loading: boolean
   loginWithNid: () => Promise<void>
-  completeNidCallback: (code: string, state: string) => Promise<void>
+  completeNidCallback: (
+    code: string,
+    state: string,
+    options?: { skipStateCheck?: boolean }
+  ) => Promise<void>
   selectOrganization: (org: Organization) => void
   logout: () => void
 }
@@ -26,6 +30,11 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 
 const SESSION_KEY = 'communicator.session'
 const ORG_KEY = 'communicator.organization'
+// Tab-scoped, not persisted to localStorage: proves *this browser*
+// initiated the OAuth attempt whose state comes back on the callback, so a
+// state value from a link an attacker completed for their own account
+// (then sent to a victim) is rejected instead of silently adopted.
+const PENDING_STATE_KEY = 'communicator.nid_pending_state'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
@@ -50,13 +59,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (data.dev_mode) {
       // No live nID instance configured -- complete the exchange directly
       // with a dev test code instead of redirecting to an unreachable IdP.
-      await completeNidCallback(`test_${Date.now()}`, data.state)
+      await completeNidCallback(`test_${Date.now()}`, data.state, { skipStateCheck: true })
     } else {
+      sessionStorage.setItem(PENDING_STATE_KEY, data.state)
       window.location.href = data.authorize_url
     }
   }
 
-  async function completeNidCallback(code: string, state: string) {
+  async function completeNidCallback(
+    code: string,
+    state: string,
+    options?: { skipStateCheck?: boolean }
+  ) {
+    if (!options?.skipStateCheck) {
+      const expected = sessionStorage.getItem(PENDING_STATE_KEY)
+      if (!expected || expected !== state) {
+        throw new Error('This sign-in link was not started from this browser.')
+      }
+    }
+    sessionStorage.removeItem(PENDING_STATE_KEY)
     const res = await fetch(`/api/v1/auth/nid/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`)
     if (!res.ok) throw new Error('nID login failed')
     const data = await res.json()
