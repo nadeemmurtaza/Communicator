@@ -192,7 +192,7 @@ export function EmailIntegration() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="flex items-center gap-2 text-slate-500">
+        <div className="flex items-center gap-2 text-[var(--color-ink-muted)]">
           <span className="loading loading-spinner loading-md"></span>
           <span>Loading Email channel settings...</span>
         </div>
@@ -206,20 +206,20 @@ export function EmailIntegration() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <Link to="/channels" className="text-xs font-medium text-slate-500 hover:text-slate-800">
+            <Link to="/channels" className="text-xs font-medium text-[var(--color-ink-muted)] hover:text-slate-800">
               Channels Hub
             </Link>
-            <span className="text-slate-400">/</span>
-            <span className="text-xs font-semibold text-slate-700">Email Channel (IMAP/SMTP)</span>
+            <span className="text-[var(--color-ink-faint)]">/</span>
+            <span className="text-xs font-semibold text-[var(--color-ink)]">Email Channel (IMAP/SMTP)</span>
           </div>
           <div className="mt-1 flex items-center gap-2">
-            <h1 className="text-xl font-bold text-slate-900">Support Emails via IMAP &amp; SMTP</h1>
+            <h1 className="text-xl font-bold text-[var(--color-ink)]">Support Emails via IMAP &amp; SMTP</h1>
             <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 border border-emerald-200 flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
               Active &amp; Connected
             </span>
           </div>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
             Connect support email accounts using standard IMAP/SMTP or inbound webhooks with automatic threaded replies and attachments.
           </p>
         </div>
@@ -228,14 +228,14 @@ export function EmailIntegration() {
           <button
             onClick={handleSyncImap}
             disabled={syncing}
-            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs flex items-center gap-1.5"
+            className="rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-xs flex items-center gap-1.5"
           >
             <span>📥</span> {syncing ? 'Polling IMAP...' : 'Poll Mailbox Now'}
           </button>
           <button
             onClick={handleVerify}
             disabled={verifying}
-            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs flex items-center gap-1.5"
+            className="rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-xs flex items-center gap-1.5"
           >
             <span>🔄</span> {verifying ? 'Verifying...' : 'Verify Connections'}
           </button>
@@ -262,21 +262,21 @@ export function EmailIntegration() {
             <span>{feedback.type === 'success' ? '✅' : '⚠️'}</span>
             <span>{feedback.message}</span>
           </div>
-          <button onClick={() => setFeedback(null)} className="text-slate-400 hover:text-slate-600 font-bold">
+          <button onClick={() => setFeedback(null)} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] font-bold">
             ×
           </button>
         </div>
       )}
 
       {/* Tabs Header */}
-      <div className="border-b border-slate-200">
+      <div className="border-b border-[var(--color-border)]">
         <nav className="flex space-x-6">
           <button
             onClick={() => setActiveTab('smtp')}
             className={`pb-3 text-xs font-semibold border-b-2 flex items-center gap-1.5 ${
               activeTab === 'smtp'
                 ? 'border-emerald-600 text-emerald-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
+                : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
             }`}
           >
             <span>📤</span> SMTP Outbound Delivery
@@ -286,7 +286,7 @@ export function EmailIntegration() {
             className={`pb-3 text-xs font-semibold border-b-2 flex items-center gap-1.5 ${
               activeTab === 'imap'
                 ? 'border-emerald-600 text-emerald-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
+                : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
             }`}
           >
             <span>📥</span> IMAP &amp; Inbound Webhooks
@@ -296,7 +296,7 @@ export function EmailIntegration() {
             className={`pb-3 text-xs font-semibold border-b-2 flex items-center gap-1.5 ${
               activeTab === 'templates'
                 ? 'border-emerald-600 text-emerald-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
+                : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
             }`}
           >
             <span>🎨</span> Templates &amp; Signatures
@@ -306,7 +306,7 @@ export function EmailIntegration() {
             className={`pb-3 text-xs font-semibold border-b-2 flex items-center gap-1.5 ${
               activeTab === 'automations'
                 ? 'border-emerald-600 text-emerald-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
+                : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
             }`}
           >
             <span>🤖</span> Auto-Reply &amp; Hours
@@ -316,7 +316,7 @@ export function EmailIntegration() {
             className={`pb-3 text-xs font-semibold border-b-2 flex items-center gap-1.5 ${
               activeTab === 'logs'
                 ? 'border-emerald-600 text-emerald-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
+                : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
             }`}
           >
             <span>📋</span> Diagnostics &amp; Logs ({events.length})
@@ -328,17 +328,17 @@ export function EmailIntegration() {
       {activeTab === 'smtp' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+              <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
                 <span>📤</span> Outbound SMTP Mail Server Settings
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[var(--color-ink-muted)]">
                 Configure your SMTP server to deliver agent responses, email notifications, and customer resolution confirmations.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700">Inbox Display Name</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink)]">Inbox Display Name</label>
                   <input
                     type="text"
                     value={name}
@@ -347,7 +347,7 @@ export function EmailIntegration() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-700">From Name</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink)]">From Name</label>
                   <input
                     type="text"
                     value={emailFromName}
@@ -359,7 +359,7 @@ export function EmailIntegration() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700">From Email Address</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink)]">From Email Address</label>
                   <input
                     type="email"
                     value={emailFromAddress}
@@ -369,7 +369,7 @@ export function EmailIntegration() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-700">Reply-To Address</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink)]">Reply-To Address</label>
                   <input
                     type="email"
                     value={emailReplyTo}
@@ -379,9 +379,9 @@ export function EmailIntegration() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-100">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-[var(--color-border)]">
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-medium text-slate-700">SMTP Host</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink)]">SMTP Host</label>
                   <input
                     type="text"
                     value={smtpHost}
@@ -391,7 +391,7 @@ export function EmailIntegration() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-700">SMTP Port</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink)]">SMTP Port</label>
                   <input
                     type="number"
                     value={smtpPort}
@@ -403,7 +403,7 @@ export function EmailIntegration() {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700">SMTP Username</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink)]">SMTP Username</label>
                   <input
                     type="text"
                     value={smtpUsername}
@@ -412,7 +412,7 @@ export function EmailIntegration() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-700">SMTP Password</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink)]">SMTP Password</label>
                   <input
                     type="password"
                     value={smtpPassword}
@@ -422,7 +422,7 @@ export function EmailIntegration() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-700">Encryption</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink)]">Encryption</label>
                   <select
                     value={smtpEncryption}
                     onChange={(e) => setSmtpEncryption(e.target.value)}
@@ -438,29 +438,29 @@ export function EmailIntegration() {
           </div>
 
           <div className="space-y-6">
-            <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">DNS &amp; Deliverability Health</h3>
+            <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+              <h3 className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">DNS &amp; Deliverability Health</h3>
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500">SPF Record:</span>
+                  <span className="text-[var(--color-ink-muted)]">SPF Record:</span>
                   <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-800">
                     ✓ Valid (v=spf1)
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500">DKIM Signature:</span>
+                  <span className="text-[var(--color-ink-muted)]">DKIM Signature:</span>
                   <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-800">
                     ✓ 2048-bit Active
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500">DMARC Policy:</span>
+                  <span className="text-[var(--color-ink-muted)]">DMARC Policy:</span>
                   <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-800">
                     ✓ p=quarantine
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500">Thread Tracking:</span>
+                  <span className="text-[var(--color-ink-muted)]">Thread Tracking:</span>
                   <span className="font-semibold text-slate-800">Message-ID &amp; In-Reply-To</span>
                 </div>
               </div>
@@ -482,18 +482,18 @@ export function EmailIntegration() {
       {activeTab === 'imap' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* IMAP Mailbox Settings */}
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+            <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
               <span>📥</span> IMAP Mailbox Polling
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[var(--color-ink-muted)]">
               Fetch incoming customer support emails automatically from your IMAP server.
             </p>
 
             <div className="space-y-4 pt-1">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-medium text-slate-700">IMAP Host</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink)]">IMAP Host</label>
                   <input
                     type="text"
                     value={imapHost}
@@ -503,7 +503,7 @@ export function EmailIntegration() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-700">IMAP Port</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink)]">IMAP Port</label>
                   <input
                     type="number"
                     value={imapPort}
@@ -515,7 +515,7 @@ export function EmailIntegration() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700">IMAP Username</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink)]">IMAP Username</label>
                   <input
                     type="text"
                     value={imapUsername}
@@ -524,7 +524,7 @@ export function EmailIntegration() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-700">IMAP Password</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink)]">IMAP Password</label>
                   <input
                     type="password"
                     value={imapPassword}
@@ -537,7 +537,7 @@ export function EmailIntegration() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700">Mailbox Folder</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink)]">Mailbox Folder</label>
                   <input
                     type="text"
                     value={imapFolder}
@@ -553,7 +553,7 @@ export function EmailIntegration() {
                       onChange={(e) => setImapSsl(e.target.checked)}
                       className="rounded-sm border-slate-300 text-emerald-600 focus:ring-emerald-500"
                     />
-                    <span className="text-xs font-medium text-slate-700">Use SSL / TLS (Port 993)</span>
+                    <span className="text-xs font-medium text-[var(--color-ink)]">Use SSL / TLS (Port 993)</span>
                   </label>
                 </div>
               </div>
@@ -561,17 +561,17 @@ export function EmailIntegration() {
           </div>
 
           {/* Inbound Email Webhook */}
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+            <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
               <span>🌐</span> Inbound Email Webhook
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[var(--color-ink-muted)]">
               Alternatively, stream incoming emails in real-time from Postmark, SendGrid Inbound Parse, Mailgun, or Cloudflare Email Routing:
             </p>
 
             <div className="space-y-3 pt-1">
               <div>
-                <div className="flex items-center justify-between text-xs text-slate-700 mb-1">
+                <div className="flex items-center justify-between text-xs text-[var(--color-ink)] mb-1">
                   <span className="font-semibold">Inbound Webhook URL:</span>
                   <button
                     onClick={() => handleCopy(webhookUrl, 'inbound_email')}
@@ -583,11 +583,11 @@ export function EmailIntegration() {
                 <input
                   readOnly
                   value={webhookUrl}
-                  className="block w-full rounded-md bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs font-mono text-slate-700"
+                  className="block w-full rounded-md bg-[var(--color-page)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-mono text-[var(--color-ink)]"
                 />
               </div>
 
-              <div className="rounded-md bg-slate-50 p-3 border border-slate-200 text-xs text-slate-600 space-y-1.5">
+              <div className="rounded-md bg-[var(--color-page)] p-3 border border-[var(--color-border)] text-xs text-[var(--color-ink-muted)] space-y-1.5">
                 <div className="font-bold text-slate-800">Supported Inbound Formats:</div>
                 <div>• <strong>Postmark Inbound</strong>: JSON payload with `FromFull`, `TextBody`, and attachments.</div>
                 <div>• <strong>SendGrid Inbound Parse</strong>: Multipart form-data with automatic thread headers.</div>
@@ -601,16 +601,16 @@ export function EmailIntegration() {
       {/* TAB 3: Templates & Signatures */}
       {activeTab === 'templates' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+            <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
               <span>✍️</span> Dynamic Agent Signature
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[var(--color-ink-muted)]">
               Customize the signature appended to outgoing emails. Use variables like <code className="bg-slate-100 px-1 py-0.5 rounded text-[11px] font-mono">{'{{agent.name}}'}</code> and <code className="bg-slate-100 px-1 py-0.5 rounded text-[11px] font-mono">{'{{inbox.name}}'}</code>.
             </p>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700">Email Signature</label>
+              <label className="block text-xs font-medium text-[var(--color-ink)]">Email Signature</label>
               <textarea
                 rows={4}
                 value={emailSignature}
@@ -620,7 +620,7 @@ export function EmailIntegration() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700">Legal Footer &amp; Company Address</label>
+              <label className="block text-xs font-medium text-[var(--color-ink)]">Legal Footer &amp; Company Address</label>
               <textarea
                 rows={2}
                 value={emailFooter}
@@ -631,10 +631,10 @@ export function EmailIntegration() {
           </div>
 
           {/* HTML Preview Box */}
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Live Email Preview</h3>
-            <div className="rounded-md border border-slate-200 p-4 bg-slate-50/50 space-y-3 text-xs text-slate-800">
-              <div className="border-b border-slate-200 pb-2 text-[11px] text-slate-500 space-y-1">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+            <h3 className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">Live Email Preview</h3>
+            <div className="rounded-md border border-[var(--color-border)] p-4 bg-[var(--color-page)]/50 space-y-3 text-xs text-slate-800">
+              <div className="border-b border-[var(--color-border)] pb-2 text-[11px] text-[var(--color-ink-muted)] space-y-1">
                 <div>From: <strong>{emailFromName} &lt;{emailFromAddress}&gt;</strong></div>
                 <div>To: <strong>Customer &lt;customer@example.com&gt;</strong></div>
                 <div>Subject: <strong>Re: Assistance with enterprise account [#CONV-8491]</strong></div>
@@ -642,10 +642,10 @@ export function EmailIntegration() {
               <p className="leading-relaxed">
                 Hi Alex, thank you for writing in! Our engineering team has deployed the requested rate limit configuration. Let us know if you need any additional assistance.
               </p>
-              <div className="pt-2 border-t border-slate-200 text-slate-600 whitespace-pre-line font-mono text-[11px]">
+              <div className="pt-2 border-t border-[var(--color-border)] text-[var(--color-ink-muted)] whitespace-pre-line font-mono text-[11px]">
                 {emailSignature.replace('{{agent.name}}', 'Riley Brooks')}
               </div>
-              <div className="text-[10px] text-slate-400 pt-2 border-t border-slate-100">
+              <div className="text-[10px] text-[var(--color-ink-faint)] pt-2 border-t border-[var(--color-border)]">
                 {emailFooter}
               </div>
             </div>
@@ -656,11 +656,11 @@ export function EmailIntegration() {
       {/* TAB 4: Auto-Reply & Hours */}
       {activeTab === 'automations' && (
         <div className="space-y-6">
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+            <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
               <span>🤖</span> Automated Email Auto-Responders
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[var(--color-ink-muted)]">
               Keep customers informed automatically with welcome receipts, out-of-office notices, and CSAT satisfaction rating surveys.
             </p>
 
@@ -723,17 +723,17 @@ export function EmailIntegration() {
       {activeTab === 'logs' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Outbound Test Email Sender */}
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+            <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
               <span>✉️</span> Send Diagnostic Outbound Email
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[var(--color-ink-muted)]">
               Dispatch a test message through your configured SMTP mail server to verify end-to-end deliverability.
             </p>
 
             <form onSubmit={handleSendTestEmail} className="space-y-3 pt-1">
               <div>
-                <label className="block text-xs font-medium text-slate-700">Recipient Email</label>
+                <label className="block text-xs font-medium text-[var(--color-ink)]">Recipient Email</label>
                 <input
                   type="email"
                   required
@@ -744,7 +744,7 @@ export function EmailIntegration() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700">Recipient Name</label>
+                <label className="block text-xs font-medium text-[var(--color-ink)]">Recipient Name</label>
                 <input
                   type="text"
                   value={testRecipientName}
@@ -754,7 +754,7 @@ export function EmailIntegration() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700">Subject</label>
+                <label className="block text-xs font-medium text-[var(--color-ink)]">Subject</label>
                 <input
                   type="text"
                   required
@@ -765,7 +765,7 @@ export function EmailIntegration() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700">Message Body</label>
+                <label className="block text-xs font-medium text-[var(--color-ink)]">Message Body</label>
                 <textarea
                   rows={3}
                   required
@@ -786,9 +786,9 @@ export function EmailIntegration() {
           </div>
 
           {/* Email Transmission & Webhook Event Logs */}
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Live Email Event Stream</h3>
+              <h3 className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">Live Email Event Stream</h3>
               <button
                 onClick={async () => {
                   const evs = await api.listEmailEvents()
@@ -800,9 +800,9 @@ export function EmailIntegration() {
               </button>
             </div>
 
-            <div className="rounded-md bg-slate-900 text-slate-200 p-4 font-mono text-xs max-h-96 overflow-y-auto space-y-2">
+            <div className="rounded-md bg-[var(--color-accent)] text-slate-200 p-4 font-mono text-xs max-h-96 overflow-y-auto space-y-2">
               {events.length === 0 ? (
-                <div className="text-slate-500">No email events recorded yet. Send a test email or trigger an inbound webhook!</div>
+                <div className="text-[var(--color-ink-muted)]">No email events recorded yet. Send a test email or trigger an inbound webhook!</div>
               ) : (
                 events.map((ev) => (
                   <div key={ev.id} className="text-slate-300 border-b border-slate-800 pb-1.5">

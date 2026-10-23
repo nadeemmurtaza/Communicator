@@ -134,7 +134,7 @@ export function CustomAttributes() {
   const getTypeBadge = (type: string) => {
     switch (type) {
       case 'text':
-        return <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-mono text-[10px] font-bold border border-slate-200">📝 TEXT</span>
+        return <span className="bg-slate-100 text-[var(--color-ink)] px-2 py-0.5 rounded font-mono text-[10px] font-bold border border-[var(--color-border)]">📝 TEXT</span>
       case 'number':
         return <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-mono text-[10px] font-bold border border-emerald-200">🔢 NUMBER</span>
       case 'currency':
@@ -148,24 +148,24 @@ export function CustomAttributes() {
       case 'link':
         return <span className="bg-cyan-50 text-cyan-700 px-2 py-0.5 rounded font-mono text-[10px] font-bold border border-cyan-200">🔗 URL</span>
       default:
-        return <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono text-[10px]">{type.toUpperCase()}</span>
+        return <span className="bg-slate-100 text-[var(--color-ink-muted)] px-2 py-0.5 rounded font-mono text-[10px]">{type.toUpperCase()}</span>
     }
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[var(--color-border)] pb-5">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--color-ink)]">
               Custom Attributes & CRM Schema Builder
             </h1>
             <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700 border border-blue-200">
               CRM Data Model
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-[var(--color-ink-muted)] mt-1">
             Define structured enterprise fields for Contacts and Conversations to power automation rules, segmentation, and live inbox sidebars.
           </p>
         </div>
@@ -199,8 +199,8 @@ export function CustomAttributes() {
             onClick={() => setActiveModel('contact_attribute')}
             className={`rounded-md px-4 py-1.5 transition-all cursor-pointer ${
               activeModel === 'contact_attribute'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-[var(--color-surface)] text-blue-600 shadow-sm'
+                : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
             }`}
           >
             👤 Contact Attributes ({attributes.filter((a) => a.attribute_model === 'contact_attribute').length})
@@ -209,8 +209,8 @@ export function CustomAttributes() {
             onClick={() => setActiveModel('conversation_attribute')}
             className={`rounded-md px-4 py-1.5 transition-all cursor-pointer ${
               activeModel === 'conversation_attribute'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-[var(--color-surface)] text-blue-600 shadow-sm'
+                : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
             }`}
           >
             💬 Conversation Attributes ({attributes.filter((a) => a.attribute_model === 'conversation_attribute').length})
@@ -223,26 +223,26 @@ export function CustomAttributes() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search attributes by name or slug..."
-            className="w-full sm:w-64 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-blue-500 focus:outline-none"
+            className="w-full sm:w-64 rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs text-slate-800 focus:border-blue-500 focus:outline-none"
           />
         </div>
       </div>
 
       {/* Attributes Table */}
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm overflow-hidden">
         {loading ? (
-          <div className="p-10 text-center text-xs text-slate-400">Loading CRM schema...</div>
+          <div className="p-10 text-center text-xs text-[var(--color-ink-faint)]">Loading CRM schema...</div>
         ) : filtered.length === 0 ? (
           <div className="p-10 text-center space-y-2">
             <div className="text-2xl">📋</div>
-            <p className="text-xs font-semibold text-slate-700">No custom attributes found</p>
-            <p className="text-[11px] text-slate-400">Click "+ Add Custom Attribute" to define your first field.</p>
+            <p className="text-xs font-semibold text-[var(--color-ink)]">No custom attributes found</p>
+            <p className="text-[11px] text-[var(--color-ink-faint)]">Click "+ Add Custom Attribute" to define your first field.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-500 font-semibold text-[11px]">
+                <tr className="border-b border-[var(--color-border)] bg-[var(--color-page)]/70 text-[var(--color-ink-muted)] font-semibold text-[11px]">
                   <th className="py-3 px-4">Display Name & Key</th>
                   <th className="py-3 px-4">Data Type</th>
                   <th className="py-3 px-4">Description</th>
@@ -253,31 +253,31 @@ export function CustomAttributes() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filtered.map((attr) => (
-                  <tr key={attr.id} className="hover:bg-slate-50/80 transition-colors">
+                  <tr key={attr.id} className="hover:bg-[var(--color-page)]/80 transition-colors">
                     <td className="py-3 px-4">
-                      <div className="font-bold text-slate-900">{attr.display_name}</div>
-                      <div className="font-mono text-[10px] text-slate-400">{attr.name}</div>
+                      <div className="font-bold text-[var(--color-ink)]">{attr.display_name}</div>
+                      <div className="font-mono text-[10px] text-[var(--color-ink-faint)]">{attr.name}</div>
                     </td>
                     <td className="py-3 px-4">
                       {getTypeBadge(attr.attribute_type)}
                     </td>
-                    <td className="py-3 px-4 text-slate-600 max-w-xs truncate">
+                    <td className="py-3 px-4 text-[var(--color-ink-muted)] max-w-xs truncate">
                       {attr.description || '—'}
                     </td>
                     <td className="py-3 px-4">
                       {attr.attribute_type === 'list' && attr.options?.length > 0 ? (
                         <div className="flex flex-wrap gap-1 max-w-xs">
                           {attr.options.slice(0, 3).map((opt) => (
-                            <span key={opt} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                            <span key={opt} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-[var(--color-ink-muted)]">
                               {opt}
                             </span>
                           ))}
                           {attr.options.length > 3 && (
-                            <span className="text-[10px] text-slate-400">+{attr.options.length - 3} more</span>
+                            <span className="text-[10px] text-[var(--color-ink-faint)]">+{attr.options.length - 3} more</span>
                           )}
                         </div>
                       ) : (
-                        <span className="text-slate-500 font-mono text-[11px]">{attr.default_value ?? '—'}</span>
+                        <span className="text-[var(--color-ink-muted)] font-mono text-[11px]">{attr.default_value ?? '—'}</span>
                       )}
                     </td>
                     <td className="py-3 px-4 text-center">
@@ -286,7 +286,7 @@ export function CustomAttributes() {
                           Required
                         </span>
                       ) : (
-                        <span className="text-slate-400 text-[10px]">Optional</span>
+                        <span className="text-[var(--color-ink-faint)] text-[10px]">Optional</span>
                       )}
                     </td>
                     <td className="py-3 px-4 text-right space-x-2">
@@ -313,20 +313,20 @@ export function CustomAttributes() {
 
       {/* CREATE / EDIT MODAL */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-accent)]/50 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-lg rounded-2xl bg-[var(--color-surface)] shadow-2xl border border-[var(--color-border)] overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)] bg-[var(--color-page)]">
               <div>
-                <h3 className="font-bold text-sm text-slate-900">
+                <h3 className="font-bold text-sm text-[var(--color-ink)]">
                   {editingAttr ? `Edit Attribute: ${editingAttr.display_name}` : 'Create Custom Attribute'}
                 </h3>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-[11px] text-[var(--color-ink-muted)]">
                   Target: {activeModel === 'contact_attribute' ? 'Contact Profile' : 'Conversation Thread'}
                 </p>
               </div>
               <button
                 onClick={() => setShowModal(false)}
-                className="h-7 w-7 rounded-full bg-slate-200 text-slate-600 hover:bg-slate-300 flex items-center justify-center text-xs font-bold cursor-pointer"
+                className="h-7 w-7 rounded-full bg-slate-200 text-[var(--color-ink-muted)] hover:bg-slate-300 flex items-center justify-center text-xs font-bold cursor-pointer"
               >
                 ✕
               </button>
@@ -334,7 +334,7 @@ export function CustomAttributes() {
 
             <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Display Label *</label>
+                <label className="block font-semibold text-[var(--color-ink)] mb-1">Display Label *</label>
                 <input
                   required
                   value={displayName}
@@ -350,7 +350,7 @@ export function CustomAttributes() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Slug Identifier (API Key) *</label>
+                <label className="block font-semibold text-[var(--color-ink)] mb-1">Slug Identifier (API Key) *</label>
                 <input
                   required
                   disabled={!!editingAttr}
@@ -362,7 +362,7 @@ export function CustomAttributes() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Attribute Data Type *</label>
+                <label className="block font-semibold text-[var(--color-ink)] mb-1">Attribute Data Type *</label>
                 <select
                   disabled={!!editingAttr}
                   value={attrType}
@@ -381,7 +381,7 @@ export function CustomAttributes() {
 
               {attrType === 'list' && (
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
+                  <label className="block font-semibold text-[var(--color-ink)] mb-1">
                     Dropdown Options (comma-separated) *
                   </label>
                   <input
@@ -391,12 +391,12 @@ export function CustomAttributes() {
                     placeholder="e.g. Free, Starter, Growth, Enterprise"
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">Separate options with commas.</p>
+                  <p className="text-[10px] text-[var(--color-ink-faint)] mt-1">Separate options with commas.</p>
                 </div>
               )}
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Description / Tooltip</label>
+                <label className="block font-semibold text-[var(--color-ink)] mb-1">Description / Tooltip</label>
                 <input
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -406,7 +406,7 @@ export function CustomAttributes() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Default Value</label>
+                <label className="block font-semibold text-[var(--color-ink)] mb-1">Default Value</label>
                 <input
                   value={defaultValue}
                   onChange={(e) => setDefaultValue(e.target.value)}
@@ -427,11 +427,11 @@ export function CustomAttributes() {
                 </label>
               </div>
 
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2">
+              <div className="pt-4 border-t border-[var(--color-border)] flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                  className="rounded-lg border border-slate-300 bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] cursor-pointer"
                 >
                   Cancel
                 </button>

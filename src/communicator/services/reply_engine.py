@@ -17,6 +17,10 @@ from communicator.models.message import Message
 from communicator.services.alerts import send_hot_lead_alert
 from communicator.services.integration_settings import get_settings_row
 from communicator.services.memory import get_contact_memories, render_contact_memories_context
+from communicator.services.relationship_profile import (
+    get_relationship_summary,
+    render_relationship_context,
+)
 from communicator.services.service_catalog import get_matching_services, render_service_context
 
 _DEFAULT_BUSINESS_NAME = "NEWAX Technologies"
@@ -24,6 +28,9 @@ _DEFAULT_BUSINESS_NAME = "NEWAX Technologies"
 _PROMPT_TEMPLATE = """You are a sales assistant for {business_name}, replying to a lead on behalf of the sales team.
 {business_description}
 Only make claims found in the SERVICES context below. Never invent pricing or contractual terms.
+If a CUSTOMER RELATIONSHIP section is present, use it to respond with awareness of the relationship --
+acknowledge what was previously discussed instead of restarting the conversation. Never state anything
+about the relationship that isn't in that section.
 If the lead asks something outside the SERVICES context, or shows a strong buying signal, or is upset/complaining,
 set intent to "escalate" and keep confidence low.
 Detect the language of the lead's most recent message and write "reply" in that same language,
@@ -59,8 +66,9 @@ _ALERT_INTENTS = ("buying_signal", "complaint", "escalate")
 _ALERT_SENTIMENTS = ("negative", "urgent")
 
 
-async def _render_knowledge_base(session: AsyncSession) -> str:
-    entries = (await session.execute(select(KnowledgeBaseEntry))).scalars().all()
+async def _render_knowledge_base(session: AsyncSession, tenant_key: str = "newax") -> str:
+    stmt = select(KnowledgeBaseEntry).where(KnowledgeBaseEntry.tenant_key == tenant_key)
+    entries = (await session.execute(stmt)).scalars().all()
     if not entries:
         return ""
     body = "\n\n".join(f"### {e.title}\n{e.content}" for e in entries)
@@ -82,19 +90,29 @@ async def _build_context(
         (m.body for m in reversed(messages) if m.direction.value == "inbound"), ""
     )
 
-    services = await get_matching_services(session, lead.institution_type)
+    tenant_key = contact.tenant_key or "newax"
+    services = await get_matching_services(session, lead.institution_type, tenant_key=tenant_key)
     service_context = render_service_context(services)
-    knowledge_context = await _render_knowledge_base(session)
+    knowledge_context = await _render_knowledge_base(session, tenant_key=tenant_key)
 
     # Ingest contact memories (Remembers) into prompt
     memories = await get_contact_memories(session, contact.id)
     memory_context = render_contact_memories_context(memories)
+
+    # Relationship summary -- across ALL of this contact's conversations
+    # and prior inquiries, not just the current thread, so the agent
+    # responds with awareness of the relationship instead of amnesia.
+    relationship_summary = await get_relationship_summary(
+        session, contact.id, exclude_conversation_id=conversation.id
+    )
+    relationship_context = render_relationship_context(relationship_summary)
 
     user_prompt = (
         f"LEAD: {lead.name} ({lead.institution_type}, {lead.city})\n"
         f"QUALIFICATION: {lead.qualification_rationale}\n\n"
         f"SERVICES:\n{service_context}\n\n"
         f"{knowledge_context}"
+        f"{relationship_context}"
         f"{memory_context}"
         f"CONVERSATION HISTORY:\n{history}\n\n"
         "Draft the next reply to send to this lead."

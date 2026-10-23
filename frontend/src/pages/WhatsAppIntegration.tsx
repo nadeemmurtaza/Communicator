@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, type WhatsAppChannelData, type WhatsAppTemplate } from '../lib/api'
+import { WhatsAppIcon } from '../components/icons/BrandIcons'
 
 export function WhatsAppIntegration() {
   const [data, setData] = useState<WhatsAppChannelData | null>(null)
@@ -268,8 +269,8 @@ export function WhatsAppIntegration() {
             <span className="font-semibold text-slate-700">WhatsApp Business API</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 text-white text-xl shadow-xs">
-              💬
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-xs">
+              <WhatsAppIcon className="h-6 w-6" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">

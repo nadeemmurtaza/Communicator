@@ -1,9 +1,35 @@
 const BASE = '/api/v1'
 
+/**
+ * Every request carries the signed-in session token and the tenant the
+ * person has selected (set by AuthContext on login / org switch), so the
+ * backend scopes data to the org actually showing in the UI instead of a
+ * hardcoded default -- switching organizations must change what every
+ * subsequent request can see.
+ */
+function authHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {}
+  try {
+    const session = localStorage.getItem('communicator.session')
+    if (session) {
+      const { token } = JSON.parse(session)
+      if (token) headers['Authorization'] = `Bearer ${token}`
+    }
+    const org = localStorage.getItem('communicator.organization')
+    if (org) {
+      const { tenantKey } = JSON.parse(org)
+      if (tenantKey) headers['X-Tenant-Key'] = tenantKey
+    }
+  } catch {
+    // corrupted storage -- fall back to unauthenticated/default-tenant request
+  }
+  return headers
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...init,
-    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
+    headers: { 'Content-Type': 'application/json', ...authHeaders(), ...(init?.headers ?? {}) },
   })
   if (!res.ok) {
     const detail = await res.text()
@@ -11,6 +37,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
+}
+
+export interface OrganizationItem {
+  id: string
+  tenantKey: string
+  name: string
+  createdAt: string
 }
 
 export interface Draft {
@@ -2344,6 +2377,35 @@ export const api = {
     const qs = q.toString()
     return `${BASE}/contacts/export${qs ? `?${qs}` : ''}`
   },
+  // A plain <a href> can't send the X-Tenant-Key/Authorization headers the
+  // export route now requires -- fetch it with those headers and hand the
+  // browser a Blob to download instead, so a non-default organization's
+  // export doesn't silently fall back to the default tenant's contacts.
+  downloadContactsExport: async (
+    params?: { channel?: string; tag?: string; search?: string; segment_id?: string },
+    filename = 'contacts_export.csv'
+  ) => {
+    const url = `${BASE}/contacts/export${(() => {
+      const q = new URLSearchParams()
+      if (params?.channel) q.set('channel', params.channel)
+      if (params?.tag) q.set('tag', params.tag)
+      if (params?.search) q.set('search', params.search)
+      if (params?.segment_id) q.set('segment_id', params.segment_id)
+      const qs = q.toString()
+      return qs ? `?${qs}` : ''
+    })()}`
+    const res = await fetch(url, { headers: authHeaders() })
+    if (!res.ok) throw new Error('Export failed')
+    const blob = await res.blob()
+    const blobUrl = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = blobUrl
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(blobUrl)
+  },
 
   // Saved Dynamic Contact Segments
   listSegments: () => request<ContactSegment[]>('/segments'),
@@ -3686,4 +3748,11 @@ export const api = {
         body: JSON.stringify({ attributes }),
       }
     ),
+  listOrganizations: (accountId?: string) =>
+    request<OrganizationItem[]>(`/organizations${accountId ? `?account_id=${encodeURIComponent(accountId)}` : ''}`),
+  createOrganization: (name: string, accountId: string) =>
+    request<OrganizationItem>('/organizations', {
+      method: 'POST',
+      body: JSON.stringify({ name, account_id: accountId }),
+    }),
 }

@@ -15,10 +15,11 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from communicator.api.dependencies import get_db_session
+from communicator.api.dependencies import get_db_session, get_tenant_key
 from communicator.compliance.optout import record_consent
 from communicator.models.consent import ConsentStatus
 from communicator.models.contact import ChannelType, Contact
+from communicator.models.customer import Customer
 from communicator.models.lead import Lead
 from communicator.models.segment import ContactSegment
 from communicator.models.tag import Tag
@@ -27,8 +28,9 @@ from communicator.services.memory import (
     delete_contact_memory,
     get_contact_memories,
 )
+from communicator.services.relationship_profile import get_relationship_summary
 from communicator.services.segment_service import build_segment_filter_stmt
-from communicator.services.tags import add_tag_to_contact, get_or_create_tag
+from communicator.services.tags import add_tag_to_contact
 
 router = APIRouter(prefix="/contacts", tags=["Contacts"])
 
@@ -53,17 +55,24 @@ async def list_contacts(
     search: str | None = None,
     segment_id: uuid.UUID | None = None,
     session: AsyncSession = Depends(get_db_session),
+    tenant_key: str = Depends(get_tenant_key),
 ):
     """
     Lists contacts with optional filtering by tag, channel, search term, or saved segment.
+    Always scoped to the caller's own tenant -- switching organizations in
+    the UI must change what this returns.
     """
     if segment_id:
         segment = await session.get(ContactSegment, segment_id)
-        if segment is None:
+        if segment is None or segment.tenant_key != tenant_key:
             raise HTTPException(status_code=404, detail="Segment not found")
-        stmt = build_segment_filter_stmt(segment.filters or {})
+        stmt = build_segment_filter_stmt(segment.filters or {}, tenant_key=tenant_key)
     else:
-        stmt = select(Contact).options(selectinload(Contact.tags))
+        stmt = (
+            select(Contact)
+            .where(Contact.tenant_key == tenant_key)
+            .options(selectinload(Contact.tags))
+        )
 
         if tag:
             stmt = stmt.where(Contact.tags.any(Tag.name == tag))
@@ -112,6 +121,64 @@ async def remove_tag(
     contact.tags = [t for t in contact.tags if t.name != tag_name]
     await session.flush()
     return _serialize(contact)
+
+
+class LinkCustomerIn(BaseModel):
+    customer_id: uuid.UUID
+
+
+@router.post("/{contact_id}/link-customer")
+async def link_contact_to_customer(
+    contact_id: uuid.UUID, payload: LinkCustomerIn, session: AsyncSession = Depends(get_db_session)
+):
+    """
+    Explicitly links a channel identity (e.g. this contact's Instagram
+    handle) to an existing Customer (e.g. their WhatsApp profile), so the
+    relationship is read as one person across channels. Never automatic --
+    an agent confirms the match first.
+    """
+    contact = await session.get(Contact, contact_id)
+    if contact is None:
+        raise HTTPException(status_code=404, detail="Contact not found")
+
+    customer = await session.get(Customer, payload.customer_id)
+    if customer is None:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    if customer.tenant_key != contact.tenant_key:
+        raise HTTPException(
+            status_code=400, detail="Contact and customer belong to different tenants"
+        )
+
+    contact.customer_id = customer.id
+    await session.flush()
+    return {"status": "linked", "contactId": str(contact.id), "customerId": str(customer.id)}
+
+
+@router.get("/{contact_id}/relationship-profile")
+async def get_contact_relationship_profile(
+    contact_id: uuid.UUID, session: AsyncSession = Depends(get_db_session)
+):
+    """
+    The customer intelligence profile an agent (human or AI) should load
+    before responding -- relationship stage, most recent documented need,
+    prior outcomes, and remembered facts, each tagged with its source.
+    Not the raw message log; see reply_engine.py for how this feeds the AI.
+    """
+    contact = await session.get(Contact, contact_id)
+    if contact is None:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    summary = await get_relationship_summary(session, contact_id)
+    return {
+        "contact": {
+            "id": str(contact.id),
+            "name": contact.person_name,
+            "value": contact.value,
+            "channel": contact.channel.value,
+            "language": contact.language,
+            "firstSeenAt": contact.created_at.isoformat(),
+        },
+        **summary,
+    }
 
 
 @router.get("/tags")
@@ -250,11 +317,13 @@ async def import_contacts(
     default_channel: str | None = Form(default=None),
     default_tags: str | None = Form(default=None),
     session: AsyncSession = Depends(get_db_session),
+    tenant_key: str = Depends(get_tenant_key),
 ):
     """
     Multi-Channel CSV Contact Import.
     Supports WhatsApp, Email, SMS, TikTok, Telegram, LINE, Facebook, Instagram.
-    Creates new contacts or updates existing tags and attributes.
+    Creates new contacts or updates existing tags and attributes, scoped to
+    the caller's own tenant.
     """
     raw = (await file.read()).decode("utf-8-sig")
     reader = csv.DictReader(io.StringIO(raw))
@@ -289,7 +358,9 @@ async def import_contacts(
         existing_stmt = (
             select(Contact)
             .options(selectinload(Contact.tags))
-            .where(Contact.channel == ch_enum, Contact.value == value)
+            .where(
+                Contact.tenant_key == tenant_key, Contact.channel == ch_enum, Contact.value == value
+            )
         )
         existing = (await session.execute(existing_stmt)).scalar_one_or_none()
 
@@ -310,7 +381,6 @@ async def import_contacts(
             existing_tag_names = {t.name for t in existing.tags}
             for t_name in all_tags:
                 if t_name not in existing_tag_names:
-                    await get_or_create_tag(session, t_name)
                     await add_tag_to_contact(session, existing, t_name)
             updated += 1
         else:
@@ -323,6 +393,7 @@ async def import_contacts(
             await session.flush()
 
             contact = Contact(
+                tenant_key=tenant_key,
                 lead_id=lead.id,
                 channel=ch_enum,
                 value=value,
@@ -335,7 +406,6 @@ async def import_contacts(
             await record_consent(session, contact.id, ConsentStatus.OPTED_IN, source="csv_import")
 
             for t_name in all_tags:
-                await get_or_create_tag(session, t_name)
                 await add_tag_to_contact(session, contact, t_name)
 
             created += 1
@@ -402,17 +472,23 @@ async def export_contacts(
     search: str | None = None,
     segment_id: uuid.UUID | None = None,
     session: AsyncSession = Depends(get_db_session),
+    tenant_key: str = Depends(get_tenant_key),
 ):
     """
-    Exports filtered contacts into a downloadable CSV file.
+    Exports filtered contacts into a downloadable CSV file. Scoped to the
+    caller's own tenant.
     """
     if segment_id:
         segment = await session.get(ContactSegment, segment_id)
-        if segment is None:
+        if segment is None or segment.tenant_key != tenant_key:
             raise HTTPException(status_code=404, detail="Segment not found")
-        stmt = build_segment_filter_stmt(segment.filters or {})
+        stmt = build_segment_filter_stmt(segment.filters or {}, tenant_key=tenant_key)
     else:
-        stmt = select(Contact).options(selectinload(Contact.tags))
+        stmt = (
+            select(Contact)
+            .where(Contact.tenant_key == tenant_key)
+            .options(selectinload(Contact.tags))
+        )
         if tag:
             stmt = stmt.where(Contact.tags.any(Tag.name == tag))
         if channel:

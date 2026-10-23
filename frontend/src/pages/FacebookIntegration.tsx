@@ -5,6 +5,7 @@ import {
   type FacebookChannelData,
   type SocialEvent,
 } from '../lib/api'
+import { FacebookIcon } from '../components/icons/BrandIcons'
 
 export function FacebookIntegration() {
   const [data, setData] = useState<FacebookChannelData | null>(null)
@@ -219,8 +220,8 @@ export function FacebookIntegration() {
             <span className="text-sm font-medium text-gray-500">Facebook Messenger</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-sm font-bold text-xl">
-              💬
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-sm">
+              <FacebookIcon className="h-6 w-6" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Facebook Messenger Integration</h1>

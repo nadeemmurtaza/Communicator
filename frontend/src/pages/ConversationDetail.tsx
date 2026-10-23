@@ -228,11 +228,11 @@ export function ConversationDetail() {
   return (
     <div className="space-y-6">
       <div>
-        <Link to="/conversations" className="text-sm text-slate-500 hover:underline">
+        <Link to="/conversations" className="text-sm text-[var(--color-ink-muted)] hover:underline">
           ← Conversations
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-xl font-semibold text-slate-900">
+          <h1 className="text-xl font-semibold text-[var(--color-ink)]">
             Conversation {id?.slice(0, 8)}
           </h1>
           {conversation && (
@@ -244,7 +244,7 @@ export function ConversationDetail() {
             <span className="badge badge-warning">Human handling</span>
           )}
           {conversation?.language && conversation.language !== 'en' && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 border border-indigo-200">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-accent-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-accent)] border border-[var(--color-border)]">
               🌐 Language: {conversation.language.toUpperCase()} • Auto-Translation Active
             </span>
           )}
@@ -258,19 +258,19 @@ export function ConversationDetail() {
       )}
 
       {conversation === null ? (
-        <p className="text-sm text-slate-500">Loading…</p>
+        <p className="text-sm text-[var(--color-ink-muted)]">Loading…</p>
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
             <button
               onClick={toggleHandoff}
               disabled={togglingHandoff}
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-50"
             >
               {conversation.humanTakeover ? 'Resume bot' : 'Take over from bot'}
             </button>
             <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-slate-500">Assigned to</label>
+              <label className="text-xs font-medium text-[var(--color-ink-muted)]">Assigned to</label>
               <select
                 value={conversation.assignedToId ?? ''}
                 onChange={(e) => assign(e.target.value)}
@@ -292,7 +292,7 @@ export function ConversationDetail() {
                     <Link
                       key={tk.id}
                       to="/tickets"
-                      className="inline-flex items-center gap-1.5 rounded-md bg-indigo-50 border border-indigo-200 px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors"
+                      className="inline-flex items-center gap-1.5 rounded-md bg-[var(--color-accent-soft)] border border-[var(--color-border)] px-2.5 py-1 text-xs font-semibold text-[var(--color-accent)] hover:bg-indigo-100 transition-colors"
                       title={tk.title}
                     >
                       <span>🎫 {tk.ticket_number}</span>
@@ -305,7 +305,7 @@ export function ConversationDetail() {
               ) : (
                 <Link
                   to="/tickets"
-                  className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                  className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] transition-colors"
                 >
                   + Open Ticket
                 </Link>
@@ -314,12 +314,12 @@ export function ConversationDetail() {
           </div>
 
           {/* DYNAMIC CRM CUSTOM ATTRIBUTES PANEL */}
-          <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-            <div className="flex items-center justify-between p-3.5 bg-slate-50/80 border-b border-slate-100">
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xs overflow-hidden">
+            <div className="flex items-center justify-between p-3.5 bg-[var(--color-page)]/80 border-b border-[var(--color-border)]">
               <div className="flex items-center gap-2">
                 <span className="text-base">🏷️</span>
-                <span className="text-xs font-bold text-slate-900">CRM Custom Attributes</span>
-                <span className="rounded-full bg-slate-200 px-2 py-0.2 text-[10px] font-semibold text-slate-700">
+                <span className="text-xs font-bold text-[var(--color-ink)]">CRM Custom Attributes</span>
+                <span className="rounded-full bg-slate-200 px-2 py-0.2 text-[10px] font-semibold text-[var(--color-ink)]">
                   {Object.keys(convAttributes).length} set
                 </span>
                 {attrSavedToast && (
@@ -339,7 +339,7 @@ export function ConversationDetail() {
                 <button
                   type="button"
                   onClick={() => setShowAttributesBar((v) => !v)}
-                  className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                  className="rounded-md border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] cursor-pointer"
                 >
                   {showAttributesBar ? 'Collapse' : 'Expand Attributes'}
                 </button>
@@ -347,9 +347,9 @@ export function ConversationDetail() {
             </div>
 
             {showAttributesBar && (
-              <div className="p-4 space-y-3 bg-white">
+              <div className="p-4 space-y-3 bg-[var(--color-surface)]">
                 {attrDefinitions.length === 0 ? (
-                  <p className="text-xs text-slate-500 py-2">
+                  <p className="text-xs text-[var(--color-ink-muted)] py-2">
                     No custom conversation attributes defined yet. <Link to="/custom-attributes" className="text-blue-600 underline">Add attributes in CRM Schema Builder</Link>.
                   </p>
                 ) : (
@@ -359,10 +359,10 @@ export function ConversationDetail() {
                       return (
                         <div key={attr.id} className="space-y-1">
                           <div className="flex items-center justify-between">
-                            <label className="text-[11px] font-semibold text-slate-700 truncate" title={attr.description}>
+                            <label className="text-[11px] font-semibold text-[var(--color-ink)] truncate" title={attr.description}>
                               {attr.display_name}
                             </label>
-                            <span className="text-[9px] font-mono text-slate-400 uppercase">{attr.attribute_type}</span>
+                            <span className="text-[9px] font-mono text-[var(--color-ink-faint)] uppercase">{attr.attribute_type}</span>
                           </div>
 
                           {attr.attribute_type === 'list' ? (
@@ -371,7 +371,7 @@ export function ConversationDetail() {
                               onChange={(e) =>
                                 setConvAttributes((prev) => ({ ...prev, [attr.name]: e.target.value }))
                               }
-                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
+                              className="w-full rounded-md border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
                             >
                               <option value="">-- Select option --</option>
                               {attr.options?.map((opt) => (
@@ -390,7 +390,7 @@ export function ConversationDetail() {
                                 }
                                 className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                               />
-                              <span className="text-xs text-slate-600">
+                              <span className="text-xs text-[var(--color-ink-muted)]">
                                 {Boolean(val === true || val === 'true') ? 'Enabled / Yes' : 'Disabled / No'}
                               </span>
                             </div>
@@ -401,7 +401,7 @@ export function ConversationDetail() {
                               onChange={(e) =>
                                 setConvAttributes((prev) => ({ ...prev, [attr.name]: e.target.value }))
                               }
-                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
+                              className="w-full rounded-md border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
                             />
                           ) : (
                             <input
@@ -411,7 +411,7 @@ export function ConversationDetail() {
                                 setConvAttributes((prev) => ({ ...prev, [attr.name]: e.target.value }))
                               }
                               placeholder={attr.description || `Enter ${attr.display_name}`}
-                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
+                              className="w-full rounded-md border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
                             />
                           )}
                         </div>
@@ -421,7 +421,7 @@ export function ConversationDetail() {
                 )}
 
                 {attrDefinitions.length > 0 && (
-                  <div className="pt-3 border-t border-slate-100 flex justify-end">
+                  <div className="pt-3 border-t border-[var(--color-border)] flex justify-end">
                     <button
                       type="button"
                       onClick={handleSaveAttributes}
@@ -442,8 +442,8 @@ export function ConversationDetail() {
                 key={m.id}
                 className={`max-w-xl rounded-lg border px-4 py-3 text-sm ${
                   m.direction === 'inbound'
-                    ? 'border-slate-200 bg-white'
-                    : 'ml-auto border-slate-900 bg-slate-900 text-white'
+                    ? 'border-[var(--color-border)] bg-[var(--color-surface)]'
+                    : 'ml-auto border-slate-900 bg-[var(--color-accent)] text-white'
                 }`}
               >
                 {m.translation && (
@@ -480,7 +480,7 @@ export function ConversationDetail() {
                 )}
                 <p
                   className={`mt-1 text-xs ${
-                    m.direction === 'inbound' ? 'text-slate-400' : 'text-slate-300'
+                    m.direction === 'inbound' ? 'text-[var(--color-ink-faint)]' : 'text-slate-300'
                   }`}
                 >
                   {m.channel} · {timeAgo(m.sentAt)}
@@ -493,7 +493,7 @@ export function ConversationDetail() {
             <button
               onClick={generateDraft}
               disabled={generating}
-              className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-colors shadow-xs"
+              className="rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3.5 py-2 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-50 transition-colors shadow-xs"
             >
               {generating ? 'Generating…' : '✨ Generate AI draft'}
             </button>
@@ -503,8 +503,8 @@ export function ConversationDetail() {
           <div className="relative mt-4">
             {/* Canned Autocomplete Dropdown */}
             {(isTypingSlash || showCannedPicker) && (
-              <div className="absolute bottom-full mb-2 left-0 right-0 z-30 max-h-72 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl flex flex-col">
-                <div className="bg-slate-50 border-b border-slate-200 px-3 py-2 flex items-center justify-between">
+              <div className="absolute bottom-full mb-2 left-0 right-0 z-30 max-h-72 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl flex flex-col">
+                <div className="bg-[var(--color-page)] border-b border-[var(--color-border)] px-3 py-2 flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
                     <span className="w-4 h-4 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px]">
                       /
@@ -523,7 +523,7 @@ export function ConversationDetail() {
                         className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${
                           cannedCategory === cat
                             ? 'bg-blue-600 text-white'
-                            : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                            : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
                         }`}
                       >
                         {cat}
@@ -534,7 +534,7 @@ export function ConversationDetail() {
 
                 <div className="max-h-48 overflow-y-auto divide-y divide-slate-100 p-1">
                   {filteredCanned.length === 0 ? (
-                    <div className="py-4 text-center text-xs text-slate-500">
+                    <div className="py-4 text-center text-xs text-[var(--color-ink-muted)]">
                       No canned replies matching "/{slashQuery}"
                     </div>
                   ) : (
@@ -550,32 +550,32 @@ export function ConversationDetail() {
                           className={`w-full text-left p-2 rounded-lg transition-colors cursor-pointer flex flex-col gap-1 ${
                             isSelected
                               ? 'bg-blue-50/90 border-l-4 border-blue-600 shadow-2xs'
-                              : 'hover:bg-slate-50 border-l-4 border-transparent'
+                              : 'hover:bg-[var(--color-page)] border-l-4 border-transparent'
                           }`}
                         >
                           <div className="flex items-center justify-between">
                             <span className="font-mono text-xs font-bold text-blue-700 bg-blue-100/70 px-1.5 py-0.5 rounded">
                               /{c.shortCode || c.short_code}
                             </span>
-                            <span className="text-[10px] uppercase font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">
+                            <span className="text-[10px] uppercase font-semibold text-[var(--color-ink-muted)] bg-slate-100 px-1.5 py-0.2 rounded border border-[var(--color-border)]">
                               {c.category}
                             </span>
                           </div>
-                          <p className="text-xs text-slate-700 line-clamp-2">{preview}</p>
+                          <p className="text-xs text-[var(--color-ink)] line-clamp-2">{preview}</p>
                         </button>
                       )
                     })
                   )}
                 </div>
 
-                <div className="bg-slate-50 px-3 py-1 text-[10.5px] text-slate-400 border-t border-slate-200 flex items-center justify-between">
-                  <span>💡 Type <code className="bg-slate-200 px-1 rounded text-slate-700 font-mono">/</code> to trigger replies</span>
+                <div className="bg-[var(--color-page)] px-3 py-1 text-[10.5px] text-[var(--color-ink-faint)] border-t border-[var(--color-border)] flex items-center justify-between">
+                  <span>💡 Type <code className="bg-slate-200 px-1 rounded text-[var(--color-ink)] font-mono">/</code> to trigger replies</span>
                   <span>↑↓ navigate • ↵ insert • esc dismiss</span>
                 </div>
               </div>
             )}
 
-            <div className="rounded-xl border border-slate-300 bg-white shadow-xs focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
+            <div className="rounded-xl border border-slate-300 bg-[var(--color-surface)] shadow-xs focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
               <textarea
                 rows={3}
                 value={replyText}
@@ -617,25 +617,25 @@ export function ConversationDetail() {
                 className="w-full resize-none px-3.5 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden"
               />
 
-              <div className="flex items-center justify-between border-t border-slate-100 px-3 py-2 bg-slate-50/50 rounded-b-xl">
+              <div className="flex items-center justify-between border-t border-[var(--color-border)] px-3 py-2 bg-[var(--color-page)]/50 rounded-b-xl">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setShowCannedPicker((v) => !v)}
                     className={`text-xs px-2 py-1 rounded font-medium transition-colors ${
-                      showCannedPicker ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-200/60'
+                      showCannedPicker ? 'bg-blue-100 text-blue-700' : 'text-[var(--color-ink-muted)] hover:bg-slate-200/60'
                     }`}
                   >
                     ⚡ Saved Replies (/)
                   </button>
-                  <span className="text-[11px] text-slate-400">Ctrl + Enter to send</span>
+                  <span className="text-[11px] text-[var(--color-ink-faint)]">Ctrl + Enter to send</span>
                   {conversation?.language && conversation.language !== 'en' && (
-                    <label className="flex items-center gap-1.5 cursor-pointer text-[11px] text-indigo-700 font-semibold bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-200">
+                    <label className="flex items-center gap-1.5 cursor-pointer text-[11px] text-[var(--color-accent)] font-semibold bg-[var(--color-accent-soft)] px-2.5 py-1 rounded-md border border-[var(--color-border)]">
                       <input
                         type="checkbox"
                         checked={autoTranslateOutbound}
                         onChange={(e) => setAutoTranslateOutbound(e.target.checked)}
-                        className="h-3.5 w-3.5 rounded text-indigo-600 border-slate-300"
+                        className="h-3.5 w-3.5 rounded text-[var(--color-accent)] border-slate-300"
                       />
                       <span>Auto-translate outbound to {conversation.language.toUpperCase()}</span>
                     </label>

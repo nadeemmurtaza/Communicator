@@ -11,11 +11,11 @@ Full implementation of Chatwoot-grade WhatsApp campaigns:
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import distinct, select
+from sqlalchemy import distinct, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -28,7 +28,9 @@ from communicator.models.broadcast import (
     BroadcastStatus,
     RecipientStatus,
 )
+from communicator.models.campaign_template import CampaignTemplate
 from communicator.models.contact import ChannelType, Contact
+from communicator.models.conversation import ConversationState
 from communicator.models.message import Message, MessageDirection, MessageStatus
 from communicator.services.integration_settings import get_whatsapp_config
 from communicator.services.messaging import get_or_create_conversation
@@ -39,7 +41,15 @@ router = APIRouter(prefix="/broadcasts", tags=["Broadcasts & Campaigns"])
 def _serialize(b: Broadcast) -> dict:
     return {
         "id": str(b.id),
+        "tenantKey": b.tenant_key,
         "name": b.name,
+        "campaignType": b.campaign_type,
+        "objective": b.objective,
+        "campaignTemplateId": str(b.campaign_template_id) if b.campaign_template_id else None,
+        "parentCampaignId": str(b.parent_campaign_id) if b.parent_campaign_id else None,
+        "stepIndex": b.step_index,
+        "stepDelayDays": b.step_delay_days,
+        "stopOnReply": b.stop_on_reply,
         "templateName": b.template_name,
         "templateLanguage": b.template_language,
         "bodyPreview": b.body_preview,
@@ -59,12 +69,21 @@ def _serialize(b: Broadcast) -> dict:
 
 class BroadcastIn(BaseModel):
     name: str
-    template_name: str
+    tenant_key: str = "newax"
+    campaign_type: str = ""
+    objective: str = ""
+    # Either reference an approved tenant template...
+    campaign_template_id: uuid.UUID | None = None
+    # ...or supply raw template fields directly (manual one-off campaigns).
+    template_name: str = ""
     template_language: str = "en_US"
     body_preview: str = ""
     template_params: dict = {}
     tag_name: str
     scheduled_at: datetime | None = None
+    stop_on_reply: bool = True
+    # Next steps in this campaign's sequence: [{delay_days, campaign_template_id?, template_name?, body_preview?}]
+    sequence_steps: list[dict] = []
 
 
 class RescheduleIn(BaseModel):
@@ -81,32 +100,129 @@ async def list_broadcasts(session: AsyncSession = Depends(get_db_session)):
     return [_serialize(b) for b in broadcasts]
 
 
-@router.post("")
-async def create_broadcast(payload: BroadcastIn, session: AsyncSession = Depends(get_db_session)):
-    # Calculate audience size based on tag(s)
-    tag_names = [t.strip() for t in payload.tag_name.replace("|", ",").split(",") if t.strip()]
+async def _resolve_template_fields(
+    session: AsyncSession, campaign_template_id: uuid.UUID | None, fallback: BroadcastIn
+) -> tuple[str, str, str, dict]:
+    """Resolves (template_name, template_language, body_preview, template_params).
+
+    When a CampaignTemplate is referenced, it must be APPROVED by Meta --
+    we never let a campaign launch against a template that isn't live.
+    """
+    if campaign_template_id is None:
+        if not fallback.template_name:
+            raise HTTPException(
+                status_code=400, detail="Provide either campaign_template_id or template_name."
+            )
+        return (
+            fallback.template_name,
+            fallback.template_language,
+            fallback.body_preview,
+            fallback.template_params,
+        )
+
+    template = await session.get(CampaignTemplate, campaign_template_id)
+    if template is None or template.tenant_key != fallback.tenant_key:
+        raise HTTPException(status_code=404, detail="Campaign template not found")
+    if template.meta_status != "APPROVED":
+        raise HTTPException(
+            status_code=409,
+            detail=f"Template '{template.meta_template_name}' is {template.meta_status}, "
+            "not APPROVED -- cannot launch a campaign with it yet.",
+        )
+    return (
+        template.meta_template_name,
+        template.meta_language,
+        template.body_preview,
+        fallback.template_params,
+    )
+
+
+async def _audience_count_for_tags(session: AsyncSession, tag_name: str, tenant_key: str) -> int:
+    tag_names = [t.strip() for t in tag_name.replace("|", ",").split(",") if t.strip()]
     stmt = (
-        select(distinct(Contact.id))
+        select(func.count(distinct(Contact.id)))
+        .where(Contact.tenant_key == tenant_key)
         .where(Contact.channel == ChannelType.WHATSAPP)
         .where(Contact.tags.any(Contact.tags.property.mapper.class_.name.in_(tag_names)))
     )
-    audience_ids = (await session.execute(stmt)).scalars().all()
-    audience_count = len(audience_ids)
+    return (await session.execute(stmt)).scalar_one()
 
+
+@router.post("")
+async def create_broadcast(payload: BroadcastIn, session: AsyncSession = Depends(get_db_session)):
+    (
+        template_name,
+        template_language,
+        body_preview,
+        template_params,
+    ) = await _resolve_template_fields(session, payload.campaign_template_id, payload)
+    audience_count = await _audience_count_for_tags(session, payload.tag_name, payload.tenant_key)
     initial_status = BroadcastStatus.SCHEDULED if payload.scheduled_at else BroadcastStatus.DRAFT
 
     broadcast = Broadcast(
+        tenant_key=payload.tenant_key,
         name=payload.name,
-        template_name=payload.template_name,
-        template_language=payload.template_language,
-        body_preview=payload.body_preview,
-        template_params=payload.template_params,
+        campaign_type=payload.campaign_type,
+        objective=payload.objective,
+        campaign_template_id=payload.campaign_template_id,
+        template_name=template_name,
+        template_language=template_language,
+        body_preview=body_preview,
+        template_params=template_params,
         tag_name=payload.tag_name,
         status=initial_status,
         scheduled_at=payload.scheduled_at,
         audience_count=audience_count,
+        stop_on_reply=payload.stop_on_reply,
     )
     session.add(broadcast)
+    await session.flush()
+
+    # Spawn the rest of the sequence as child campaigns, scheduled relative
+    # to this one's send time (or now, for drafts) -- see Sequence A in the
+    # NEWAX WhatsApp Automation spec. Each step only reaches a recipient if
+    # dispatch finds they haven't replied/opted out since the step before it.
+    base_time = payload.scheduled_at or datetime.now(UTC)
+    for i, step in enumerate(payload.sequence_steps, start=1):
+        step_template_id = step.get("campaign_template_id")
+        step_payload = BroadcastIn(
+            name=f"{payload.name} - Step {i}",
+            tenant_key=payload.tenant_key,
+            campaign_type=payload.campaign_type,
+            objective=payload.objective,
+            campaign_template_id=uuid.UUID(step_template_id) if step_template_id else None,
+            template_name=step.get("template_name", ""),
+            template_language=step.get("template_language", "en_US"),
+            body_preview=step.get("body_preview", ""),
+            template_params=step.get("template_params", {}),
+            tag_name=payload.tag_name,
+            stop_on_reply=payload.stop_on_reply,
+        )
+        step_template_name, step_language, step_body, step_params = await _resolve_template_fields(
+            session, step_payload.campaign_template_id, step_payload
+        )
+        delay_days = int(step.get("delay_days", 0))
+        child = Broadcast(
+            tenant_key=payload.tenant_key,
+            name=step_payload.name,
+            campaign_type=payload.campaign_type,
+            objective=payload.objective,
+            campaign_template_id=step_payload.campaign_template_id,
+            parent_campaign_id=broadcast.id,
+            step_index=i,
+            step_delay_days=delay_days,
+            template_name=step_template_name,
+            template_language=step_language,
+            body_preview=step_body,
+            template_params=step_params,
+            tag_name=payload.tag_name,
+            status=BroadcastStatus.SCHEDULED,
+            scheduled_at=base_time + timedelta(days=delay_days),
+            audience_count=audience_count,
+            stop_on_reply=payload.stop_on_reply,
+        )
+        session.add(child)
+
     await session.flush()
     return _serialize(broadcast)
 
@@ -114,6 +230,7 @@ async def create_broadcast(payload: BroadcastIn, session: AsyncSession = Depends
 @router.get("/audience-preview")
 async def preview_audience(
     tags: str = Query(..., description="Comma-separated tag names"),
+    tenant_key: str = Query("newax"),
     session: AsyncSession = Depends(get_db_session),
 ):
     """
@@ -127,6 +244,7 @@ async def preview_audience(
     stmt = (
         select(Contact)
         .options(selectinload(Contact.tags))
+        .where(Contact.tenant_key == tenant_key)
         .where(Contact.channel == ChannelType.WHATSAPP)
         .where(Contact.tags.any(Contact.tags.property.mapper.class_.name.in_(tag_list)))
     )
@@ -276,9 +394,29 @@ async def reschedule_broadcast(
             status_code=400, detail="Cannot reschedule a campaign that has already started."
         )
 
+    old_scheduled_at = broadcast.scheduled_at
     broadcast.scheduled_at = payload.scheduled_at
     broadcast.status = BroadcastStatus.SCHEDULED if payload.scheduled_at else BroadcastStatus.DRAFT
     await session.flush()
+
+    # Child steps are scheduled relative to this campaign's send time -- move
+    # them by the same delta so the sequence's day-N spacing stays intact.
+    if payload.scheduled_at and old_scheduled_at:
+        delta = payload.scheduled_at - old_scheduled_at
+        children = (
+            (
+                await session.execute(
+                    select(Broadcast).where(Broadcast.parent_campaign_id == broadcast.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        for child in children:
+            if child.status not in (BroadcastStatus.SENDING, BroadcastStatus.COMPLETED):
+                child.scheduled_at = (child.scheduled_at or payload.scheduled_at) + delta
+        await session.flush()
+
     return _serialize(broadcast)
 
 
@@ -300,6 +438,7 @@ async def dispatch_broadcast(
     stmt = (
         select(Contact)
         .options(selectinload(Contact.tags))
+        .where(Contact.tenant_key == broadcast.tenant_key)
         .where(Contact.channel == ChannelType.WHATSAPP)
         .where(Contact.tags.any(Contact.tags.property.mapper.class_.name.in_(tag_list)))
     )
@@ -308,7 +447,7 @@ async def dispatch_broadcast(
     broadcast.status = BroadcastStatus.SENDING
     await session.flush()
 
-    config = await get_whatsapp_config(session)
+    config = await get_whatsapp_config(session, tenant_key=broadcast.tenant_key)
     provider = None
     if config.access_token and config.phone_number_id:
         provider = MetaWhatsAppProvider(
@@ -334,6 +473,51 @@ async def dispatch_broadcast(
 
         # Link or create conversation with broadcast_id
         conversation = await get_or_create_conversation(session, contact)
+
+        # Stop-on-reply (sequence step): skip anyone who has replied, been
+        # taken over by a human, or gone hot since the previous step fired --
+        # per the spec's "recheck eligibility immediately before sending".
+        if broadcast.parent_campaign_id is not None:
+            parent = await session.get(Broadcast, broadcast.parent_campaign_id)
+            parent_recipient = (
+                await session.execute(
+                    select(BroadcastRecipient).where(
+                        BroadcastRecipient.broadcast_id == broadcast.parent_campaign_id,
+                        BroadcastRecipient.contact_id == contact.id,
+                    )
+                )
+            ).scalar_one_or_none()
+            # Only continue the sequence for contacts the previous step
+            # actually reached -- a contact the prior step skipped/failed
+            # never saw this campaign and shouldn't jump ahead to step N.
+            if parent_recipient is None or parent_recipient.status not in (
+                RecipientStatus.SENT,
+                RecipientStatus.DELIVERED,
+                RecipientStatus.READ,
+            ):
+                recipient.status = RecipientStatus.SKIPPED
+                recipient.error = "Previous step in sequence did not send to this contact"
+                broadcast.skipped_count += 1
+                continue
+
+            if broadcast.stop_on_reply:
+                parent_sent_at = parent.created_at if parent else None
+                engaged_since_parent = (
+                    conversation.human_takeover
+                    or conversation.state
+                    in (ConversationState.HOT_LEAD, ConversationState.HANDED_OFF)
+                    or (
+                        parent_sent_at
+                        and conversation.last_inbound_at
+                        and conversation.last_inbound_at > parent_sent_at
+                    )
+                )
+                if engaged_since_parent:
+                    recipient.status = RecipientStatus.SKIPPED
+                    recipient.error = "Contact replied or was engaged since the previous step"
+                    broadcast.skipped_count += 1
+                    continue
+
         conversation.broadcast_id = broadcast.id
 
         message_body = broadcast.body_preview or f"WhatsApp Campaign: {broadcast.template_name}"

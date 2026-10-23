@@ -35,8 +35,8 @@ export function Conversations() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Conversations</h1>
-        <p className="mt-1 text-sm text-slate-500">Every lead thread, across every channel.</p>
+        <h1 className="text-xl font-semibold text-[var(--color-ink)]">Conversations</h1>
+        <p className="mt-1 text-sm text-[var(--color-ink-muted)]">Every lead thread, across every channel.</p>
       </div>
 
       {error && (
@@ -51,7 +51,7 @@ export function Conversations() {
             key={s}
             onClick={() => setFilter(s)}
             className={`rounded-full px-3 py-1 text-xs font-medium ${
-              filter === s ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              filter === s ? 'bg-[var(--color-accent)] text-white' : 'bg-slate-100 text-[var(--color-ink-muted)] hover:bg-slate-200'
             }`}
           >
             {s === 'all' ? 'All' : stateLabel(s)}
@@ -60,15 +60,15 @@ export function Conversations() {
       </div>
 
       {conversations === null ? (
-        <p className="text-sm text-slate-500">Loading…</p>
+        <p className="text-sm text-[var(--color-ink-muted)]">Loading…</p>
       ) : filtered.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-10 text-center text-sm text-slate-500">
+        <div className="rounded-lg border border-dashed border-slate-300 bg-[var(--color-surface)] px-4 py-10 text-center text-sm text-[var(--color-ink-muted)]">
           No conversations in this state.
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+        <div className="overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
           <table className="w-full text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+            <thead className="border-b border-[var(--color-border)] bg-[var(--color-page)] text-left text-xs font-medium uppercase tracking-wide text-[var(--color-ink-muted)]">
               <tr>
                 <th className="px-4 py-2">Conversation</th>
                 <th className="px-4 py-2">State</th>
@@ -77,16 +77,16 @@ export function Conversations() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filtered.map((c) => (
-                <tr key={c.id} className="hover:bg-slate-50">
+                <tr key={c.id} className="hover:bg-[var(--color-page)]">
                   <td className="px-4 py-3">
-                    <Link to={`/conversations/${c.id}`} className="font-medium text-slate-900 hover:underline">
+                    <Link to={`/conversations/${c.id}`} className="font-medium text-[var(--color-ink)] hover:underline">
                       {c.id.slice(0, 8)}
                     </Link>
                   </td>
                   <td className="px-4 py-3">
                     <span className={`badge ${stateBadgeClass(c.state)}`}>{stateLabel(c.state)}</span>
                   </td>
-                  <td className="hidden px-4 py-3 text-slate-500 sm:table-cell">{timeAgo(c.updatedAt)}</td>
+                  <td className="hidden px-4 py-3 text-[var(--color-ink-muted)] sm:table-cell">{timeAgo(c.updatedAt)}</td>
                 </tr>
               ))}
             </tbody>

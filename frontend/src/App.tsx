@@ -1,5 +1,9 @@
 import { Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
+import { ProtectedRoute } from './components/ProtectedRoute'
+import { Login } from './pages/Login'
+import { NidCallback } from './pages/NidCallback'
+import { Organizations } from './pages/Organizations'
 import { Automation } from './pages/Automation'
 import { Broadcasts } from './pages/Broadcasts'
 import { ChannelsHub } from './pages/ChannelsHub'
@@ -30,11 +34,25 @@ import { EmailIntegration } from './pages/EmailIntegration'
 import { TikTokIntegration } from './pages/TikTokIntegration'
 import { AuditLogs } from './pages/AuditLogs'
 import { CustomAttributes } from './pages/CustomAttributes'
+import { SlaMonitoring } from './pages/SlaMonitoring'
+import { RoutingCapacity } from './pages/RoutingCapacity'
+import { MacrosManagement } from './pages/MacrosManagement'
+import { CannedResponsesManagement } from './pages/CannedResponsesManagement'
+import { ApprovalsQueue } from './pages/ApprovalsQueue'
 
 function App() {
   return (
     <Routes>
-      <Route element={<Layout />}>
+      <Route path="/login" element={<Login />} />
+      <Route path="/auth/nid/callback" element={<NidCallback />} />
+      <Route path="/organizations" element={<Organizations />} />
+      <Route
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
         <Route path="/" element={<Dashboard />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/drafts" element={<Drafts />} />
@@ -65,6 +83,11 @@ function App() {
         <Route path="/webhooks" element={<Webhooks />} />
         <Route path="/audit-logs" element={<AuditLogs />} />
         <Route path="/custom-attributes" element={<CustomAttributes />} />
+        <Route path="/sla" element={<SlaMonitoring />} />
+        <Route path="/routing-capacity" element={<RoutingCapacity />} />
+        <Route path="/macros" element={<MacrosManagement />} />
+        <Route path="/canned-responses" element={<CannedResponsesManagement />} />
+        <Route path="/approvals" element={<ApprovalsQueue />} />
       </Route>
     </Routes>
   )

@@ -252,11 +252,11 @@ export function Contacts() {
       case 'whatsapp':
         return 'bg-emerald-100 text-emerald-800 border-emerald-200'
       case 'email':
-        return 'bg-indigo-100 text-indigo-800 border-indigo-200'
+        return 'bg-indigo-100 text-indigo-800 border-[var(--color-border)]'
       case 'sms':
         return 'bg-blue-100 text-blue-800 border-blue-200'
       case 'tiktok':
-        return 'bg-slate-900 text-white border-slate-700'
+        return 'bg-[var(--color-accent)] text-white border-slate-700'
       case 'telegram':
         return 'bg-sky-100 text-sky-800 border-sky-200'
       case 'instagram':
@@ -266,7 +266,7 @@ export function Contacts() {
       case 'line':
         return 'bg-green-100 text-green-800 border-green-200'
       default:
-        return 'bg-slate-100 text-slate-700 border-slate-200'
+        return 'bg-slate-100 text-[var(--color-ink)] border-[var(--color-border)]'
     }
   }
 
@@ -276,36 +276,38 @@ export function Contacts() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-slate-900">Contacts &amp; Audience Segments</h1>
-            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+            <h1 className="text-xl font-bold text-[var(--color-ink)]">Contacts &amp; Audience Segments</h1>
+            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-[var(--color-ink)]">
               {contacts ? `${contacts.length} Reachable` : 'Loading...'}
             </span>
           </div>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
             Omnichannel customer directory with multi-channel CSV import, smart duplicate resolution, and dynamic targeting segments.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <a
-            href={api.exportContactsUrl({
-              channel: selectedChannel === 'all' ? undefined : selectedChannel,
-              segment_id: selectedSegmentId === 'all' ? undefined : selectedSegmentId,
-              tag: selectedTag === 'all' ? undefined : selectedTag,
-              search: searchQuery.trim() || undefined,
-            })}
-            download="contacts_export.csv"
-            className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs flex items-center gap-1.5"
+          <button
+            type="button"
+            onClick={() =>
+              api.downloadContactsExport({
+                channel: selectedChannel === 'all' ? undefined : selectedChannel,
+                segment_id: selectedSegmentId === 'all' ? undefined : selectedSegmentId,
+                tag: selectedTag === 'all' ? undefined : selectedTag,
+                search: searchQuery.trim() || undefined,
+              })
+            }
+            className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-xs flex items-center gap-1.5"
           >
             <span>📥</span> Export CSV
-          </a>
+          </button>
           <button
             onClick={() => {
               setEditingSegment(null)
               resetSegmentForm()
               setShowSegmentModal(true)
             }}
-            className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs flex items-center gap-1.5"
+            className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-xs flex items-center gap-1.5"
           >
             <span>🏷️</span> + New Segment
           </button>
@@ -315,7 +317,7 @@ export function Contacts() {
               setImportPreview(null)
               setShowImportModal(true)
             }}
-            className="rounded-md bg-slate-900 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 shadow-xs flex items-center gap-1.5"
+            className="rounded-md bg-[var(--color-accent)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] shadow-xs flex items-center gap-1.5"
           >
             <span>📤</span> Import CSV
           </button>
@@ -350,10 +352,10 @@ export function Contacts() {
       {/* Saved Dynamic Segments Carousel / Cards */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+          <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-ink)]">
             Saved Dynamic Audience Segments
           </span>
-          <span className="text-[11px] text-slate-400">
+          <span className="text-[11px] text-[var(--color-ink-faint)]">
             Click segment to filter audience
           </span>
         </div>
@@ -362,8 +364,8 @@ export function Contacts() {
             onClick={() => setSelectedSegmentId('all')}
             className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-medium text-left transition-all ${
               selectedSegmentId === 'all'
-                ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+                ? 'bg-[var(--color-accent)] text-white border-slate-900 shadow-xs'
+                : 'bg-[var(--color-surface)] text-[var(--color-ink)] border-[var(--color-border)] hover:border-slate-300'
             }`}
           >
             <div className="font-semibold">All Contacts</div>
@@ -375,31 +377,31 @@ export function Contacts() {
               key={seg.id}
               className={`shrink-0 rounded-lg border px-3 py-2 text-xs text-left transition-all flex items-center gap-3 ${
                 selectedSegmentId === seg.id
-                  ? 'bg-indigo-50 border-indigo-300 ring-1 ring-indigo-200'
-                  : 'bg-white border-slate-200 hover:border-slate-300'
+                  ? 'bg-[var(--color-accent-soft)] border-indigo-300 ring-1 ring-indigo-200'
+                  : 'bg-[var(--color-surface)] border-[var(--color-border)] hover:border-slate-300'
               }`}
             >
               <button
                 onClick={() => setSelectedSegmentId(seg.id)}
                 className="text-left"
               >
-                <div className="font-semibold text-slate-900">{seg.name}</div>
-                <div className="text-[10px] text-slate-500">
+                <div className="font-semibold text-[var(--color-ink)]">{seg.name}</div>
+                <div className="text-[10px] text-[var(--color-ink-muted)]">
                   {seg.memberCount} members · {seg.filters?.channels?.join(', ') || 'all channels'}
                 </div>
               </button>
-              <div className="flex items-center gap-1 border-l border-slate-200 pl-2">
+              <div className="flex items-center gap-1 border-l border-[var(--color-border)] pl-2">
                 <button
                   onClick={() => openEditSegment(seg)}
                   title="Edit Segment"
-                  className="text-slate-400 hover:text-slate-600 text-xs"
+                  className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] text-xs"
                 >
                   ✏️
                 </button>
                 <button
                   onClick={() => handleDeleteSegment(seg)}
                   title="Delete Segment"
-                  className="text-slate-400 hover:text-rose-600 text-xs"
+                  className="text-[var(--color-ink-faint)] hover:text-rose-600 text-xs"
                 >
                   ✕
                 </button>
@@ -410,11 +412,11 @@ export function Contacts() {
       </div>
 
       {/* Filter Toolbar */}
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs space-y-3">
+      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-xs space-y-3">
         {/* Search & Channel Filters */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="relative flex-1">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs">
+            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-[var(--color-ink-faint)] text-xs">
               🔍
             </span>
             <input
@@ -434,8 +436,8 @@ export function Contacts() {
                 onClick={() => setSelectedChannel(ch.id)}
                 className={`rounded-full px-2.5 py-1 text-xs font-medium flex items-center gap-1 transition-all ${
                   selectedChannel === ch.id
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    ? 'bg-[var(--color-accent)] text-white shadow-xs'
+                    : 'bg-slate-100 text-[var(--color-ink-muted)] hover:bg-slate-200'
                 }`}
               >
                 <span>{ch.icon}</span>
@@ -447,8 +449,8 @@ export function Contacts() {
 
         {/* Tag Filters */}
         {tags.length > 0 && (
-          <div className="flex items-center gap-2 pt-2 border-t border-slate-100 overflow-x-auto">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">
+          <div className="flex items-center gap-2 pt-2 border-t border-[var(--color-border)] overflow-x-auto">
+            <span className="text-[11px] font-semibold text-[var(--color-ink-faint)] uppercase tracking-wider shrink-0">
               Tags:
             </span>
             <button
@@ -456,7 +458,7 @@ export function Contacts() {
               className={`rounded-full px-2 py-0.5 text-[11px] font-medium shrink-0 ${
                 selectedTag === 'all'
                   ? 'bg-slate-700 text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  : 'bg-slate-100 text-[var(--color-ink-muted)] hover:bg-slate-200'
               }`}
             >
               All Tags
@@ -468,7 +470,7 @@ export function Contacts() {
                 className={`rounded-full px-2 py-0.5 text-[11px] font-medium shrink-0 ${
                   selectedTag === t
                     ? 'bg-slate-700 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    : 'bg-slate-100 text-[var(--color-ink-muted)] hover:bg-slate-200'
                 }`}
               >
                 #{t}
@@ -481,16 +483,16 @@ export function Contacts() {
       {/* Contacts Table */}
       {contacts === null ? (
         <div className="flex h-48 items-center justify-center">
-          <div className="flex items-center gap-2 text-slate-500 text-xs">
+          <div className="flex items-center gap-2 text-[var(--color-ink-muted)] text-xs">
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
             <span>Loading contacts...</span>
           </div>
         </div>
       ) : contacts.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center space-y-3">
+        <div className="rounded-xl border border-dashed border-slate-300 bg-[var(--color-surface)] p-10 text-center space-y-3">
           <span className="text-3xl">👥</span>
-          <h3 className="text-sm font-bold text-slate-900">No matching contacts found</h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">
+          <h3 className="text-sm font-bold text-[var(--color-ink)]">No matching contacts found</h3>
+          <p className="text-xs text-[var(--color-ink-muted)] max-w-sm mx-auto">
             Try adjusting your search criteria, channel filters, or import audience contacts via Multi-Channel CSV.
           </p>
           <button
@@ -500,15 +502,15 @@ export function Contacts() {
               setSelectedTag('all')
               setSearchQuery('')
             }}
-            className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)]"
           >
             Clear Filters
           </button>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
+        <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xs">
           <table className="w-full text-xs">
-            <thead className="border-b border-slate-200 bg-slate-50 text-left font-semibold uppercase tracking-wider text-slate-500">
+            <thead className="border-b border-[var(--color-border)] bg-[var(--color-page)] text-left font-semibold uppercase tracking-wider text-[var(--color-ink-muted)]">
               <tr>
                 <th className="px-4 py-3">Customer Contact</th>
                 <th className="px-4 py-3">Channel &amp; Reach</th>
@@ -519,16 +521,16 @@ export function Contacts() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {contacts.map((c) => (
-                <tr key={c.id} className="hover:bg-slate-50/50 transition-colors">
+                <tr key={c.id} className="hover:bg-[var(--color-page)]/50 transition-colors">
                   {/* Name & Initials */}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
-                      <div className="h-7 w-7 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-700 text-[11px] shrink-0">
+                      <div className="h-7 w-7 rounded-full bg-slate-100 border border-[var(--color-border)] flex items-center justify-center font-bold text-[var(--color-ink)] text-[11px] shrink-0">
                         {c.personName ? c.personName.slice(0, 2).toUpperCase() : '??'}
                       </div>
                       <div>
-                        <div className="font-semibold text-slate-900">{c.personName || 'Unnamed Contact'}</div>
-                        <div className="text-[10px] text-slate-400 font-mono">ID: {c.id.slice(0, 8)}</div>
+                        <div className="font-semibold text-[var(--color-ink)]">{c.personName || 'Unnamed Contact'}</div>
+                        <div className="text-[10px] text-[var(--color-ink-faint)] font-mono">ID: {c.id.slice(0, 8)}</div>
                       </div>
                     </div>
                   </td>
@@ -544,13 +546,13 @@ export function Contacts() {
                         <span>{getChannelIcon(c.channel)}</span>
                         <span className="uppercase">{c.channel}</span>
                       </span>
-                      <span className="font-mono text-slate-700">{c.value}</span>
+                      <span className="font-mono text-[var(--color-ink)]">{c.value}</span>
                     </div>
                   </td>
 
                   {/* Language */}
                   <td className="px-4 py-3">
-                    <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono text-slate-600 uppercase">
+                    <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono text-[var(--color-ink-muted)] uppercase">
                       {c.language || 'en'}
                     </span>
                   </td>
@@ -561,12 +563,12 @@ export function Contacts() {
                       {c.tags.map((t) => (
                         <span
                           key={t}
-                          className="inline-flex items-center gap-1 rounded-md bg-slate-100 border border-slate-200 px-1.5 py-0.5 text-[10px] text-slate-700"
+                          className="inline-flex items-center gap-1 rounded-md bg-slate-100 border border-[var(--color-border)] px-1.5 py-0.5 text-[10px] text-[var(--color-ink)]"
                         >
                           <span>#{t}</span>
                           <button
                             onClick={() => handleRemoveTag(c.id, t)}
-                            className="text-slate-400 hover:text-rose-600"
+                            className="text-[var(--color-ink-faint)] hover:text-rose-600"
                           >
                             ✕
                           </button>
@@ -595,7 +597,7 @@ export function Contacts() {
                           </button>
                           <button
                             onClick={() => setTaggingContactId(null)}
-                            className="text-slate-400 hover:text-slate-600 text-xs"
+                            className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] text-xs"
                           >
                             ✕
                           </button>
@@ -606,7 +608,7 @@ export function Contacts() {
                             setTaggingContactId(c.id)
                             setNewTagInput('')
                           }}
-                          className="rounded border border-dashed border-slate-300 px-1.5 py-0.5 text-[10px] text-slate-500 hover:border-slate-400 hover:text-slate-700"
+                          className="rounded border border-dashed border-slate-300 px-1.5 py-0.5 text-[10px] text-[var(--color-ink-muted)] hover:border-slate-400 hover:text-[var(--color-ink)]"
                         >
                           + Tag
                         </button>
@@ -616,7 +618,7 @@ export function Contacts() {
 
                   {/* Actions */}
                   <td className="px-4 py-3 text-right">
-                    <span className="text-[11px] text-slate-400">
+                    <span className="text-[11px] text-[var(--color-ink-faint)]">
                       {c.createdAt ? new Date(c.createdAt).toLocaleDateString() : 'Active'}
                     </span>
                   </td>
@@ -631,12 +633,12 @@ export function Contacts() {
       {/* MODAL 1: Multi-Channel CSV Import & Preview Modal */}
       {/* ========================================================================= */}
       {showImportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="w-full max-w-2xl rounded-xl border border-slate-200 bg-white shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="border-b border-slate-100 p-4 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-accent)]/50 p-4">
+          <div className="w-full max-w-2xl rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="border-b border-[var(--color-border)] p-4 flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">Multi-Channel CSV Audience Import</h3>
-                <p className="text-xs text-slate-500">
+                <h3 className="text-sm font-bold text-[var(--color-ink)]">Multi-Channel CSV Audience Import</h3>
+                <p className="text-xs text-[var(--color-ink-muted)]">
                   Import contacts across WhatsApp, Email, SMS, TikTok, Telegram, and Social channels.
                 </p>
               </div>
@@ -646,7 +648,7 @@ export function Contacts() {
                   setImportFile(null)
                   setImportPreview(null)
                 }}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)]"
               >
                 ✕
               </button>
@@ -655,10 +657,10 @@ export function Contacts() {
             <div className="p-5 space-y-4 overflow-y-auto flex-1">
               {/* Step 1: File Dropzone & Default Attributes */}
               <div className="space-y-3">
-                <label className="block text-xs font-semibold text-slate-700">Select CSV File</label>
+                <label className="block text-xs font-semibold text-[var(--color-ink)]">Select CSV File</label>
                 <div
                   onClick={() => fileRef.current?.click()}
-                  className="rounded-lg border-2 border-dashed border-slate-300 p-6 text-center hover:border-slate-400 cursor-pointer bg-slate-50/50 transition-colors"
+                  className="rounded-lg border-2 border-dashed border-slate-300 p-6 text-center hover:border-slate-400 cursor-pointer bg-[var(--color-page)]/50 transition-colors"
                 >
                   <input
                     ref={fileRef}
@@ -670,15 +672,15 @@ export function Contacts() {
                   <span className="text-2xl block mb-1">📄</span>
                   {importFile ? (
                     <div>
-                      <div className="text-xs font-bold text-slate-900">{importFile.name}</div>
-                      <div className="text-[11px] text-slate-500">
+                      <div className="text-xs font-bold text-[var(--color-ink)]">{importFile.name}</div>
+                      <div className="text-[11px] text-[var(--color-ink-muted)]">
                         {(importFile.size / 1024).toFixed(1)} KB · Click to change file
                       </div>
                     </div>
                   ) : (
                     <div>
-                      <div className="text-xs font-semibold text-slate-700">Click or drag CSV file here</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">
+                      <div className="text-xs font-semibold text-[var(--color-ink)]">Click or drag CSV file here</div>
+                      <div className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">
                         Supported columns: <code>name</code>, <code>channel</code>, <code>value</code>, <code>email</code>, <code>phone</code>, <code>tags</code>
                       </div>
                     </div>
@@ -689,13 +691,13 @@ export function Contacts() {
               {/* Default channel & tags overrides */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">
+                  <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">
                     Fallback Channel (if column missing)
                   </label>
                   <select
                     value={defaultChannel}
                     onChange={(e) => setDefaultChannel(e.target.value)}
-                    className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs bg-white"
+                    className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs bg-[var(--color-surface)]"
                   >
                     <option value="">Auto-Detect from Email/Phone</option>
                     <option value="whatsapp">WhatsApp</option>
@@ -710,7 +712,7 @@ export function Contacts() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">
+                  <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">
                     Apply Tags to All Imported Contacts
                   </label>
                   <input
@@ -725,24 +727,24 @@ export function Contacts() {
 
               {/* Step 2: Live Preview Table */}
               {previewing && (
-                <div className="text-center py-4 text-xs text-slate-500 flex items-center justify-center gap-2">
+                <div className="text-center py-4 text-xs text-[var(--color-ink-muted)] flex items-center justify-center gap-2">
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
                   <span>Inspecting CSV structure...</span>
                 </div>
               )}
 
               {importPreview && (
-                <div className="space-y-2 pt-2 border-t border-slate-100">
+                <div className="space-y-2 pt-2 border-t border-[var(--color-border)]">
                   <div className="flex items-center justify-between text-xs font-semibold text-slate-800">
                     <span>Parsed Preview ({importPreview.totalRows} Total Rows)</span>
-                    <span className="text-[11px] text-slate-500">
+                    <span className="text-[11px] text-[var(--color-ink-muted)]">
                       Channels: {importPreview.detectedChannels.join(', ') || 'Auto'}
                     </span>
                   </div>
 
-                  <div className="overflow-hidden rounded-lg border border-slate-200 text-xs">
+                  <div className="overflow-hidden rounded-lg border border-[var(--color-border)] text-xs">
                     <table className="w-full">
-                      <thead className="bg-slate-50 text-left text-[11px] font-semibold text-slate-600 border-b border-slate-200">
+                      <thead className="bg-[var(--color-page)] text-left text-[11px] font-semibold text-[var(--color-ink-muted)] border-b border-[var(--color-border)]">
                         <tr>
                           <th className="px-3 py-1.5">Name</th>
                           <th className="px-3 py-1.5">Channel</th>
@@ -756,11 +758,11 @@ export function Contacts() {
                             <td className="px-3 py-1.5 font-sans font-medium text-slate-800">
                               {r.name || '—'}
                             </td>
-                            <td className="px-3 py-1.5 uppercase font-semibold text-slate-700">
+                            <td className="px-3 py-1.5 uppercase font-semibold text-[var(--color-ink)]">
                               {r.channel}
                             </td>
-                            <td className="px-3 py-1.5 text-slate-600">{r.value || '[Missing]'}</td>
-                            <td className="px-3 py-1.5 text-slate-500">
+                            <td className="px-3 py-1.5 text-[var(--color-ink-muted)]">{r.value || '[Missing]'}</td>
+                            <td className="px-3 py-1.5 text-[var(--color-ink-muted)]">
                               {r.tags.length > 0 ? r.tags.join(', ') : '—'}
                             </td>
                           </tr>
@@ -772,21 +774,21 @@ export function Contacts() {
               )}
             </div>
 
-            <div className="border-t border-slate-100 p-4 bg-slate-50 flex items-center justify-between">
-              <span className="text-xs text-slate-500">
+            <div className="border-t border-[var(--color-border)] p-4 bg-[var(--color-page)] flex items-center justify-between">
+              <span className="text-xs text-[var(--color-ink-muted)]">
                 Contacts will be automatically opted-in and mapped to unique communication channels.
               </span>
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowImportModal(false)}
-                  className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)]"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleExecuteImport}
                   disabled={!importFile || importing}
-                  className="rounded-md bg-slate-900 px-4 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 shadow-xs disabled:opacity-50"
+                  className="rounded-md bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] shadow-xs disabled:opacity-50"
                 >
                   {importing ? 'Importing Contacts...' : 'Confirm & Import Audience'}
                 </button>
@@ -800,20 +802,20 @@ export function Contacts() {
       {/* MODAL 2: Dynamic Segment Builder Modal */}
       {/* ========================================================================= */}
       {showSegmentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="w-full max-w-lg rounded-xl border border-slate-200 bg-white shadow-xl overflow-hidden">
-            <div className="border-b border-slate-100 p-4 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-accent)]/50 p-4">
+          <div className="w-full max-w-lg rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl overflow-hidden">
+            <div className="border-b border-[var(--color-border)] p-4 flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">
+                <h3 className="text-sm font-bold text-[var(--color-ink)]">
                   {editingSegment ? 'Edit Dynamic Audience Segment' : 'Create Dynamic Saved Segment'}
                 </h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-[var(--color-ink-muted)]">
                   Target customers dynamically using multi-channel filters, tags, and search keywords.
                 </p>
               </div>
               <button
                 onClick={() => setShowSegmentModal(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)]"
               >
                 ✕
               </button>
@@ -821,7 +823,7 @@ export function Contacts() {
 
             <div className="p-5 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Segment Name</label>
+                <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">Segment Name</label>
                 <input
                   type="text"
                   placeholder="e.g. VIP Enterprise Customers"
@@ -832,7 +834,7 @@ export function Contacts() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Description</label>
+                <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">Description</label>
                 <textarea
                   rows={2}
                   placeholder="Describe the purpose of this target group..."
@@ -844,7 +846,7 @@ export function Contacts() {
 
               {/* Channels filter */}
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
+                <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">
                   Channel Targeting (Leave empty for all channels)
                 </label>
                 <div className="grid grid-cols-3 gap-2">
@@ -853,8 +855,8 @@ export function Contacts() {
                       key={ch.id}
                       className={`flex items-center gap-1.5 rounded-md border p-2 text-xs cursor-pointer transition-all ${
                         segmentChannels.includes(ch.id)
-                          ? 'border-slate-900 bg-slate-900 text-white font-semibold'
-                          : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                          ? 'border-slate-900 bg-[var(--color-accent)] text-white font-semibold'
+                          : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:bg-[var(--color-page)]'
                       }`}
                     >
                       <input
@@ -880,8 +882,8 @@ export function Contacts() {
               {tags.length > 0 && (
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-medium text-slate-700">Filter by Tags</label>
-                    <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                    <label className="text-xs font-medium text-[var(--color-ink)]">Filter by Tags</label>
+                    <div className="flex items-center gap-2 text-[11px] text-[var(--color-ink-muted)]">
                       <span>Match:</span>
                       <label className="inline-flex items-center gap-1 cursor-pointer">
                         <input
@@ -905,7 +907,7 @@ export function Contacts() {
                       </label>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-2 rounded-md border border-slate-200 bg-slate-50">
+                  <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-2 rounded-md border border-[var(--color-border)] bg-[var(--color-page)]">
                     {tags.map((t) => (
                       <button
                         key={t}
@@ -919,8 +921,8 @@ export function Contacts() {
                         }}
                         className={`rounded-full px-2 py-0.5 text-[11px] font-medium transition-all ${
                           segmentTags.includes(t)
-                            ? 'bg-slate-900 text-white'
-                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                            ? 'bg-[var(--color-accent)] text-white'
+                            : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-ink)] hover:bg-slate-100'
                         }`}
                       >
                         #{t}
@@ -931,17 +933,17 @@ export function Contacts() {
               )}
             </div>
 
-            <div className="border-t border-slate-100 p-4 bg-slate-50 flex items-center justify-end gap-2">
+            <div className="border-t border-[var(--color-border)] p-4 bg-[var(--color-page)] flex items-center justify-end gap-2">
               <button
                 onClick={() => setShowSegmentModal(false)}
-                className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)]"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveSegment}
                 disabled={savingSegment}
-                className="rounded-md bg-slate-900 px-4 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 shadow-xs"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] shadow-xs"
               >
                 {savingSegment ? 'Saving...' : editingSegment ? 'Update Segment' : 'Create Segment'}
               </button>

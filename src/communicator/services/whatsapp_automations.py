@@ -577,11 +577,20 @@ async def match_advanced_rule(
     text: str,
     payload_id: str | None = None,
     intent: str | None = None,
+    tenant_key: str = "newax",
+    channel: str = "",
 ) -> AutomationRule | None:
-    """Matches inbound message or button against active AutomationRule records."""
+    """
+    Matches inbound message or button against active AutomationRule records.
+    Scoped to the inbound contact's own tenant, and to rules that are either
+    channel-agnostic (AutomationRule.channel == "") or match the inbound
+    channel -- a tenant's Instagram-only rule must never fire on WhatsApp.
+    """
     stmt = (
         select(AutomationRule)
         .where(AutomationRule.is_active.is_(True))
+        .where(AutomationRule.tenant_key == tenant_key)
+        .where((AutomationRule.channel == "") | (AutomationRule.channel == channel))
         .order_by(AutomationRule.priority.desc(), AutomationRule.created_at.asc())
     )
     rules = (await session.execute(stmt)).scalars().all()

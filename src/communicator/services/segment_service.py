@@ -12,12 +12,16 @@ from communicator.models.segment import ContactSegment
 from communicator.models.tag import Tag
 
 
-def build_segment_filter_stmt(filters: dict[str, Any]):
+def build_segment_filter_stmt(filters: dict[str, Any], tenant_key: str = "newax"):
     """
     Constructs a SQLAlchemy select query applying dynamic criteria:
     channels, tags (any/all), search text, and creation date bounds.
+    Always scoped to one tenant -- a segment must never surface another
+    tenant's contacts.
     """
-    stmt = select(Contact).options(selectinload(Contact.tags))
+    stmt = (
+        select(Contact).options(selectinload(Contact.tags)).where(Contact.tenant_key == tenant_key)
+    )
 
     # 1. Filter by channels
     channels = filters.get("channels")
@@ -73,7 +77,7 @@ async def get_segment_contacts(
     session: AsyncSession, segment: ContactSegment, limit: int = 100, offset: int = 0
 ) -> list[Contact]:
     """Retrieves contacts matching the dynamic segment filters."""
-    stmt = build_segment_filter_stmt(segment.filters or {})
+    stmt = build_segment_filter_stmt(segment.filters or {}, tenant_key=segment.tenant_key)
     stmt = stmt.order_by(Contact.created_at.desc()).limit(limit).offset(offset)
     result = await session.execute(stmt)
     return list(result.scalars().unique().all())
@@ -81,40 +85,60 @@ async def get_segment_contacts(
 
 async def count_segment_contacts(session: AsyncSession, segment: ContactSegment) -> int:
     """Calculates total count of contacts matching the segment."""
-    base_stmt = build_segment_filter_stmt(segment.filters or {})
+    base_stmt = build_segment_filter_stmt(segment.filters or {}, tenant_key=segment.tenant_key)
     subq = base_stmt.subquery()
     count_stmt = select(func.count()).select_from(subq)
     result = await session.execute(count_stmt)
     return int(result.scalar_one_or_none() or 0)
 
 
-async def seed_default_segments(session: AsyncSession) -> list[ContactSegment]:
-    """Initializes standard dynamic audience segments if none exist."""
-    existing = (await session.execute(select(ContactSegment))).scalars().first()
+async def seed_default_segments(
+    session: AsyncSession, tenant_key: str = "newax"
+) -> list[ContactSegment]:
+    """Initializes standard dynamic audience segments for a tenant if it has none yet."""
+    existing = (
+        (
+            await session.execute(
+                select(ContactSegment).where(ContactSegment.tenant_key == tenant_key)
+            )
+        )
+        .scalars()
+        .first()
+    )
     if existing is not None:
         return list(
-            (await session.execute(select(ContactSegment).order_by(ContactSegment.name)))
+            (
+                await session.execute(
+                    select(ContactSegment)
+                    .where(ContactSegment.tenant_key == tenant_key)
+                    .order_by(ContactSegment.name)
+                )
+            )
             .scalars()
             .all()
         )
 
     defaults = [
         ContactSegment(
+            tenant_key=tenant_key,
             name="All Omnichannel Contacts",
             description="Entire unified customer database across all communication channels.",
             filters={},
         ),
         ContactSegment(
+            tenant_key=tenant_key,
             name="WhatsApp VIP Audience",
             description="High-value VIP contacts opted-in for official WhatsApp communications.",
             filters={"channels": ["whatsapp"], "tags": ["vip"], "tag_match_mode": "any"},
         ),
         ContactSegment(
+            tenant_key=tenant_key,
             name="Email & SMS Subscribers",
             description="Direct outreach audience on Email and SMS messaging channels.",
             filters={"channels": ["email", "sms"], "tag_match_mode": "any"},
         ),
         ContactSegment(
+            tenant_key=tenant_key,
             name="Social & TikTok Community",
             description="Social media followers across TikTok, Instagram, and Facebook.",
             filters={"channels": ["tiktok", "instagram", "facebook"], "tag_match_mode": "any"},

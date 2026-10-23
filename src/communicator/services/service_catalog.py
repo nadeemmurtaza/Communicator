@@ -6,8 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from communicator.models.service import Service
 
 
-async def get_matching_services(session: AsyncSession, institution_type: str) -> list[Service]:
-    stmt = select(Service)
+async def get_matching_services(
+    session: AsyncSession, institution_type: str, tenant_key: str = "newax"
+) -> list[Service]:
+    stmt = select(Service).where(Service.tenant_key == tenant_key)
     services = list((await session.execute(stmt)).scalars().all())
     if not institution_type:
         return services

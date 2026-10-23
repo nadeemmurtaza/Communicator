@@ -211,21 +211,21 @@ export function Tickets() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--color-ink)]">
               Ticketing & Back-Office Collaboration
             </h1>
             <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-800">
               Unified Hub
             </span>
           </div>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
             One ticketing system for customer issues, back-office collaboration, and tracker tickets that resolve widespread problems across conversations.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+            className="inline-flex items-center justify-center rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[var(--color-accent-hover)]"
           >
             + Create Ticket
           </button>
@@ -235,15 +235,15 @@ export function Tickets() {
       {/* KPI Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
+            <div className="text-xs font-medium text-[var(--color-ink-muted)] uppercase tracking-wider">
               Active Tickets
             </div>
             <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-slate-900">{stats.open_tickets}</span>
-              <span className="text-xs text-slate-400">of {stats.total_tickets} total</span>
+              <span className="text-2xl font-bold text-[var(--color-ink)]">{stats.open_tickets}</span>
+              <span className="text-xs text-[var(--color-ink-faint)]">of {stats.total_tickets} total</span>
             </div>
-            <div className="mt-2 text-xs text-slate-500">Across Support & Back-Office</div>
+            <div className="mt-2 text-xs text-[var(--color-ink-muted)]">Across Support & Back-Office</div>
           </div>
 
           <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-4 shadow-sm">
@@ -290,7 +290,7 @@ export function Tickets() {
       )}
 
       {/* Primary Filters & Tabs */}
-      <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 border-b border-[var(--color-border)] pb-4 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-wrap items-center gap-1">
           <button
             onClick={() => {
@@ -299,8 +299,8 @@ export function Tickets() {
             }}
             className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
               activeTab === 'all'
-                ? 'bg-slate-900 text-white'
-                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                ? 'bg-[var(--color-accent)] text-white'
+                : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
             }`}
           >
             All Tickets ({tickets.length})
@@ -313,7 +313,7 @@ export function Tickets() {
             className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
               activeTab === 'tracker'
                 ? 'bg-rose-600 text-white'
-                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
             }`}
           >
             <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse"></span>
@@ -327,7 +327,7 @@ export function Tickets() {
             className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
               activeTab === 'customer_issue'
                 ? 'bg-emerald-700 text-white'
-                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
             }`}
           >
             Customer Issues ({stats?.customer_issues ?? 0})
@@ -340,7 +340,7 @@ export function Tickets() {
             className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
               activeTab === 'back_office'
                 ? 'bg-indigo-700 text-white'
-                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
             }`}
           >
             Back-Office Collaboration ({stats?.back_office_tickets ?? 0})
@@ -353,7 +353,7 @@ export function Tickets() {
             className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
               activeTab === 'resolved'
                 ? 'bg-slate-700 text-white'
-                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
             }`}
           >
             Resolved ({stats?.resolved_tickets ?? 0})
@@ -365,7 +365,7 @@ export function Tickets() {
           <select
             value={selectedDept}
             onChange={(e) => setSelectedDept(e.target.value)}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm focus:border-indigo-500 focus:outline-none"
+            className="rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs font-medium text-[var(--color-ink)] shadow-sm focus:border-indigo-500 focus:outline-none"
           >
             <option value="all">All Departments</option>
             <option value="support">Support</option>
@@ -382,22 +382,22 @@ export function Tickets() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search tickets, IDs, contacts..."
-            className="w-48 sm:w-64 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none"
+            className="w-48 sm:w-64 rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs placeholder:text-[var(--color-ink-faint)] focus:border-indigo-500 focus:outline-none"
           />
         </div>
       </div>
 
       {/* Ticket List */}
       {loading ? (
-        <div className="py-12 text-center text-sm text-slate-500">Loading tickets...</div>
+        <div className="py-12 text-center text-sm text-[var(--color-ink-muted)]">Loading tickets...</div>
       ) : error ? (
         <div className="rounded-lg bg-rose-50 p-4 text-sm text-rose-700">{error}</div>
       ) : filteredTickets.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-300 p-12 text-center">
-          <p className="text-sm text-slate-500">No tickets found matching current filters.</p>
+          <p className="text-sm text-[var(--color-ink-muted)]">No tickets found matching current filters.</p>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="mt-3 inline-flex items-center text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+            className="mt-3 inline-flex items-center text-xs font-semibold text-[var(--color-accent)] hover:text-indigo-800"
           >
             + Create a ticket now
           </button>
@@ -412,13 +412,13 @@ export function Tickets() {
                 t.ticket_type === 'tracker'
                   ? 'border-rose-300 bg-rose-50/30'
                   : t.ticket_type === 'back_office'
-                  ? 'border-indigo-200 bg-indigo-50/20'
-                  : 'border-slate-200 bg-white'
+                  ? 'border-[var(--color-border)] bg-[var(--color-accent-soft)]/20'
+                  : 'border-[var(--color-border)] bg-[var(--color-surface)]'
               }`}
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-bold text-slate-700">
+                  <span className="font-mono text-xs font-bold text-[var(--color-ink)]">
                     {t.ticket_number}
                   </span>
 
@@ -438,7 +438,7 @@ export function Tickets() {
                   )}
 
                   {/* Department Badge */}
-                  <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 uppercase">
+                  <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-[var(--color-ink-muted)] uppercase">
                     {t.department}
                   </span>
 
@@ -449,7 +449,7 @@ export function Tickets() {
                         ? 'bg-red-100 text-red-800 font-bold'
                         : t.priority === 'high'
                         ? 'bg-amber-100 text-amber-800'
-                        : 'bg-slate-100 text-slate-700'
+                        : 'bg-slate-100 text-[var(--color-ink)]'
                     }`}
                   >
                     {t.priority.toUpperCase()}
@@ -471,7 +471,7 @@ export function Tickets() {
                   >
                     {t.status.replace(/_/g, ' ')}
                   </span>
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-[var(--color-ink-faint)]">
                     {new Date(t.created_at).toLocaleDateString([], {
                       month: 'short',
                       day: 'numeric',
@@ -484,12 +484,12 @@ export function Tickets() {
 
               {/* Title & Description */}
               <div className="mt-2">
-                <h3 className="text-base font-semibold text-slate-900">{t.title}</h3>
-                <p className="mt-1 line-clamp-2 text-xs text-slate-600">{t.description}</p>
+                <h3 className="text-base font-semibold text-[var(--color-ink)]">{t.title}</h3>
+                <p className="mt-1 line-clamp-2 text-xs text-[var(--color-ink-muted)]">{t.description}</p>
               </div>
 
               {/* Tracker / Linked Metadata Footer */}
-              <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
+              <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-[var(--color-border)] pt-3 text-xs text-[var(--color-ink-muted)]">
                 {t.ticket_type === 'tracker' && (
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-rose-700">
@@ -518,11 +518,11 @@ export function Tickets() {
                 )}
 
                 {t.contact_name && (
-                  <div className="flex items-center gap-1 text-slate-700">
-                    <span className="text-slate-400">Customer:</span>
+                  <div className="flex items-center gap-1 text-[var(--color-ink)]">
+                    <span className="text-[var(--color-ink-faint)]">Customer:</span>
                     <span className="font-medium">{t.contact_name}</span>
                     {t.contact_identifier && (
-                      <span className="text-slate-400 font-mono">({t.contact_identifier})</span>
+                      <span className="text-[var(--color-ink-faint)] font-mono">({t.contact_identifier})</span>
                     )}
                   </div>
                 )}
@@ -531,14 +531,14 @@ export function Tickets() {
                   <Link
                     to={`/conversations/${t.conversation_id}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="text-indigo-600 hover:text-indigo-800 font-medium"
+                    className="text-[var(--color-accent)] hover:text-indigo-800 font-medium"
                   >
                     View Conversation →
                   </Link>
                 )}
 
                 {t.assigned_to_name && (
-                  <div className="ml-auto text-slate-600">
+                  <div className="ml-auto text-[var(--color-ink-muted)]">
                     Assignee: <span className="font-medium">{t.assigned_to_name}</span>
                   </div>
                 )}
@@ -550,12 +550,12 @@ export function Tickets() {
 
       {/* Ticket Detail Slide-out / Modal */}
       {selectedTicket && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="relative flex max-h-[90vh] w-full max-w-3xl flex-col rounded-2xl bg-white shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-accent)]/40 backdrop-blur-xs p-4">
+          <div className="relative flex max-h-[90vh] w-full max-w-3xl flex-col rounded-2xl bg-[var(--color-surface)] shadow-2xl overflow-hidden">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 bg-slate-50">
+            <div className="flex items-center justify-between border-b border-[var(--color-border)] px-6 py-4 bg-[var(--color-page)]">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-sm font-bold text-slate-700">
+                <span className="font-mono text-sm font-bold text-[var(--color-ink)]">
                   {selectedTicket.ticket_number}
                 </span>
                 <span
@@ -569,13 +569,13 @@ export function Tickets() {
                 >
                   {selectedTicket.ticket_type.replace(/_/g, ' ').toUpperCase()}
                 </span>
-                <span className="rounded bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700 uppercase">
+                <span className="rounded bg-slate-200 px-2 py-0.5 text-xs font-semibold text-[var(--color-ink)] uppercase">
                   {selectedTicket.department}
                 </span>
               </div>
               <button
                 onClick={() => setSelectedTicket(null)}
-                className="text-slate-400 hover:text-slate-600 text-lg font-bold"
+                className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] text-lg font-bold"
               >
                 ✕
               </button>
@@ -586,17 +586,17 @@ export function Tickets() {
               {/* Title & Status Controls */}
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">{selectedTicket.title}</h2>
-                  <p className="mt-1 text-xs text-slate-400">
+                  <h2 className="text-xl font-bold text-[var(--color-ink)]">{selectedTicket.title}</h2>
+                  <p className="mt-1 text-xs text-[var(--color-ink-faint)]">
                     Created on {new Date(selectedTicket.created_at).toLocaleString()}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <label className="text-xs font-semibold text-slate-500">Status:</label>
+                  <label className="text-xs font-semibold text-[var(--color-ink-muted)]">Status:</label>
                   <select
                     value={selectedTicket.status}
                     onChange={(e) => handleUpdateStatus(selectedTicket.id, e.target.value)}
-                    className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 shadow-sm focus:border-indigo-500 focus:outline-none"
+                    className="rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs font-medium text-slate-800 shadow-sm focus:border-indigo-500 focus:outline-none"
                   >
                     <option value="open">Open</option>
                     <option value="in_progress">In Progress</option>
@@ -609,8 +609,8 @@ export function Tickets() {
               </div>
 
               {/* Description */}
-              <div className="rounded-xl bg-slate-50 p-4 text-xs text-slate-700 leading-relaxed border border-slate-200">
-                <span className="font-semibold block mb-1 text-slate-900">Description:</span>
+              <div className="rounded-xl bg-[var(--color-page)] p-4 text-xs text-[var(--color-ink)] leading-relaxed border border-[var(--color-border)]">
+                <span className="font-semibold block mb-1 text-[var(--color-ink)]">Description:</span>
                 {selectedTicket.description}
               </div>
 
@@ -656,25 +656,25 @@ export function Tickets() {
                         {selectedTicket.child_tickets.map((child) => (
                           <div
                             key={child.id}
-                            className="flex items-center justify-between rounded bg-white p-2 text-xs border border-rose-200"
+                            className="flex items-center justify-between rounded bg-[var(--color-surface)] p-2 text-xs border border-rose-200"
                           >
                             <div className="flex items-center gap-2">
-                              <span className="font-mono font-bold text-slate-700">
+                              <span className="font-mono font-bold text-[var(--color-ink)]">
                                 {child.ticket_number}
                               </span>
                               <span className="text-slate-800">{child.title}</span>
                               {child.contact_name && (
-                                <span className="text-slate-500">({child.contact_name})</span>
+                                <span className="text-[var(--color-ink-muted)]">({child.contact_name})</span>
                               )}
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                              <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-[var(--color-ink-muted)]">
                                 {child.status}
                               </span>
                               {child.conversation_id && (
                                 <Link
                                   to={`/conversations/${child.conversation_id}`}
-                                  className="text-indigo-600 hover:underline text-[11px]"
+                                  className="text-[var(--color-accent)] hover:underline text-[11px]"
                                 >
                                   Chat →
                                 </Link>
@@ -690,8 +690,8 @@ export function Tickets() {
 
               {/* Link to Tracker for Child/Customer Tickets */}
               {selectedTicket.ticket_type !== 'tracker' && (
-                <div className="rounded-xl border border-slate-200 bg-white p-4">
-                  <h4 className="text-xs font-semibold text-slate-700 mb-2">
+                <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+                  <h4 className="text-xs font-semibold text-[var(--color-ink)] mb-2">
                     Tracker Incident Link
                   </h4>
                   {selectedTicket.tracker_id ? (
@@ -712,7 +712,7 @@ export function Tickets() {
                       <select
                         value={linkTrackerId}
                         onChange={(e) => setLinkTrackerId(e.target.value)}
-                        className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 focus:border-indigo-500 focus:outline-none"
+                        className="flex-1 rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
                       >
                         <option value="">Select an active tracker incident to link...</option>
                         {trackers.map((tr) => (
@@ -724,7 +724,7 @@ export function Tickets() {
                       <button
                         onClick={handleLinkTracker}
                         disabled={!linkTrackerId || linkingTracker}
-                        className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+                        className="rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
                       >
                         {linkingTracker ? 'Linking...' : 'Link to Tracker'}
                       </button>
@@ -736,26 +736,26 @@ export function Tickets() {
               {/* Back-Office Collaboration Feed */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                  <h4 className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">
                     Collaboration & Internal Audit Trail ({selectedTicket.activities?.length ?? 0})
                   </h4>
-                  <span className="text-xs text-slate-400">Teammate & Back-Office Notes</span>
+                  <span className="text-xs text-[var(--color-ink-faint)]">Teammate & Back-Office Notes</span>
                 </div>
 
-                <div className="space-y-2 max-h-60 overflow-y-auto border border-slate-200 rounded-xl p-3 bg-slate-50/50">
+                <div className="space-y-2 max-h-60 overflow-y-auto border border-[var(--color-border)] rounded-xl p-3 bg-[var(--color-page)]/50">
                   {selectedTicket.activities && selectedTicket.activities.length > 0 ? (
                     selectedTicket.activities.map((act) => (
                       <div
                         key={act.id}
                         className={`rounded-lg p-2.5 text-xs ${
                           act.activity_type === 'back_office_note'
-                            ? 'bg-indigo-50 border border-indigo-200 text-indigo-950'
+                            ? 'bg-[var(--color-accent-soft)] border border-[var(--color-border)] text-indigo-950'
                             : act.activity_type === 'broadcast'
                             ? 'bg-rose-50 border border-rose-200 text-rose-950 font-medium'
-                            : 'bg-white border border-slate-200 text-slate-800'
+                            : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-slate-800'
                         }`}
                       >
-                        <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+                        <div className="flex items-center justify-between text-[11px] text-[var(--color-ink-muted)] mb-1">
                           <span className="font-semibold text-slate-800">{act.author_name}</span>
                           <span>
                             {new Date(act.created_at).toLocaleTimeString([], {
@@ -768,7 +768,7 @@ export function Tickets() {
                       </div>
                     ))
                   ) : (
-                    <div className="py-4 text-center text-xs text-slate-400">
+                    <div className="py-4 text-center text-xs text-[var(--color-ink-faint)]">
                       No internal collaboration notes yet.
                     </div>
                   )}
@@ -782,9 +782,9 @@ export function Tickets() {
                       value={newNoteAuthor}
                       onChange={(e) => setNewNoteAuthor(e.target.value)}
                       placeholder="Your name or role (e.g. Finance Lead)"
-                      className="w-48 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none"
+                      className="w-48 rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none"
                     />
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-[var(--color-ink-faint)]">
                       Adding to {selectedTicket.department.toUpperCase()} collaboration thread
                     </span>
                   </div>
@@ -794,12 +794,12 @@ export function Tickets() {
                       value={newNoteMessage}
                       onChange={(e) => setNewNoteMessage(e.target.value)}
                       placeholder="Write an internal note or update for teammates..."
-                      className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none"
+                      className="flex-1 rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none"
                     />
                     <button
                       type="submit"
                       disabled={!newNoteMessage.trim() || submittingNote}
-                      className="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+                      className="rounded-lg bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
                     >
                       {submittingNote ? 'Posting...' : 'Post Note'}
                     </button>
@@ -813,15 +813,15 @@ export function Tickets() {
 
       {/* Broadcast & Resolve All Modal */}
       {showBroadcastModal && broadcastTargetTracker && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-accent)]/40 backdrop-blur-xs p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-[var(--color-surface)] p-6 shadow-2xl space-y-4">
             <div>
-              <h3 className="text-lg font-bold text-slate-900">
+              <h3 className="text-lg font-bold text-[var(--color-ink)]">
                 Widespread Broadcast & Resolution
               </h3>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
                 Dispatches an incident update to all customer conversations linked to{' '}
-                <span className="font-mono font-semibold text-slate-700">
+                <span className="font-mono font-semibold text-[var(--color-ink)]">
                   {broadcastTargetTracker.ticket_number}
                 </span>{' '}
                 ({broadcastTargetTracker.title}).
@@ -829,7 +829,7 @@ export function Tickets() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-700">
+              <label className="text-xs font-semibold text-[var(--color-ink)]">
                 Customer Broadcast Message:
               </label>
               <textarea
@@ -841,24 +841,24 @@ export function Tickets() {
               />
             </div>
 
-            <div className="space-y-2 rounded-xl bg-slate-50 p-3 border border-slate-200">
-              <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+            <div className="space-y-2 rounded-xl bg-[var(--color-page)] p-3 border border-[var(--color-border)]">
+              <label className="flex items-center gap-2 text-xs text-[var(--color-ink)] cursor-pointer">
                 <input
                   type="checkbox"
                   checked={broadcastResolveAll}
                   onChange={(e) => setBroadcastResolveAll(e.target.checked)}
-                  className="rounded text-indigo-600 focus:ring-indigo-500"
+                  className="rounded text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
                 />
                 <span className="font-medium">
                   Auto-resolve all {broadcastTargetTracker.child_count ?? 0} linked customer tickets
                 </span>
               </label>
-              <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+              <label className="flex items-center gap-2 text-xs text-[var(--color-ink)] cursor-pointer">
                 <input
                   type="checkbox"
                   checked={broadcastSendCustomer}
                   onChange={(e) => setBroadcastSendCustomer(e.target.checked)}
-                  className="rounded text-indigo-600 focus:ring-indigo-500"
+                  className="rounded text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
                 />
                 <span className="font-medium">
                   Send message directly to impacted customers in their conversation thread
@@ -869,7 +869,7 @@ export function Tickets() {
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 onClick={() => setShowBroadcastModal(false)}
-                className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                className="rounded-lg px-3 py-1.5 text-xs font-semibold text-[var(--color-ink-muted)] hover:bg-slate-100"
               >
                 Cancel
               </button>
@@ -887,13 +887,13 @@ export function Tickets() {
 
       {/* Create Ticket Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-              <h3 className="text-lg font-bold text-slate-900">Create New Ticket</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-accent)]/40 backdrop-blur-xs p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-[var(--color-surface)] p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
+              <h3 className="text-lg font-bold text-[var(--color-ink)]">Create New Ticket</h3>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-slate-400 hover:text-slate-600 font-bold"
+                className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] font-bold"
               >
                 ✕
               </button>
@@ -902,7 +902,7 @@ export function Tickets() {
             <form onSubmit={handleCreateTicket} className="space-y-4">
               {/* Type Selection */}
               <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                <label className="text-xs font-semibold text-[var(--color-ink)] block mb-1">
                   Ticket Type:
                 </label>
                 <div className="grid grid-cols-3 gap-2">
@@ -912,7 +912,7 @@ export function Tickets() {
                     className={`rounded-lg p-2 text-center text-xs font-medium border ${
                       newType === 'customer_issue'
                         ? 'border-emerald-600 bg-emerald-50 text-emerald-800 font-bold'
-                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                        : 'border-[var(--color-border)] text-[var(--color-ink-muted)] hover:bg-[var(--color-page)]'
                     }`}
                   >
                     Customer Issue
@@ -922,8 +922,8 @@ export function Tickets() {
                     onClick={() => setNewType('back_office')}
                     className={`rounded-lg p-2 text-center text-xs font-medium border ${
                       newType === 'back_office'
-                        ? 'border-indigo-600 bg-indigo-50 text-indigo-800 font-bold'
-                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                        ? 'border-indigo-600 bg-[var(--color-accent-soft)] text-indigo-800 font-bold'
+                        : 'border-[var(--color-border)] text-[var(--color-ink-muted)] hover:bg-[var(--color-page)]'
                     }`}
                   >
                     Back-Office Task
@@ -934,7 +934,7 @@ export function Tickets() {
                     className={`rounded-lg p-2 text-center text-xs font-medium border ${
                       newType === 'tracker'
                         ? 'border-rose-600 bg-rose-50 text-rose-800 font-bold'
-                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                        : 'border-[var(--color-border)] text-[var(--color-ink-muted)] hover:bg-[var(--color-page)]'
                     }`}
                   >
                     Tracker (Widespread)
@@ -943,7 +943,7 @@ export function Tickets() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                <label className="text-xs font-semibold text-[var(--color-ink)] block mb-1">
                   Ticket Title:
                 </label>
                 <input
@@ -957,7 +957,7 @@ export function Tickets() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                <label className="text-xs font-semibold text-[var(--color-ink)] block mb-1">
                   Description:
                 </label>
                 <textarea
@@ -972,13 +972,13 @@ export function Tickets() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  <label className="text-xs font-semibold text-[var(--color-ink)] block mb-1">
                     Department:
                   </label>
                   <select
                     value={newDept}
                     onChange={(e) => setNewDept(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs text-slate-700 focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-lg border border-slate-300 bg-[var(--color-surface)] p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
                   >
                     <option value="support">Support</option>
                     <option value="finance">Finance</option>
@@ -990,13 +990,13 @@ export function Tickets() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  <label className="text-xs font-semibold text-[var(--color-ink)] block mb-1">
                     Priority:
                   </label>
                   <select
                     value={newPriority}
                     onChange={(e) => setNewPriority(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs text-slate-700 focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-lg border border-slate-300 bg-[var(--color-surface)] p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -1008,13 +1008,13 @@ export function Tickets() {
 
               {newType !== 'tracker' && trackers.length > 0 && (
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  <label className="text-xs font-semibold text-[var(--color-ink)] block mb-1">
                     Link to Tracker Incident (Optional):
                   </label>
                   <select
                     value={newTrackerId}
                     onChange={(e) => setNewTrackerId(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs text-slate-700 focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-lg border border-slate-300 bg-[var(--color-surface)] p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
                   >
                     <option value="">None (Standalone ticket)</option>
                     {trackers.map((tr) => (
@@ -1026,18 +1026,18 @@ export function Tickets() {
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--color-border)]">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-[var(--color-ink-muted)] hover:bg-slate-100"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={creatingTicket}
-                  className="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+                  className="rounded-lg bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
                 >
                   {creatingTicket ? 'Creating...' : 'Create Ticket'}
                 </button>

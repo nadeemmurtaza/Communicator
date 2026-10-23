@@ -26,13 +26,17 @@ def _clean_text(raw: str) -> str:
     return "\n\n".join(non_empty)
 
 
-def _assert_public_host(hostname: str) -> None:
+def _resolve_public_ip(hostname: str) -> str:
     """
-    Blocks SSRF: refuses to fetch a URL whose host resolves to a private,
-    loopback, link-local, or other non-public IP (internal services, cloud
-    metadata endpoints like 169.254.169.254, etc). This is an admin-only
-    knowledge-base import feature, but the URL itself is still
-    attacker-influenceable input.
+    Blocks SSRF: resolves the host once and refuses any private, loopback,
+    link-local, or other non-public IP (internal services, cloud metadata
+    endpoints like 169.254.169.254, etc), returning the vetted address.
+
+    The caller connects directly to this returned IP (rather than letting
+    the HTTP client re-resolve the hostname) so a DNS answer that changes
+    between this check and the actual connection -- a DNS-rebinding attack --
+    cannot bypass the guard. This is an admin-only knowledge-base import
+    feature, but the URL itself is still attacker-influenceable input.
     """
     try:
         infos = socket.getaddrinfo(hostname, None)
@@ -50,6 +54,9 @@ def _assert_public_host(hostname: str) -> None:
             or ip.is_unspecified
         ):
             raise IngestionError(f"Refusing to fetch non-public address: {hostname} -> {ip}")
+        return str(ip)
+
+    raise IngestionError(f"Could not resolve host: {hostname}")
 
 
 async def ingest_url(session: AsyncSession, url: str) -> KnowledgeBaseEntry:
@@ -64,23 +71,46 @@ async def ingest_url(session: AsyncSession, url: str) -> KnowledgeBaseEntry:
     parsed = urlparse(url)
     if not parsed.netloc:
         raise IngestionError(f"Invalid URL: {url}")
+    if parsed.username or parsed.password:
+        # A userinfo component (https://user:pass@host/...) is never needed
+        # for a public help-center URL, and allowing it both leaks
+        # credentials into the Host header below and (because the pinned
+        # authority was previously built via a string replace of the
+        # hostname inside netloc) could leave the request targeting the
+        # un-pinned original host if the replace matched inside userinfo
+        # instead of the host.
+        raise IngestionError(f"Refusing URL with embedded credentials: {url}")
 
-    _assert_public_host(parsed.hostname or "")
+    hostname = parsed.hostname or ""
+    safe_ip = _resolve_public_ip(hostname)
+    # Rebuild the authority explicitly from parts (safe_ip[:port]) rather
+    # than string-replacing hostname inside netloc, which -- being a plain
+    # first-occurrence, case-sensitive replace -- could silently no-op for a
+    # mixed-case hostname and leave the request pointed at the un-pinned,
+    # un-vetted original host.
+    pinned_netloc = safe_ip if parsed.port is None else f"{safe_ip}:{parsed.port}"
+    pinned_url = parsed._replace(netloc=pinned_netloc).geturl()
 
     headers = {
+        "Host": parsed.netloc,
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/124.0.0.0 Safari/537.36 (KnowledgeBaseIngestBot/1.0)"
-        )
+        ),
     }
 
     try:
         # follow_redirects=False: a public URL redirecting to a private/
         # internal address is the classic SSRF-via-redirect bypass, so
         # redirects are rejected outright rather than silently followed.
+        # The request is made against safe_ip (the vetted address), not the
+        # hostname, so the HTTP client cannot re-resolve DNS and land on a
+        # different (possibly private) address than the one that was checked.
         async with httpx.AsyncClient(timeout=25.0, follow_redirects=False) as client:
-            resp = await client.get(url, headers=headers)
+            resp = await client.get(
+                pinned_url, headers=headers, extensions={"sni_hostname": hostname}
+            )
             if resp.is_redirect:
                 raise IngestionError(f"Refusing to follow redirect from {url}")
             resp.raise_for_status()

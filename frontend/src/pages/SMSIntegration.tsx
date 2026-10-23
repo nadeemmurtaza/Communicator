@@ -5,6 +5,7 @@ import {
   type SMSChannelData,
   type SMSEvent,
 } from '../lib/api'
+import { SmsIcon } from '../components/icons/BrandIcons'
 
 export function SMSIntegration() {
   const [data, setData] = useState<SMSChannelData | null>(null)
@@ -219,7 +220,7 @@ export function SMSIntegration() {
           </div>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-600 text-white shadow-sm">
-              <span className="text-xl">📱</span>
+              <SmsIcon className="h-6 w-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">

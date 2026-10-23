@@ -1,5 +1,8 @@
-from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from communicator.api.routes import (
     ai_connections,
@@ -12,12 +15,16 @@ from communicator.api.routes import (
     conversations,
     copilot_approvals,
     custom_attributes,
+    discovery,
     drafts,
     gateways,
     inboxes,
+    instagram_auth,
     issue_trackers,
     knowledge_base,
     macros,
+    nid_auth,
+    organizations,
     outgoing_webhooks,
     prechat,
     presence,
@@ -50,11 +57,6 @@ app = FastAPI(
 )
 
 
-@app.get("/", include_in_schema=False)
-async def root():
-    return RedirectResponse(url="/docs")
-
-
 @app.get("/api/v1/health")
 async def health_check():
     return {"status": "ok"}
@@ -62,6 +64,9 @@ async def health_check():
 
 # Webhooks authenticate themselves (Twilio signature / Postmark shared secret)
 app.include_router(webhooks.router, prefix="/api/v1")
+app.include_router(instagram_auth.router, prefix="/api/v1")
+app.include_router(nid_auth.router, prefix="/api/v1")
+app.include_router(organizations.router, prefix="/api/v1")
 app.include_router(widget.router, prefix="/api/v1")
 app.include_router(widget_customizer.router, prefix="/api/v1")
 app.include_router(prechat.router, prefix="/api/v1")
@@ -70,6 +75,7 @@ app.include_router(roles.router, prefix="/api/v1")
 app.include_router(sso.router, prefix="/api/v1/sso", tags=["sso"])
 app.include_router(translation.router, prefix="/api/v1")
 app.include_router(custom_attributes.router, prefix="/api/v1")
+app.include_router(discovery.router, prefix="/api/v1")
 app.include_router(inboxes.router, prefix="/api/v1")
 app.include_router(drafts.router, prefix="/api/v1")
 app.include_router(services.router, prefix="/api/v1")
@@ -100,3 +106,23 @@ app.include_router(gateways.router, prefix="/api/v1")
 app.include_router(outgoing_webhooks.router, prefix="/api/v1")
 app.include_router(stripe_integration.router, prefix="/api/v1")
 app.include_router(issue_trackers.router, prefix="/api/v1")
+
+# Built frontend (frontend/dist, from `npm run build`) -- served from the
+# same origin as the API so the Instagram OAuth redirect_uri, webhook URLs
+# etc. all point at one domain in production instead of needing a separate
+# static host. Mounted/registered last so it never shadows an /api/v1/* route.
+FRONTEND_DIST = Path(__file__).resolve().parents[3] / "frontend" / "dist"
+if (FRONTEND_DIST / "assets").is_dir():
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="frontend-assets")
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+async def spa(full_path: str):
+    """SPA fallback: any non-API, non-static path serves index.html and lets
+    react-router handle the route client-side."""
+    index = FRONTEND_DIST / "index.html"
+    if not index.is_file():
+        raise HTTPException(
+            status_code=404, detail="Frontend build not found. Run `npm run build`."
+        )
+    return FileResponse(index)

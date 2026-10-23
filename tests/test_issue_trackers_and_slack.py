@@ -1,4 +1,5 @@
 import uuid
+from urllib.parse import urlparse
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -117,7 +118,7 @@ async def test_create_linked_issues_all_providers(db_session):
     )
     assert gh_issue.provider == "github"
     assert gh_issue.issue_key.startswith("#")
-    assert "github.com" in gh_issue.issue_url
+    assert urlparse(gh_issue.issue_url).hostname == "github.com"
 
     # 3. Jira
     jira_issue = await issue_tracker_service.create_linked_issue(
@@ -131,7 +132,8 @@ async def test_create_linked_issues_all_providers(db_session):
     )
     assert jira_issue.provider == "jira"
     assert jira_issue.issue_key.startswith("SUP-")
-    assert "atlassian.net" in jira_issue.issue_url
+    jira_host = urlparse(jira_issue.issue_url).hostname or ""
+    assert jira_host == "atlassian.net" or jira_host.endswith(".atlassian.net")
 
     # Retrieve all issues for this conversation
     linked = await issue_tracker_service.list_linked_issues(db_session, conversation_id=conv.id)
@@ -175,7 +177,8 @@ async def test_slack_conversation_sync(db_session):
     assert sync_res["is_synced"] is True
     assert sync_res["slack_channel_name"] == "#customer-escalations"
     assert sync_res["slack_thread_ts"] != ""
-    assert "slack.com" in sync_res["thread_url"]
+    slack_host = urlparse(sync_res["thread_url"]).hostname or ""
+    assert slack_host == "slack.com" or slack_host.endswith(".slack.com")
 
     # Verify status query
     status = await issue_tracker_service.get_slack_sync_status(db_session, conv.id)

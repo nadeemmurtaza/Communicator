@@ -31,8 +31,8 @@ export function Sequences() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Follow-up sequences</h1>
-        <p className="mt-1 text-sm text-slate-500">A/B variant performance per sequence.</p>
+        <h1 className="text-xl font-semibold text-[var(--color-ink)]">Follow-up sequences</h1>
+        <p className="mt-1 text-sm text-[var(--color-ink-muted)]">A/B variant performance per sequence.</p>
       </div>
 
       {error && (
@@ -42,33 +42,33 @@ export function Sequences() {
       )}
 
       {sequences === null ? (
-        <p className="text-sm text-slate-500">Loading…</p>
+        <p className="text-sm text-[var(--color-ink-muted)]">Loading…</p>
       ) : sequences.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-10 text-center text-sm text-slate-500">
+        <div className="rounded-lg border border-dashed border-slate-300 bg-[var(--color-surface)] px-4 py-10 text-center text-sm text-[var(--color-ink-muted)]">
           No sequences configured.
         </div>
       ) : (
         <ul className="space-y-2">
           {sequences.map((s) => (
-            <li key={s.id} className="rounded-lg border border-slate-200 bg-white">
+            <li key={s.id} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
               <button
                 onClick={() => toggle(s.id)}
                 className="flex w-full items-center justify-between px-4 py-3 text-left"
               >
-                <span className="text-sm font-medium text-slate-900">{s.name}</span>
+                <span className="text-sm font-medium text-[var(--color-ink)]">{s.name}</span>
                 <span className={`badge ${s.isActive ? 'badge-success' : 'badge-ghost'}`}>
                   {s.isActive ? 'Active' : 'Inactive'}
                 </span>
               </button>
               {openId === s.id && (
-                <div className="border-t border-slate-100 px-4 py-3">
+                <div className="border-t border-[var(--color-border)] px-4 py-3">
                   {stats === null ? (
-                    <p className="text-sm text-slate-500">Loading stats…</p>
+                    <p className="text-sm text-[var(--color-ink-muted)]">Loading stats…</p>
                   ) : stats.variants.length === 0 ? (
-                    <p className="text-sm text-slate-500">No enrollments yet.</p>
+                    <p className="text-sm text-[var(--color-ink-muted)]">No enrollments yet.</p>
                   ) : (
                     <table className="w-full text-sm">
-                      <thead className="text-left text-xs uppercase tracking-wide text-slate-400">
+                      <thead className="text-left text-xs uppercase tracking-wide text-[var(--color-ink-faint)]">
                         <tr>
                           <th className="py-1">Variant</th>
                           <th className="py-1">Enrolled</th>
@@ -78,7 +78,7 @@ export function Sequences() {
                       </thead>
                       <tbody>
                         {stats.variants.map((v) => (
-                          <tr key={v.variant} className="border-t border-slate-100">
+                          <tr key={v.variant} className="border-t border-[var(--color-border)]">
                             <td className="py-1.5 font-medium text-slate-800">{v.variant}</td>
                             <td className="py-1.5">{v.enrolled}</td>
                             <td className="py-1.5">{v.replied}</td>

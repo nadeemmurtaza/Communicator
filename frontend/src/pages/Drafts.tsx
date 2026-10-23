@@ -33,8 +33,8 @@ export function Drafts() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Draft review</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="text-xl font-semibold text-[var(--color-ink)]">Draft review</h1>
+        <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
           AI-drafted replies waiting for your approval before they go out.
         </p>
       </div>
@@ -46,25 +46,25 @@ export function Drafts() {
       )}
 
       {drafts === null ? (
-        <p className="text-sm text-slate-500">Loading…</p>
+        <p className="text-sm text-[var(--color-ink-muted)]">Loading…</p>
       ) : drafts.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-10 text-center text-sm text-slate-500">
+        <div className="rounded-lg border border-dashed border-slate-300 bg-[var(--color-surface)] px-4 py-10 text-center text-sm text-[var(--color-ink-muted)]">
           Nothing pending. New drafts land here as leads reply.
         </div>
       ) : (
         <ul className="space-y-3">
           {drafts.map((d) => (
-            <li key={d.id} className="rounded-lg border border-slate-200 bg-white p-4">
+            <li key={d.id} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <Link
                     to={`/conversations/${d.conversationId}`}
-                    className="text-xs font-medium text-slate-500 hover:underline"
+                    className="text-xs font-medium text-[var(--color-ink-muted)] hover:underline"
                   >
                     Conversation {d.conversationId.slice(0, 8)}
                   </Link>
                   <p className="mt-1 whitespace-pre-wrap text-sm text-slate-800">{d.body}</p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--color-ink-faint)]">
                     <span>{Math.round(d.confidence * 100)}% confidence</span>
                     <span>·</span>
                     <span>{timeAgo(d.createdAt)}</span>
@@ -80,14 +80,14 @@ export function Drafts() {
                   <button
                     disabled={busyId === d.id}
                     onClick={() => act(d.id, 'reject')}
-                    className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                    className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-50"
                   >
                     Reject
                   </button>
                   <button
                     disabled={busyId === d.id}
                     onClick={() => act(d.id, 'approve')}
-                    className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+                    className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
                   >
                     Approve &amp; send
                   </button>

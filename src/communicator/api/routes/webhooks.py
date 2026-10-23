@@ -519,14 +519,18 @@ async def meta_instagram_inbound(
     stmt = select(Inbox).where(Inbox.channel_type == ChannelType.INSTAGRAM)
     inbox = (await session.execute(stmt)).scalars().first()
     app_secret = inbox.credentials.get("appSecret") if (inbox and inbox.credentials) else None
+    # Fall back to the app's own configured secret for inboxes connected
+    # before instagram_auth.py started saving one on the inbox record --
+    # webhook payloads are always signed with the app secret, never a
+    # per-account token, so this is the same secret either way.
+    if not app_secret:
+        app_secret = settings.meta_instagram_app_secret
 
     raw_body = await request.body()
-    if (
-        app_secret
-        and not app_secret.startswith("•")
-        and not app_secret.startswith("mock")
-        and x_hub_signature_256
-        and not validate_meta_signature(app_secret, raw_body, x_hub_signature_256)
+    has_real_secret = bool(app_secret) and not app_secret.startswith(("•", "mock"))
+    if has_real_secret and (
+        not x_hub_signature_256
+        or not validate_meta_signature(app_secret, raw_body, x_hub_signature_256)
     ):
         raise HTTPException(status_code=403, detail="Invalid Meta Instagram signature.")
 
@@ -774,7 +778,7 @@ async def voice_inbound_webhook(
     call_sid = str(
         data.get("CallSid")
         or data.get("call_sid")
-        or f"CA{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        or f"CA{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
     )
     from_number = str(data.get("From") or data.get("from") or "+14155550100")
     to_number = str(data.get("To") or data.get("to") or "+14155550199")
@@ -1070,7 +1074,7 @@ async def email_inbound_webhook(
         payload.get("MessageID")
         or payload.get("message_id")
         or payload.get("headers", {}).get(
-            "Message-ID", f"<{datetime.now().strftime('%Y%m%d%H%M%S')}@customer-email>"
+            "Message-ID", f"<{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}@customer-email>"
         )
     )
     in_reply_to = payload.get("InReplyTo") or payload.get("in_reply_to")

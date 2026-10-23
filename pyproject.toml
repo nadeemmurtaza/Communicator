@@ -23,6 +23,7 @@ dependencies = [
   "python-multipart>=0.0.20,<1",
   "pypdf>=5.0",
   "beautifulsoup4>=4.12",
+  "defusedxml>=0.7,<1",
 ]
 
 [project.optional-dependencies]

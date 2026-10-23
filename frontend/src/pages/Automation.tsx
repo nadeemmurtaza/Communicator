@@ -11,11 +11,11 @@ const ACTION_LABELS: Record<string, { label: string; icon: string; color: string
   interactive_buttons: { label: 'Quick Buttons', icon: '🔘', color: 'bg-emerald-50 text-emerald-700' },
   interactive_list: { label: 'List Menu', icon: '📋', color: 'bg-purple-50 text-purple-700' },
   send_media: { label: 'Send Media', icon: '🖼️', color: 'bg-amber-50 text-amber-700' },
-  send_cta_url: { label: 'CTA Link', icon: '🔗', color: 'bg-indigo-50 text-indigo-700' },
+  send_cta_url: { label: 'CTA Link', icon: '🔗', color: 'bg-[var(--color-accent-soft)] text-[var(--color-accent)]' },
   send_template: { label: 'Meta Template', icon: '📄', color: 'bg-cyan-50 text-cyan-700' },
   handoff: { label: 'Agent Handoff', icon: '👤', color: 'bg-rose-50 text-rose-700' },
   add_tag: { label: 'Add Tag', icon: '🏷️', color: 'bg-teal-50 text-teal-700' },
-  remove_tag: { label: 'Remove Tag', icon: '✂️', color: 'bg-slate-50 text-slate-700' },
+  remove_tag: { label: 'Remove Tag', icon: '✂️', color: 'bg-[var(--color-page)] text-[var(--color-ink)]' },
   assign_team: { label: 'Assign Team', icon: '👥', color: 'bg-orange-50 text-orange-700' },
   enroll_sequence: { label: 'Enroll Drip', icon: '⏳', color: 'bg-sky-50 text-sky-700' },
   send_csat: { label: 'CSAT Survey', icon: '⭐', color: 'bg-yellow-50 text-yellow-800' },
@@ -185,40 +185,40 @@ export function Automation() {
       {/* Top Header & Action Controls */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+          <h1 className="text-xl font-bold text-[var(--color-ink)] flex items-center gap-2">
             <span>WhatsApp Automation Suite</span>
             <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
               Meta Cloud API Ready
             </span>
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
             Enterprise WhatsApp automations: interactive buttons, catalog menus, 24h session window recovery, live agent handoff, and CSAT surveys.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleSeedDefaults}
-            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 shadow-sm"
+            className="rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-2 text-xs font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-sm"
             title="Install 11 standard WhatsApp automations in one click"
           >
             ⚡ Load Pre-Built Rules
           </button>
           <button
             onClick={handleRunNudges}
-            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 shadow-sm"
+            className="rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-2 text-xs font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-sm"
             title="Check for conversations nearing the 24h Meta session window cutoff"
           >
             ⏰ Run 24h Nudges
           </button>
           <button
             onClick={() => setShowTester((v) => !v)}
-            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 shadow-sm"
+            className="rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-2 text-xs font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-sm"
           >
             🧪 {showTester ? 'Hide Simulator' : 'Test Simulator'}
           </button>
           <button
             onClick={() => setShowForm((v) => !v)}
-            className="rounded-md bg-slate-900 px-3 py-2 text-xs font-medium text-white hover:bg-slate-800 shadow-sm"
+            className="rounded-md bg-[var(--color-accent)] px-3 py-2 text-xs font-medium text-white hover:bg-[var(--color-accent-hover)] shadow-sm"
           >
             {showForm ? 'Cancel' : '+ Add Custom Rule'}
           </button>
@@ -242,62 +242,62 @@ export function Automation() {
       {/* Stats Summary Cards */}
       {stats && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <p className="text-xs font-medium text-slate-500">Active Rules</p>
-            <p className="mt-1 text-2xl font-bold text-slate-900">
-              {stats.activeRules} <span className="text-xs text-slate-400 font-normal">/ {stats.totalRules}</span>
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+            <p className="text-xs font-medium text-[var(--color-ink-muted)]">Active Rules</p>
+            <p className="mt-1 text-2xl font-bold text-[var(--color-ink)]">
+              {stats.activeRules} <span className="text-xs text-[var(--color-ink-faint)] font-normal">/ {stats.totalRules}</span>
             </p>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <p className="text-xs font-medium text-slate-500">Total Executions</p>
-            <p className="mt-1 text-2xl font-bold text-slate-900">{stats.totalExecutions.toLocaleString()}</p>
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+            <p className="text-xs font-medium text-[var(--color-ink-muted)]">Total Executions</p>
+            <p className="mt-1 text-2xl font-bold text-[var(--color-ink)]">{stats.totalExecutions.toLocaleString()}</p>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <p className="text-xs font-medium text-slate-500">Avg CSAT Rating</p>
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+            <p className="text-xs font-medium text-[var(--color-ink-muted)]">Avg CSAT Rating</p>
             <p className="mt-1 text-2xl font-bold text-amber-500">
               {stats.csatAverage ? `⭐ ${stats.csatAverage}` : '—'}
             </p>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <p className="text-xs font-medium text-slate-500">CSAT Feedback Count</p>
-            <p className="mt-1 text-2xl font-bold text-slate-900">{stats.csatResponsesCount}</p>
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+            <p className="text-xs font-medium text-[var(--color-ink-muted)]">CSAT Feedback Count</p>
+            <p className="mt-1 text-2xl font-bold text-[var(--color-ink)]">{stats.csatResponsesCount}</p>
           </div>
         </div>
       )}
 
       {/* Simulator / Tester Drawer */}
       {showTester && (
-        <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-5 space-y-4">
+        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-accent-soft)]/50 p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-indigo-900 flex items-center gap-2">
               <span>🧪 WhatsApp Message & Button Simulator</span>
             </h2>
-            <span className="text-xs text-indigo-600">Simulate incoming customer actions without sending real texts</span>
+            <span className="text-xs text-[var(--color-accent)]">Simulate incoming customer actions without sending real texts</span>
           </div>
           <form onSubmit={handleRunTest} className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-slate-600">Incoming Message Text</label>
+              <label className="block text-xs font-medium text-[var(--color-ink-muted)]">Incoming Message Text</label>
               <input
                 value={testInput}
                 onChange={(e) => setTestInput(e.target.value)}
                 placeholder='e.g. "menu", "pricing", "agent", "quote", "#bot"'
-                className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm"
+                className="mt-1 w-full rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600">Button / List Payload ID (Optional)</label>
+              <label className="block text-xs font-medium text-[var(--color-ink-muted)]">Button / List Payload ID (Optional)</label>
               <input
                 value={testPayload}
                 onChange={(e) => setTestPayload(e.target.value)}
                 placeholder='e.g. "csat:5", "menu:services"'
-                className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm"
+                className="mt-1 w-full rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-sm"
               />
             </div>
             <div className="sm:col-span-3">
               <button
                 type="submit"
                 disabled={testing || (!testInput && !testPayload)}
-                className="rounded-md bg-indigo-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-4 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
               >
                 {testing ? 'Testing…' : 'Simulate WhatsApp Rule'}
               </button>
@@ -305,27 +305,27 @@ export function Automation() {
           </form>
 
           {testResult && (
-            <div className="rounded-md border border-slate-200 bg-white p-4 space-y-2 text-sm">
+            <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4 space-y-2 text-sm">
               {testResult.matched ? (
                 <>
                   <div className="flex items-center gap-2 font-medium text-emerald-700">
                     <span>✅ Matched Rule:</span>
                     <span className="font-semibold">{testResult.rule?.name}</span>
-                    <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+                    <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-[var(--color-ink-muted)]">
                       Priority: {testResult.rule?.priority}
                     </span>
                   </div>
-                  <div className="text-xs text-slate-600">
+                  <div className="text-xs text-[var(--color-ink-muted)]">
                     <strong>Action:</strong> {testResult.actionType}
                   </div>
-                  <div className="rounded bg-slate-50 p-3 font-mono text-xs text-slate-800 whitespace-pre-wrap">
+                  <div className="rounded bg-[var(--color-page)] p-3 font-mono text-xs text-slate-800 whitespace-pre-wrap">
                     {testResult.actionValue}
                   </div>
                 </>
               ) : (
-                <div className="text-slate-600">
+                <div className="text-[var(--color-ink-muted)]">
                   <span className="font-medium text-amber-600">ℹ️ No deterministic rule matched.</span>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
                     The autonomous AI reply engine will handle this message using your service catalog, business profile, and knowledge base.
                   </p>
                 </div>
@@ -337,13 +337,13 @@ export function Automation() {
 
       {/* New Rule Creation Form */}
       {showForm && (
-        <form onSubmit={submit} className="space-y-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-sm font-semibold text-slate-900 border-b border-slate-100 pb-2">
+        <form onSubmit={submit} className="space-y-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
+          <h2 className="text-sm font-semibold text-[var(--color-ink)] border-b border-[var(--color-border)] pb-2">
             Create WhatsApp Automation Rule
           </h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-medium text-slate-600">Rule Name</label>
+              <label className="block text-xs font-medium text-[var(--color-ink-muted)]">Rule Name</label>
               <input
                 required
                 value={name}
@@ -353,7 +353,7 @@ export function Automation() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600">Trigger Keyword / Payload</label>
+              <label className="block text-xs font-medium text-[var(--color-ink-muted)]">Trigger Keyword / Payload</label>
               <input
                 required
                 value={keyword}
@@ -363,11 +363,11 @@ export function Automation() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600">Match Type</label>
+              <label className="block text-xs font-medium text-[var(--color-ink-muted)]">Match Type</label>
               <select
                 value={matchType}
                 onChange={(e) => setMatchType(e.target.value)}
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm bg-white"
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm bg-[var(--color-surface)]"
               >
                 <option value="contains">Contains Keyword</option>
                 <option value="exact">Exact Match</option>
@@ -379,11 +379,11 @@ export function Automation() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600">Action Type</label>
+              <label className="block text-xs font-medium text-[var(--color-ink-muted)]">Action Type</label>
               <select
                 value={actionType}
                 onChange={(e) => setActionType(e.target.value)}
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm bg-white"
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm bg-[var(--color-surface)]"
               >
                 <option value="auto_reply">💬 Plain Text Reply</option>
                 <option value="interactive_buttons">🔘 Quick-Reply Interactive Buttons</option>
@@ -399,7 +399,7 @@ export function Automation() {
               </select>
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-slate-600">Description (Optional)</label>
+              <label className="block text-xs font-medium text-[var(--color-ink-muted)]">Description (Optional)</label>
               <input
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -408,7 +408,7 @@ export function Automation() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600">Priority (Higher runs first)</label>
+              <label className="block text-xs font-medium text-[var(--color-ink-muted)]">Priority (Higher runs first)</label>
               <input
                 type="number"
                 value={priority}
@@ -420,8 +420,8 @@ export function Automation() {
 
           {/* Action configuration details */}
           {actionType === 'interactive_buttons' ? (
-            <div className="space-y-3 rounded-md bg-slate-50 p-4 border border-slate-200">
-              <label className="block text-xs font-medium text-slate-700">Message Body Text</label>
+            <div className="space-y-3 rounded-md bg-[var(--color-page)] p-4 border border-[var(--color-border)]">
+              <label className="block text-xs font-medium text-[var(--color-ink)]">Message Body Text</label>
               <textarea
                 value={actionValue}
                 onChange={(e) => setActionValue(e.target.value)}
@@ -429,7 +429,7 @@ export function Automation() {
                 placeholder="Please select an option below:"
                 className="w-full rounded-md border border-slate-300 p-2 text-sm"
               />
-              <p className="text-xs font-medium text-slate-600">Buttons (up to 3 for WhatsApp Cloud API):</p>
+              <p className="text-xs font-medium text-[var(--color-ink-muted)]">Buttons (up to 3 for WhatsApp Cloud API):</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <input
                   value={button1}
@@ -453,7 +453,7 @@ export function Automation() {
             </div>
           ) : actionType === 'handoff' ? (
             <div>
-              <label className="block text-xs font-medium text-slate-600">Internal Handoff Note (Optional)</label>
+              <label className="block text-xs font-medium text-[var(--color-ink-muted)]">Internal Handoff Note (Optional)</label>
               <input
                 value={actionValue}
                 onChange={(e) => setActionValue(e.target.value)}
@@ -463,7 +463,7 @@ export function Automation() {
             </div>
           ) : actionType === 'add_tag' || actionType === 'remove_tag' ? (
             <div>
-              <label className="block text-xs font-medium text-slate-600">Tag Name</label>
+              <label className="block text-xs font-medium text-[var(--color-ink-muted)]">Tag Name</label>
               <input
                 required
                 value={actionValue}
@@ -474,7 +474,7 @@ export function Automation() {
             </div>
           ) : actionType === 'send_csat' ? (
             <div>
-              <label className="block text-xs font-medium text-slate-600">Custom Survey Question (Optional)</label>
+              <label className="block text-xs font-medium text-[var(--color-ink-muted)]">Custom Survey Question (Optional)</label>
               <input
                 value={actionValue}
                 onChange={(e) => setActionValue(e.target.value)}
@@ -484,7 +484,7 @@ export function Automation() {
             </div>
           ) : (
             <div>
-              <label className="block text-xs font-medium text-slate-600">Action Value / Payload</label>
+              <label className="block text-xs font-medium text-[var(--color-ink-muted)]">Action Value / Payload</label>
               <textarea
                 required
                 value={actionValue}
@@ -506,14 +506,14 @@ export function Automation() {
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="rounded-md border border-slate-300 px-4 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded-md border border-slate-300 px-4 py-1.5 text-sm font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="rounded-md bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+              className="rounded-md bg-[var(--color-accent)] px-4 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
             >
               {saving ? 'Saving…' : 'Save Rule'}
             </button>
@@ -523,23 +523,23 @@ export function Automation() {
 
       {/* Rules Listing */}
       {rules === null ? (
-        <div className="p-8 text-center text-sm text-slate-500">Loading automation suite…</div>
+        <div className="p-8 text-center text-sm text-[var(--color-ink-muted)]">Loading automation suite…</div>
       ) : rules.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-white p-12 text-center">
-          <p className="text-sm font-medium text-slate-900">No automation rules configured yet.</p>
-          <p className="mt-1 text-xs text-slate-500">
+        <div className="rounded-lg border border-dashed border-slate-300 bg-[var(--color-surface)] p-12 text-center">
+          <p className="text-sm font-medium text-[var(--color-ink)]">No automation rules configured yet.</p>
+          <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
             Click below to instantly install all 11 battle-tested WhatsApp automations!
           </p>
           <button
             onClick={handleSeedDefaults}
-            className="mt-4 rounded-md bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 shadow"
+            className="mt-4 rounded-md bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] shadow"
           >
             ⚡ Load All Pre-Built WhatsApp Automations
           </button>
         </div>
       ) : (
-        <div className="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="border-b border-slate-100 bg-slate-50/75 px-4 py-3 flex items-center justify-between text-xs font-medium text-slate-500">
+        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm overflow-hidden">
+          <div className="border-b border-[var(--color-border)] bg-[var(--color-page)]/75 px-4 py-3 flex items-center justify-between text-xs font-medium text-[var(--color-ink-muted)]">
             <span>Automation Rule ({rules.length})</span>
             <span>Priority & Status</span>
           </div>
@@ -548,42 +548,42 @@ export function Automation() {
               const meta = ACTION_LABELS[r.actionType] ?? {
                 label: r.actionType,
                 icon: '⚡',
-                color: 'bg-slate-100 text-slate-700',
+                color: 'bg-slate-100 text-[var(--color-ink)]',
               }
               return (
-                <li key={r.id} className="p-4 hover:bg-slate-50/50 transition-colors">
+                <li key={r.id} className="p-4 hover:bg-[var(--color-page)]/50 transition-colors">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0 space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-semibold text-sm text-slate-900">{r.name}</span>
+                        <span className="font-semibold text-sm text-[var(--color-ink)]">{r.name}</span>
                         <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium ${meta.color}`}>
                           <span>{meta.icon}</span>
                           <span>{meta.label}</span>
                         </span>
                         {r.executionCount ? (
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 font-mono">
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-[var(--color-ink-muted)] font-mono">
                             {r.executionCount} fired
                           </span>
                         ) : null}
                       </div>
 
-                      <p className="text-xs text-slate-600">
+                      <p className="text-xs text-[var(--color-ink-muted)]">
                         When input <span className="font-semibold">{r.matchType}</span>: "{r.triggerKeyword}"
                       </p>
 
                       {r.description && (
-                        <p className="text-xs text-slate-400 italic">{r.description}</p>
+                        <p className="text-xs text-[var(--color-ink-faint)] italic">{r.description}</p>
                       )}
 
                       {r.actionValue && (
-                        <div className="mt-1 line-clamp-2 max-w-xl text-xs font-mono text-slate-500 bg-slate-50 p-1.5 rounded border border-slate-100">
+                        <div className="mt-1 line-clamp-2 max-w-xl text-xs font-mono text-[var(--color-ink-muted)] bg-[var(--color-page)] p-1.5 rounded border border-[var(--color-border)]">
                           {r.actionValue}
                         </div>
                       )}
                     </div>
 
                     <div className="flex shrink-0 items-center gap-2 pt-2 sm:pt-0">
-                      <span className="text-xs font-mono text-slate-400" title="Execution priority">
+                      <span className="text-xs font-mono text-[var(--color-ink-faint)]" title="Execution priority">
                         p:{r.priority}
                       </span>
                       <button
@@ -591,14 +591,14 @@ export function Automation() {
                         className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
                           r.isActive
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-slate-100 text-slate-500 border border-slate-200'
+                            : 'bg-slate-100 text-[var(--color-ink-muted)] border border-[var(--color-border)]'
                         }`}
                       >
                         {r.isActive ? 'Active' : 'Paused'}
                       </button>
                       <button
                         onClick={() => remove(r.id)}
-                        className="rounded px-2 py-1 text-xs text-slate-400 hover:bg-red-50 hover:text-red-600"
+                        className="rounded px-2 py-1 text-xs text-[var(--color-ink-faint)] hover:bg-red-50 hover:text-red-600"
                         title="Delete Rule"
                       >
                         Delete

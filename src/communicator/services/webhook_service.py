@@ -4,11 +4,13 @@ import hashlib
 import hmac
 import json
 import logging
+import re
 import secrets
 import time
 import uuid
 from datetime import UTC, datetime
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 from sqlalchemy import desc, select
@@ -242,12 +244,16 @@ async def deliver_payload_to_endpoint(
     error_message = None
     success = True
 
-    # Check if simulated / internal mock URL
-    is_simulated = (
-        not endpoint.url.startswith("http")
-        or "internal.bayworks" in endpoint.url
-        or "example.com" in endpoint.url
-        or "mock" in endpoint.url
+    # Check if simulated / internal mock URL -- matched label-by-label against
+    # the parsed hostname (a dot-delimited component match, not a substring
+    # of the raw URL), so a real endpoint can't accidentally (or
+    # deliberately) be misclassified by stuffing one of these words into a
+    # path or query string, while "api.internal.bayworks.co" still matches
+    # the "internal.bayworks" marker as a subdomain segment.
+    endpoint_host = (urlparse(endpoint.url).hostname or "").lower()
+    is_simulated = not endpoint.url.startswith("http") or any(
+        re.search(rf"(^|\.){re.escape(marker)}(\.|$)", endpoint_host)
+        for marker in ("internal.bayworks", "example.com", "mock")
     )
 
     if is_simulated:

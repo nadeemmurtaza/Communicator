@@ -7,11 +7,14 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check-contrast": "node scripts/check-contrast.mjs"
   },
   "dependencies": {
+    "@nadeemmurtaza/design-system": "^0.1.1",
     "@tailwindcss/vite": "^4.3.3",
     "daisyui": "^5.7.50",
+    "lucide-react": "^1.61.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-router-dom": "^7.18.4",

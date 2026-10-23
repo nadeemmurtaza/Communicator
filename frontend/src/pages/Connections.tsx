@@ -29,15 +29,15 @@ export function Connections() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Connections & Universal Gateways</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-xl font-semibold text-[var(--color-ink)]">Connections & Universal Gateways</h1>
+          <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
             Connect any SMS provider, any Email provider, any VoIP/SIP trunk, and manage multi-channel credentials.
           </p>
         </div>
 
         <Link
           to="/self-improving"
-          className="inline-flex items-center gap-1.5 self-start rounded-md bg-indigo-50 border border-indigo-200 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition-colors"
+          className="inline-flex items-center gap-1.5 self-start rounded-md bg-[var(--color-accent-soft)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-accent)] hover:bg-indigo-100 transition-colors"
         >
           <span>🤖</span>
           <span>Configure AI Model Hub</span>
@@ -49,13 +49,13 @@ export function Connections() {
       {notice && <Banner tone="success">{notice}</Banner>}
 
       {/* Primary Tabs */}
-      <div className="flex border-b border-slate-200 overflow-x-auto gap-2">
+      <div className="flex border-b border-[var(--color-border)] overflow-x-auto gap-2">
         <button
           onClick={() => setActiveTab('gateways')}
           className={`py-2 px-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
             activeTab === 'gateways'
-              ? 'border-indigo-600 text-indigo-600 font-semibold'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
+              ? 'border-indigo-600 text-[var(--color-accent)] font-semibold'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
           🌐 Universal Gateways (Any SMS, Email, VoIP/SIP)
@@ -64,8 +64,8 @@ export function Connections() {
           onClick={() => setActiveTab('stripe')}
           className={`py-2 px-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors flex items-center gap-1.5 ${
             activeTab === 'stripe'
-              ? 'border-indigo-600 text-indigo-600 font-semibold'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
+              ? 'border-indigo-600 text-[var(--color-accent)] font-semibold'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
           <span>💳</span>
@@ -75,8 +75,8 @@ export function Connections() {
           onClick={() => setActiveTab('trackers')}
           className={`py-2 px-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors flex items-center gap-1.5 ${
             activeTab === 'trackers'
-              ? 'border-indigo-600 text-indigo-600 font-semibold'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
+              ? 'border-indigo-600 text-[var(--color-accent)] font-semibold'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
           <span>🎯</span>
@@ -86,8 +86,8 @@ export function Connections() {
           onClick={() => setActiveTab('whatsapp')}
           className={`py-2 px-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
             activeTab === 'whatsapp'
-              ? 'border-indigo-600 text-indigo-600 font-semibold'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
+              ? 'border-indigo-600 text-[var(--color-accent)] font-semibold'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
           💬 WhatsApp Cloud API
@@ -96,8 +96,8 @@ export function Connections() {
           onClick={() => setActiveTab('business')}
           className={`py-2 px-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
             activeTab === 'business'
-              ? 'border-indigo-600 text-indigo-600 font-semibold'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
+              ? 'border-indigo-600 text-[var(--color-accent)] font-semibold'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
           🏢 Business Profile & Hours
@@ -106,8 +106,8 @@ export function Connections() {
           onClick={() => setActiveTab('templates')}
           className={`py-2 px-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
             activeTab === 'templates'
-              ? 'border-indigo-600 text-indigo-600 font-semibold'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
+              ? 'border-indigo-600 text-[var(--color-accent)] font-semibold'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
           📋 Meta HSM Templates
@@ -137,7 +137,7 @@ export function Connections() {
             onError={setError}
           />
         ) : (
-          <p className="text-sm text-slate-500">Loading…</p>
+          <p className="text-sm text-[var(--color-ink-muted)]">Loading…</p>
         )
       )}
 
@@ -152,7 +152,7 @@ export function Connections() {
             onError={setError}
           />
         ) : (
-          <p className="text-sm text-slate-500">Loading…</p>
+          <p className="text-sm text-[var(--color-ink-muted)]">Loading…</p>
         )
       )}
 
@@ -160,7 +160,7 @@ export function Connections() {
         data ? (
           <TemplatesSection onError={setError} wabaConfigured={!!data.whatsapp.wabaId} />
         ) : (
-          <p className="text-sm text-slate-500">Loading…</p>
+          <p className="text-sm text-[var(--color-ink-muted)]">Loading…</p>
         )
       )}
     </div>
@@ -240,9 +240,9 @@ function UniversalGatewaysSection({
   return (
     <div className="space-y-6">
       {/* Overview & Action Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4 rounded-lg border border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-[var(--color-surface)] p-4 rounded-lg border border-[var(--color-border)]">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider mr-2">Filter:</span>
+          <span className="text-xs font-semibold text-[var(--color-ink-muted)] uppercase tracking-wider mr-2">Filter:</span>
           {[
             { id: 'all', label: 'All Gateways' },
             { id: 'sms', label: '📱 SMS Gateways' },
@@ -254,8 +254,8 @@ function UniversalGatewaysSection({
               onClick={() => setFilterType(item.id)}
               className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                 filterType === item.id
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  ? 'bg-[var(--color-accent)] text-white'
+                  : 'bg-slate-100 text-[var(--color-ink-muted)] hover:bg-slate-200'
               }`}
             >
               {item.label}
@@ -265,7 +265,7 @@ function UniversalGatewaysSection({
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 px-3.5 py-1.5 text-xs font-medium text-white shadow-sm transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-md bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] px-3.5 py-1.5 text-xs font-medium text-white shadow-sm transition-colors"
         >
           <span>+</span>
           <span>Connect Any Provider</span>
@@ -274,13 +274,13 @@ function UniversalGatewaysSection({
 
       {/* Gateway Cards Grid */}
       {loading ? (
-        <p className="text-sm text-slate-500 py-6 text-center">Loading gateways…</p>
+        <p className="text-sm text-[var(--color-ink-muted)] py-6 text-center">Loading gateways…</p>
       ) : gateways.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center bg-white">
-          <p className="text-sm text-slate-500">No gateways configured for this filter.</p>
+        <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center bg-[var(--color-surface)]">
+          <p className="text-sm text-[var(--color-ink-muted)]">No gateways configured for this filter.</p>
           <button
             onClick={() => setShowAddModal(true)}
-            className="mt-3 text-xs font-medium text-indigo-600 hover:underline"
+            className="mt-3 text-xs font-medium text-[var(--color-accent)] hover:underline"
           >
             + Connect your first provider
           </button>
@@ -290,23 +290,23 @@ function UniversalGatewaysSection({
           {gateways.map((gw) => (
             <div
               key={gw.id}
-              className={`flex flex-col justify-between rounded-lg border bg-white p-4 shadow-xs transition-shadow hover:shadow-sm ${
-                gw.is_default ? 'border-indigo-300 ring-1 ring-indigo-200' : 'border-slate-200'
+              className={`flex flex-col justify-between rounded-lg border bg-[var(--color-surface)] p-4 shadow-xs transition-shadow hover:shadow-sm ${
+                gw.is_default ? 'border-indigo-300 ring-1 ring-indigo-200' : 'border-[var(--color-border)]'
               }`}
             >
               <div>
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-base font-semibold text-slate-900 truncate">{gw.name}</span>
+                      <span className="text-base font-semibold text-[var(--color-ink)] truncate">{gw.name}</span>
                       {gw.is_default && (
-                        <span className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-3xs font-semibold text-indigo-700 border border-indigo-200">
+                        <span className="inline-flex items-center rounded-full bg-[var(--color-accent-soft)] px-2 py-0.5 text-3xs font-semibold text-[var(--color-accent)] border border-[var(--color-border)]">
                           ★ Default
                         </span>
                       )}
                     </div>
-                    <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-500">
-                      <span className="font-mono text-2xs uppercase px-1.5 py-0.5 bg-slate-100 rounded text-slate-600">
+                    <div className="mt-0.5 flex items-center gap-2 text-xs text-[var(--color-ink-muted)]">
+                      <span className="font-mono text-2xs uppercase px-1.5 py-0.5 bg-slate-100 rounded text-[var(--color-ink-muted)]">
                         {gw.provider}
                       </span>
                       <span>·</span>
@@ -321,7 +321,7 @@ function UniversalGatewaysSection({
                         ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                         : gw.test_status === 'error'
                           ? 'bg-red-50 text-red-700 border border-red-200'
-                          : 'bg-slate-100 text-slate-600 border border-slate-200'
+                          : 'bg-slate-100 text-[var(--color-ink-muted)] border border-[var(--color-border)]'
                     }`}
                   >
                     <span
@@ -342,7 +342,7 @@ function UniversalGatewaysSection({
                 </div>
 
                 {/* Configuration Specs Preview */}
-                <div className="my-3 rounded-md bg-slate-50 p-2.5 text-xs text-slate-600 space-y-1 font-mono">
+                <div className="my-3 rounded-md bg-[var(--color-page)] p-2.5 text-xs text-[var(--color-ink-muted)] space-y-1 font-mono">
                   {gw.gateway_type === 'sms' && (
                     <>
                       {gw.config?.from_number && <div>From: {gw.config.from_number}</div>}
@@ -362,33 +362,33 @@ function UniversalGatewaysSection({
                     </>
                   )}
                   {Object.entries(gw.credentials || {}).map(([k, v]) => (
-                    <div key={k} className="text-2xs text-slate-500">
-                      {k}: <span className="text-slate-700">{v || 'configured'}</span>
+                    <div key={k} className="text-2xs text-[var(--color-ink-muted)]">
+                      {k}: <span className="text-[var(--color-ink)]">{v || 'configured'}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Action Toolbar */}
-              <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs gap-2">
+              <div className="mt-3 pt-3 border-t border-[var(--color-border)] flex items-center justify-between text-xs gap-2">
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => handleTestConnection(gw.id)}
                     disabled={testingId === gw.id}
-                    className="rounded border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                    className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-50"
                   >
                     {testingId === gw.id ? 'Pinging…' : '⚡ Test'}
                   </button>
                   <button
                     onClick={() => setPingModalGateway(gw)}
-                    className="rounded border border-slate-200 bg-white px-2 py-1 font-medium text-slate-700 hover:bg-slate-50"
+                    className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)]"
                   >
                     ✉ Ping
                   </button>
                   {!gw.is_default && (
                     <button
                       onClick={() => handleSetDefault(gw.id)}
-                      className="rounded border border-slate-200 bg-white px-2 py-1 font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                      className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 font-medium text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-page)]"
                     >
                       ★ Default
                     </button>
@@ -397,7 +397,7 @@ function UniversalGatewaysSection({
 
                 <button
                   onClick={() => handleDelete(gw.id)}
-                  className="text-slate-400 hover:text-red-600 transition-colors p-1"
+                  className="text-[var(--color-ink-faint)] hover:text-red-600 transition-colors p-1"
                   title="Delete Gateway"
                 >
                   ✕
@@ -556,17 +556,17 @@ function AddGatewayModal({
   const providerList = catalog ? catalog[gatewayType] || [] : []
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
-      <div className="w-full max-w-lg rounded-xl bg-white shadow-xl border border-slate-200 overflow-hidden max-h-[90vh] flex flex-col">
-        <div className="border-b border-slate-200 px-5 py-3.5 flex items-center justify-between bg-slate-50">
-          <h2 className="text-sm font-semibold text-slate-900">+ Connect Any Provider</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-sm">✕</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-accent)]/40 p-4 backdrop-blur-xs">
+      <div className="w-full max-w-lg rounded-xl bg-[var(--color-surface)] shadow-xl border border-[var(--color-border)] overflow-hidden max-h-[90vh] flex flex-col">
+        <div className="border-b border-[var(--color-border)] px-5 py-3.5 flex items-center justify-between bg-[var(--color-page)]">
+          <h2 className="text-sm font-semibold text-[var(--color-ink)]">+ Connect Any Provider</h2>
+          <button onClick={onClose} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] text-sm">✕</button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
           {/* Gateway Type Selection */}
           <div>
-            <label className="block font-medium text-slate-700 mb-1">Gateway Type</label>
+            <label className="block font-medium text-[var(--color-ink)] mb-1">Gateway Type</label>
             <div className="grid grid-cols-3 gap-2">
               {[
                 { id: 'sms', label: '📱 SMS' },
@@ -579,8 +579,8 @@ function AddGatewayModal({
                   onClick={() => setGatewayType(t.id as any)}
                   className={`py-1.5 px-3 rounded-md border text-center font-medium ${
                     gatewayType === t.id
-                      ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
-                      : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                      ? 'border-indigo-600 bg-[var(--color-accent-soft)] text-[var(--color-accent)]'
+                      : 'border-[var(--color-border)] hover:bg-[var(--color-page)] text-[var(--color-ink)]'
                   }`}
                 >
                   {t.label}
@@ -591,7 +591,7 @@ function AddGatewayModal({
 
           {/* Provider Selection */}
           <div>
-            <label className="block font-medium text-slate-700 mb-1">Select Provider</label>
+            <label className="block font-medium text-[var(--color-ink)] mb-1">Select Provider</label>
             <select
               value={provider}
               onChange={(e) => setProvider(e.target.value)}
@@ -606,7 +606,7 @@ function AddGatewayModal({
           </div>
 
           <div>
-            <label className="block font-medium text-slate-700 mb-1">Gateway Name</label>
+            <label className="block font-medium text-[var(--color-ink)] mb-1">Gateway Name</label>
             <input
               type="text"
               required
@@ -619,10 +619,10 @@ function AddGatewayModal({
 
           {/* Dynamic Provider Input Fields */}
           {provider === 'custom_http' && (
-            <div className="space-y-3 p-3 bg-slate-50 rounded-md border border-slate-200">
-              <p className="font-semibold text-slate-700">Custom HTTP REST Gateway Settings</p>
+            <div className="space-y-3 p-3 bg-[var(--color-page)] rounded-md border border-[var(--color-border)]">
+              <p className="font-semibold text-[var(--color-ink)]">Custom HTTP REST Gateway Settings</p>
               <div>
-                <label className="block text-2xs text-slate-500 mb-0.5">Endpoint URL</label>
+                <label className="block text-2xs text-[var(--color-ink-muted)] mb-0.5">Endpoint URL</label>
                 <input
                   type="url"
                   required
@@ -633,7 +633,7 @@ function AddGatewayModal({
                 />
               </div>
               <div>
-                <label className="block text-2xs text-slate-500 mb-0.5">Bearer Token / Secret Key</label>
+                <label className="block text-2xs text-[var(--color-ink-muted)] mb-0.5">Bearer Token / Secret Key</label>
                 <input
                   type="password"
                   value={bearerToken}
@@ -646,11 +646,11 @@ function AddGatewayModal({
           )}
 
           {provider === 'smtp' && (
-            <div className="space-y-3 p-3 bg-slate-50 rounded-md border border-slate-200">
-              <p className="font-semibold text-slate-700">SMTP Server Configuration</p>
+            <div className="space-y-3 p-3 bg-[var(--color-page)] rounded-md border border-[var(--color-border)]">
+              <p className="font-semibold text-[var(--color-ink)]">SMTP Server Configuration</p>
               <div className="grid grid-cols-3 gap-2">
                 <div className="col-span-2">
-                  <label className="block text-2xs text-slate-500 mb-0.5">SMTP Host</label>
+                  <label className="block text-2xs text-[var(--color-ink-muted)] mb-0.5">SMTP Host</label>
                   <input
                     type="text"
                     required
@@ -661,7 +661,7 @@ function AddGatewayModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-2xs text-slate-500 mb-0.5">Port</label>
+                  <label className="block text-2xs text-[var(--color-ink-muted)] mb-0.5">Port</label>
                   <input
                     type="number"
                     value={smtpPort}
@@ -672,7 +672,7 @@ function AddGatewayModal({
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-2xs text-slate-500 mb-0.5">Username</label>
+                  <label className="block text-2xs text-[var(--color-ink-muted)] mb-0.5">Username</label>
                   <input
                     type="text"
                     value={smtpUsername}
@@ -681,7 +681,7 @@ function AddGatewayModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-2xs text-slate-500 mb-0.5">Password</label>
+                  <label className="block text-2xs text-[var(--color-ink-muted)] mb-0.5">Password</label>
                   <input
                     type="password"
                     value={smtpPassword}
@@ -692,7 +692,7 @@ function AddGatewayModal({
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-2xs text-slate-500 mb-0.5">From Address</label>
+                  <label className="block text-2xs text-[var(--color-ink-muted)] mb-0.5">From Address</label>
                   <input
                     type="email"
                     value={fromAddress}
@@ -702,7 +702,7 @@ function AddGatewayModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-2xs text-slate-500 mb-0.5">From Name</label>
+                  <label className="block text-2xs text-[var(--color-ink-muted)] mb-0.5">From Name</label>
                   <input
                     type="text"
                     value={fromName}
@@ -716,11 +716,11 @@ function AddGatewayModal({
           )}
 
           {provider === 'sip_trunk' && (
-            <div className="space-y-3 p-3 bg-slate-50 rounded-md border border-slate-200">
-              <p className="font-semibold text-slate-700">Generic SIP Trunk / PBX Settings</p>
+            <div className="space-y-3 p-3 bg-[var(--color-page)] rounded-md border border-[var(--color-border)]">
+              <p className="font-semibold text-[var(--color-ink)]">Generic SIP Trunk / PBX Settings</p>
               <div className="grid grid-cols-3 gap-2">
                 <div className="col-span-2">
-                  <label className="block text-2xs text-slate-500 mb-0.5">SIP Server IP / Host</label>
+                  <label className="block text-2xs text-[var(--color-ink-muted)] mb-0.5">SIP Server IP / Host</label>
                   <input
                     type="text"
                     required
@@ -731,7 +731,7 @@ function AddGatewayModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-2xs text-slate-500 mb-0.5">SIP Port</label>
+                  <label className="block text-2xs text-[var(--color-ink-muted)] mb-0.5">SIP Port</label>
                   <input
                     type="number"
                     value={sipPort}
@@ -742,7 +742,7 @@ function AddGatewayModal({
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-2xs text-slate-500 mb-0.5">SIP Auth User</label>
+                  <label className="block text-2xs text-[var(--color-ink-muted)] mb-0.5">SIP Auth User</label>
                   <input
                     type="text"
                     value={sipUser}
@@ -752,7 +752,7 @@ function AddGatewayModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-2xs text-slate-500 mb-0.5">SIP Auth Secret</label>
+                  <label className="block text-2xs text-[var(--color-ink-muted)] mb-0.5">SIP Auth Secret</label>
                   <input
                     type="password"
                     value={sipPass}
@@ -762,7 +762,7 @@ function AddGatewayModal({
                 </div>
               </div>
               <div>
-                <label className="block text-2xs text-slate-500 mb-0.5">Outbound Caller ID</label>
+                <label className="block text-2xs text-[var(--color-ink-muted)] mb-0.5">Outbound Caller ID</label>
                 <input
                   type="text"
                   value={fromNumber}
@@ -776,10 +776,10 @@ function AddGatewayModal({
 
           {/* Generic API Key / Secret Form for REST Providers */}
           {provider !== 'custom_http' && provider !== 'smtp' && provider !== 'sip_trunk' && (
-            <div className="space-y-3 p-3 bg-slate-50 rounded-md border border-slate-200">
-              <p className="font-semibold text-slate-700">{provider.toUpperCase()} Credentials</p>
+            <div className="space-y-3 p-3 bg-[var(--color-page)] rounded-md border border-[var(--color-border)]">
+              <p className="font-semibold text-[var(--color-ink)]">{provider.toUpperCase()} Credentials</p>
               <div>
-                <label className="block text-2xs text-slate-500 mb-0.5">API Key / Token / Account SID</label>
+                <label className="block text-2xs text-[var(--color-ink-muted)] mb-0.5">API Key / Token / Account SID</label>
                 <input
                   type="password"
                   required
@@ -793,7 +793,7 @@ function AddGatewayModal({
                 />
               </div>
               <div>
-                <label className="block text-2xs text-slate-500 mb-0.5">Secret / Auth Token (if required)</label>
+                <label className="block text-2xs text-[var(--color-ink-muted)] mb-0.5">Secret / Auth Token (if required)</label>
                 <input
                   type="password"
                   value={authToken}
@@ -803,7 +803,7 @@ function AddGatewayModal({
                 />
               </div>
               <div>
-                <label className="block text-2xs text-slate-500 mb-0.5">Sender ID / Phone / From Email</label>
+                <label className="block text-2xs text-[var(--color-ink-muted)] mb-0.5">Sender ID / Phone / From Email</label>
                 <input
                   type="text"
                   value={fromNumber || fromAddress}
@@ -819,28 +819,28 @@ function AddGatewayModal({
           )}
 
           {/* Set as Default Checkbox */}
-          <label className="flex items-center gap-2 text-xs text-slate-700 pt-2">
+          <label className="flex items-center gap-2 text-xs text-[var(--color-ink)] pt-2">
             <input
               type="checkbox"
               checked={isDefault}
               onChange={(e) => setIsDefault(e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-indigo-600"
+              className="h-4 w-4 rounded border-slate-300 text-[var(--color-accent)]"
             />
             <span>Set as active default gateway for {gatewayType.toUpperCase()}</span>
           </label>
 
-          <div className="flex justify-end gap-2 pt-4 border-t border-slate-200">
+          <div className="flex justify-end gap-2 pt-4 border-t border-[var(--color-border)]">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="rounded-md bg-indigo-600 hover:bg-indigo-700 px-4 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+              className="rounded-md bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] px-4 py-1.5 text-xs font-medium text-white disabled:opacity-50"
             >
               {saving ? 'Connecting…' : 'Save & Connect Provider'}
             </button>
@@ -891,16 +891,16 @@ function SendPingModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
-      <div className="w-full max-w-md rounded-xl bg-white shadow-xl border border-slate-200 p-5 space-y-4 text-xs">
-        <div className="flex items-center justify-between border-b pb-3 border-slate-100">
-          <h3 className="font-semibold text-slate-900 text-sm">Send Test Ping · {gateway.name}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-accent)]/40 p-4 backdrop-blur-xs">
+      <div className="w-full max-w-md rounded-xl bg-[var(--color-surface)] shadow-xl border border-[var(--color-border)] p-5 space-y-4 text-xs">
+        <div className="flex items-center justify-between border-b pb-3 border-[var(--color-border)]">
+          <h3 className="font-semibold text-[var(--color-ink)] text-sm">Send Test Ping · {gateway.name}</h3>
+          <button onClick={onClose} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)]">✕</button>
         </div>
 
         <form onSubmit={handleSend} className="space-y-3">
           <div>
-            <label className="block text-2xs text-slate-500 mb-1">
+            <label className="block text-2xs text-[var(--color-ink-muted)] mb-1">
               Destination ({gateway.gateway_type === 'email' ? 'Email Address' : 'Phone Number or SIP URI'})
             </label>
             <input
@@ -913,7 +913,7 @@ function SendPingModal({
           </div>
 
           <div>
-            <label className="block text-2xs text-slate-500 mb-1">Test Payload</label>
+            <label className="block text-2xs text-[var(--color-ink-muted)] mb-1">Test Payload</label>
             <textarea
               rows={2}
               value={message}
@@ -926,14 +926,14 @@ function SendPingModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded border border-slate-300 px-3 py-1.5 text-slate-600 hover:bg-slate-50"
+              className="rounded border border-slate-300 px-3 py-1.5 text-[var(--color-ink-muted)] hover:bg-[var(--color-page)]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={sending}
-              className="rounded bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 text-white font-medium disabled:opacity-50"
+              className="rounded bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] px-3 py-1.5 text-white font-medium disabled:opacity-50"
             >
               {sending ? 'Sending…' : 'Transmit Test Ping'}
             </button>
@@ -962,10 +962,10 @@ function SectionCard({
   children: React.ReactNode
 }) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white">
-      <div className="border-b border-slate-100 px-5 py-4">
-        <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
-        <p className="mt-0.5 text-xs text-slate-500">{description}</p>
+    <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
+      <div className="border-b border-[var(--color-border)] px-5 py-4">
+        <h2 className="text-sm font-semibold text-[var(--color-ink)]">{title}</h2>
+        <p className="mt-0.5 text-xs text-[var(--color-ink-muted)]">{description}</p>
       </div>
       <div className="p-5">{children}</div>
     </section>
@@ -987,7 +987,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-slate-500">{label}</label>
+      <label className="block text-xs font-medium text-[var(--color-ink-muted)]">{label}</label>
       <input
         type={secret ? 'password' : 'text'}
         value={value}
@@ -1062,7 +1062,7 @@ function WhatsAppSection({
         <span
           className={`inline-block h-2 w-2 rounded-full ${connected ? 'bg-emerald-500' : 'bg-slate-300'}`}
         />
-        <span className="text-sm text-slate-700">
+        <span className="text-sm text-[var(--color-ink)]">
           {connected
             ? `Connected — ${data.whatsapp.verifiedName || data.whatsapp.displayNumber}`
             : 'Not verified yet'}
@@ -1093,11 +1093,11 @@ function WhatsAppSection({
         />
       </div>
 
-      <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-4 py-3">
-        <p className="text-xs font-medium text-slate-500">Webhook setup (paste into Meta's console)</p>
+      <div className="mt-4 rounded-md border border-[var(--color-border)] bg-[var(--color-page)] px-4 py-3">
+        <p className="text-xs font-medium text-[var(--color-ink-muted)]">Webhook setup (paste into Meta's console)</p>
         <dl className="mt-2 space-y-1 text-sm">
           <div className="flex gap-2">
-            <dt className="shrink-0 text-slate-500">Callback URL path:</dt>
+            <dt className="shrink-0 text-[var(--color-ink-muted)]">Callback URL path:</dt>
             <dd className="font-mono text-xs text-slate-800">{data.whatsapp.webhookCallbackPath}</dd>
           </div>
         </dl>
@@ -1116,14 +1116,14 @@ function WhatsAppSection({
         <button
           onClick={save}
           disabled={saving}
-          className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
           {saving ? 'Saving…' : 'Save'}
         </button>
         <button
           onClick={verify}
           disabled={verifying}
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-50"
         >
           {verifying ? 'Verifying…' : 'Verify connection'}
         </button>
@@ -1184,7 +1184,7 @@ function BusinessProfileSection({
       <div className="space-y-4">
         <Field label="Business name" value={name} onChange={setName} placeholder="Acme Inc." />
         <div>
-          <label className="block text-xs font-medium text-slate-500">Description</label>
+          <label className="block text-xs font-medium text-[var(--color-ink-muted)]">Description</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -1194,7 +1194,7 @@ function BusinessProfileSection({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-500">Agent guidelines</label>
+          <label className="block text-xs font-medium text-[var(--color-ink-muted)]">Agent guidelines</label>
           <textarea
             value={guidelines}
             onChange={(e) => setGuidelines(e.target.value)}
@@ -1203,7 +1203,7 @@ function BusinessProfileSection({
             className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
           />
         </div>
-        <label className="flex items-center gap-2 text-sm text-slate-700">
+        <label className="flex items-center gap-2 text-sm text-[var(--color-ink)]">
           <input
             type="checkbox"
             checked={autoReply}
@@ -1213,8 +1213,8 @@ function BusinessProfileSection({
           Auto-reply enabled
         </label>
 
-        <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
-          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+        <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-page)] p-4">
+          <label className="flex items-center gap-2 text-sm font-medium text-[var(--color-ink)]">
             <input
               type="checkbox"
               checked={hoursEnabled}
@@ -1227,7 +1227,7 @@ function BusinessProfileSection({
             <div className="mt-3 space-y-3">
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-500">Start (24h)</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink-muted)]">Start (24h)</label>
                   <input
                     type="number"
                     min={0}
@@ -1238,7 +1238,7 @@ function BusinessProfileSection({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-500">End (24h)</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink-muted)]">End (24h)</label>
                   <input
                     type="number"
                     min={0}
@@ -1249,7 +1249,7 @@ function BusinessProfileSection({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-500">Timezone</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink-muted)]">Timezone</label>
                   <input
                     value={timezone}
                     onChange={(e) => setTimezone(e.target.value)}
@@ -1259,7 +1259,7 @@ function BusinessProfileSection({
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-500">
+                <label className="block text-xs font-medium text-[var(--color-ink-muted)]">
                   Away message (sent outside hours instead of an AI reply)
                 </label>
                 <textarea
@@ -1276,7 +1276,7 @@ function BusinessProfileSection({
       <button
         onClick={save}
         disabled={saving}
-        className="mt-4 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+        className="mt-4 rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
       >
         {saving ? 'Saving…' : 'Save'}
       </button>
@@ -1340,7 +1340,7 @@ function TemplatesSection({
       description="Pre-approved messages for re-engaging a lead outside the 24h session window."
     >
       {!wabaConfigured ? (
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-[var(--color-ink-muted)]">
           Set a WhatsApp Business Account ID above to manage templates.
         </p>
       ) : (
@@ -1348,17 +1348,17 @@ function TemplatesSection({
           <div className="mb-3 flex justify-end">
             <button
               onClick={() => setShowForm((v) => !v)}
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)]"
             >
               {showForm ? 'Cancel' : 'New template'}
             </button>
           </div>
 
           {showForm && (
-            <form onSubmit={submit} className="mb-4 space-y-3 rounded-md border border-slate-200 p-4">
+            <form onSubmit={submit} className="mb-4 space-y-3 rounded-md border border-[var(--color-border)] p-4">
               <Field label="Name" value={name} onChange={setName} placeholder="order_update" />
               <div>
-                <label className="block text-xs font-medium text-slate-500">Category</label>
+                <label className="block text-xs font-medium text-[var(--color-ink-muted)]">Category</label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
@@ -1370,7 +1370,7 @@ function TemplatesSection({
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-500">Body text</label>
+                <label className="block text-xs font-medium text-[var(--color-ink-muted)]">Body text</label>
                 <textarea
                   value={bodyText}
                   onChange={(e) => setBodyText(e.target.value)}
@@ -1382,7 +1382,7 @@ function TemplatesSection({
               <button
                 type="submit"
                 disabled={saving}
-                className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
               >
                 {saving ? 'Submitting…' : 'Submit for approval'}
               </button>
@@ -1390,16 +1390,16 @@ function TemplatesSection({
           )}
 
           {templates === null ? (
-            <p className="text-sm text-slate-500">Loading…</p>
+            <p className="text-sm text-[var(--color-ink-muted)]">Loading…</p>
           ) : templates.length === 0 ? (
-            <p className="text-sm text-slate-500">No templates yet.</p>
+            <p className="text-sm text-[var(--color-ink-muted)]">No templates yet.</p>
           ) : (
-            <ul className="divide-y divide-slate-100 rounded-md border border-slate-200">
+            <ul className="divide-y divide-slate-100 rounded-md border border-[var(--color-border)]">
               {templates.map((t) => (
                 <li key={t.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
                   <div className="min-w-0">
                     <span className="font-medium text-slate-800">{t.name}</span>
-                    <span className="ml-2 text-xs text-slate-500">
+                    <span className="ml-2 text-xs text-[var(--color-ink-muted)]">
                       {t.category} · {t.language} ·{' '}
                       <span
                         className={
@@ -1416,7 +1416,7 @@ function TemplatesSection({
                   </div>
                   <button
                     onClick={() => deleteTemplate(t.name)}
-                    className="shrink-0 text-xs font-medium text-slate-400 hover:text-red-600"
+                    className="shrink-0 text-xs font-medium text-[var(--color-ink-faint)] hover:text-red-600"
                   >
                     Delete
                   </button>
@@ -1518,7 +1518,7 @@ function StripeBillingSection({
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-500">
+      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center text-[var(--color-ink-muted)]">
         <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
         <p className="mt-2 text-sm">Loading Stripe configuration...</p>
       </div>
@@ -1527,24 +1527,24 @@ function StripeBillingSection({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-100 pb-5">
+      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-xs space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[var(--color-border)] pb-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 border border-indigo-100 text-2xl">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-accent-soft)] border border-indigo-100 text-2xl">
               💳
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <h2 className="text-base font-bold text-[var(--color-ink)] flex items-center gap-2">
                 Stripe Billing & Sidebar Integration
                 <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
                   config?.last_test_status === 'connected' || config?.last_test_status === 'connected_simulated'
                     ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                    : 'bg-slate-100 text-slate-600'
+                    : 'bg-slate-100 text-[var(--color-ink-muted)]'
                 }`}>
                   {config?.last_test_status === 'connected' ? 'Live Connected' : (config?.last_test_status === 'connected_simulated' ? 'Sandbox Active' : 'Untested')}
                 </span>
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[var(--color-ink-muted)]">
                 Powers real-time subscription badges, MRR & LTV metrics, customer invoices, and 1-click refunds in the conversation drawer.
               </p>
             </div>
@@ -1554,14 +1554,14 @@ function StripeBillingSection({
             <button
               onClick={handleTest}
               disabled={testing}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 shadow-2xs cursor-pointer transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-50 shadow-2xs cursor-pointer transition-colors"
             >
               <span>{testing ? 'Testing...' : '⚡ Test Connection'}</span>
             </button>
             <button
               onClick={handleSave}
               disabled={saving}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-50 shadow-xs cursor-pointer transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-4 py-1.5 text-xs font-bold text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50 shadow-xs cursor-pointer transition-colors"
             >
               <span>{saving ? 'Saving...' : 'Save Configuration'}</span>
             </button>
@@ -1584,22 +1584,22 @@ function StripeBillingSection({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Stripe Account Name</label>
+            <label className="block text-xs font-bold text-[var(--color-ink)] mb-1">Stripe Account Name</label>
             <input
               type="text"
               value={accountName}
               onChange={(e) => setAccountName(e.target.value)}
               placeholder="e.g. Primary Production Billing"
-              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-indigo-500 focus:outline-hidden"
+              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-hidden"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Default Workspace Currency</label>
+            <label className="block text-xs font-bold text-[var(--color-ink)] mb-1">Default Workspace Currency</label>
             <select
               value={currency}
               onChange={(e) => setCurrency(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-indigo-500 focus:outline-hidden"
+              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-hidden"
             >
               <option value="usd">USD ($)</option>
               <option value="eur">EUR (€)</option>
@@ -1611,9 +1611,9 @@ function StripeBillingSection({
 
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-bold text-slate-700">Stripe Secret Key (sk_...)</label>
+              <label className="text-xs font-bold text-[var(--color-ink)]">Stripe Secret Key (sk_...)</label>
               {config?.has_api_key && (
-                <span className="text-[10px] text-slate-400 font-mono">Current: {config.api_key_masked}</span>
+                <span className="text-[10px] text-[var(--color-ink-faint)] font-mono">Current: {config.api_key_masked}</span>
               )}
             </div>
             <input
@@ -1621,29 +1621,29 @@ function StripeBillingSection({
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder={config?.has_api_key ? '•••••••••••••••• (Leave blank to keep)' : 'sk_test_... or sk_live_...'}
-              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-indigo-500 focus:outline-hidden font-mono"
+              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-hidden font-mono"
             />
-            <p className="text-[11px] text-slate-400 mt-1">
+            <p className="text-[11px] text-[var(--color-ink-faint)] mt-1">
               Leave blank to use the built-in Sandbox Simulator with high-fidelity customer mock subscriptions.
             </p>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Stripe Publishable Key (pk_...)</label>
+            <label className="block text-xs font-bold text-[var(--color-ink)] mb-1">Stripe Publishable Key (pk_...)</label>
             <input
               type="text"
               value={publishableKey}
               onChange={(e) => setPublishableKey(e.target.value)}
               placeholder="pk_test_... or pk_live_..."
-              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-indigo-500 focus:outline-hidden font-mono"
+              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-hidden font-mono"
             />
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-bold text-slate-700">Stripe Webhook Signing Secret (whsec_...)</label>
+              <label className="text-xs font-bold text-[var(--color-ink)]">Stripe Webhook Signing Secret (whsec_...)</label>
               {config?.has_webhook_secret && (
-                <span className="text-[10px] text-slate-400 font-mono">Current: {config.webhook_secret_masked}</span>
+                <span className="text-[10px] text-[var(--color-ink-faint)] font-mono">Current: {config.webhook_secret_masked}</span>
               )}
             </div>
             <input
@@ -1651,7 +1651,7 @@ function StripeBillingSection({
               value={webhookSecret}
               onChange={(e) => setWebhookSecret(e.target.value)}
               placeholder={config?.has_webhook_secret ? '•••••••••••••••• (Leave blank to keep)' : 'whsec_...'}
-              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 focus:border-indigo-500 focus:outline-hidden font-mono"
+              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-hidden font-mono"
             />
           </div>
 
@@ -1661,9 +1661,9 @@ function StripeBillingSection({
                 type="checkbox"
                 checked={testMode}
                 onChange={(e) => setTestMode(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                className="h-4 w-4 rounded border-slate-300 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
               />
-              <span className="text-xs font-semibold text-slate-700">
+              <span className="text-xs font-semibold text-[var(--color-ink)]">
                 Enable Sandbox / Test Mode Simulator
               </span>
             </label>
@@ -1673,9 +1673,9 @@ function StripeBillingSection({
                 type="checkbox"
                 checked={isEnabled}
                 onChange={(e) => setIsEnabled(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                className="h-4 w-4 rounded border-slate-300 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
               />
-              <span className="text-xs font-semibold text-slate-700">
+              <span className="text-xs font-semibold text-[var(--color-ink)]">
                 Stripe Integration Enabled in Conversation Sidebar
               </span>
             </label>
@@ -1833,7 +1833,7 @@ function IssueTrackersSection({
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-500">
+      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center text-[var(--color-ink-muted)]">
         <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
         <p className="mt-2 text-sm">Loading issue tracker &amp; Slack configurations...</p>
       </div>
@@ -1847,16 +1847,16 @@ function IssueTrackersSection({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-2">
+      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-xs space-y-2">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50 border border-purple-100 text-2xl">
             🎯
           </div>
           <div>
-            <h2 className="text-base font-bold text-slate-900">
+            <h2 className="text-base font-bold text-[var(--color-ink)]">
               1-Click Issue Trackers &amp; Slack Workspace Sync
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[var(--color-ink-muted)]">
               Connect Linear, GitHub Issues, Jira, and Slack so support agents can escalate bugs and sync conversation threads directly with engineering.
             </p>
           </div>
@@ -1865,13 +1865,13 @@ function IssueTrackersSection({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* 1. Linear */}
-        <div className="rounded-xl border border-purple-100 bg-white p-5 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="rounded-xl border border-purple-100 bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
             <div className="flex items-center gap-2">
               <span className="text-xl">🟣</span>
               <div>
-                <h3 className="font-bold text-sm text-slate-900">Linear</h3>
-                <span className="text-[10px] text-slate-400 font-mono">
+                <h3 className="font-bold text-sm text-[var(--color-ink)]">Linear</h3>
+                <span className="text-[10px] text-[var(--color-ink-faint)] font-mono">
                   Status: {linCfg?.last_test_status || 'untested'}
                 </span>
               </div>
@@ -1880,7 +1880,7 @@ function IssueTrackersSection({
               <button
                 onClick={() => handleTest('linear')}
                 disabled={testingProvider === 'linear'}
-                className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[11px] font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] cursor-pointer"
               >
                 {testingProvider === 'linear' ? 'Testing...' : '⚡ Test'}
               </button>
@@ -1896,7 +1896,7 @@ function IssueTrackersSection({
 
           <div className="space-y-3 text-xs">
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+              <label className="block text-[11px] font-bold text-[var(--color-ink)] mb-1">
                 API Key (lin_api_...)
               </label>
               <input
@@ -1904,11 +1904,11 @@ function IssueTrackersSection({
                 placeholder={linCfg?.credentials?.has_api_key ? '•••••••••••••••• (Leave blank to keep)' : 'lin_api_...'}
                 value={linearApiKey}
                 onChange={(e) => setLinearApiKey(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 p-2 text-xs font-mono"
+                className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs font-mono"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+              <label className="block text-[11px] font-bold text-[var(--color-ink)] mb-1">
                 Default Team Key
               </label>
               <input
@@ -1916,20 +1916,20 @@ function IssueTrackersSection({
                 value={linearTeamKey}
                 onChange={(e) => setLinearTeamKey(e.target.value)}
                 placeholder="ENG"
-                className="w-full rounded-lg border border-slate-200 p-2 text-xs font-mono"
+                className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs font-mono"
               />
             </div>
           </div>
         </div>
 
         {/* 2. GitHub Issues */}
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
             <div className="flex items-center gap-2">
               <span className="text-xl">🐙</span>
               <div>
-                <h3 className="font-bold text-sm text-slate-900">GitHub Issues</h3>
-                <span className="text-[10px] text-slate-400 font-mono">
+                <h3 className="font-bold text-sm text-[var(--color-ink)]">GitHub Issues</h3>
+                <span className="text-[10px] text-[var(--color-ink-faint)] font-mono">
                   Status: {ghCfg?.last_test_status || 'untested'}
                 </span>
               </div>
@@ -1938,14 +1938,14 @@ function IssueTrackersSection({
               <button
                 onClick={() => handleTest('github')}
                 disabled={testingProvider === 'github'}
-                className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[11px] font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] cursor-pointer"
               >
                 {testingProvider === 'github' ? 'Testing...' : '⚡ Test'}
               </button>
               <button
                 onClick={handleSaveGitHub}
                 disabled={savingProvider === 'github'}
-                className="rounded bg-slate-900 px-3 py-1 text-[11px] font-bold text-white hover:bg-slate-800 cursor-pointer"
+                className="rounded bg-[var(--color-accent)] px-3 py-1 text-[11px] font-bold text-white hover:bg-[var(--color-accent-hover)] cursor-pointer"
               >
                 {savingProvider === 'github' ? 'Saving...' : 'Save'}
               </button>
@@ -1954,7 +1954,7 @@ function IssueTrackersSection({
 
           <div className="space-y-3 text-xs">
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+              <label className="block text-[11px] font-bold text-[var(--color-ink)] mb-1">
                 Personal Access Token (ghp_...)
               </label>
               <input
@@ -1962,28 +1962,28 @@ function IssueTrackersSection({
                 placeholder={ghCfg?.credentials?.has_access_token ? '•••••••••••••••• (Leave blank to keep)' : 'ghp_...'}
                 value={ghToken}
                 onChange={(e) => setGhToken(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 p-2 text-xs font-mono"
+                className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs font-mono"
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Org / Owner</label>
+                <label className="block text-[11px] font-bold text-[var(--color-ink)] mb-1">Org / Owner</label>
                 <input
                   type="text"
                   value={ghOwner}
                   onChange={(e) => setGhOwner(e.target.value)}
                   placeholder="newax-org"
-                  className="w-full rounded-lg border border-slate-200 p-2 text-xs font-mono"
+                  className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs font-mono"
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Repository</label>
+                <label className="block text-[11px] font-bold text-[var(--color-ink)] mb-1">Repository</label>
                 <input
                   type="text"
                   value={ghRepo}
                   onChange={(e) => setGhRepo(e.target.value)}
                   placeholder="product-engine"
-                  className="w-full rounded-lg border border-slate-200 p-2 text-xs font-mono"
+                  className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs font-mono"
                 />
               </div>
             </div>
@@ -1991,13 +1991,13 @@ function IssueTrackersSection({
         </div>
 
         {/* 3. Jira Cloud */}
-        <div className="rounded-xl border border-blue-100 bg-white p-5 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="rounded-xl border border-blue-100 bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
             <div className="flex items-center gap-2">
               <span className="text-xl">🔷</span>
               <div>
-                <h3 className="font-bold text-sm text-slate-900">Jira Cloud</h3>
-                <span className="text-[10px] text-slate-400 font-mono">
+                <h3 className="font-bold text-sm text-[var(--color-ink)]">Jira Cloud</h3>
+                <span className="text-[10px] text-[var(--color-ink-faint)] font-mono">
                   Status: {jiraCfg?.last_test_status || 'untested'}
                 </span>
               </div>
@@ -2006,7 +2006,7 @@ function IssueTrackersSection({
               <button
                 onClick={() => handleTest('jira')}
                 disabled={testingProvider === 'jira'}
-                className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[11px] font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] cursor-pointer"
               >
                 {testingProvider === 'jira' ? 'Testing...' : '⚡ Test'}
               </button>
@@ -2023,57 +2023,57 @@ function IssueTrackersSection({
           <div className="space-y-3 text-xs">
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Jira Domain</label>
+                <label className="block text-[11px] font-bold text-[var(--color-ink)] mb-1">Jira Domain</label>
                 <input
                   type="text"
                   value={jiraDomain}
                   onChange={(e) => setJiraDomain(e.target.value)}
                   placeholder="newax.atlassian.net"
-                  className="w-full rounded-lg border border-slate-200 p-2 text-xs font-mono"
+                  className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs font-mono"
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Project Key</label>
+                <label className="block text-[11px] font-bold text-[var(--color-ink)] mb-1">Project Key</label>
                 <input
                   type="text"
                   value={jiraProject}
                   onChange={(e) => setJiraProject(e.target.value)}
                   placeholder="SUP"
-                  className="w-full rounded-lg border border-slate-200 p-2 text-xs font-mono"
+                  className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs font-mono"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">User Email</label>
+              <label className="block text-[11px] font-bold text-[var(--color-ink)] mb-1">User Email</label>
               <input
                 type="text"
                 value={jiraEmail}
                 onChange={(e) => setJiraEmail(e.target.value)}
                 placeholder="agent@newax.com"
-                className="w-full rounded-lg border border-slate-200 p-2 text-xs"
+                className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">API Token</label>
+              <label className="block text-[11px] font-bold text-[var(--color-ink)] mb-1">API Token</label>
               <input
                 type="password"
                 placeholder={jiraCfg?.credentials?.has_api_token ? '•••••••••••••••• (Leave blank to keep)' : 'API token'}
                 value={jiraToken}
                 onChange={(e) => setJiraToken(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 p-2 text-xs font-mono"
+                className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs font-mono"
               />
             </div>
           </div>
         </div>
 
         {/* 4. Slack Workspace Sync */}
-        <div className="rounded-xl border border-emerald-100 bg-white p-5 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="rounded-xl border border-emerald-100 bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
             <div className="flex items-center gap-2">
               <span className="text-xl">💬</span>
               <div>
-                <h3 className="font-bold text-sm text-slate-900">Slack Workspace Sync</h3>
-                <span className="text-[10px] text-slate-400 font-mono">
+                <h3 className="font-bold text-sm text-[var(--color-ink)]">Slack Workspace Sync</h3>
+                <span className="text-[10px] text-[var(--color-ink-faint)] font-mono">
                   Status: {slackCfg?.last_test_status || 'untested'}
                 </span>
               </div>
@@ -2082,7 +2082,7 @@ function IssueTrackersSection({
               <button
                 onClick={() => handleTest('slack')}
                 disabled={testingProvider === 'slack'}
-                className="rounded border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[11px] font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] cursor-pointer"
               >
                 {testingProvider === 'slack' ? 'Testing...' : '⚡ Test'}
               </button>
@@ -2098,7 +2098,7 @@ function IssueTrackersSection({
 
           <div className="space-y-3 text-xs">
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+              <label className="block text-[11px] font-bold text-[var(--color-ink)] mb-1">
                 Bot Token (xoxb-...)
               </label>
               <input
@@ -2106,11 +2106,11 @@ function IssueTrackersSection({
                 placeholder={slackCfg?.credentials?.has_bot_token ? '•••••••••••••••• (Leave blank to keep)' : 'xoxb-...'}
                 value={slackToken}
                 onChange={(e) => setSlackToken(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 p-2 text-xs font-mono"
+                className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs font-mono"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+              <label className="block text-[11px] font-bold text-[var(--color-ink)] mb-1">
                 Default Notification Channel
               </label>
               <input
@@ -2118,7 +2118,7 @@ function IssueTrackersSection({
                 value={slackChannel}
                 onChange={(e) => setSlackChannel(e.target.value)}
                 placeholder="#customer-escalations"
-                className="w-full rounded-lg border border-slate-200 p-2 text-xs font-mono"
+                className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs font-mono"
               />
             </div>
           </div>

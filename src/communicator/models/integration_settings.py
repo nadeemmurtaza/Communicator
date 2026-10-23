@@ -24,6 +24,9 @@ class IntegrationSettings(Base):
     __tablename__ = "integration_settings"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_key: Mapped[str] = mapped_column(
+        String(100), default="newax", nullable=False, unique=True, index=True
+    )
 
     # WhatsApp / Meta Cloud API connection
     whatsapp_provider: Mapped[str] = mapped_column(String(20), default="meta", nullable=False)

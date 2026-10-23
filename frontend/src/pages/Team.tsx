@@ -286,17 +286,17 @@ export function Team() {
   return (
     <div className="space-y-6">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[var(--color-border)] pb-5">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--color-ink)]">
               Team & Role-Based Access Control (RBAC)
             </h1>
             <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700 border border-blue-200">
               Enterprise Security
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-[var(--color-ink-muted)] mt-1">
             Manage agent capacity routing, enforce principle of least privilege, and define custom enterprise permissions matrices.
           </p>
         </div>
@@ -307,8 +307,8 @@ export function Team() {
             onClick={() => setActiveTab('members')}
             className={`rounded-md px-3.5 py-1.5 transition-all ${
               activeTab === 'members'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-[var(--color-surface)] text-blue-600 shadow-sm'
+                : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
             }`}
           >
             👥 Team Members ({members?.length ?? 0})
@@ -317,8 +317,8 @@ export function Team() {
             onClick={() => setActiveTab('roles')}
             className={`rounded-md px-3.5 py-1.5 transition-all ${
               activeTab === 'roles'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-[var(--color-surface)] text-blue-600 shadow-sm'
+                : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
             }`}
           >
             🛡️ RBAC Roles ({roles.length})
@@ -327,8 +327,8 @@ export function Team() {
             onClick={() => setActiveTab('sso')}
             className={`rounded-md px-3.5 py-1.5 transition-all ${
               activeTab === 'sso'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-[var(--color-surface)] text-blue-600 shadow-sm'
+                : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
             }`}
           >
             🔑 Enterprise SSO & SAML
@@ -354,11 +354,11 @@ export function Team() {
       {activeTab === 'members' && (
         <div className="space-y-6">
           {/* Add Team Member Card */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-            <h2 className="text-sm font-semibold text-slate-900">Invite New Team Member</h2>
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm space-y-4">
+            <h2 className="text-sm font-semibold text-[var(--color-ink)]">Invite New Team Member</h2>
             <form onSubmit={submitMember} className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name</label>
+                <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Full Name</label>
                 <input
                   required
                   value={name}
@@ -369,7 +369,7 @@ export function Team() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address</label>
+                <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Email Address</label>
                 <input
                   type="email"
                   value={email}
@@ -380,11 +380,11 @@ export function Team() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Assigned RBAC Role</label>
+                <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Assigned RBAC Role</label>
                 <select
                   value={memberRole}
                   onChange={(e) => setMemberRole(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs focus:border-blue-500 focus:outline-none capitalize"
+                  className="w-full rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-2 text-xs focus:border-blue-500 focus:outline-none capitalize"
                 >
                   {roles.map((r) => (
                     <option key={r.name} value={r.name}>
@@ -407,17 +407,17 @@ export function Team() {
           </div>
 
           {/* Members Table */}
-          <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm overflow-hidden">
             {loading ? (
-              <div className="p-12 text-center text-xs text-slate-500">
+              <div className="p-12 text-center text-xs text-[var(--color-ink-muted)]">
                 <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-blue-600 border-r-transparent"></div>
                 <p className="mt-2 font-medium">Loading team directory...</p>
               </div>
             ) : !members || members.length === 0 ? (
-              <div className="p-12 text-center text-xs text-slate-500">
+              <div className="p-12 text-center text-xs text-[var(--color-ink-muted)]">
                 <span className="text-3xl">👥</span>
                 <div className="font-semibold text-slate-800 mt-2">No Team Members Found</div>
-                <p className="text-[11px] text-slate-400 mt-0.5">
+                <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">
                   Add team members above to route conversations to human specialists.
                 </p>
               </div>
@@ -425,7 +425,7 @@ export function Team() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
+                    <tr className="border-b border-[var(--color-border)] bg-[var(--color-page)] text-[11px] font-semibold text-[var(--color-ink-muted)] uppercase tracking-wider">
                       <th className="py-3 px-4">Member</th>
                       <th className="py-3 px-4">Role & Permissions</th>
                       <th className="py-3 px-4">Status & Capacity</th>
@@ -438,15 +438,15 @@ export function Team() {
                       const currentRoleObj = roles.find((r) => r.name === currentRoleName)
 
                       return (
-                        <tr key={m.id} className="hover:bg-slate-50/60 transition-colors">
+                        <tr key={m.id} className="hover:bg-[var(--color-page)]/60 transition-colors">
                           <td className="py-3.5 px-4 whitespace-nowrap">
                             <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0 uppercase">
+                              <div className="h-8 w-8 rounded-full bg-[var(--color-accent)] text-white font-bold text-xs flex items-center justify-center shrink-0 uppercase">
                                 {m.name.charAt(0) || 'U'}
                               </div>
                               <div>
-                                <div className="font-semibold text-slate-900">{m.name}</div>
-                                <div className="text-[11px] text-slate-500">{m.email || 'No email registered'}</div>
+                                <div className="font-semibold text-[var(--color-ink)]">{m.name}</div>
+                                <div className="text-[11px] text-[var(--color-ink-muted)]">{m.email || 'No email registered'}</div>
                               </div>
                             </div>
                           </td>
@@ -456,7 +456,7 @@ export function Team() {
                               <select
                                 value={currentRoleName}
                                 onChange={(e) => handleRoleChange(m.id, e.target.value)}
-                                className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:outline-none"
+                                className="rounded-md border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:outline-none"
                               >
                                 {roles.map((r) => (
                                   <option key={r.name} value={r.name}>
@@ -467,7 +467,7 @@ export function Team() {
                               <button
                                 type="button"
                                 onClick={() => setInspectingMember(m)}
-                                className="rounded bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600 hover:bg-slate-200"
+                                className="rounded bg-slate-100 px-2 py-1 text-[10px] font-semibold text-[var(--color-ink-muted)] hover:bg-slate-200"
                               >
                                 {currentRoleObj ? `${currentRoleObj.permissions_count} perms` : 'View Perms'}
                               </button>
@@ -480,7 +480,7 @@ export function Team() {
                                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
                                 {m.availability_status || 'online'}
                               </span>
-                              <span className="text-[11px] text-slate-500">
+                              <span className="text-[11px] text-[var(--color-ink-muted)]">
                                 Max {m.max_concurrent_conversations || 5} concurrent chats
                               </span>
                             </div>
@@ -511,8 +511,8 @@ export function Team() {
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h2 className="text-base font-semibold text-slate-900">Enterprise Roles Matrix</h2>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <h2 className="text-base font-semibold text-[var(--color-ink)]">Enterprise Roles Matrix</h2>
+              <p className="text-xs text-[var(--color-ink-muted)] mt-0.5">
                 Pre-configured system security roles plus customized privilege profiles.
               </p>
             </div>
@@ -529,45 +529,45 @@ export function Team() {
             {roles.map((role) => (
               <div
                 key={role.id}
-                className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all space-y-4"
+                className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all space-y-4"
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <span
                       className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                         role.is_system_role
-                          ? 'bg-slate-100 text-slate-700 border border-slate-200'
+                          ? 'bg-slate-100 text-[var(--color-ink)] border border-[var(--color-border)]'
                           : 'bg-purple-50 text-purple-700 border border-purple-200'
                       }`}
                     >
                       {role.is_system_role ? 'System Role' : 'Custom Role'}
                     </span>
-                    <span className="text-[11px] font-semibold text-slate-500">
+                    <span className="text-[11px] font-semibold text-[var(--color-ink-muted)]">
                       👥 {role.assigned_members_count} member{role.assigned_members_count === 1 ? '' : 's'}
                     </span>
                   </div>
 
-                  <h3 className="text-sm font-bold text-slate-900">{role.display_name}</h3>
-                  <code className="text-[10px] font-mono text-slate-400">slug: {role.name}</code>
+                  <h3 className="text-sm font-bold text-[var(--color-ink)]">{role.display_name}</h3>
+                  <code className="text-[10px] font-mono text-[var(--color-ink-faint)]">slug: {role.name}</code>
 
-                  <p className="text-xs text-slate-500 mt-2 line-clamp-2">
+                  <p className="text-xs text-[var(--color-ink-muted)] mt-2 line-clamp-2">
                     {role.description || 'No description provided.'}
                   </p>
 
                   {/* Permissions Preview */}
-                  <div className="mt-3 pt-3 border-t border-slate-100 space-y-1.5">
+                  <div className="mt-3 pt-3 border-t border-[var(--color-border)] space-y-1.5">
                     <div className="flex items-center justify-between text-[11px]">
-                      <span className="font-semibold text-slate-700">Privileges</span>
+                      <span className="font-semibold text-[var(--color-ink)]">Privileges</span>
                       <span className="font-bold text-blue-600">{role.permissions_count} granted</span>
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {role.permissions.slice(0, 4).map((p) => (
-                        <span key={p} className="rounded bg-slate-50 border border-slate-200 px-1.5 py-0.2 text-[10px] font-mono text-slate-600">
+                        <span key={p} className="rounded bg-[var(--color-page)] border border-[var(--color-border)] px-1.5 py-0.2 text-[10px] font-mono text-[var(--color-ink-muted)]">
                           {p}
                         </span>
                       ))}
                       {role.permissions.length > 4 && (
-                        <span className="rounded bg-slate-100 px-1.5 py-0.2 text-[10px] font-semibold text-slate-500">
+                        <span className="rounded bg-slate-100 px-1.5 py-0.2 text-[10px] font-semibold text-[var(--color-ink-muted)]">
                           +{role.permissions.length - 4} more
                         </span>
                       )}
@@ -576,7 +576,7 @@ export function Team() {
                 </div>
 
                 {/* Card Footer Actions */}
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                <div className="pt-2 border-t border-[var(--color-border)] flex items-center justify-between text-xs">
                   <button
                     type="button"
                     onClick={() => openEditRoleModal(role)}
@@ -605,7 +605,7 @@ export function Team() {
       {activeTab === 'sso' && (
         <div className="space-y-6">
           {/* SSO Top Status Banner */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-5">
             <div className="space-y-1">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-blue-600 font-bold text-lg">
@@ -613,14 +613,14 @@ export function Team() {
                 </div>
                 <div>
                   {ssoConfig?.last_tested_at && (
-                    <div className="text-[10px] font-mono text-slate-400">
+                    <div className="text-[10px] font-mono text-[var(--color-ink-faint)]">
                       Config ID: {ssoConfig.id.slice(0, 8)}... | Last verified: {new Date(ssoConfig.last_tested_at).toLocaleString()}
                     </div>
                   )}
-                  <h2 className="text-base font-bold text-slate-900">
+                  <h2 className="text-base font-bold text-[var(--color-ink)]">
                     SAML 2.0 Identity Provider (IdP) & SSO Enforcement
                   </h2>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-[var(--color-ink-muted)]">
                     Connect Okta, Microsoft Entra ID (Azure AD), Google Workspace, OneLogin, or custom SAML 2.0 federations.
                   </p>
                 </div>
@@ -632,7 +632,7 @@ export function Team() {
                 className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold border ${
                   ssoEnabled
                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : 'bg-slate-100 text-slate-600 border-slate-200'
+                    : 'bg-slate-100 text-[var(--color-ink-muted)] border-[var(--color-border)]'
                 }`}
               >
                 <span
@@ -645,7 +645,7 @@ export function Team() {
                 type="button"
                 onClick={handleRunSSOTest}
                 disabled={testingSso}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--color-ink)] shadow-xs hover:bg-[var(--color-page)] disabled:opacity-50"
               >
                 {testingSso ? 'Testing Connection...' : '⚡ Test Connection'}
               </button>
@@ -654,10 +654,10 @@ export function Team() {
 
           <form onSubmit={handleSaveSSO} className="space-y-6">
             {/* Identity Provider Presets */}
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm space-y-4">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">1. Select Identity Provider</h3>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <h3 className="text-sm font-bold text-[var(--color-ink)]">1. Select Identity Provider</h3>
+                <p className="text-xs text-[var(--color-ink-muted)] mt-0.5">
                   Choose your organization's enterprise directory or select Generic SAML 2.0.
                 </p>
               </div>
@@ -677,12 +677,12 @@ export function Team() {
                     className={`flex flex-col items-center justify-center p-3.5 rounded-xl border text-center transition-all ${
                       ssoProvider === item.id
                         ? 'border-blue-500 bg-blue-50/60 shadow-xs ring-2 ring-blue-500/20'
-                        : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100 hover:border-slate-300'
+                        : 'border-[var(--color-border)] bg-[var(--color-page)]/50 hover:bg-slate-100 hover:border-slate-300'
                     }`}
                   >
                     <span className="text-2xl mb-1">{item.icon}</span>
                     <span className="text-xs font-bold text-slate-800">{item.name}</span>
-                    <span className="text-[10px] text-slate-400 mt-0.5">{item.desc}</span>
+                    <span className="text-[10px] text-[var(--color-ink-faint)] mt-0.5">{item.desc}</span>
                   </button>
                 ))}
               </div>
@@ -690,17 +690,17 @@ export function Team() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* IdP Settings */}
-              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-                <div className="border-b border-slate-100 pb-3">
-                  <h3 className="text-sm font-bold text-slate-900">2. Identity Provider (IdP) Credentials</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm space-y-4">
+                <div className="border-b border-[var(--color-border)] pb-3">
+                  <h3 className="text-sm font-bold text-[var(--color-ink)]">2. Identity Provider (IdP) Credentials</h3>
+                  <p className="text-xs text-[var(--color-ink-muted)] mt-0.5">
                     Enter the SSO endpoints provided by your identity directory.
                   </p>
                 </div>
 
                 <div className="space-y-3 text-xs">
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">
+                    <label className="block font-semibold text-[var(--color-ink)] mb-1">
                       IdP Single Sign-On URL (HTTP-POST Binding) *
                     </label>
                     <input
@@ -719,7 +719,7 @@ export function Team() {
                   </div>
 
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">
+                    <label className="block font-semibold text-[var(--color-ink)] mb-1">
                       IdP Entity ID / Issuer URI *
                     </label>
                     <input
@@ -738,7 +738,7 @@ export function Team() {
                   </div>
 
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">
+                    <label className="block font-semibold text-[var(--color-ink)] mb-1">
                       X.509 Public Certificate (PEM format) *
                     </label>
                     <textarea
@@ -750,7 +750,7 @@ MIIDpDCCAoygAwIBAgIGAX...
 -----END CERTIFICATE-----"
                       className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none font-mono text-[10px] leading-relaxed"
                     />
-                    <p className="text-[10px] text-slate-400 mt-1">
+                    <p className="text-[10px] text-[var(--color-ink-faint)] mt-1">
                       Used to verify XML digital signatures on SAML authentication assertions.
                     </p>
                   </div>
@@ -758,11 +758,11 @@ MIIDpDCCAoygAwIBAgIGAX...
               </div>
 
               {/* Service Provider (SP) Metadata */}
-              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-                <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm space-y-4">
+                <div className="border-b border-[var(--color-border)] pb-3 flex items-center justify-between">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">3. Service Provider (SP) Settings</h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <h3 className="text-sm font-bold text-[var(--color-ink)]">3. Service Provider (SP) Settings</h3>
+                    <p className="text-xs text-[var(--color-ink-muted)] mt-0.5">
                       Configure these values in your IdP application setup.
                     </p>
                   </div>
@@ -779,7 +779,7 @@ MIIDpDCCAoygAwIBAgIGAX...
                 <div className="space-y-3 text-xs">
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="font-semibold text-slate-700">Assertion Consumer Service (ACS) URL</label>
+                      <label className="font-semibold text-[var(--color-ink)]">Assertion Consumer Service (ACS) URL</label>
                       <button
                         type="button"
                         onClick={() => handleCopy(`${window.location.origin}/api/v1/sso/saml/acs`, 'acs')}
@@ -788,14 +788,14 @@ MIIDpDCCAoygAwIBAgIGAX...
                         {copiedField === 'acs' ? '✓ Copied' : 'Copy'}
                       </button>
                     </div>
-                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-[11px] text-slate-700 select-all">
+                    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-page)] px-3 py-2 font-mono text-[11px] text-[var(--color-ink)] select-all">
                       {window.location.origin}/api/v1/sso/saml/acs
                     </div>
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="font-semibold text-slate-700">SP Entity ID (Audience URI)</label>
+                      <label className="font-semibold text-[var(--color-ink)]">SP Entity ID (Audience URI)</label>
                       <button
                         type="button"
                         onClick={() => handleCopy(spEntityId, 'entityId')}
@@ -825,10 +825,10 @@ MIIDpDCCAoygAwIBAgIGAX...
             </div>
 
             {/* Access Policies & Provisioning */}
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-              <div className="border-b border-slate-100 pb-3">
-                <h3 className="text-sm font-bold text-slate-900">4. Domain Enforcement & Just-in-Time (JIT) Provisioning</h3>
-                <p className="text-xs text-slate-500 mt-0.5">
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm space-y-4">
+              <div className="border-b border-[var(--color-border)] pb-3">
+                <h3 className="text-sm font-bold text-[var(--color-ink)]">4. Domain Enforcement & Just-in-Time (JIT) Provisioning</h3>
+                <p className="text-xs text-[var(--color-ink-muted)] mt-0.5">
                   Control domain restrictions, automated account creation, and default RBAC privilege assignments.
                 </p>
               </div>
@@ -836,7 +836,7 @@ MIIDpDCCAoygAwIBAgIGAX...
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
                 <div className="space-y-4">
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">
+                    <label className="block font-semibold text-[var(--color-ink)] mb-1">
                       Enforced Email Domains
                     </label>
                     <input
@@ -846,13 +846,13 @@ MIIDpDCCAoygAwIBAgIGAX...
                       placeholder="e.g. bayworks.com, acme.io, enterprise.org"
                       className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
                     />
-                    <p className="text-[10px] text-slate-400 mt-1">
+                    <p className="text-[10px] text-[var(--color-ink-faint)] mt-1">
                       Separate multiple domains with commas. Team members with these domains will be forced to authenticate via SSO.
                     </p>
                   </div>
 
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">
+                    <label className="block font-semibold text-[var(--color-ink)] mb-1">
                       Default RBAC Role for Provisioned Members
                     </label>
                     <select
@@ -869,7 +869,7 @@ MIIDpDCCAoygAwIBAgIGAX...
                   </div>
                 </div>
 
-                <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50/70 p-4">
+                <div className="space-y-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-page)]/70 p-4">
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -879,7 +879,7 @@ MIIDpDCCAoygAwIBAgIGAX...
                     />
                     <div>
                       <div className="font-semibold text-slate-800">Enforce Enterprise SSO</div>
-                      <div className="text-[11px] text-slate-500">
+                      <div className="text-[11px] text-[var(--color-ink-muted)]">
                         Require team members with matching domains to log in through your Identity Provider.
                       </div>
                     </div>
@@ -894,7 +894,7 @@ MIIDpDCCAoygAwIBAgIGAX...
                     />
                     <div>
                       <div className="font-semibold text-slate-800">Just-in-Time (JIT) User Provisioning</div>
-                      <div className="text-[11px] text-slate-500">
+                      <div className="text-[11px] text-[var(--color-ink-muted)]">
                         Automatically create team accounts on first successful SAML login.
                       </div>
                     </div>
@@ -909,7 +909,7 @@ MIIDpDCCAoygAwIBAgIGAX...
                     />
                     <div>
                       <div className="font-semibold text-slate-800">Allow Break-Glass Password Sign-In</div>
-                      <div className="text-[11px] text-slate-500">
+                      <div className="text-[11px] text-[var(--color-ink-muted)]">
                         Enable emergency local password logins if your Identity Provider is down.
                       </div>
                     </div>
@@ -917,12 +917,12 @@ MIIDpDCCAoygAwIBAgIGAX...
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+              <div className="pt-4 border-t border-[var(--color-border)] flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={handleRunSSOTest}
                   disabled={testingSso}
-                  className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  className="rounded-lg border border-slate-300 bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-50"
                 >
                   {testingSso ? 'Testing Connection...' : '⚡ Validate Setup'}
                 </button>
@@ -941,23 +941,23 @@ MIIDpDCCAoygAwIBAgIGAX...
 
       {/* SSO DIAGNOSTIC TEST RESULTS MODAL */}
       {showTestModal && ssoTestResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-accent)]/50 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-lg rounded-2xl bg-[var(--color-surface)] shadow-2xl border border-[var(--color-border)] overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)] bg-[var(--color-page)]">
               <div className="flex items-center gap-2">
                 <span className="text-xl">
                   {ssoTestResult.status === 'healthy' ? '✅' : '⚠️'}
                 </span>
                 <div>
-                  <h3 className="font-bold text-sm text-slate-900">SAML 2.0 Connection Diagnostics</h3>
-                  <p className="text-[11px] text-slate-500">
+                  <h3 className="font-bold text-sm text-[var(--color-ink)]">SAML 2.0 Connection Diagnostics</h3>
+                  <p className="text-[11px] text-[var(--color-ink-muted)]">
                     Tested at: {new Date(ssoTestResult.tested_at).toLocaleTimeString()}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setShowTestModal(false)}
-                className="h-7 w-7 rounded-full bg-slate-200 text-slate-600 hover:bg-slate-300 flex items-center justify-center text-xs font-bold"
+                className="h-7 w-7 rounded-full bg-slate-200 text-[var(--color-ink-muted)] hover:bg-slate-300 flex items-center justify-center text-xs font-bold"
               >
                 ✕
               </button>
@@ -974,12 +974,12 @@ MIIDpDCCAoygAwIBAgIGAX...
                 {ssoTestResult.message}
               </div>
 
-              <div className="divide-y divide-slate-100 border border-slate-200 rounded-lg overflow-hidden text-xs">
+              <div className="divide-y divide-slate-100 border border-[var(--color-border)] rounded-lg overflow-hidden text-xs">
                 {ssoTestResult.checks.map((check, idx) => (
-                  <div key={idx} className="p-3 bg-white flex items-start justify-between gap-3">
+                  <div key={idx} className="p-3 bg-[var(--color-surface)] flex items-start justify-between gap-3">
                     <div>
                       <div className="font-semibold text-slate-800">{check.name}</div>
-                      <div className="text-[11px] text-slate-500 mt-0.5">{check.message}</div>
+                      <div className="text-[11px] text-[var(--color-ink-muted)] mt-0.5">{check.message}</div>
                     </div>
                     <span
                       className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-bold uppercase border ${
@@ -995,10 +995,10 @@ MIIDpDCCAoygAwIBAgIGAX...
               </div>
             </div>
 
-            <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+            <div className="p-3 bg-[var(--color-page)] border-t border-[var(--color-border)] flex justify-end">
               <button
                 onClick={() => setShowTestModal(false)}
-                className="rounded-lg bg-slate-900 px-4 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+                className="rounded-lg bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)]"
               >
                 Done
               </button>
@@ -1009,20 +1009,20 @@ MIIDpDCCAoygAwIBAgIGAX...
 
       {/* CREATE / EDIT ROLE MODAL */}
       {showRoleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-accent)]/50 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-2xl rounded-2xl bg-[var(--color-surface)] shadow-2xl border border-[var(--color-border)] overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)] bg-[var(--color-page)]">
               <div>
-                <h3 className="font-bold text-sm text-slate-900">
+                <h3 className="font-bold text-sm text-[var(--color-ink)]">
                   {editingRole ? `Edit Role: ${editingRole.display_name}` : 'Create Custom Enterprise Role'}
                 </h3>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-[11px] text-[var(--color-ink-muted)]">
                   Define granular access controls across conversations, CRM, and system settings.
                 </p>
               </div>
               <button
                 onClick={() => setShowRoleModal(false)}
-                className="h-7 w-7 rounded-full bg-slate-200 text-slate-600 hover:bg-slate-300 flex items-center justify-center text-xs font-bold"
+                className="h-7 w-7 rounded-full bg-slate-200 text-[var(--color-ink-muted)] hover:bg-slate-300 flex items-center justify-center text-xs font-bold"
               >
                 ✕
               </button>
@@ -1031,7 +1031,7 @@ MIIDpDCCAoygAwIBAgIGAX...
             <form onSubmit={handleSaveRole} className="p-5 space-y-4 overflow-y-auto flex-1">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Role Display Name</label>
+                  <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Role Display Name</label>
                   <input
                     required
                     value={roleDisplayName}
@@ -1047,20 +1047,20 @@ MIIDpDCCAoygAwIBAgIGAX...
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Role Identifier (Slug)</label>
+                  <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Role Identifier (Slug)</label>
                   <input
                     required
                     disabled={!!editingRole}
                     value={roleSlug}
                     onChange={(e) => setRoleSlug(e.target.value)}
                     placeholder="e.g. tier2_lead"
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono disabled:bg-slate-100 disabled:text-slate-500"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono disabled:bg-slate-100 disabled:text-[var(--color-ink-muted)]"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Description</label>
+                <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Description</label>
                 <input
                   value={roleDesc}
                   onChange={(e) => setRoleDesc(e.target.value)}
@@ -1071,8 +1071,8 @@ MIIDpDCCAoygAwIBAgIGAX...
 
               {/* Permissions Checkbox Grid by Category */}
               <div className="space-y-4 pt-2">
-                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                  <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2">
+                  <span className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">
                     Permissions Matrix ({selectedPerms.length} selected)
                   </span>
                   <div className="flex items-center gap-2 text-xs">
@@ -1087,7 +1087,7 @@ MIIDpDCCAoygAwIBAgIGAX...
                     <button
                       type="button"
                       onClick={() => setSelectedPerms([])}
-                      className="text-slate-500 hover:text-slate-700 font-medium"
+                      className="text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] font-medium"
                     >
                       Deselect All
                     </button>
@@ -1097,7 +1097,7 @@ MIIDpDCCAoygAwIBAgIGAX...
                 {categories.map((cat) => {
                   const catItems = catalog.filter((c) => c.category === cat)
                   return (
-                    <div key={cat} className="rounded-lg border border-slate-200 p-3 bg-slate-50/50 space-y-2">
+                    <div key={cat} className="rounded-lg border border-[var(--color-border)] p-3 bg-[var(--color-page)]/50 space-y-2">
                       <div className="text-xs font-bold text-slate-800">{cat}</div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {catItems.map((item) => {
@@ -1107,8 +1107,8 @@ MIIDpDCCAoygAwIBAgIGAX...
                               key={item.key}
                               className={`flex items-start gap-2 p-2 rounded-md border text-xs cursor-pointer transition-colors ${
                                 isChecked
-                                  ? 'bg-blue-50/70 border-blue-200 text-slate-900'
-                                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                                  ? 'bg-blue-50/70 border-blue-200 text-[var(--color-ink)]'
+                                  : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-ink-muted)] hover:bg-[var(--color-page)]'
                               }`}
                             >
                               <input
@@ -1119,7 +1119,7 @@ MIIDpDCCAoygAwIBAgIGAX...
                               />
                               <div>
                                 <div className="font-semibold">{item.label}</div>
-                                <div className="text-[10px] text-slate-500 leading-tight">{item.description}</div>
+                                <div className="text-[10px] text-[var(--color-ink-muted)] leading-tight">{item.description}</div>
                               </div>
                             </label>
                           )
@@ -1130,11 +1130,11 @@ MIIDpDCCAoygAwIBAgIGAX...
                 })}
               </div>
 
-              <div className="pt-3 border-t border-slate-200 flex justify-end gap-2">
+              <div className="pt-3 border-t border-[var(--color-border)] flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowRoleModal(false)}
-                  className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  className="rounded-lg border border-slate-300 bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)]"
                 >
                   Cancel
                 </button>
@@ -1153,20 +1153,20 @@ MIIDpDCCAoygAwIBAgIGAX...
 
       {/* INSPECT MEMBER PERMISSIONS MODAL */}
       {inspectingMember && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-accent)]/50 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-lg rounded-2xl bg-[var(--color-surface)] shadow-2xl border border-[var(--color-border)] overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)] bg-[var(--color-page)]">
               <div>
-                <h3 className="font-bold text-sm text-slate-900">
+                <h3 className="font-bold text-sm text-[var(--color-ink)]">
                   Effective Privileges: {inspectingMember.name}
                 </h3>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-[11px] text-[var(--color-ink-muted)]">
                   Role: <strong className="text-slate-800 capitalize">{inspectingMember.role || 'agent'}</strong> ({inspectingMember.email})
                 </p>
               </div>
               <button
                 onClick={() => setInspectingMember(null)}
-                className="h-7 w-7 rounded-full bg-slate-200 text-slate-600 hover:bg-slate-300 flex items-center justify-center text-xs font-bold"
+                className="h-7 w-7 rounded-full bg-slate-200 text-[var(--color-ink-muted)] hover:bg-slate-300 flex items-center justify-center text-xs font-bold"
               >
                 ✕
               </button>
@@ -1177,7 +1177,7 @@ MIIDpDCCAoygAwIBAgIGAX...
                 Granted based on role assignment and SOC 2 RBAC governance.
               </div>
 
-              <div className="divide-y divide-slate-100 border border-slate-200 rounded-lg overflow-hidden text-xs">
+              <div className="divide-y divide-slate-100 border border-[var(--color-border)] rounded-lg overflow-hidden text-xs">
                 {catalog.map((perm) => {
                   const roleObj = roles.find((r) => r.name === (inspectingMember.role || 'agent'))
                   const isRoleGranted = roleObj?.permissions.includes(perm.key) ?? false
@@ -1185,16 +1185,16 @@ MIIDpDCCAoygAwIBAgIGAX...
                   const isGranted = inspectingMember.role === 'super_admin' || isRoleGranted || isCustomGranted
 
                   return (
-                    <div key={perm.key} className="flex items-center justify-between p-2.5 bg-white">
+                    <div key={perm.key} className="flex items-center justify-between p-2.5 bg-[var(--color-surface)]">
                       <div>
                         <div className="font-semibold text-slate-800">{perm.label}</div>
-                        <div className="text-[10px] font-mono text-slate-400">{perm.key}</div>
+                        <div className="text-[10px] font-mono text-[var(--color-ink-faint)]">{perm.key}</div>
                       </div>
                       <span
                         className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase border ${
                           isGranted
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : 'bg-slate-50 text-slate-400 border-slate-200'
+                            : 'bg-[var(--color-page)] text-[var(--color-ink-faint)] border-[var(--color-border)]'
                         }`}
                       >
                         {isGranted ? '✓ Allowed' : 'Denied'}
@@ -1205,10 +1205,10 @@ MIIDpDCCAoygAwIBAgIGAX...
               </div>
             </div>
 
-            <div className="p-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+            <div className="p-3 bg-[var(--color-page)] border-t border-[var(--color-border)] flex justify-end">
               <button
                 onClick={() => setInspectingMember(null)}
-                className="rounded-lg bg-slate-900 px-4 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+                className="rounded-lg bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)]"
               >
                 Close
               </button>

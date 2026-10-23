@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom'
+import { CHANNEL_ICONS } from '../components/icons/BrandIcons'
 
 const CHANNELS = [
   {
     id: 'whatsapp',
     name: 'WhatsApp Business API',
     description: 'Official WhatsApp Business Cloud API with interactive templates, 24h window, and live analytics.',
-    icon: '💬',
+    icon: 'whatsapp',
     status: 'connected',
     statusLabel: 'Active & Verified',
     statusColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
@@ -13,10 +14,10 @@ const CHANNELS = [
     stats: '100K daily limit · 🟢 Quality Rating: High',
   },
   {
-    id: 'live_chat',
+    id: 'live-chat',
     name: 'Website Live Chat',
     description: 'Embeddable customizable chat widget for your website with pre-chat forms, visitor presence, and HMAC identity verification.',
-    icon: '🌐',
+    icon: 'live-chat',
     status: 'connected',
     statusLabel: 'Active & Configured',
     statusColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
@@ -27,7 +28,7 @@ const CHANNELS = [
     id: 'email',
     name: 'Email (IMAP / SMTP / Postmark)',
     description: 'Connect shared support emails, parse threaded replies, and send branded email responses.',
-    icon: '✉️',
+    icon: 'email',
     status: 'connected',
     statusLabel: 'Active & Connected',
     statusColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
@@ -38,7 +39,7 @@ const CHANNELS = [
     id: 'sms',
     name: 'SMS Messaging (Twilio)',
     description: 'Direct SMS outreach and inbound conversation handling via Twilio, A2P 10DLC verification, and carrier compliance.',
-    icon: '📱',
+    icon: 'sms',
     status: 'connected',
     statusLabel: 'Active & Connected',
     statusColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
@@ -49,7 +50,7 @@ const CHANNELS = [
     id: 'facebook',
     name: 'Facebook Messenger',
     description: 'Manage Facebook business page messages, comments, and customer replies from one inbox.',
-    icon: '👥',
+    icon: 'facebook',
     status: 'connected',
     statusLabel: 'Active & Connected',
     statusColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
@@ -60,7 +61,7 @@ const CHANNELS = [
     id: 'instagram',
     name: 'Instagram Direct Messages',
     description: 'Handle Instagram DMs, story mentions, and post replies in your unified team inbox.',
-    icon: '📸',
+    icon: 'instagram',
     status: 'connected',
     statusLabel: 'Active & Connected',
     statusColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
@@ -71,7 +72,7 @@ const CHANNELS = [
     id: 'telegram',
     name: 'Telegram Bot API',
     description: 'Connect Telegram support bots and manage high-volume customer messages securely.',
-    icon: '✈️',
+    icon: 'telegram',
     status: 'connected',
     statusLabel: 'Active & Connected',
     statusColor: 'bg-sky-100 text-sky-800 border-sky-200',
@@ -82,7 +83,7 @@ const CHANNELS = [
     id: 'line',
     name: 'LINE Messaging API',
     description: 'Support customers across Japan, Taiwan, and Thailand with official LINE channel integration.',
-    icon: '🟢',
+    icon: 'line',
     status: 'connected',
     statusLabel: 'Active & Connected',
     statusColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
@@ -93,7 +94,7 @@ const CHANNELS = [
     id: 'tiktok',
     name: 'TikTok Direct Messages & Comments',
     description: 'Manage incoming TikTok customer conversations and video comment moderation directly in your unified inbox.',
-    icon: '🎵',
+    icon: 'tiktok',
     status: 'connected',
     statusLabel: 'Active & Connected',
     statusColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
@@ -104,7 +105,7 @@ const CHANNELS = [
     id: 'voice',
     name: 'Voice & WebRTC Calling',
     description: 'Phone calls and audio conferencing directly inside the agent inbox with Twilio Voice & WebRTC.',
-    icon: '📞',
+    icon: 'voice',
     status: 'connected',
     statusLabel: 'Active & Connected',
     statusColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
@@ -135,24 +136,28 @@ export function ChannelsHub() {
             to="/channels/whatsapp"
             className="rounded-md bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 shadow-xs flex items-center gap-1.5"
           >
-            <span>💬</span> Configure WhatsApp
+            <CHANNEL_ICONS.whatsapp className="h-3.5 w-3.5" /> Configure WhatsApp
           </Link>
         </div>
       </div>
 
       {/* Grid of Channels */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {CHANNELS.map((ch) => (
+        {CHANNELS.map((ch) => {
+          const Icon = CHANNEL_ICONS[ch.icon]
+          return (
           <div
             key={ch.id}
-            className={`rounded-xl border p-5 bg-white shadow-xs transition-all flex flex-col justify-between ${
-              ch.status === 'connected' ? 'border-emerald-300 ring-1 ring-emerald-200' : 'border-slate-200 hover:border-slate-300'
+            className={`glass-card p-5 transition-all flex flex-col justify-between ${
+              ch.status === 'connected' ? 'ring-1 ring-emerald-200' : ''
             }`}
           >
             <div>
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">{ch.icon}</span>
+                  <span className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-accent-soft)] text-[var(--color-accent)]">
+                    <Icon className="h-6 w-6" />
+                  </span>
                   <div>
                     <h3 className="text-sm font-bold text-slate-900">{ch.name}</h3>
                     <span className="text-[11px] text-slate-400 font-mono">{ch.stats}</span>
@@ -189,7 +194,8 @@ export function ChannelsHub() {
               )}
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

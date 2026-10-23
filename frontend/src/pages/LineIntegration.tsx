@@ -5,6 +5,7 @@ import {
   type LineChannelData,
   type SocialEvent,
 } from '../lib/api'
+import { LineIcon } from '../components/icons/BrandIcons'
 
 export function LineIntegration() {
   const [data, setData] = useState<LineChannelData | null>(null)
@@ -215,8 +216,8 @@ export function LineIntegration() {
             <span className="text-sm font-medium text-gray-500">LINE Messaging</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-green-600 flex items-center justify-center text-white shadow-sm font-bold text-xl">
-              🟢
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-green-600 flex items-center justify-center text-white shadow-sm">
+              <LineIcon className="h-6 w-6" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900 tracking-tight">LINE Messaging API Integration</h1>

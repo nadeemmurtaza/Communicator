@@ -9,6 +9,16 @@ import {
   type PreChatRoutingRule,
   type PreChatTestIntakeResult,
 } from '../lib/api'
+import { LiveChatIcon } from '../components/icons/BrandIcons'
+
+const DEFAULT_AVATAR_URL = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128'
+
+// Only a literal http(s):// prefix is accepted before a saved/branding-config
+// avatar URL reaches an <img src> -- that value is attacker-influenceable,
+// and a javascript:/data: URI there is a DOM XSS sink, not just a broken
+// image. An explicit regex prefix test (rather than parsing the URL and
+// inspecting it) keeps the guard a single, directly-inspectable boolean.
+const SAFE_IMAGE_URL_RE = /^https?:\/\//i
 
 export function LiveChatIntegration() {
   const [data, setData] = useState<LiveChatChannelData | null>(null)
@@ -507,7 +517,7 @@ export function LiveChatIntegration() {
               className="flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-sm"
               style={{ backgroundColor: widgetColor }}
             >
-              <span className="text-xl">🌐</span>
+              <LiveChatIcon className="h-5 w-5 text-white" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -1227,8 +1237,9 @@ export function LiveChatIntegration() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
+                        {/* avatarUrl is gated by SAFE_IMAGE_URL_RE (literal http(s):// prefix, else the constant default) before reaching src. */}
                         <img
-                          src={avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128'}
+                          src={SAFE_IMAGE_URL_RE.test(avatarUrl) ? avatarUrl : DEFAULT_AVATAR_URL}
                           alt="Avatar"
                           className="h-9 w-9 rounded-full border-2 border-white/60 object-cover shadow-xs"
                         />
@@ -1407,8 +1418,9 @@ export function LiveChatIntegration() {
                     {/* Mobile Header */}
                     <div className="p-3 text-white flex items-center gap-2" style={{ backgroundColor: widgetColor }}>
                       <span className="text-xs">←</span>
+                      {/* avatarUrl is gated by SAFE_IMAGE_URL_RE (see the first avatar <img> above). */}
                       <img
-                        src={avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128'}
+                        src={SAFE_IMAGE_URL_RE.test(avatarUrl) ? avatarUrl : DEFAULT_AVATAR_URL}
                         alt="Avatar"
                         className="h-7 w-7 rounded-full object-cover border border-white"
                       />
@@ -1928,8 +1940,9 @@ export function LiveChatIntegration() {
                 {/* Header */}
                 <div className="p-4 text-white shrink-0 shadow-sm" style={{ backgroundColor: widgetColor }}>
                   <div className="flex items-center gap-3">
+                    {/* avatarUrl is gated by SAFE_IMAGE_URL_RE (see the first avatar <img> above). */}
                     <img
-                      src={avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128'}
+                      src={SAFE_IMAGE_URL_RE.test(avatarUrl) ? avatarUrl : DEFAULT_AVATAR_URL}
                       alt="Avatar"
                       className="h-9 w-9 rounded-full border-2 border-white/60 object-cover shadow-xs"
                     />

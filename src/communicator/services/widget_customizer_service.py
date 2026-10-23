@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import re
 import uuid
+from html import escape
 from typing import Any
 
 from sqlalchemy import select
@@ -8,6 +10,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.models.contact import ChannelType
 from communicator.models.inbox import Inbox
+
+# Website tokens are always generated as "web_live_<16 hex chars>" (see
+# below) or the "web_token_default" fallback -- never free text -- so any
+# value outside this shape is rejected rather than reflected into HTML/JS.
+_SAFE_TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+def _sanitize_token(token: str) -> str:
+    """Prevents reflected XSS: a token embedded raw in HTML/inline-JS must
+    not be able to break out of its context (query-string input is
+    attacker-controlled)."""
+    return token if _SAFE_TOKEN_RE.match(token) else "web_token_default"
+
 
 DEFAULT_WIDGET_CONFIG: dict[str, Any] = {
     "widget_color": "#1570EF",
@@ -53,6 +68,7 @@ async def get_or_create_website_inbox(session: AsyncSession) -> Inbox:
 
 
 def generate_embed_codes(token: str, base_url: str, styling: dict[str, Any]) -> dict[str, str]:
+    token = _sanitize_token(token)
     color = styling.get("widget_color", "#1570EF")
     pos = styling.get("widget_position", "right")
 
@@ -122,11 +138,14 @@ export function LiveChatWidget() {{
 
 
 def generate_preview_page_html(token: str, base_url: str, styling: dict[str, Any]) -> str:
+    token = _sanitize_token(token)
     color = styling.get("widget_color", "#1570EF")
     pos = styling.get("widget_position", "right")
-    greeting_title = styling.get("greeting_title", "Hi there! 👋")
-    greeting_tagline = styling.get("greeting_tagline", "We typically reply in under 2 minutes.")
-    launcher_text = styling.get("launcher_text", "Chat with us")
+    greeting_title = escape(str(styling.get("greeting_title", "Hi there! 👋")))
+    greeting_tagline = escape(
+        str(styling.get("greeting_tagline", "We typically reply in under 2 minutes."))
+    )
+    launcher_text = escape(str(styling.get("launcher_text", "Chat with us")))
     launcher_style = styling.get("launcher_style", "round_bubble")
 
     return f"""<!DOCTYPE html>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../lib/api'
+import { VoiceIcon } from '../components/icons/BrandIcons'
 import type {
   VoiceChannelData,
   VoiceUpdatePayload,
@@ -309,8 +310,8 @@ export function VoiceIntegration() {
       {activeCall && (
         <div className="rounded-xl bg-slate-900 text-white p-4 shadow-xl border border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in slide-in-from-top-2">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl animate-pulse">
-              📞
+            <div className="h-10 w-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center animate-pulse">
+              <VoiceIcon className="h-6 w-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">

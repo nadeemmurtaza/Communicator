@@ -156,7 +156,7 @@ async def test_universal_voice_sip_provider_dispatch():
     res_sip = await sip_prov.send(contact, "SIP trunk announcement")
     assert res_sip.provider == "sip_trunk"
     assert "sip_uri" in res_sip.raw_response
-    assert "pbx.mycompany.com" in res_sip.raw_response["sip_uri"]
+    assert res_sip.raw_response["sip_uri"].split("@")[-1].split(":")[0] == "pbx.mycompany.com"
 
 
 @pytest.mark.asyncio

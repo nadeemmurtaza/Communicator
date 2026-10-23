@@ -5,6 +5,7 @@ import {
   type TelegramChannelData,
   type SocialEvent,
 } from '../lib/api'
+import { TelegramIcon } from '../components/icons/BrandIcons'
 
 export function TelegramIntegration() {
   const [data, setData] = useState<TelegramChannelData | null>(null)
@@ -214,8 +215,8 @@ export function TelegramIntegration() {
             <span className="text-sm font-medium text-gray-500">Telegram Bot</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-400 to-blue-600 flex items-center justify-center text-white shadow-sm font-bold text-xl">
-              ✈️
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-400 to-blue-600 flex items-center justify-center text-white shadow-sm">
+              <TelegramIcon className="h-6 w-6" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Telegram Bot Integration</h1>
