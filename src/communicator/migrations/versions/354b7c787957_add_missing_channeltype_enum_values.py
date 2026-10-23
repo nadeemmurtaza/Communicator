@@ -29,13 +29,20 @@ _SAFE_ENUM_VALUE = re.compile(r"^[a-z_]+$")
 
 def upgrade() -> None:
     """Upgrade schema."""
-    # ALTER TYPE ... ADD VALUE doesn't support bind parameters (it's DDL, not
-    # a data statement), so these are validated against a strict allowlist
-    # pattern before interpolation rather than passed through unchecked --
-    # every entry also comes from the fixed tuple above, never request input.
+    # ALTER TYPE ... ADD VALUE does not accept a bind parameter for the value
+    # (confirmed against this project's own Postgres: asyncpg rejects
+    # "ALTER TYPE channeltype ADD VALUE IF NOT EXISTS $1" with a syntax
+    # error -- DDL in Postgres takes a literal here, not a parameter slot),
+    # so Semgrep's raw-SQL-concatenation rule can't be satisfied by
+    # parameterizing it the normal way. The value is additionally validated
+    # against a strict allowlist regex before interpolation, and every
+    # entry comes from the fixed tuple above, never request input, so this
+    # is not the injection the rule is written to catch.
     for value in _NEW_VALUES:
         if not _SAFE_ENUM_VALUE.match(value):
             raise ValueError(f"Unsafe enum value in migration: {value!r}")
+        # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query
+        # nosemgrep: python.lang.security.audit.formatted-sql-query.formatted-sql-query
         op.execute(f"ALTER TYPE channeltype ADD VALUE IF NOT EXISTS '{value}'")
 
 

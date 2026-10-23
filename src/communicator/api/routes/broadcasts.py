@@ -15,7 +15,7 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import distinct, select
+from sqlalchemy import distinct, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -140,12 +140,12 @@ async def _resolve_template_fields(
 async def _audience_count_for_tags(session: AsyncSession, tag_name: str, tenant_key: str) -> int:
     tag_names = [t.strip() for t in tag_name.replace("|", ",").split(",") if t.strip()]
     stmt = (
-        select(distinct(Contact.id))
+        select(func.count(distinct(Contact.id)))
         .where(Contact.tenant_key == tenant_key)
         .where(Contact.channel == ChannelType.WHATSAPP)
         .where(Contact.tags.any(Contact.tags.property.mapper.class_.name.in_(tag_names)))
     )
-    return len((await session.execute(stmt)).scalars().all())
+    return (await session.execute(stmt)).scalar_one()
 
 
 @router.post("")
