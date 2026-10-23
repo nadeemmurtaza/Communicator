@@ -1383,9 +1383,10 @@ async def send_whatsapp_test_message(
                 "sentAt": now.isoformat(),
             }
         except Exception as e:  # noqa: BLE001
+            logger.warning("WhatsApp send via Meta failed, falling back to simulation: %s", e)
             return {
                 "status": "simulated_sent",
-                "error": str(e),
+                "error": "Provider request failed; message simulated.",
                 "provider": "meta_sim",
                 "providerMessageId": f"test_sim_{uuid.uuid4().hex[:10]}",
                 "sentAt": now.isoformat(),
@@ -1507,7 +1508,8 @@ async def register_whatsapp_phone_number(
                 err = (data.get("error") or {}).get("message", "Registration failed")
                 return {"status": "error", "message": err}
         except Exception as e:  # noqa: BLE001
-            return {"status": "error", "message": str(e)}
+            logger.warning("WhatsApp phone number registration with Meta failed: %s", e)
+            return {"status": "error", "message": "Registration failed."}
 
     return {
         "status": "registered",

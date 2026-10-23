@@ -11,6 +11,20 @@ import {
 } from '../lib/api'
 import { LiveChatIcon } from '../components/icons/BrandIcons'
 
+const DEFAULT_AVATAR_URL = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128'
+
+// Rejects anything but a real http(s) image URL before it reaches an <img src>
+// -- a saved/branding-config avatar URL is attacker-influenceable, and a
+// javascript:/data: value there is a DOM XSS sink, not just a broken image.
+function safeAvatarSrc(url: string): string {
+  try {
+    const parsed = new URL(url, window.location.origin)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? url : DEFAULT_AVATAR_URL
+  } catch {
+    return DEFAULT_AVATAR_URL
+  }
+}
+
 export function LiveChatIntegration() {
   const [data, setData] = useState<LiveChatChannelData | null>(null)
   const [events, setEvents] = useState<LiveChatEvent[]>([])
@@ -1229,7 +1243,7 @@ export function LiveChatIntegration() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <img
-                          src={avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128'}
+                          src={safeAvatarSrc(avatarUrl || DEFAULT_AVATAR_URL)}
                           alt="Avatar"
                           className="h-9 w-9 rounded-full border-2 border-white/60 object-cover shadow-xs"
                         />
@@ -1409,7 +1423,7 @@ export function LiveChatIntegration() {
                     <div className="p-3 text-white flex items-center gap-2" style={{ backgroundColor: widgetColor }}>
                       <span className="text-xs">←</span>
                       <img
-                        src={avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128'}
+                        src={safeAvatarSrc(avatarUrl || DEFAULT_AVATAR_URL)}
                         alt="Avatar"
                         className="h-7 w-7 rounded-full object-cover border border-white"
                       />
@@ -1930,7 +1944,7 @@ export function LiveChatIntegration() {
                 <div className="p-4 text-white shrink-0 shadow-sm" style={{ backgroundColor: widgetColor }}>
                   <div className="flex items-center gap-3">
                     <img
-                      src={avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128'}
+                      src={safeAvatarSrc(avatarUrl || DEFAULT_AVATAR_URL)}
                       alt="Avatar"
                       className="h-9 w-9 rounded-full border-2 border-white/60 object-cover shadow-xs"
                     />
