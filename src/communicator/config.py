@@ -61,7 +61,11 @@ class Settings(BaseSettings):
     nid_base_url: str = "http://localhost:4000"
     nid_client_id: str = ""
     nid_client_secret: str = ""
-    nid_redirect_uri: str = "http://localhost:8000/api/v1/auth/nid/callback"
+    # Points at the SPA's own route, not the backend JSON endpoint directly --
+    # nID redirects the browser here, and the frontend's NidCallback page
+    # calls /api/v1/auth/nid/callback itself and stores the resulting
+    # session before routing on, so the browser never lands on raw JSON.
+    nid_redirect_uri: str = "http://localhost:8000/auth/nid/callback"
     nid_vault_addr: str = "http://localhost:4000"
     nid_vault_role_id: str = ""
     nid_vault_secret_id: str = ""

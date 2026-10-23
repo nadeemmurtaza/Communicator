@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom'
-import { api } from '../../lib/api'
 
 interface SlaMonitorModalProps {
   setSelectedId: any
@@ -71,7 +70,7 @@ export function SlaMonitorModal(props: SlaMonitorModalProps) {
                 <span className="text-[11px] font-normal text-slate-500">{slaPolicies.length} configured</span>
               </h4>
               <div className="space-y-2">
-                {slaPolicies.map((policy) => (
+                {slaPolicies.map((policy: any) => (
                   <div
                     key={policy.id}
                     className="p-3 rounded-lg border border-slate-200/80 bg-white hover:border-slate-300 transition-all flex items-center justify-between gap-3 text-xs"
@@ -87,7 +86,7 @@ export function SlaMonitorModal(props: SlaMonitorModalProps) {
                       <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-[10px] font-bold">
                         Res: {policy.resolutionTimeThreshold >= 60 ? `${Math.round(policy.resolutionTimeThreshold / 60)}h` : `${policy.resolutionTimeThreshold}m`}
                       </span>
-                      {policy.priorities.map((p) => (
+                      {policy.priorities.map((p: any) => (
                         <span key={p} className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[9px] font-medium uppercase">
                           {p}
                         </span>
@@ -110,7 +109,7 @@ export function SlaMonitorModal(props: SlaMonitorModalProps) {
                 </div>
               ) : (
                 <div className="border border-slate-200 rounded-lg overflow-hidden divide-y divide-slate-100 text-xs">
-                  {slaBreaches.map((b) => (
+                  {slaBreaches.map((b: any) => (
                     <div
                       key={b.conversationId}
                       className="p-2.5 flex items-center justify-between hover:bg-slate-50 transition-colors"

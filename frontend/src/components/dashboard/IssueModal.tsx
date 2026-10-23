@@ -1,4 +1,3 @@
-import { api } from '../../lib/api'
 
 interface IssueModalProps {
   activeConv: any

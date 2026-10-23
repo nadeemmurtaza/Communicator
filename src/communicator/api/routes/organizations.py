@@ -53,7 +53,9 @@ async def list_organizations(
 
 
 @router.post("")
-async def create_organization(payload: OrganizationIn, session: AsyncSession = Depends(get_db_session)):
+async def create_organization(
+    payload: OrganizationIn, session: AsyncSession = Depends(get_db_session)
+):
     if not payload.name.strip():
         raise HTTPException(status_code=400, detail="Organization name is required.")
 
@@ -66,7 +68,9 @@ async def create_organization(payload: OrganizationIn, session: AsyncSession = D
         suffix += 1
         tenant_key = f"{base_key}-{suffix}"
 
-    tenant = Tenant(tenant_key=tenant_key, name=payload.name.strip(), owner_account_id=payload.account_id)
+    tenant = Tenant(
+        tenant_key=tenant_key, name=payload.name.strip(), owner_account_id=payload.account_id
+    )
     session.add(tenant)
     await session.flush()
     return _serialize(tenant)

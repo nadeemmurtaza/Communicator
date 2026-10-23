@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom'
-import { api } from '../../lib/api'
 
 interface CannedResponsesModalProps {
   cannedResponses: any
@@ -114,7 +113,7 @@ export function CannedResponsesModal(props: CannedResponsesModalProps) {
                       <button
                         key={tag}
                         type="button"
-                        onClick={() => setNewCannedContent((prev) => prev + `{{${tag}}}`)}
+                        onClick={() => setNewCannedContent((prev: any) => prev + `{{${tag}}}`)}
                         className="bg-white border border-slate-200 hover:border-blue-400 text-blue-600 font-mono px-1.5 py-0.5 rounded cursor-pointer transition-colors"
                       >
                         +{tag}
@@ -151,7 +150,7 @@ export function CannedResponsesModal(props: CannedResponsesModalProps) {
               </h4>
 
               <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100 max-h-72 overflow-y-auto">
-                {cannedResponses.map((c) => (
+                {cannedResponses.map((c: any) => (
                   <div key={c.id || c.shortCode || c.short_code} className="p-3 hover:bg-slate-50/70 transition-colors flex items-start justify-between gap-3">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">

@@ -154,6 +154,25 @@ export function InstagramIntegration() {
     }
   }
 
+  async function handleConnectInstagram() {
+    try {
+      setError(null)
+      // A plain <a href> can't send the operator's session header that
+      // /instagram/start now requires, so fetch the authorize URL via the
+      // authenticated API client and navigate to it ourselves.
+      const session = localStorage.getItem('communicator.session')
+      const token = session ? JSON.parse(session).token : null
+      const res = await fetch('/api/v1/auth/instagram/start', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (!res.ok) throw new Error('Could not start Instagram connection.')
+      const { authorizeUrl } = await res.json()
+      window.location.href = authorizeUrl
+    } catch (err: any) {
+      setError(err.message || 'Failed to start Instagram connection.')
+    }
+  }
+
   async function handleVerifyConnection() {
     try {
       setVerifying(true)
@@ -390,12 +409,12 @@ export function InstagramIntegration() {
             ) : (
               <p className="text-sm text-gray-500">No Instagram account connected yet.</p>
             )}
-            <a
-              href="/api/v1/auth/instagram/start"
+            <button
+              onClick={handleConnectInstagram}
               className="px-4 py-2 bg-gradient-to-tr from-pink-500 to-amber-400 text-white text-sm font-medium rounded-lg hover:opacity-90 transition"
             >
               {data?.health.accountConnected ? 'Reconnect Instagram Account' : 'Connect Instagram Account'}
-            </a>
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100">

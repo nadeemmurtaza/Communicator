@@ -1,4 +1,3 @@
-import { api } from '../../lib/api'
 
 interface RefundModalProps {
   activeConv: any
@@ -58,12 +57,12 @@ export function RefundModal(props: RefundModalProps) {
                 <select
                   value={selectedInvoiceForRefund?.id || ''}
                   onChange={(e) => {
-                    const inv = stripeInvoices.find((i) => i.id === e.target.value)
+                    const inv = stripeInvoices.find((i: any) => i.id === e.target.value)
                     setSelectedInvoiceForRefund(inv || null)
                   }}
                   className="w-full rounded-lg border border-slate-200 p-2 text-xs text-slate-800 focus:border-indigo-500 focus:outline-hidden"
                 >
-                  {stripeInvoices.map((inv) => (
+                  {stripeInvoices.map((inv: any) => (
                     <option key={inv.id} value={inv.id}>
                       {inv.number} · {inv.amount_paid_formatted} (Paid on {new Date(inv.created_at).toLocaleDateString()})
                     </option>

@@ -1,4 +1,3 @@
-import { api } from '../../lib/api'
 
 interface CreateMacroModalProps {
   conversations: any
@@ -24,7 +23,6 @@ interface CreateMacroModalProps {
 
 export function CreateMacroModal(props: CreateMacroModalProps) {
   const {
-    conversations,
     handleCreateMacro,
     newMacroCSAT,
     newMacroDesc,

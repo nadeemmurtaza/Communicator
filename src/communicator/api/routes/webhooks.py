@@ -519,6 +519,12 @@ async def meta_instagram_inbound(
     stmt = select(Inbox).where(Inbox.channel_type == ChannelType.INSTAGRAM)
     inbox = (await session.execute(stmt)).scalars().first()
     app_secret = inbox.credentials.get("appSecret") if (inbox and inbox.credentials) else None
+    # Fall back to the app's own configured secret for inboxes connected
+    # before instagram_auth.py started saving one on the inbox record --
+    # webhook payloads are always signed with the app secret, never a
+    # per-account token, so this is the same secret either way.
+    if not app_secret:
+        app_secret = settings.meta_instagram_app_secret
 
     raw_body = await request.body()
     if (

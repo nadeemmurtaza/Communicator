@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom'
-import { api } from '../../lib/api'
 
 interface CapacityModalProps {
   api: any
@@ -58,7 +57,7 @@ export function CapacityModal(props: CapacityModalProps) {
               </div>
               <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200/80">
                 <span className="text-[10px] font-semibold text-emerald-700 uppercase">Online Agents</span>
-                <p className="text-lg font-bold text-emerald-900 mt-0.5">{capacityOverview?.onlineAgents ?? routingAgents.filter(a => a.availabilityStatus === 'online').length}</p>
+                <p className="text-lg font-bold text-emerald-900 mt-0.5">{capacityOverview?.onlineAgents ?? routingAgents.filter((a: any) => a.availabilityStatus === 'online').length}</p>
               </div>
               <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200/80">
                 <span className="text-[10px] font-semibold text-blue-700 uppercase">Total Slots</span>
@@ -96,7 +95,7 @@ export function CapacityModal(props: CapacityModalProps) {
                 <span className="text-[11px] font-normal text-slate-500">{routingAgents.length} agents</span>
               </h4>
               <div className="border border-slate-200 rounded-lg overflow-hidden divide-y divide-slate-100 text-xs">
-                {routingAgents.map((ag) => (
+                {routingAgents.map((ag: any) => (
                   <div key={ag.id} className="p-3 flex items-center justify-between hover:bg-slate-50 transition-colors">
                     <div className="flex items-center gap-3">
                       <div className="relative">

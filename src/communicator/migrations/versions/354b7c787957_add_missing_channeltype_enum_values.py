@@ -12,6 +12,7 @@ Instagram webhook verify endpoint) fails with
 "invalid input value for enum channeltype".
 """
 
+import re
 from collections.abc import Sequence
 
 from alembic import op
@@ -23,15 +24,21 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 _NEW_VALUES = ("website", "facebook", "instagram", "telegram", "line", "voice", "tiktok")
+_SAFE_ENUM_VALUE = re.compile(r"^[a-z_]+$")
 
 
 def upgrade() -> None:
     """Upgrade schema."""
+    # ALTER TYPE ... ADD VALUE doesn't support bind parameters (it's DDL, not
+    # a data statement), so these are validated against a strict allowlist
+    # pattern before interpolation rather than passed through unchecked --
+    # every entry also comes from the fixed tuple above, never request input.
     for value in _NEW_VALUES:
+        if not _SAFE_ENUM_VALUE.match(value):
+            raise ValueError(f"Unsafe enum value in migration: {value!r}")
         op.execute(f"ALTER TYPE channeltype ADD VALUE IF NOT EXISTS '{value}'")
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     # Postgres does not support removing enum values; no-op.
-    pass

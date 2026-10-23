@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Login } from './pages/Login'
+import { NidCallback } from './pages/NidCallback'
 import { Organizations } from './pages/Organizations'
 import { Automation } from './pages/Automation'
 import { Broadcasts } from './pages/Broadcasts'
@@ -43,6 +44,7 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/auth/nid/callback" element={<NidCallback />} />
       <Route path="/organizations" element={<Organizations />} />
       <Route
         element={

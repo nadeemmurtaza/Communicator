@@ -88,3 +88,47 @@ class MetaMessengerProvider(ChannelProvider):
                     "error": str(e),
                 },
             )
+
+
+class InstagramLoginProvider(ChannelProvider):
+    """
+    Provider for Instagram accounts connected through Instagram Business
+    Login (instagram_auth.py's OAuth flow) rather than a linked Facebook
+    Page. Those tokens are only valid against graph.instagram.com, not
+    graph.facebook.com/me/messages -- sending them to the Page endpoint
+    fails outright (MetaMessengerProvider was previously used for every
+    Instagram inbox regardless of which flow connected it, which silently
+    "succeeded" via its simulated-fallback on the resulting HTTP error).
+    """
+
+    api_base = "https://graph.instagram.com/v21.0"
+
+    def __init__(self, access_token: str | None = None, ig_user_id: str | None = None) -> None:
+        self.access_token = access_token
+        self.ig_user_id = ig_user_id
+
+    async def send(self, contact: Contact, body: str, subject: str | None = None) -> SendResult:
+        if not self.access_token or not self.ig_user_id:
+            msg_id = f"mid.meta_instagram_{uuid.uuid4().hex[:16]}"
+            return SendResult(
+                provider="instagram",
+                provider_message_id=msg_id,
+                raw_response={
+                    "recipient_id": contact.value,
+                    "message_id": msg_id,
+                    "simulated": True,
+                },
+            )
+
+        endpoint = f"{self.api_base}/{self.ig_user_id}/messages"
+        payload = {"recipient": {"id": contact.value}, "message": {"text": body}}
+
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            res = await client.post(
+                endpoint, headers={"Authorization": f"Bearer {self.access_token}"}, json=payload
+            )
+            res.raise_for_status()
+            data = res.json()
+
+        msg_id = data.get("message_id") or f"mid.{uuid.uuid4().hex[:16]}"
+        return SendResult(provider="instagram", provider_message_id=msg_id, raw_response=data)

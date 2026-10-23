@@ -1,9 +1,35 @@
 const BASE = '/api/v1'
 
+/**
+ * Every request carries the signed-in session token and the tenant the
+ * person has selected (set by AuthContext on login / org switch), so the
+ * backend scopes data to the org actually showing in the UI instead of a
+ * hardcoded default -- switching organizations must change what every
+ * subsequent request can see.
+ */
+function authHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {}
+  try {
+    const session = localStorage.getItem('communicator.session')
+    if (session) {
+      const { token } = JSON.parse(session)
+      if (token) headers['Authorization'] = `Bearer ${token}`
+    }
+    const org = localStorage.getItem('communicator.organization')
+    if (org) {
+      const { tenantKey } = JSON.parse(org)
+      if (tenantKey) headers['X-Tenant-Key'] = tenantKey
+    }
+  } catch {
+    // corrupted storage -- fall back to unauthenticated/default-tenant request
+  }
+  return headers
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...init,
-    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
+    headers: { 'Content-Type': 'application/json', ...authHeaders(), ...(init?.headers ?? {}) },
   })
   if (!res.ok) {
     const detail = await res.text()

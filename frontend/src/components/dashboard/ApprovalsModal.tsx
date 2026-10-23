@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom'
-import { api } from '../../lib/api'
 
 interface ApprovalsModalProps {
   approvalFilterStatus: any
@@ -55,7 +54,7 @@ export function ApprovalsModal(props: ApprovalsModalProps) {
               {['all', 'pending', 'approved', 'rejected'].map((st) => {
                 const count = st === 'all'
                   ? copilotApprovals.length
-                  : copilotApprovals.filter((a) => a.status === st).length
+                  : copilotApprovals.filter((a: any) => a.status === st).length
                 return (
                   <button
                     key={st}
@@ -90,8 +89,8 @@ export function ApprovalsModal(props: ApprovalsModalProps) {
             {/* Approvals List */}
             <div className="space-y-3">
               {copilotApprovals
-                .filter((a) => approvalFilterStatus === 'all' || a.status === approvalFilterStatus)
-                .map((app) => (
+                .filter((a: any) => approvalFilterStatus === 'all' || a.status === approvalFilterStatus)
+                .map((app: any) => (
                   <div
                     key={app.id}
                     className={`rounded-xl border p-4 transition-all ${

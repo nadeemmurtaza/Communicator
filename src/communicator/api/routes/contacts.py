@@ -15,7 +15,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from communicator.api.dependencies import get_db_session
+from communicator.api.dependencies import get_db_session, get_tenant_key
 from communicator.compliance.optout import record_consent
 from communicator.models.consent import ConsentStatus
 from communicator.models.contact import ChannelType, Contact
@@ -55,17 +55,24 @@ async def list_contacts(
     search: str | None = None,
     segment_id: uuid.UUID | None = None,
     session: AsyncSession = Depends(get_db_session),
+    tenant_key: str = Depends(get_tenant_key),
 ):
     """
     Lists contacts with optional filtering by tag, channel, search term, or saved segment.
+    Always scoped to the caller's own tenant -- switching organizations in
+    the UI must change what this returns.
     """
     if segment_id:
         segment = await session.get(ContactSegment, segment_id)
-        if segment is None:
+        if segment is None or segment.tenant_key != tenant_key:
             raise HTTPException(status_code=404, detail="Segment not found")
-        stmt = build_segment_filter_stmt(segment.filters or {}, tenant_key=segment.tenant_key)
+        stmt = build_segment_filter_stmt(segment.filters or {}, tenant_key=tenant_key)
     else:
-        stmt = select(Contact).options(selectinload(Contact.tags))
+        stmt = (
+            select(Contact)
+            .where(Contact.tenant_key == tenant_key)
+            .options(selectinload(Contact.tags))
+        )
 
         if tag:
             stmt = stmt.where(Contact.tags.any(Tag.name == tag))
@@ -460,17 +467,23 @@ async def export_contacts(
     search: str | None = None,
     segment_id: uuid.UUID | None = None,
     session: AsyncSession = Depends(get_db_session),
+    tenant_key: str = Depends(get_tenant_key),
 ):
     """
-    Exports filtered contacts into a downloadable CSV file.
+    Exports filtered contacts into a downloadable CSV file. Scoped to the
+    caller's own tenant.
     """
     if segment_id:
         segment = await session.get(ContactSegment, segment_id)
-        if segment is None:
+        if segment is None or segment.tenant_key != tenant_key:
             raise HTTPException(status_code=404, detail="Segment not found")
-        stmt = build_segment_filter_stmt(segment.filters or {}, tenant_key=segment.tenant_key)
+        stmt = build_segment_filter_stmt(segment.filters or {}, tenant_key=tenant_key)
     else:
-        stmt = select(Contact).options(selectinload(Contact.tags))
+        stmt = (
+            select(Contact)
+            .where(Contact.tenant_key == tenant_key)
+            .options(selectinload(Contact.tags))
+        )
         if tag:
             stmt = stmt.where(Contact.tags.any(Tag.name == tag))
         if channel:

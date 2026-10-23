@@ -69,13 +69,16 @@ async def login_with_nid_callback(
 async def get_current_user_profile(authorization: str | None = Header(default=None)) -> dict:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing or invalid Bearer authorization header."
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid Bearer authorization header.",
         )
 
     token = authorization.split("Bearer ", 1)[1].strip()
     session_claims = nid_client.validate_session(token)
     if not session_claims:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired session token.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired session token."
+        )
 
     return {
         "status": "authenticated",
