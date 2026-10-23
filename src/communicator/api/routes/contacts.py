@@ -317,11 +317,13 @@ async def import_contacts(
     default_channel: str | None = Form(default=None),
     default_tags: str | None = Form(default=None),
     session: AsyncSession = Depends(get_db_session),
+    tenant_key: str = Depends(get_tenant_key),
 ):
     """
     Multi-Channel CSV Contact Import.
     Supports WhatsApp, Email, SMS, TikTok, Telegram, LINE, Facebook, Instagram.
-    Creates new contacts or updates existing tags and attributes.
+    Creates new contacts or updates existing tags and attributes, scoped to
+    the caller's own tenant.
     """
     raw = (await file.read()).decode("utf-8-sig")
     reader = csv.DictReader(io.StringIO(raw))
@@ -356,7 +358,9 @@ async def import_contacts(
         existing_stmt = (
             select(Contact)
             .options(selectinload(Contact.tags))
-            .where(Contact.channel == ch_enum, Contact.value == value)
+            .where(
+                Contact.tenant_key == tenant_key, Contact.channel == ch_enum, Contact.value == value
+            )
         )
         existing = (await session.execute(existing_stmt)).scalar_one_or_none()
 
@@ -389,6 +393,7 @@ async def import_contacts(
             await session.flush()
 
             contact = Contact(
+                tenant_key=tenant_key,
                 lead_id=lead.id,
                 channel=ch_enum,
                 value=value,

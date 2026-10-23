@@ -92,33 +92,53 @@ async def count_segment_contacts(session: AsyncSession, segment: ContactSegment)
     return int(result.scalar_one_or_none() or 0)
 
 
-async def seed_default_segments(session: AsyncSession) -> list[ContactSegment]:
-    """Initializes standard dynamic audience segments if none exist."""
-    existing = (await session.execute(select(ContactSegment))).scalars().first()
+async def seed_default_segments(
+    session: AsyncSession, tenant_key: str = "newax"
+) -> list[ContactSegment]:
+    """Initializes standard dynamic audience segments for a tenant if it has none yet."""
+    existing = (
+        (
+            await session.execute(
+                select(ContactSegment).where(ContactSegment.tenant_key == tenant_key)
+            )
+        )
+        .scalars()
+        .first()
+    )
     if existing is not None:
         return list(
-            (await session.execute(select(ContactSegment).order_by(ContactSegment.name)))
+            (
+                await session.execute(
+                    select(ContactSegment)
+                    .where(ContactSegment.tenant_key == tenant_key)
+                    .order_by(ContactSegment.name)
+                )
+            )
             .scalars()
             .all()
         )
 
     defaults = [
         ContactSegment(
+            tenant_key=tenant_key,
             name="All Omnichannel Contacts",
             description="Entire unified customer database across all communication channels.",
             filters={},
         ),
         ContactSegment(
+            tenant_key=tenant_key,
             name="WhatsApp VIP Audience",
             description="High-value VIP contacts opted-in for official WhatsApp communications.",
             filters={"channels": ["whatsapp"], "tags": ["vip"], "tag_match_mode": "any"},
         ),
         ContactSegment(
+            tenant_key=tenant_key,
             name="Email & SMS Subscribers",
             description="Direct outreach audience on Email and SMS messaging channels.",
             filters={"channels": ["email", "sms"], "tag_match_mode": "any"},
         ),
         ContactSegment(
+            tenant_key=tenant_key,
             name="Social & TikTok Community",
             description="Social media followers across TikTok, Instagram, and Facebook.",
             filters={"channels": ["tiktok", "instagram", "facebook"], "tag_match_mode": "any"},

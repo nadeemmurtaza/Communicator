@@ -527,12 +527,10 @@ async def meta_instagram_inbound(
         app_secret = settings.meta_instagram_app_secret
 
     raw_body = await request.body()
-    if (
-        app_secret
-        and not app_secret.startswith("•")
-        and not app_secret.startswith("mock")
-        and x_hub_signature_256
-        and not validate_meta_signature(app_secret, raw_body, x_hub_signature_256)
+    has_real_secret = bool(app_secret) and not app_secret.startswith(("•", "mock"))
+    if has_real_secret and (
+        not x_hub_signature_256
+        or not validate_meta_signature(app_secret, raw_body, x_hub_signature_256)
     ):
         raise HTTPException(status_code=403, detail="Invalid Meta Instagram signature.")
 

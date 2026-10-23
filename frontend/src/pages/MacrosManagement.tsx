@@ -33,7 +33,7 @@ export function MacrosManagement() {
         tags: tags.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean),
       })
     }
-    if (message.trim()) actions.push({ type: 'send_message', body: message.trim() })
+    if (message.trim()) actions.push({ type: 'send_message', message: message.trim() })
     if (note.trim()) actions.push({ type: 'add_private_note', note: note.trim() })
     return actions
   }

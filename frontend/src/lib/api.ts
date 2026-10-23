@@ -2377,6 +2377,35 @@ export const api = {
     const qs = q.toString()
     return `${BASE}/contacts/export${qs ? `?${qs}` : ''}`
   },
+  // A plain <a href> can't send the X-Tenant-Key/Authorization headers the
+  // export route now requires -- fetch it with those headers and hand the
+  // browser a Blob to download instead, so a non-default organization's
+  // export doesn't silently fall back to the default tenant's contacts.
+  downloadContactsExport: async (
+    params?: { channel?: string; tag?: string; search?: string; segment_id?: string },
+    filename = 'contacts_export.csv'
+  ) => {
+    const url = `${BASE}/contacts/export${(() => {
+      const q = new URLSearchParams()
+      if (params?.channel) q.set('channel', params.channel)
+      if (params?.tag) q.set('tag', params.tag)
+      if (params?.search) q.set('search', params.search)
+      if (params?.segment_id) q.set('segment_id', params.segment_id)
+      const qs = q.toString()
+      return qs ? `?${qs}` : ''
+    })()}`
+    const res = await fetch(url, { headers: authHeaders() })
+    if (!res.ok) throw new Error('Export failed')
+    const blob = await res.blob()
+    const blobUrl = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = blobUrl
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(blobUrl)
+  },
 
   // Saved Dynamic Contact Segments
   listSegments: () => request<ContactSegment[]>('/segments'),

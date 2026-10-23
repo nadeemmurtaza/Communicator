@@ -287,18 +287,20 @@ export function Contacts() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <a
-            href={api.exportContactsUrl({
-              channel: selectedChannel === 'all' ? undefined : selectedChannel,
-              segment_id: selectedSegmentId === 'all' ? undefined : selectedSegmentId,
-              tag: selectedTag === 'all' ? undefined : selectedTag,
-              search: searchQuery.trim() || undefined,
-            })}
-            download="contacts_export.csv"
+          <button
+            type="button"
+            onClick={() =>
+              api.downloadContactsExport({
+                channel: selectedChannel === 'all' ? undefined : selectedChannel,
+                segment_id: selectedSegmentId === 'all' ? undefined : selectedSegmentId,
+                tag: selectedTag === 'all' ? undefined : selectedTag,
+                search: searchQuery.trim() || undefined,
+              })
+            }
             className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs flex items-center gap-1.5"
           >
             <span>📥</span> Export CSV
-          </a>
+          </button>
           <button
             onClick={() => {
               setEditingSegment(null)

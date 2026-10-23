@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from communicator.api.dependencies import get_db_session
+from communicator.api.dependencies import get_db_session, get_tenant_key
 from communicator.models.segment import ContactSegment
 from communicator.services.segment_service import (
     count_segment_contacts,
@@ -47,27 +47,40 @@ async def _serialize_segment(session: AsyncSession, segment: ContactSegment) -> 
 
 
 @router.get("")
-async def list_segments(session: AsyncSession = Depends(get_db_session)):
-    """Lists all saved contact segments with real-time member counts."""
-    await seed_default_segments(session)
-    stmt = select(ContactSegment).order_by(ContactSegment.created_at.asc())
+async def list_segments(
+    session: AsyncSession = Depends(get_db_session), tenant_key: str = Depends(get_tenant_key)
+):
+    """Lists all saved contact segments with real-time member counts, scoped to the caller's tenant."""
+    await seed_default_segments(session, tenant_key=tenant_key)
+    stmt = (
+        select(ContactSegment)
+        .where(ContactSegment.tenant_key == tenant_key)
+        .order_by(ContactSegment.created_at.asc())
+    )
     segments = (await session.execute(stmt)).scalars().all()
     return [await _serialize_segment(session, s) for s in segments]
 
 
 @router.post("", status_code=201)
-async def create_segment(payload: SegmentIn, session: AsyncSession = Depends(get_db_session)):
-    """Creates a new dynamic saved contact segment."""
+async def create_segment(
+    payload: SegmentIn,
+    session: AsyncSession = Depends(get_db_session),
+    tenant_key: str = Depends(get_tenant_key),
+):
+    """Creates a new dynamic saved contact segment for the caller's tenant."""
     name = payload.name.strip()
     if not name:
         raise HTTPException(status_code=400, detail="Segment name cannot be empty.")
 
-    existing_stmt = select(ContactSegment).where(ContactSegment.name == name)
+    existing_stmt = select(ContactSegment).where(
+        ContactSegment.tenant_key == tenant_key, ContactSegment.name == name
+    )
     existing = (await session.execute(existing_stmt)).scalar_one_or_none()
     if existing is not None:
         raise HTTPException(status_code=400, detail=f"A segment with name '{name}' already exists.")
 
     segment = ContactSegment(
+        tenant_key=tenant_key,
         name=name,
         description=payload.description.strip(),
         filters=payload.filters or {},
@@ -83,10 +96,11 @@ async def get_segment(
     limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_db_session),
+    tenant_key: str = Depends(get_tenant_key),
 ):
     """Retrieves segment details and matching contact members."""
     segment = await session.get(ContactSegment, segment_id)
-    if segment is None:
+    if segment is None or segment.tenant_key != tenant_key:
         raise HTTPException(status_code=404, detail="Segment not found.")
 
     contacts = await get_segment_contacts(session, segment, limit=limit, offset=offset)
@@ -110,10 +124,11 @@ async def update_segment(
     segment_id: uuid.UUID,
     payload: SegmentUpdateIn,
     session: AsyncSession = Depends(get_db_session),
+    tenant_key: str = Depends(get_tenant_key),
 ):
     """Updates segment properties and targeting rules."""
     segment = await session.get(ContactSegment, segment_id)
-    if segment is None:
+    if segment is None or segment.tenant_key != tenant_key:
         raise HTTPException(status_code=404, detail="Segment not found.")
 
     if payload.name is not None:
@@ -121,7 +136,9 @@ async def update_segment(
         if not new_name:
             raise HTTPException(status_code=400, detail="Segment name cannot be empty.")
         if new_name != segment.name:
-            existing_stmt = select(ContactSegment).where(ContactSegment.name == new_name)
+            existing_stmt = select(ContactSegment).where(
+                ContactSegment.tenant_key == tenant_key, ContactSegment.name == new_name
+            )
             existing = (await session.execute(existing_stmt)).scalar_one_or_none()
             if existing is not None:
                 raise HTTPException(
@@ -140,10 +157,14 @@ async def update_segment(
 
 
 @router.delete("/{segment_id}")
-async def delete_segment(segment_id: uuid.UUID, session: AsyncSession = Depends(get_db_session)):
+async def delete_segment(
+    segment_id: uuid.UUID,
+    session: AsyncSession = Depends(get_db_session),
+    tenant_key: str = Depends(get_tenant_key),
+):
     """Deletes a saved contact segment."""
     segment = await session.get(ContactSegment, segment_id)
-    if segment is None:
+    if segment is None or segment.tenant_key != tenant_key:
         raise HTTPException(status_code=404, detail="Segment not found.")
 
     await session.delete(segment)
@@ -153,11 +174,13 @@ async def delete_segment(segment_id: uuid.UUID, session: AsyncSession = Depends(
 
 @router.get("/{segment_id}/export")
 async def export_segment_contacts(
-    segment_id: uuid.UUID, session: AsyncSession = Depends(get_db_session)
+    segment_id: uuid.UUID,
+    session: AsyncSession = Depends(get_db_session),
+    tenant_key: str = Depends(get_tenant_key),
 ):
     """Exports all contacts matching the segment as downloadable CSV."""
     segment = await session.get(ContactSegment, segment_id)
-    if segment is None:
+    if segment is None or segment.tenant_key != tenant_key:
         raise HTTPException(status_code=404, detail="Segment not found.")
 
     contacts = await get_segment_contacts(session, segment, limit=5000)

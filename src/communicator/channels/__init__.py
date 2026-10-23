@@ -95,7 +95,12 @@ async def get_provider(channel: ChannelType, session: AsyncSession) -> ChannelPr
         stmt = select(Inbox).where(Inbox.channel_type == ChannelType.INSTAGRAM)
         inbox = (await session.execute(stmt)).scalars().first()
         creds = inbox.credentials if inbox and inbox.credentials else {}
-        if creds.get("igId") and not creds.get("pageId"):
+        # Page-linked inboxes (manual setup via update_instagram_channel, or
+        # the seeded default) store their Facebook Page under
+        # connectedPageId, not pageId -- checking the wrong key here routes
+        # those inboxes' real/seeded Page tokens to the Instagram Login
+        # endpoint instead, which was finding #4's own bug.
+        if creds.get("igId") and not creds.get("connectedPageId"):
             # Connected via Instagram Business Login (instagram_auth.py) --
             # that token is only valid against graph.instagram.com, not the
             # Facebook Page messaging endpoint below.
@@ -104,7 +109,7 @@ async def get_provider(channel: ChannelType, session: AsyncSession) -> ChannelPr
             )
         return MetaMessengerProvider(
             page_access_token=creds.get("pageAccessToken") or creds.get("accessToken"),
-            page_id=creds.get("pageId"),
+            page_id=creds.get("connectedPageId"),
             channel_name="instagram",
         )
 

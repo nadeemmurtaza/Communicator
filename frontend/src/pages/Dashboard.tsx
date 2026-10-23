@@ -1147,7 +1147,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
     if (newMacroCSAT) actions.push({ type: 'send_csat_survey' })
     if (newMacroPriority) actions.push({ type: 'change_priority', priority: newMacroPriority })
     if (newMacroTag.trim()) actions.push({ type: 'add_tags', tags: newMacroTag.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean) })
-    if (newMacroMessage.trim()) actions.push({ type: 'send_message', body: newMacroMessage.trim() })
+    if (newMacroMessage.trim()) actions.push({ type: 'send_message', message: newMacroMessage.trim() })
     if (newMacroNote.trim()) actions.push({ type: 'add_private_note', note: newMacroNote.trim() })
 
     if (actions.length === 0) {
