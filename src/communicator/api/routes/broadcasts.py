@@ -478,7 +478,6 @@ async def dispatch_broadcast(
         # taken over by a human, or gone hot since the previous step fired --
         # per the spec's "recheck eligibility immediately before sending".
         if broadcast.parent_campaign_id is not None:
-            parent = await session.get(Broadcast, broadcast.parent_campaign_id)
             parent_recipient = (
                 await session.execute(
                     select(BroadcastRecipient).where(
@@ -501,7 +500,12 @@ async def dispatch_broadcast(
                 continue
 
             if broadcast.stop_on_reply:
-                parent_sent_at = parent.created_at if parent else None
+                # The recipient's own sent_at, not the parent campaign's
+                # created_at -- a campaign is often created well before its
+                # scheduled send, and comparing against creation time would
+                # treat ordinary pre-send activity as a reply that should
+                # suppress this step.
+                parent_sent_at = parent_recipient.sent_at
                 engaged_since_parent = (
                     conversation.human_takeover
                     or conversation.state

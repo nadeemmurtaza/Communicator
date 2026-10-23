@@ -3748,11 +3748,13 @@ export const api = {
         body: JSON.stringify({ attributes }),
       }
     ),
-  listOrganizations: (accountId?: string) =>
-    request<OrganizationItem[]>(`/organizations${accountId ? `?account_id=${encodeURIComponent(accountId)}` : ''}`),
-  createOrganization: (name: string, accountId: string) =>
+  // Scoped server-side to the signed-in account (Authorization header via
+  // authHeaders()) -- account_id is no longer accepted as a client-supplied
+  // parameter, so it's not sent here.
+  listOrganizations: () => request<OrganizationItem[]>('/organizations'),
+  createOrganization: (name: string) =>
     request<OrganizationItem>('/organizations', {
       method: 'POST',
-      body: JSON.stringify({ name, account_id: accountId }),
+      body: JSON.stringify({ name }),
     }),
 }

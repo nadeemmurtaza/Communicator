@@ -2491,18 +2491,18 @@ Ticket Context: Conversation ID ${activeConv.id}`
       {/* ========================================================================= */}
       {/* COLUMN 3: ACTIVE CONVERSATION WORKSPACE                                   */}
       {/* ========================================================================= */}
-      <main className="flex flex-1 flex-col overflow-hidden bg-[var(--color-surface)]">
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[var(--color-surface)]">
         {/* Top Header of Chat Area */}
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-[#eaecf0] px-6">
-          <div className="flex items-center gap-3">
+        <header className="flex h-14 shrink-0 min-w-0 items-center justify-between gap-2 border-b border-[#eaecf0] px-6">
+          <div className="flex min-w-0 shrink items-center gap-3">
             <img
               src={activeConv.avatar}
               alt={activeConv.name}
-              className="h-9 w-9 rounded-full object-cover ring-1 ring-[var(--color-border)]"
+              className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-[var(--color-border)]"
             />
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-semibold text-[var(--color-ink)] text-sm">{activeConv.name}</h2>
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-2">
+                <h2 className="shrink-0 font-semibold text-[var(--color-ink)] text-sm">{activeConv.name}</h2>
 
                 {/* Live Teammates Presence Avatars */}
                 {activePresences.filter((p) => p.agentName !== 'Riley Brooks').length > 0 && (
@@ -2549,11 +2549,11 @@ Ticket Context: Conversation ID ${activeConv.id}`
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-2 text-xs text-[var(--color-ink-muted)]">
-                <span>#1 · {activeConv.channel}</span>
+              <div className="flex min-w-0 items-center gap-2 overflow-x-auto text-xs text-[var(--color-ink-muted)]">
+                <span className="shrink-0">#1 · {activeConv.channel}</span>
 
                 {/* Presence Simulation Pill for quick verification */}
-                <div className="inline-flex items-center gap-1 rounded bg-[var(--color-accent-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-ink-muted)] border border-[var(--color-border)]">
+                <div className="inline-flex shrink-0 items-center gap-1 rounded bg-[var(--color-accent-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-ink-muted)] border border-[var(--color-border)]">
                   <span className="text-[var(--color-ink-faint)]">Simulate:</span>
                   <button
                     onClick={() => simulateTeammate('viewing')}
@@ -2583,18 +2583,18 @@ Ticket Context: Conversation ID ${activeConv.id}`
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 overflow-x-auto">
             {activeConv.sla && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-600">
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-600">
                 <span>🔥</span>
                 <span>{activeConv.sla}</span>
               </span>
             )}
 
-            <div className="relative">
+            <div className="relative shrink-0">
               <button
                 onClick={() => setSnoozeMenuOpen((v) => !v)}
-                className="inline-flex items-center gap-1.5 rounded-md border border-[#d0d5dd] bg-[var(--color-surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--color-ink)] shadow-xs hover:bg-[var(--color-page)]"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-[#d0d5dd] bg-[var(--color-surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--color-ink)] shadow-xs hover:bg-[var(--color-page)]"
               >
                 <span>⏰ Snooze</span>
                 <span className="text-[10px] text-[var(--color-ink-faint)]">⌄</span>
@@ -2633,7 +2633,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
             <button
               onClick={handleSummarizeThread}
               disabled={isSummarizing}
-              className="inline-flex items-center gap-1.5 rounded-md border border-purple-200 bg-purple-50 px-2.5 py-1.5 text-xs font-semibold text-purple-700 hover:bg-purple-100 shadow-xs transition-colors disabled:opacity-50"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-purple-200 bg-purple-50 px-2.5 py-1.5 text-xs font-semibold text-purple-700 hover:bg-purple-100 shadow-xs transition-colors disabled:opacity-50"
               title="Generate executive bulleted summary of this conversation thread"
             >
               <span>{isSummarizing ? '⏳' : '✨'}</span>
@@ -2643,7 +2643,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
             <button
               onClick={() => handleRunTriage(true)}
               disabled={isTriaging}
-              className="inline-flex items-center gap-1.5 rounded-md border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 shadow-xs transition-colors disabled:opacity-50"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 shadow-xs transition-colors disabled:opacity-50"
               title="Captain AI parses customer intent, tags, and routes to appropriate team"
             >
               <span>{isTriaging ? '⏳' : '🎯'}</span>
@@ -2651,11 +2651,11 @@ Ticket Context: Conversation ID ${activeConv.id}`
             </button>
 
             {/* Auto-Assignment Routing Button */}
-            <div className="relative group">
+            <div className="relative group shrink-0">
               <button
                 onClick={() => handleAutoAssign('capacity_based')}
                 disabled={isAutoAssigning}
-                className="inline-flex items-center gap-1.5 rounded-md border border-teal-200 bg-teal-50 px-2.5 py-1.5 text-xs font-semibold text-teal-800 hover:bg-teal-100 shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-teal-200 bg-teal-50 px-2.5 py-1.5 text-xs font-semibold text-teal-800 hover:bg-teal-100 shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
                 title="Auto-assigns to the online agent with the most available capacity slots"
               >
                 <span>{isAutoAssigning ? '⏳' : '⚡'}</span>
@@ -2689,7 +2689,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
                   prev.map((c) => (c.id === activeConv.id ? { ...c, status: next } : c))
                 )
               }}
-              className="inline-flex items-center gap-1.5 rounded-md border border-[#d0d5dd] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] shadow-xs hover:bg-[var(--color-page)]"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-[#d0d5dd] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] shadow-xs hover:bg-[var(--color-page)]"
             >
               <span>{activeConv.status === 'Resolved' ? 'Re-open' : 'Resolve'}</span>
               <span className="text-[10px] text-[var(--color-ink-faint)]">⌄</span>
@@ -2698,7 +2698,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
             <button
               onClick={() => setShowRightSidebar((v) => !v)}
               title="Toggle right contact sidebar"
-              className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] p-1 font-bold text-sm"
+              className="shrink-0 text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] p-1 font-bold text-sm"
             >
               ⋮
             </button>
@@ -3501,7 +3501,7 @@ Ticket Context: Conversation ID ${activeConv.id}`
       {/* COLUMN 4: CONTACT & CONVERSATION DETAILS SIDEBAR                         */}
       {/* ========================================================================= */}
       {showRightSidebar && (
-        <aside className="flex w-[330px] shrink-0 flex-col border-l border-[#eaecf0] bg-[var(--color-surface)] text-[13px] overflow-y-auto">
+        <aside className="flex w-[290px] shrink-0 flex-col border-l border-[#eaecf0] bg-[var(--color-surface)] text-[13px] overflow-y-auto">
           {/* Header */}
           <div className="flex h-14 shrink-0 items-center justify-between border-b border-[#eaecf0] px-5">
             <h3 className="font-semibold text-[var(--color-ink)] text-sm">Contact & Profile</h3>

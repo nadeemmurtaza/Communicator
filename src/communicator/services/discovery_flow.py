@@ -148,12 +148,17 @@ def is_discovery_start(payload_id: str | None, body: str) -> bool:
 
 async def start_discovery(
     session: AsyncSession, conversation: Conversation, contact: Contact
-) -> None:
+) -> bool:
+    """Returns True only if a discovery flow was actually started -- the
+    caller must keep routing the reply through the normal pipeline
+    (business hours, automation rules, the AI reply engine) when this
+    returns False, rather than treat "discovery didn't fire" as "nothing
+    more to do for this message"."""
     tenant_key = await resolve_tenant_key(session, contact)
     template = await get_template(session, tenant_key)
     if template is None or not template.steps:
         logger.warning("No discovery flow template for tenant %s; skipping discovery", tenant_key)
-        return
+        return False
 
     # Returning customer: don't re-ask what a prior Inquiry already told us.
     # Only prefills a step's answer when the field is actually present on
@@ -182,6 +187,7 @@ async def start_discovery(
             intro = "Good to hear from you again. " + intro
         await _send(session, contact, conversation, intro)
     await _advance_past_prefilled(session, contact, conversation, template)
+    return True
 
 
 async def _advance_past_prefilled(

@@ -208,8 +208,11 @@ async def _route_reply(
     if is_discovery_active(conversation):
         await handle_discovery_reply(session, conversation, contact, body, interactive_payload_id)
         return
-    if is_discovery_start(interactive_payload_id, body):
-        await start_discovery(session, conversation, contact)
+    # No discovery flow template for this tenant -- fall through to the
+    # normal pipeline below instead of silently sending nothing.
+    if is_discovery_start(interactive_payload_id, body) and await start_discovery(
+        session, conversation, contact
+    ):
         return
 
     # 5. After-Hours / Business Hours away message
