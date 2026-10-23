@@ -71,10 +71,25 @@ async def ingest_url(session: AsyncSession, url: str) -> KnowledgeBaseEntry:
     parsed = urlparse(url)
     if not parsed.netloc:
         raise IngestionError(f"Invalid URL: {url}")
+    if parsed.username or parsed.password:
+        # A userinfo component (https://user:pass@host/...) is never needed
+        # for a public help-center URL, and allowing it both leaks
+        # credentials into the Host header below and (because the pinned
+        # authority was previously built via a string replace of the
+        # hostname inside netloc) could leave the request targeting the
+        # un-pinned original host if the replace matched inside userinfo
+        # instead of the host.
+        raise IngestionError(f"Refusing URL with embedded credentials: {url}")
 
     hostname = parsed.hostname or ""
     safe_ip = _resolve_public_ip(hostname)
-    pinned_url = parsed._replace(netloc=parsed.netloc.replace(hostname, safe_ip, 1)).geturl()
+    # Rebuild the authority explicitly from parts (safe_ip[:port]) rather
+    # than string-replacing hostname inside netloc, which -- being a plain
+    # first-occurrence, case-sensitive replace -- could silently no-op for a
+    # mixed-case hostname and leave the request pointed at the un-pinned,
+    # un-vetted original host.
+    pinned_netloc = safe_ip if parsed.port is None else f"{safe_ip}:{parsed.port}"
+    pinned_url = parsed._replace(netloc=pinned_netloc).geturl()
 
     headers = {
         "Host": parsed.netloc,
