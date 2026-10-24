@@ -1,259 +1,852 @@
-# Communicator — Architecture & Delivery Plan
+# Communicator Architecture and Delivery Plan
+
+Status: **Current foundation plus planned standalone-product generalization**
 
 ## 1. Goal
 
-Given a lead sitting in Harvester's database, Communicator should be able to,
-without a human touching every message:
+Communicator enables an organization to connect approved customer and business data, define communication-ready profiles and audiences, send messages across supported channels, receive replies, preserve complete conversation history, generate grounded responses, follow up safely, and measure engagement.
 
-1. **Fetch** the lead and its contact points (email / phone / WhatsApp) from
-   Harvester.
-2. **Send** a first-touch message on the appropriate channel(s).
-3. **Receive** replies on that same channel (inbound email, inbound SMS,
-   inbound WhatsApp).
-4. **Respond** using the full conversation history, the current message, and
-   a catalog of the services we sell — answering questions, handling
-   objections, and routing hot leads to a human.
-5. **Follow up automatically** on a cadence if the lead goes quiet, and stop
-   cleanly the moment they reply, convert, or opt out.
-6. **Report outcomes back to Harvester** so lead scoring and sales visibility
-   stay in one place.
+Communicator must work as a standalone product.
 
-Everything below is designed to be built incrementally (see §9, Roadmap) —
-none of it needs to exist on day one to ship value.
+Harvester and NEWAX Core are optional integrations. A customer may instead use manual entry, a CRM, an ERP, a relational database, a document database, an API, a file import, a message queue, or another approved connector.
 
-## 2. Non-negotiable constraints
+## 2. Locked product boundary
 
-These shape the design more than anything else:
+Communicator owns:
 
-- **Consent and opt-out are handled before any AI logic runs.** STOP/
-  UNSUBSCRIBE-class replies on any channel immediately and permanently
-  suppress that contact on that channel, full stop — no model, no queue, no
-  "let me just check the intent first."
-- **A human can always see and, initially, must approve** what the AI is
-  about to send. This mirrors Harvester's existing `OutreachDraft` /
-  `AccountBrief` approval gate — we are extending the same philosophy to
-  two-way conversations rather than reinventing it.
-- **Channel rules are legally different** (CAN-SPAM for email, TCPA-style
-  consent for SMS, Meta's WhatsApp Business session/template rules) and must
-  be modeled explicitly, not bolted on later.
-- **No hallucinated promises.** The model only answers from the service
-  catalog and lead-specific facts we give it; pricing, contractual terms, and
-  anything it isn't confident about get escalated to a human instead of
-  guessed.
+- Its operational database and migrations
+- Authentication, authorization, and tenant isolation
+- Connection and credential profiles
+- Source schemas, mappings, and normalization
+- Organization, person, and contact profiles
+- Contact-channel eligibility
+- Consent and suppression
+- Dynamic groups and static groups
+- Frozen campaign audiences
+- Campaigns and sequences
+- Conversations and messages
+- Delivery, reply, bounce, complaint, and engagement history
+- Draft generation, approval, auto-send, and escalation
+- Communication context
+- Audit, retention, export, backup, and restore
 
-## 3. High-level architecture
+Communicator does not require:
 
+- Harvester for profile creation
+- NEWAX Core for identity
+- A NEWAX-owned database
+- Harvester field names
+- Core Registry field names
+- Direct access to another application's tables
+
+## 3. Product combinations
+
+```text
+Communicator only
+Customer database, CRM, API, file, or manual entry
+→ Communicator
+→ groups, audiences, campaigns, conversations, and replies
 ```
-                     ┌─────────────────────────┐
-                     │        Harvester         │
-                     │  (leads, institutions,    │
-                     │   contact points, drafts) │
-                     └───────────┬───────────────┘
-                                 │ REST API (pull leads, push outcomes)
+
+```text
+Harvester + Communicator
+Harvester publishing rule
+→ signed API, webhook, or event delivery
+→ Communicator source adapter
+→ Communicator mapping and normalization
+```
+
+```text
+Communicator + NEWAX Core
+Optional Core identity, relationships, source facets, and governed context
+→ Communicator Core adapter
+```
+
+```text
+Full NEWAX deployment
+Harvester lead intelligence
++ optional Core identity and governance
++ Communicator communication and engagement
+```
+
+No deployment mode changes Communicator's ownership of messages, conversations, audiences, consent, or response context.
+
+## 4. Formatting independence
+
+The same external record may have different meanings in each product:
+
+```text
+Harvester
+Observation, evidence, resolved lead entity, qualification, score, and dossier
+
+NEWAX Core
+Existence, canonical identity, relationships, provenance, and governed source facets
+
+Communicator
+Communication profile, channel, group, audience, conversation, and engagement
+```
+
+Communicator's normalization flow is:
+
+```text
+Source-native record
+→ immutable intake record
+→ source-schema validation
+→ mapping
+→ Communicator candidate
+→ duplicate and identity matching
+→ organization, person, and contact profile
+→ consent and channel eligibility
+→ group evaluation
+```
+
+A common outer event envelope may standardize delivery. It must not become a shared internal schema.
+
+## 5. High-level architecture
+
+```text
+┌──────────────────────────────────────────────────────────────────────┐
+│                         Approved Data Sources                         │
+│                                                                      │
+│ Customer DB  CRM/ERP  APIs  Files  Webhooks  Harvester  NEWAX Core │
+└────────────────────────────────┬─────────────────────────────────────┘
+                                 │
                                  ▼
- ┌───────────────────────────────────────────────────────────────────┐
- │                            Communicator                            │
- │                                                                     │
- │  ┌────────────┐   ┌────────────────┐   ┌──────────────────────┐   │
- │  │ Lead Sync   │──▶│  Conversation   │◀──│  Inbound Webhooks     │   │
- │  │ Worker      │   │  Store (PG)     │   │  (email/SMS/WhatsApp) │   │
- │  └────────────┘   └───────┬────────┘   └──────────▲────────────┘   │
- │                            │                        │                │
- │                    ┌───────▼────────┐      ┌────────┴────────┐      │
- │                    │  Reply Engine   │      │ Channel Adapters │      │
- │                    │ (intent + RAG   │      │ Email / SMS /    │      │
- │                    │  + LLM draft)   │      │ WhatsApp senders │      │
- │                    └───────┬────────┘      └────────▲────────┘      │
- │                            │                          │              │
- │                    ┌───────▼────────┐        ┌────────┴────────┐    │
- │                    │ Approval Queue  │───────▶│  Send Dispatcher │    │
- │                    │ (human review,  │        │  (rate limits,   │    │
- │                    │  auto-send gate)│        │  quiet hours)    │    │
- │                    └────────────────┘        └─────────────────┘    │
- │                                                                       │
- │                    ┌────────────────┐                                │
- │                    │ Follow-up       │  (scheduled worker, evaluates │
- │                    │ Scheduler       │   silent conversations)       │
- │                    └────────────────┘                                │
- └───────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                         Connector Gateway                            │
+│                                                                      │
+│ Connection profiles  Credential resolver  Adapter registry          │
+│ Schema discovery      Capability validation  Checkpoints             │
+└────────────────────────────────┬─────────────────────────────────────┘
+                                 │
+                                 ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                    Intake, Mapping, and Profiles                      │
+│                                                                      │
+│ Raw intake  Schema registry  Mapping engine  Normalization           │
+│ Profile matching  Provenance  Consent  Suppression  Eligibility      │
+└───────────────────────┬───────────────────────────────┬──────────────┘
+                        │                               │
+                        ▼                               ▼
+┌─────────────────────────────────┐   ┌────────────────────────────────┐
+│ Groups and Audiences            │   │ Communication Context          │
+│                                 │   │                                │
+│ Dynamic groups                  │   │ Identity and organization      │
+│ Static groups                   │   │ Recent conversation history    │
+│ Frozen campaign audiences       │   │ Objections and commitments     │
+│ Inclusion/exclusion reasons     │   │ Source-owned external context  │
+└────────────────┬────────────────┘   └────────────────┬───────────────┘
+                 │                                     │
+                 └──────────────────┬──────────────────┘
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                     Communication Orchestration                      │
+│                                                                      │
+│ Campaigns  Sequences  Conversations  Messages  Reply engine          │
+│ Approval  Auto-send  Follow-up  Escalation  Audit                   │
+└────────────────────────────────┬─────────────────────────────────────┘
+                                 │
+                                 ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                         Channel Providers                            │
+│                                                                      │
+│ Email  SMS  WhatsApp  Future approved channels                      │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-Communicator is a standalone Python/FastAPI service (same stack as
-Harvester, for shared tooling and ops familiarity) with its own Postgres
-database, a Redis-backed task queue for scheduling/retries, and one FastAPI
-router per inbound provider webhook.
+## 6. Current foundation
 
-## 4. Data model (Communicator's own DB)
+The current codebase contains the Harvester-first communication path through Phases 0–5:
 
-Mirrors Harvester's SQLAlchemy conventions (UUID PKs, JSONB for flexible
-fields, `created_at`/`updated_at`).
+- Core conversation, message, contact, consent, sequence, draft, and audit models
+- Harvester API client and lead synchronization
+- Email, SMS, and WhatsApp sending adapters
+- Inbound webhooks
+- Unified message history
+- Intent classification and draft generation
+- Human approval
+- Follow-up scheduling and confidence-gated auto-send
+- Sequence variants
+- Hot-lead alerts
+- Language detection and translated follow-ups
 
-- **`Lead`** — a local cache of a Harvester `CanonicalInstitution` +
-  its qualification summary: `harvester_institution_id`, `name`,
-  `institution_type`, `city`, `qualification_rationale`, `synced_at`.
-  Communicator never treats this as the source of truth — it's a read
-  cache refreshed by the Lead Sync Worker.
-- **`Contact`** — one reachable person/number at a `Lead`:
-  `channel` (email/sms/whatsapp), `value`, `person_name`, `role`,
-  `harvester_contact_point_id`.
-- **`ConsentRecord`** — per `Contact` + channel: `status`
-  (opted_in/opted_out/unknown), `source`, `recorded_at`. Checked before
-  every send; written to on every STOP-class inbound message.
-- **`Conversation`** — one thread per `Contact` (a lead may have parallel
-  conversations on different channels): `state` (`NEW`,
-  `AWAITING_REPLY`, `ENGAGED`, `HOT_LEAD`, `HANDED_OFF`, `OPTED_OUT`,
-  `CLOSED_WON`, `CLOSED_LOST`), `sequence_id`, `sequence_step`,
-  `next_followup_at`.
-- **`Message`** — every inbound/outbound message: `conversation_id`,
-  `direction`, `channel`, `body`, `provider`, `provider_message_id`,
-  `status` (queued/sent/delivered/failed/received), `sent_at`.
-- **`Service`** — the catalog the AI is allowed to talk about: `name`,
-  `summary`, `details` (markdown), `target_institution_types`,
-  `faq` (JSONB list of Q/A), `pricing_notes`. This is the grounding data
-  for "explain about services and answer queries."
-- **`FollowUpSequence`** / **`SequenceStep`** — templated cadences
-  (e.g. day 0 intro, day 3 nudge, day 7 case study, day 14 breakup),
-  per channel, with stop conditions (any reply, opt-out, max steps).
-- **`Draft`** — an AI-generated candidate reply awaiting send:
-  `conversation_id`, `body`, `confidence`, `status`
-  (`pending_review`/`approved`/`auto_approved`/`rejected`/`sent`),
-  `reviewer`, `reviewer_feedback` — directly modeled on Harvester's
-  `OutreachDraft`.
-- **`AuditLog`** — every AI decision (intent classification, draft
-  generated, auto-send vs. escalate) and every human action, for
-  compliance and debugging.
+This is a useful implementation foundation. It is not proof that generic connectors, multi-tenancy, resale packaging, source-schema mappings, or optional-Core behavior are complete.
 
-## 5. Integration with Harvester
+## 7. Target profile model
 
-Communicator talks to Harvester **only through its existing (and
-lightly extended) FastAPI API** — not by connecting directly to
-Harvester's Postgres database. Rationale: independent scaling/deploys,
-least-privilege access, and Harvester's schema stays free to evolve without
-breaking Communicator.
+The current Harvester-oriented `Lead` cache should evolve through migrations into communication-oriented profile concepts.
 
-Pull side (Communicator → Harvester, polling or webhook-triggered):
-- `GET /api/v1/institutions?qualified=true&updated_since=...` — incremental
-  sync of leads ready for outreach (exists today, needs a `qualified`
-  filter — see the integration doc in the Harvester repo).
-- `GET /api/v1/institutions/{id}` — full dossier (contact points,
-  qualification rationale) used as AI context.
-- `GET /api/v1/drafts` (`status=APPROVED`) — an alternative "ready to
-  contact" signal, reusing Harvester's existing human-approval gate for the
-  *first* touch; Communicator owns the reply loop after that.
+### `OrganizationProfile`
 
-Push side (Communicator → Harvester):
-- `POST /api/v1/outreach-outcomes` *(new endpoint — see integration doc)* —
-  reports `opened`/`replied`/`positive_reply`/`closed_won` back onto
-  Harvester's `OutreachOutcome` so lead scoring and sales dashboards reflect
-  real engagement, not just "we sent something."
+```text
+id
+tenant_id
+display_name
+organization_type
+status
+summary
+primary_location
+attributes
+created_at
+updated_at
+```
 
-Auth: reuse Harvester's existing bearer-token auth (`get_current_user`),
-issuing Communicator a dedicated service-role token scoped to read
-institutions/drafts and write outcomes only.
+### `PersonProfile`
 
-## 6. Channel adapters
+```text
+id
+tenant_id
+organization_profile_id
+name
+role
+summary
+attributes
+created_at
+updated_at
+```
 
-A single `ChannelProvider` interface (`send(contact, body) -> ProviderRef`,
-`parse_inbound(payload) -> InboundMessage`) with three implementations:
+### `ContactChannel`
 
-- **Email** — SES or Postmark/SendGrid (need inbound-parse webhooks, which
-  raw SMTP doesn't give us; Harvester's current `smtplib` sender is
-  outbound-only and insufficient here). Requires unsubscribe link + physical
-  address footer for CAN-SPAM.
-- **SMS** — Twilio. Requires documented consent before first send (TCPA) and
-  `STOP`/`HELP` keyword handling (Twilio provides this at the platform level
-  as a backstop; we still record it ourselves).
-- **WhatsApp** — Twilio's WhatsApp API or Meta's WhatsApp Business Cloud API
-  directly. Key constraint: outside a 24-hour customer-initiated session
-  window, only pre-approved **template messages** can be sent — this directly
-  shapes the follow-up scheduler (first-touch and any re-engagement after 24h
-  silence must use an approved template, not free text).
+```text
+id
+person_profile_id
+organization_profile_id
+channel_type
+address
+verification_status
+preferred
+source_reference
+created_at
+updated_at
+```
 
-Recommendation: start with **Twilio for SMS + WhatsApp** (one vendor, one
-webhook shape, one bill) and **Postmark for email** (best-in-class inbound
-parsing). Swappable later behind the `ChannelProvider` interface.
+### `ExternalReference`
 
-## 7. Reply engine (the "respond to messages" piece)
+```text
+id
+tenant_id
+profile_type
+profile_id
+source_system
+source_installation
+source_entity_id
+source_schema
+source_revision
+last_synced_at
+```
 
-Runs whenever an inbound `Message` arrives, or a follow-up step fires.
+### `SourceAttribute`
 
-1. **Compliance gate** (cheap, deterministic, runs first): does the message
-   match an opt-out/opt-in keyword for this channel? If so, update
-   `ConsentRecord` and stop — no LLM call.
-2. **Intent classification** (fast/cheap model or rules): `faq_question`,
-   `objection`, `buying_signal`, `scheduling_request`, `complaint`,
-   `unrelated`. Buying signals and complaints are flagged `HOT_LEAD` /
-   `HANDED_OFF` for immediate human attention regardless of what the draft
-   step produces.
-3. **Context assembly** for the drafting model:
-   - Full `Conversation` message history (in order).
-   - The current inbound message.
-   - The `Lead` profile (institution type, city, qualification rationale
-     from Harvester).
-   - Relevant `Service` catalog entries, retrieved by keyword match against
-     `target_institution_types` initially; upgrade to embedding search once
-     the catalog is large enough to need it.
-   - A system prompt fixing tone, allowed claims, and hard escalation rules
-     (never discuss pricing beyond `pricing_notes`, never make legal/
-     contractual commitments, always offer a human call when asked).
-4. **Draft generation** (Claude) produces the candidate reply + a
-   `confidence` score and a `citations` list (which `Service`/FAQ entries it
-   drew from), stored as a `Draft`.
-5. **Approval gate**: below a configured confidence threshold, or for any
-   `HOT_LEAD`/`complaint`/off-catalog question, the draft sits in
-   `pending_review` for a human (reusing the review-queue pattern from
-   Harvester's `DraftReviewService`). Above the threshold and once the team
-   trusts the system, low-risk FAQ replies can be configured to auto-send.
-   This threshold is a per-deployment config knob, not a fixed rule — start
-   conservative (100% human review) and loosen deliberately.
+Stores bounded source-owned context without pretending it is Communicator-owned truth.
 
-## 8. Automatic follow-up
+```text
+id
+profile_type
+profile_id
+source_system
+attribute_key
+attribute_value
+source_revision
+freshness
+sensitivity
+model_use_allowed
+```
 
-A scheduled worker (Celery/APScheduler + Redis) scans conversations in
-`AWAITING_REPLY` whose `next_followup_at` has passed:
+Existing conversations and contacts require an explicit migration and compatibility strategy. Renaming a table and hoping every foreign key develops emotional resilience is not a strategy.
 
-- Advances to the next `SequenceStep` for that `Conversation`'s
-  `FollowUpSequence`, respecting: channel-specific quiet hours/working
-  hours (reusing Harvester's `within_working_hours` concept), per-lead
-  weekly message caps, and WhatsApp's 24h template-vs-freeform constraint.
-- Stops immediately on any inbound reply, opt-out, or `CLOSED_*` state —
-  checked at send time, not just at scheduling time, to avoid racing an
-  in-flight reply.
-- Generated follow-up copy goes through the same `Draft` + approval gate as
-  reactive replies.
+## 8. Connection profiles
 
-## 9. Roadmap (phased)
+Route:
 
-- **Phase 0 — Foundations**: repo scaffold (FastAPI + SQLAlchemy async +
-  Alembic, matching Harvester's layout), Communicator DB schema, Harvester
-  API client, `ConsentRecord`/opt-out handling, `AuditLog`. No sending yet.
-- **Phase 1 — Outbound MVP**: email + SMS send of a manually-templated
-  first-touch message for Harvester leads with `APPROVED` drafts; delivery
-  status tracking; outcome push back to Harvester. No AI yet — proves the
-  send/receive plumbing and compliance gate.
-- **Phase 2 — Omnichannel inbound**: add WhatsApp; inbound webhooks for all
-  three channels; unified `Conversation`/`Message` timeline; still
-  human-written replies, now with real conversation history to reply from.
-- **Phase 3 — AI reply engine**: `Service` catalog, intent classification,
-  RAG-grounded draft generation, human approval queue.
-- **Phase 4 — Automated follow-up + auto-send**: `FollowUpSequence`
-  scheduler; confidence-gated auto-send for low-risk FAQ replies; outcome
-  feedback loop enriches Harvester's lead scoring.
-- **Phase 5 — Optimization**: sequence A/B testing, sentiment-based hot-lead
-  alerts to sales, multi-language support.
+```text
+/settings/connections
+```
 
-## 10. Open decisions
+Connection categories:
 
-Flagging rather than guessing on the items that materially change the
-design:
+```text
+Database
+REST API
+GraphQL API
+Webhook
+Message queue
+Object storage
+File import
+Harvester
+NEWAX Core
+CRM or ERP
+Custom connector
+```
 
-- **Provider choice**: Twilio for SMS/WhatsApp + Postmark for email assumed
-  above — confirm, since this affects webhook contracts and cost.
-- **LLM provider**: Harvester already depends on `openai`; this plan assumes
-  Claude for reply drafting for quality/safety on customer-facing text.
-  Either is a drop-in behind the drafting interface.
-- **Auto-send trust threshold**: who signs off on moving a reply category
-  from "always human-reviewed" to "auto-send," and what's the rollback
-  trigger if it goes wrong.
-- **Data residency/compliance region**: affects where Communicator's DB and
-  message content can be hosted (PII in chat transcripts).
+Connection metadata:
+
+```text
+id
+name
+tenant_id
+connector_type
+engine_or_provider
+environment
+host
+port
+database_or_resource
+schema_or_namespace
+ssl_mode
+network_mode
+access_mode
+secret_reference
+status
+capability_snapshot
+last_validated_at
+last_successful_sync_at
+created_at
+updated_at
+```
+
+Secret values remain outside normal connection metadata and are never returned after storage.
+
+## 9. Credential system
+
+Production secret resolution order:
+
+```text
+Deployment secret manager
+→ encrypted application vault
+→ explicitly enabled local development adapter
+```
+
+Supported secret material may include:
+
+- Username and password
+- API key
+- OAuth client and refresh credentials
+- Bearer token
+- Private key
+- Certificate
+- SSH tunnel material
+- Webhook signing secret
+- Channel-provider credentials
+
+The frontend shows only configured state, status, environment, last validation, last rotation, and a short fingerprint.
+
+## 10. Database adapters
+
+Initial relational adapters:
+
+- PostgreSQL
+- MySQL
+- MariaDB
+- Microsoft SQL Server
+- SQLite for bounded local use
+
+Initial document and managed-service adapters:
+
+- MongoDB
+- Supabase
+- Neon
+- Amazon RDS-compatible relational services
+- Google Cloud SQL-compatible relational services
+- Azure SQL
+
+Later adapters may include Oracle, DynamoDB, Firebase, Elasticsearch, Snowflake, BigQuery, ClickHouse, and approved customer-specific systems.
+
+"Any database" means an adapter framework with certified capabilities. It does not mean arbitrary access to every engine, version, stored procedure, trigger, extension, and home-grown schema humans have accumulated since the invention of regret.
+
+## 11. Adapter contract
+
+```python
+class ConnectionAdapter:
+    connector_type: str
+    adapter_version: str
+
+    async def validate(self, profile, credential) -> ValidationResult: ...
+    async def discover_schema(self, profile) -> SourceSchema: ...
+    async def preview(self, profile, cursor=None) -> PreviewBatch: ...
+    async def read(self, profile, cursor=None) -> SourceBatch: ...
+    async def write(self, profile, records) -> WriteResult: ...
+    async def checkpoint(self, run) -> Checkpoint: ...
+```
+
+Every adapter declares:
+
+- Engine and supported versions
+- Read, write, polling, webhook, export, and CDC capability
+- Schema discovery behavior
+- Transaction behavior
+- Cursor and checkpoint semantics
+- Identifier and timestamp handling
+- Batch and payload limits
+- TLS and network requirements
+- Safe validation operation
+- Required permissions
+
+Default access is read-only.
+
+## 12. Source-schema registry
+
+```text
+SourceSchemaDefinition
+SourceSchemaVersion
+ConnectorVersion
+MappingProfile
+MappingVersion
+NormalizationVersion
+CompatibilityState
+```
+
+Examples:
+
+```text
+customer_crm.contacts.v3
+customer_postgres.accounts.v2
+harvester.full_lead_context.v1
+core.communication_context.v1
+partner_api.person.v4
+```
+
+Unknown or incompatible schemas enter quarantine or review. They do not receive the charitable assumption that similarly named fields mean the same thing.
+
+## 13. Mapping engine
+
+Supported operations:
+
+- Direct mapping
+- Rename
+- Constant
+- Conditional mapping
+- Enumeration mapping
+- Split
+- Combine
+- Lookup
+- Normalize
+- Ignore
+- Preserve as source metadata
+- Require review
+- Redact
+- Deny import
+
+Example CRM mapping:
+
+```text
+crm.account_name
+→ organization profile display name
+
+crm.primary_email
+→ email contact channel
+
+crm.do_not_contact
+→ suppression status
+
+crm.account_owner
+→ source-owned relationship context
+```
+
+Example Harvester mapping:
+
+```text
+harvester.organization_name
+→ organization profile display name
+
+harvester.person_name and role
+→ person profile
+
+harvester.verified_email
+→ email contact channel
+
+harvester.lead_score
+→ source-owned lead context
+
+harvester.dossier_reference
+→ external context reference
+```
+
+Mappings are versioned, previewable, testable, auditable, and reversible.
+
+## 14. Intake pipeline
+
+```text
+Connection profile
+→ credential resolution
+→ adapter validation
+→ source schema discovery
+→ source-native read
+→ immutable intake persistence
+→ schema validation
+→ mapping
+→ Communicator normalization
+→ duplicate and identity matching
+→ profile services
+→ consent and channel eligibility
+→ group evaluation
+→ local commit
+→ optional outbound event
+```
+
+Optional outbound integration never participates in the local profile or message transaction.
+
+## 15. Synchronization modes
+
+Target modes:
+
+```text
+Manual import
+Scheduled import
+Continuous polling
+Webhook-triggered synchronization
+Change-data-capture where approved
+Manual export
+Scheduled export
+Event-driven publication
+Bidirectional synchronization for explicitly approved fields
+```
+
+Every run stores:
+
+- Connection, schema, mapping, and normalization versions
+- Cursor or checkpoint
+- Records examined
+- Created, updated, skipped, quarantined, and rejected counts
+- Conflict decisions
+- Retry and recovery state
+- Actor or scheduler identity
+- Error details without secrets
+
+## 16. Groups and filters
+
+### Dynamic group
+
+A saved query evaluated against current Communicator profile data.
+
+### Static group
+
+A manually maintained collection.
+
+### Frozen campaign audience
+
+An immutable snapshot created when a campaign is approved.
+
+```text
+Profile data
+→ filter evaluation
+→ dynamic or static group
+→ audience preview
+→ suppression and eligibility checks
+→ approval
+→ frozen campaign audience
+```
+
+Each inclusion and exclusion must be explainable.
+
+## 17. Campaigns and conversations
+
+A campaign references a frozen audience, objective, sequence, channels, schedule, limits, approval state, and sending policy.
+
+A conversation belongs to a communication profile and channel context. Conversation history remains local even when the originating source is disconnected.
+
+Current state examples:
+
+```text
+NEW
+AWAITING_REPLY
+ENGAGED
+HOT_LEAD
+HANDED_OFF
+OPTED_OUT
+CLOSED_WON
+CLOSED_LOST
+```
+
+State names and transitions should become configurable where resale requirements justify it, without weakening compliance states.
+
+## 18. Channel providers
+
+A stable `ChannelProvider` interface supports sending, inbound parsing, delivery updates, identity validation, and capability metadata.
+
+Initial channels:
+
+- Email
+- SMS
+- WhatsApp
+
+Future channels require explicit legal, security, webhook, identity, and opt-out review before activation.
+
+Channel-specific rules remain explicit. The application must not flatten legally different channels into one optimistic `send()` button and let compliance clean up afterward.
+
+## 19. Consent and suppression
+
+Consent and opt-out are evaluated before model logic and before every send.
+
+Required behavior:
+
+- Per profile and channel status
+- Source and evidence
+- Effective time
+- Tenant scope
+- Global and campaign-specific suppression where policy permits
+- STOP and unsubscribe handling
+- Complaint handling
+- Conflict resolution across connected sources
+- Audit and export
+
+Core synchronization may share suppression outcomes when configured. Communicator remains capable of enforcing suppression locally without Core.
+
+## 20. Communication Context Profile
+
+```text
+CommunicationContextProfile
+├── Identity summary
+├── Organization summary
+├── Person and role summary
+├── Contact-channel state
+├── Source-owned lead or relationship context
+├── Recent conversation history
+├── Questions and objections
+├── Preferences and commitments
+├── Current intent and sentiment
+├── Relevant service or knowledge context
+├── Consent and suppression
+└── Source references and freshness
+```
+
+Context sources:
+
+- Local profiles
+- Local conversation history
+- Service and knowledge catalog
+- Harvester adapter
+- Core adapter
+- Customer CRM or ERP
+- Customer knowledge base
+- Approved imported records
+
+Context retrieval is layered:
+
+1. Identity and current conversation summary
+2. Recent messages
+3. Open questions, objections, promises, and preferences
+4. Relevant organization and source context
+5. Older records retrieved on demand
+6. Raw source material available for verification
+
+Every context item has source, freshness, sensitivity, retention, purpose, and model-use permission.
+
+## 21. Reply engine
+
+The current reply engine remains conceptually valid but receives context through the generalized context builder.
+
+```text
+Inbound message
+→ deterministic compliance gate
+→ intent and risk classification
+→ context assembly
+→ grounded draft
+→ confidence and citation record
+→ approval or permitted auto-send
+→ message dispatch
+→ audit
+```
+
+Hard escalation examples:
+
+- Pricing or contractual commitments outside approved knowledge
+- Complaint or legal threat
+- Sensitive-data request
+- Uncertain identity
+- Conflicting source context
+- Low-confidence answer
+- High-value buying signal requiring a person
+
+## 22. Follow-up engine
+
+Follow-up remains conversation-owned and source-independent.
+
+It evaluates:
+
+- Conversation state
+- Last inbound and outbound activity
+- Sequence step
+- Quiet hours and timezone
+- Weekly and channel limits
+- Consent and suppression
+- Provider restrictions
+- Campaign state
+- Human handoff
+
+A disconnected source must not erase scheduled work or conversation history.
+
+## 23. Optional Harvester integration
+
+Harvester may publish:
+
+- Minimal Contact
+- Standard Lead
+- Full Lead Context
+- Custom mapped payload
+
+Communicator maps these payloads into local profiles. It does not treat Harvester's model as its own.
+
+Feedback to Harvester may include:
+
+- Sent
+- Delivered
+- Reply received
+- Positive reply
+- Hard or soft bounce
+- Complaint
+- Opt-out
+- Invalid contact
+- Closed won or lost
+- Verification or refresh request
+
+Direct integration works without Core.
+
+## 24. Optional NEWAX Core integration
+
+Core may provide:
+
+- Canonical organization and person IDs
+- Relationships
+- Contact-channel updates
+- Consent and suppression state
+- Customer or partner context
+- Approved source facets
+- Controlled context packages
+- Merge and split notifications
+
+Communicator may publish:
+
+- Communication profile links
+- Contact-channel state
+- Consent and suppression outcomes
+- Delivery, bounce, complaint, reply, and engagement events
+- Conversation-state summaries
+
+Core is not required to preserve a message, create a draft, or send a reply.
+
+## 25. Reliability
+
+Use:
+
+- Transactional local outbox
+- Durable inbound inbox
+- Stable event and command IDs
+- Payload hashes
+- Idempotent processing
+- Exponential retry with jitter
+- Dead letter
+- Circuit breaker
+- Backpressure
+- Durable checkpoints
+- Reconciliation
+
+No distributed transaction spans Communicator and another product.
+
+## 26. Security
+
+- Tenant-scoped connections and data access
+- Least-privilege credentials
+- Write-only secrets
+- TLS validation
+- SSRF protections
+- Parameterized and adapter-owned queries
+- Schema, table, collection, and operation allowlists
+- Payload and response limits
+- Signed product events
+- Timestamp and replay validation
+- Consent checks before sending
+- Context authorization before model use
+- Redaction and sensitivity controls
+- Audit without secrets
+- No shared database credentials
+
+## 27. Resale architecture
+
+Required capabilities:
+
+- Tenant provisioning and isolation
+- Tenant-specific connection and channel credentials
+- Tenant-specific sender identities
+- Tenant-specific service and knowledge catalog
+- Subscription and license state
+- Usage, channel, and model quotas
+- Feature flags
+- Branding and terminology
+- Custom domains
+- Data residency
+- Import and export portability
+- Retention and deletion
+- Backup and restore
+- Upgrade compatibility
+- Controlled white-labeling
+
+NEWAX remains the default product brand. White-labeling does not permit weakening consent, audit, or security controls.
+
+## 28. Administration routes
+
+```text
+/settings/connections
+/settings/credentials
+/settings/source-schemas
+/settings/mappings
+/settings/synchronization
+/integrations/harvester
+/integrations/newax-core
+/groups
+/audiences
+/context
+/campaigns
+/conversations
+/drafts
+/operations
+```
+
+## 29. Delivery plan
+
+The current Phase 0–5 implementation remains the foundation.
+
+Standalone-product generalization is delivered through the roadmap in `docs/ROADMAP.md`:
+
+```text
+CSP-0   Product boundary and migration inventory
+CSP-1   Generic profile foundation
+CSP-2   Connection and credential foundation
+CSP-3   Database and source adapter kernel
+CSP-4   Source-schema registry and mapping
+CSP-5   Communicator normalization engine
+CSP-6   Groups, filters, and frozen audiences
+CSP-7   Communication Context Profile
+CSP-8   Direct Harvester adapter
+CSP-9   Optional NEWAX Core adapter
+CSP-10  Synchronization engine
+CSP-11  Administration UI
+CSP-12  Multi-tenant resale foundation
+CSP-13  Packaging and operations
+CSP-14  Verification and rollout
+```
+
+## 30. Acceptance criteria
+
+The target architecture is not complete until:
+
+1. Communicator operates with Harvester and Core disabled.
+2. Profiles can originate from manual entry or approved customer systems.
+3. Each source is mapped through a versioned Communicator mapping.
+4. Source-native records are preserved before transformation.
+5. External schemas do not become the internal schema.
+6. Consent and suppression are source-independent and enforced before every send.
+7. Dynamic groups and frozen audiences remain distinct.
+8. Conversation history survives source disconnection.
+9. Strong reply context can be assembled without Core.
+10. Direct Harvester integration works without Core.
+11. Optional Core integration works without Harvester.
+12. Customer databases use certified, least-privilege adapters.
+13. Optional integration outages create backlogs, not message loss.
+14. Product events are idempotent and replay-safe.
+15. Context access is permissioned and auditable.
+16. Tenants remain isolated across data, connections, messages, mappings, groups, and context.
+17. Backup, restore, export, deletion, licensing, and upgrade paths are verified.
+18. Exact-head tests, migrations, security checks, runtime scenarios, and CI pass before activation.
+
+## 31. Locked rule
+
+> Communicator is the communication and relationship product. Sources may enrich its profiles and context, but Communicator independently owns how data becomes an audience, a conversation, and a response.
