@@ -40,7 +40,7 @@ than merged, because it invents tenant identity a second time (D12).
 | D6 | nID's existing `X-Tenant-Id` convention wins; Communicator renames its branch's `X-Tenant-Key` | `TenantActorGuard` honours `X-Tenant-Id` (`tenant-actor.guard.ts:71-85`). Two spellings for the same concept across the ecosystem guarantees drift. |
 | D7 | Communicator maps nID **role → product capability** locally, using the RBAC engine that already exists (`services/rbac_service.py`); nID does not gain a permissions engine | nID's role vocabulary is one unvalidated free-text default `'STAFF'` (`tenant-staff.service.ts:55-56`, `InviteStaffDto:17-18` has no enum) and zero permission strings; `TenantApiKey.scopes` exists but is enforced nowhere. Communicator is the opposite: `STANDARD_PERMISSIONS` already holds 22 keys, `RoleDefinition` and `check_member_permission` exist, and **nothing calls them on a request path** — only `routes/roles.py` imports the service. So D7 is not "invent an authz layer", it is "bind the one that already ships to nID's role", which is also the only way to avoid a second capability vocabulary. Who is an agent of which tenant is nID's; what an agent may do inside Communicator is Communicator's. **This is the one boundary this spec draws against a literal "all auth in nID" — overriding it means building a permissions system inside nID.** |
 | D8 | Mock auth is gated on the explicit flag **only**; the `app_env == "development"` clause is deleted | `config.py:9` defaults `app_env="development"` and the branch mints a valid session for *any* code when that holds. A production deploy with defaults would accept forged logins. |
-| D9 | Enforce auth route-file by route-file, with a written public allowlist, in the enforcement PR | 44 route files exist and 39 are tenant-blind. A runtime "enforcement on/off" flag ships a bypass; a per-file sweep with tests is the honest cost. |
+| D9 | Enforce auth route-file by route-file, with a written public allowlist, in the enforcement PR | 45 route modules hold 360 operations and 2 carry an auth dependency (§3.1). A runtime "enforcement on/off" flag ships a bypass; a per-file sweep with tests is the honest cost. |
 | D10 | No migration-seeded tenant. A Communicator `tenants` row is **auto-provisioned**, idempotently, the first time one of its members is introspected | Rev. 2 said "keyed to a real nID tenant id", which a migration cannot know: `Tenant.id` is a deployment-specific cuid (`schema.prisma:86`). Tenant rows exist today only via `POST /api/v1/organizations` while everything defaults to `"newax"`, inserted by hand. Lazy upsert on `ON CONFLICT DO NOTHING` removes the hand-insert and keeps nID as the existence check. |
 | D11 | nID work lands **before** Communicator's enforcement PR, not after | Communicator's enforcement PR depends on introspection responses. Shipping it against the current account-claims-only exchange would leave the escalation open behind a flag. |
 | D12 | **Tenant provisioning belongs to nID.** The branch's `POST /organizations` self-service create is deleted, not adapted | It mints `tenant_key = _slugify(name)` and writes `owner_account_id` from the local session — a Communicator-invented key that exists in no nID `Tenant` row and grants no `TenantStaffMembership`. Under D3 every subsequent request for that "organization" is a 403. `GET /organizations` survives as a read-only projection of introspection memberships. |
@@ -114,13 +114,17 @@ SPA request; nine migrations chained `b3e5f6a7c8d9 → … → 33fe48fddf99`.
 
 1. Alembic splits into two heads after merge — `c4d5e6f7a8b9` and `33fe48fddf99` share parent
    `b3e5f6a7c8d9`. Needs an explicit merge revision.
-2. `routes/automation.py` — all 10 endpoints take `Depends(get_db_session)` and nothing else.
-   `routes/roles.py` is the same and worse: it manages the RBAC grants themselves, and
+2. `routes/automation.py` — all **8** endpoints take `Depends(get_db_session)` and nothing else
+   (`:57, :67, :75, :86, :117, :128, :168, :181`; rev. 4 measured the merged tree and it is 8, not
+   the 10 this draft first claimed). `routes/roles.py` is the same and worse: it manages the RBAC
+   grants themselves, and
    `GET /roles/members/{member_id}/check` evaluates any member's permissions for any caller.
 3. `seed_default_whatsapp_automations` — dedup is `select(AutomationRule.name)` with no tenant
-   filter (`whatsapp_automations.py:1115`), so tenant two seeds zero rules; the seeder never
-   sets `tenant_key`, so seeded rules land in the model default `"newax"`; the `count()` at
-   :969-970 is computed and discarded.
+   filter (`whatsapp_automations.py:1124`), so tenant two seeds zero rules; **and the seeded
+   `AutomationRule(...)` literals never pass `tenant_key` at all**, so they land on the model
+   default whatever the caller asked for; the seeder takes no tenant argument
+   (`seed_default_whatsapp_automations(session)` at `:963`); the `count()` at
+   `:978-979` is computed, discarded and its result thrown away.
 4. `config.py` — both sides add a `nid_*` block; `nid_redirect_uri` (`:67`) and `public_url` (`:59`)
    both say `:8001` while uvicorn serves `:8000` (`README.md:30`) and the branch's Vite proxy sends
    `/api` to `:8000`. `nid_redirect_uri` additionally names the API path (`config.py:67`, read into
@@ -144,12 +148,46 @@ SPA request; nine migrations chained `b3e5f6a7c8d9 → … → 33fe48fddf99`.
    the seeder tenant-aware; it does not invent the two missing compliance rules, because opt-out
    handling is a product and carrier-compliance decision, not a tenancy mechanic. Recorded in §7.
 
+### 3.1 Rev. 4 measurements on the merged tree (2026-11-01)
+
+Everything below was measured by walking the merged app object and the live Postgres catalog, not
+inferred — it replaces the estimates the earlier drafts worked from.
+
+- **Enforcement baseline.** `app.routes` yields **360** operations (method × path) across 45 route
+  modules. Exactly **2** of them carry an auth dependency today — `GET` and `POST
+  /api/v1/organizations`. The other 358 answer to an anonymous caller. §5's allowlist turns that
+  into 39 genuinely public operations and 321 to guard; the plan enumerates both lists.
+- **`IntegrationSettings.tenant_key` is UNIQUE.** The model declares `unique=True`
+  (`models/integration_settings.py:27-29`), migration `5a95ba8a58af:28-32` creates
+  `ix_integration_settings_tenant_key` as a **unique** index, and the live catalog confirms it. So
+  "two tenants hold distinct WhatsApp credentials" (acceptance criterion 8) is physically
+  impossible until a migration drops that uniqueness. PR-2 opens with that migration; it is not
+  optional cleanup.
+- **`TeamMember` carries neither `tenant_key` nor `nid_account_id`** (`models/team_member.py:11-35`
+  — `id, name, email, role, custom_permissions, availability_status,
+  max_concurrent_conversations, last_assigned_at, created_at`). §4.2 adds the `nid_account_id`
+  link; the missing `tenant_key` means `roles.py`'s member list, `team.py` and auto-assignment are
+  **cross-tenant today** — every tenant's UI would show the same single `team_members` table. PR-2
+  adds `team_members.tenant_key` for the same reason it drops the settings uniqueness: D7's
+  permission lookup is meaningless while a member row is global.
+- **Only 14 of 58 tables have a tenant column** (`automation_rules`, `broadcasts`,
+  `campaign_templates`, `contacts`, `customers`, `discovery_flow_templates`, `inquiries`,
+  `integration_settings`, `knowledge_base_entries`, `leads`, `segments`, `services`, `tags`, plus
+  `tenants` itself). `conversations`, `messages`, `inboxes`, `tickets`, `drafts`,
+  `canned_responses`, `macros`, `sla_policies`, `webhook_endpoints`, `ai_connections` and the
+  rest do not. PR-2 guards *every* non-allowlisted route — so an unauthenticated caller learns
+  nothing — and filters by `tenant_key` *where the column exists*, and it writes the remaining
+  tables down in `docs/TENANCY_GAPS.md` instead of implying they are scoped. Adding tenant columns
+  to 44 tables, backfilling them and rewriting their queries is its own project (project 3), not a
+  task inside this one.
+
 ## 4. Design
 
 ### 4.1 Project 0 — what gets built in nID
 
 Follows nID's conventions: `apps/api/src/modules/<name>/` with controller/service/module/dto +
-`*.spec.ts` (Jest, `apps/api/jest.config.cjs`); `prisma.forTenant()` for writes and
+`*.spec.ts` (Jest, `apps/api/jest.config.js` — CommonJS `module.exports`, and its `testMatch`
+covers both `src/**/*.spec.ts` and `test/**/*.spec.ts`); `prisma.forTenant()` for writes and
 `prisma.unscoped` only where a table has an open-SELECT policy; RLS in the same migration that
 creates a tenant-owned table (HOUSE-RULES rule 2); `timingSafeEqual` for every secret compare
 (rule 4); env behind `core/config` and never logged (rule 6); done means
@@ -168,6 +206,7 @@ table (open SELECT already in place, `20260917195555:208`).
 ```
 RelyingPartySession
   id           TEXT pk (cuid)
+  tenantId     TEXT -> OAuthClient's tenant (denormalized, no Tenant relation)
   accountId    TEXT -> Account   ON DELETE CASCADE
   clientId     TEXT -> OAuthClient ON DELETE CASCADE
   tokenHash    TEXT @unique        -- sha256; raw token is returned once, never stored
@@ -176,12 +215,20 @@ RelyingPartySession
   revokedAt    TIMESTAMP NULL      -- AccountSession has no equivalent; logout must be durable
   createdAt    TIMESTAMP
   @@index([accountId])
+  @@index([tenantId])
 ```
 
-No `tenantId`: `Account` and `AccountSession` are deliberately non-tenant tables
-(`schema.prisma:530-544`) because an account spans tenants. It gets the bootstrap shape —
-open `FOR SELECT USING (true)` plus scoped insert/update/delete — because a token is resolved
-before the tenant is known, exactly like `VerificationSession` (`001_verification_sessions:18`).
+`tenantId` is the owning client's tenant, copied in at mint time, and the table is shaped exactly
+like `OAuthLoginRequest` (`packages/db/prisma/schema.prisma`, the model right after
+`LoginRequestStatus`), which already does the same thing: a `tenantId` column with
+`@@index([tenantId])` and no `Tenant` relation, because resolving *which* tenant a presented
+credential belongs to is the chicken-and-egg problem RLS can't solve by itself. So it carries
+`ENABLE` + `FORCE ROW LEVEL SECURITY` with the bootstrap shape — open `FOR SELECT USING (true)`,
+tenant-scoped insert/update/delete — same as the `login_request_lookup` / `login_request_*_scoped`
+policies in `20260917195555_accounts_and_oauth/migration.sql:219-232`. The alternative — no
+`tenantId` at all, the way `Account`/`AccountSession` are left unprotected
+(`migration.sql:195-199`) — would leave a credential table with no isolation policy whatsoever,
+which is not a trade this ecosystem makes for anything that unlocks tenant data.
 
 **N3 — `POST /v1/oauth/token` also mints an RP session.** Returns
 `{account, session: {token, expiresAt, scopes}}`. Reuses `generateSessionToken` / `sha256Hex`
@@ -191,9 +238,18 @@ short-lived and revocable, which is what makes D4's rejection of `AccountSession
 instead of something the relying party has to work around.
 
 **N4 — `POST /v1/oauth/introspect`, guarded by the RP's own client credential.**
-Body `{token}`; server hashes, loads `RelyingPartySession`, checks expiry/revocation and that
-the session's `clientId` equals the calling client, then resolves
-`tenantStaffMembership.findMany({where:{accountId}})` joined to `Tenant` and returns:
+Body `{token, clientId, clientSecret}` — the same three-credential shape as `POST /v1/oauth/token`,
+because this endpoint hands out tenant identifiers and roles and must be authenticated by
+something other than the bearer of the token. Server hashes the token, loads `RelyingPartySession`,
+checks expiry/revocation and that the session's `clientId` equals the calling client; a bad
+`clientId`/`clientSecret` is a 403, an unknown/expired/revoked token is a 200 `{active: false}`
+(RFC 7662 semantics — the caller asked a question, and "no" is a valid answer, not an error).
+Then resolves `tenantStaffMembership.findMany({where:{accountId}})` (open SELECT, same bootstrap
+reasoning) and, for each membership, reads that tenant's `Tenant` row *inside*
+`prisma.forTenant(membership.tenantId, …)` — `Tenant`'s own `tenant_self` policy
+(`000_init/migration.sql:186-188`) is `USING ("id" = current_setting('app.tenant_id', true))`, so a
+cross-tenant `Tenant` read returns nothing. That is one small transaction per organization a
+person belongs to, which is the same cost the guard already pays per request. Returns:
 
 ```json
 {
@@ -207,9 +263,15 @@ the session's `clientId` equals the calling client, then resolves
 }
 ```
 
-Response is `no-store`; the session row is `unscoped` read, writes via `forTenant`. Audit per
-rule 3 is not required (no Subject PII), but the endpoint is rate-limited like checkout is in
-the billing spec.
+Response is `no-store`; the session row is `unscoped` read, writes via `forTenant`. Audit per rule
+3 is not required (no Subject PII). **Rev. 3 correction:** the earlier draft said this endpoint
+"is rate-limited like checkout is in the billing spec" — nID has no rate limiter to inherit
+(`@nestjs/throttler` is not a dependency of `apps/api`, there is no guard or interceptor
+registered for it, and the billing plan never landed its limiting task either), so Project 0 does
+not invent one. What actually protects these endpoints today is that both require a
+`clientSecret` with 192 bits of entropy, the session token itself is 192 bits and only its hash is
+stored, and the responses are `no-store`. A limiter for `apps/api`'s inbound surface is a
+platform-wide nID task, not something this tenancy work should smuggle in under one controller.
 
 **N5 — `POST /v1/oauth/revoke`.** Sets `revokedAt`; idempotent; requires the client credential.
 Communicator's logout calls it.
@@ -295,8 +357,10 @@ because Communicator's own rows key people by local UUID — `Conversation.assig
 `Ticket.assigned_to_id`, `Approval.assigned_to_id` all point at `TeamMember.id`
 (`models/team_member.py:16`) — and nID's cuid strings cannot be those FKs. So `TeamMember` gains a
 nullable `nid_account_id` that resolves through this table, which is what D7's permission lookup
-needs to find the caller at all. The row is upserted from introspection results and grants no
-access by itself.
+needs to find the caller at all. It also gains a `tenant_key`: the table is global today
+(`models/team_member.py:11-35` has no tenant column), so one shared agent list is visible to every
+tenant and a per-tenant capability check has nothing to be per-tenant *about*. The row is upserted
+from introspection results and grants no access by itself.
 
 ### 4.3 Communicator: per-request authorization
 
@@ -323,7 +387,8 @@ passing means the tenant exists, so the row is created inside the same request o
 `"newax"` survives only as `DEFAULT_TENANT_KEY`, honoured when `app_env == "development"`, and
 `Settings` refuses to boot if it is still the configured tenant while the app is not in development.
 
-`GET /api/v1/auth/me` is the SPA's view of all this and must stop reading the deleted dict: it
+`GET /api/v1/auth/nid/me` (the router is prefixed `/auth/nid`, so this is the path that actually
+exists on both branches) is the SPA's view of all this and must stop reading the deleted dict: it
 becomes the introspection call itself, returning `{account_id, email, phone, memberships:
 [{tenant_id, name, role}]}`. That response is what `Organizations.tsx` lists, what the tenant picker
 switches, and what `GET /api/v1/organizations` projects (D12) — and the authorization
@@ -352,15 +417,18 @@ permission keys; nothing else consults role. Three consequences worth stating:
 ### 4.4 Automation tenancy
 
 - `match_advanced_rule(session, ..., tenant_key)` — keep the branch's filter, delete the `"newax"`
-  default so a missing tenant is a `TypeError` at the call site, not a silent cross-tenant read.
-- Seeder dedup becomes `where(AutomationRule.tenant_key == tenant_key)` (the `select` at :1115);
-  seeded rows carry `tenant_key`; the dead `count()` at :969-970 is removed; the docstring stops
-  claiming eleven. Hardcoded copy inside the seeded rules (office address at :1077,
-  `https://calendly.com` at :1064, "Welcome to our WhatsApp Center") reads the tenant's
-  `IntegrationSettings` row — the same row that becomes per-tenant in this merge.
-- `routes/automation.py`: all 10 endpoints take `require_tenant_member`; `PUT /{id}` and
-  `DELETE /{id}` fetch `where(id == rule_id, tenant_key == tenant_key)` so another tenant's id
-  returns 404, not 403-with-existence-proof.
+  default (`:580`) so a missing tenant is a `TypeError` at the call site, not a silent cross-tenant
+  read.
+- Seeder dedup becomes `where(AutomationRule.tenant_key == tenant_key)` (the `select` at `:1124`);
+  seeded rows carry `tenant_key`; the dead `count()` at `:978-979` is removed; the docstring stops
+  claiming eleven (it lists "Opt-Out Compliance (STOP)" and "Opt-In Re-engagement (START)" at
+  `:974-975` and builds neither — see defect 9). Hardcoded copy inside the seeded rules (office
+  address description at `:1082`, `https://calendly.com` at `:1073`, "Welcome to our WhatsApp
+  Center" at `:990`) reads the tenant's `IntegrationSettings` row — the same row that becomes
+  per-tenant in this merge.
+- `routes/automation.py`: all 8 endpoints take `require_tenant_member`; `PUT /{rule_id}` (`:168`)
+  and `DELETE /{rule_id}` (`:181`) fetch `where(id == rule_id, tenant_key == tenant_key)` so
+  another tenant's id returns 404, not 403-with-existence-proof.
 - `run_inactivity_nudges` and `/scheduler/*` iterate per tenant and resolve the provider from that
   tenant's settings row, not the singleton.
 
@@ -443,8 +511,14 @@ credentials logs a warning instead of returning an empty dict silently.
    `roles.py` (D7); config hygiene (§4.5); automation scoping and seeder (§4.4); frontend bearer
    wiring with `dev_mode` and `/auth/me` casing ported per D2. Splitting this ships an intermediate
    where the dict is gone, the guard is live, and the SPA still sends no bearer — every route 401.
-4. **PR-3 (Communicator):** test sweep (§4.6) green, then `ruff check`, `ruff format --check`,
-   typecheck, build. This is a gate on PR-2, not a separate deliverable.
+4. **PR-3 (Communicator):** test sweep (§4.6) green, then `ruff check src tests`,
+   `ruff format --check src tests` and `npm run build` (which is `tsc -b && vite build`).
+   **Rev. 3 correction:** this section used to promise a Python "typecheck" step. Communicator has
+   no typechecker — there is no `mypy.ini`, `[tool.mypy]`, `[tool.pyright]`, `pyrightconfig.json`
+   or typecheck script anywhere in the repo or `.github/workflows/ci.yml`, and mypy is not in
+   `pyproject.toml`'s dev extras. Adding one is its own project, not a gate inside this one; the
+   only static typing that exists today is the frontend's, via `tsc -b`. This is a gate on PR-2,
+   not a separate deliverable.
 
 PR-1 can merge today; it needs nothing from nID. PR-2 needs PR-N1 deployed, and a real login can
 only be verified once PR-N1 is up, because today's `authorize_url` 404s (§3).
@@ -462,8 +536,16 @@ only be verified once PR-N1 is up, because today's `authorize_url` 404s (§3).
   does not hold. N4 is the fix, and it is new code in a repo this project does not own alone.
 - A 44-route sweep touches files unmodified since the branch diverged; conflicts resolve in favour
   of adding the dependency, never dropping it.
-- Removing the singleton rewrites 11 `get_settings_row` / `get_whatsapp_config` call sites to pass
-  `tenant_key`; each needs a read, not a sed.
+- Removing the singleton rewrites **20** `get_settings_row` / `get_whatsapp_config` call sites to
+  pass `tenant_key` (rev. 4 count on the merged tree: 15 `get_settings_row` — `routes/inboxes.py:675,
+  :1116, :1150, :1251`, `routes/settings.py:38, :96, :145, :181, :217, :245`,
+  `services/inbound.py:200`, `services/reply_engine.py:58`, `services/whatsapp_automations.py:456,
+  :479, :527` — and 5 `get_whatsapp_config` — `routes/broadcasts.py:450`, `routes/discovery.py:143`,
+  `routes/webhooks.py:117, :126`, `services/channels/__init__.py:33`); each needs a read, not a sed.
+  Five of those sit on paths that have no authenticated request to take a tenant from — the Meta
+  webhooks, `services/inbound.py`, `channels/__init__.py` and the scheduler — so those callers
+  resolve the tenant *from the payload* (`IntegrationSettings.meta_phone_number_id` / `meta_waba_id`
+  matching what Meta sent) rather than from a header. That resolution is new code, not a rename.
 - The merge drags 3,155 deleted lines of branch rewrites. Regions `newax/finalization` also changed
   (live-proof, crypto-mesh) need per-file review — no blind `-X ours`.
 - **D12 leaves no self-service onboarding.** Deleting `POST /organizations` means a new customer
@@ -512,5 +594,7 @@ only be verified once PR-N1 is up, because today's `authorize_url` 404s (§3).
    both, and defect 9's docstring is corrected to stop claiming eleven.
 9. `POST /api/v1/organizations` is gone, and the org list a person sees is exactly their
    introspected memberships.
-10. nID: `pnpm typecheck && pnpm lint && pnpm test && pnpm db:validate` green. Communicator:
-    `pytest`, `ruff check`, `ruff format --check`, typecheck and frontend build green.
+10. nID: `pnpm typecheck && pnpm lint && pnpm test && pnpm db:validate` green, plus
+    `RUN_DB_TESTS=true pnpm --filter @nid/api test` green against live Postgres. Communicator:
+    `pytest`, `ruff check src tests`, `ruff format --check src tests` and `cd frontend && npm run
+    build` green (no Python typechecker exists — see §6 item 4).
