@@ -76,7 +76,7 @@ async def handle_agent_commands(
             session,
             contact,
             provider,
-            "🤖 Automated assistant has been resumed. How else can we help you today?",
+            "Automated assistant has been resumed. How else can we help you today?",
         )
         conversation.human_takeover = False
         conversation.state = ConversationState.ENGAGED
@@ -200,13 +200,13 @@ async def handle_csat_response(
         # Tag contact according to score
         if score >= 4:
             await add_tag_to_contact(session, contact, "csat_promoter")
-            reply = "🎉 Thank you so much for the glowing feedback! We're thrilled to assist you."
+            reply = "Thank you so much for the glowing feedback! We're thrilled to assist you."
         elif score == 3:
             await add_tag_to_contact(session, contact, "csat_neutral")
-            reply = "🙏 Thank you for your feedback! We are constantly working to improve."
+            reply = "Thank you for your feedback! We are constantly working to improve."
         else:
             await add_tag_to_contact(session, contact, "csat_detractor")
-            reply = "🙏 Thank you for sharing your honest feedback. We apologize for falling short and will have a manager follow up with you."
+            reply = "Thank you for sharing your honest feedback. We apologize for falling short and will have a manager follow up with you."
 
         provider = await get_provider(contact.channel, session)
         await send_outbound_message(session, contact, provider, reply)
@@ -245,7 +245,7 @@ async def execute_handoff(
     # Inform the customer
     provider = await get_provider(contact.channel, session)
     msg = (
-        "🔔 A human specialist has been notified and is reviewing your message. "
+        "A human specialist has been notified and is reviewing your message. "
         "A team member will be with you in just a moment!"
     )
     if note:
@@ -254,8 +254,8 @@ async def execute_handoff(
     if isinstance(provider, MetaWhatsAppProvider):
         try:
             buttons = [
-                {"id": "menu:main", "title": "🔙 Main Menu"},
-                {"id": "menu:services", "title": "🌟 View Services"},
+                {"id": "menu:main", "title": "Main Menu"},
+                {"id": "menu:services", "title": "View Services"},
             ]
             await provider.send_interactive_buttons(
                 to=contact.value,
@@ -440,9 +440,9 @@ async def handle_navigation_menu(
             )
         else:
             buttons = [
-                {"id": "menu:pricing", "title": "💰 Pricing"},
-                {"id": "action:agent", "title": "📞 Talk to Agent"},
-                {"id": "menu:main", "title": "🔙 Main Menu"},
+                {"id": "menu:pricing", "title": "Pricing"},
+                {"id": "action:agent", "title": "Talk to Agent"},
+                {"id": "menu:main", "title": "Main Menu"},
             ]
             await provider.send_interactive_buttons(
                 to=contact.value,
@@ -456,16 +456,16 @@ async def handle_navigation_menu(
         settings_row = await get_settings_row(session)
         biz_name = settings_row.business_name or "our team"
         body = (
-            f"💰 *Transparent Pricing from {biz_name}*\n\n"
+            f"*Transparent Pricing from {biz_name}*\n\n"
             "• Starter Packages: Flexible monthly support & setup\n"
             "• Enterprise & Custom Solutions: Tailored scoped delivery\n"
             "• Free Initial Consultation: 100% complimentary requirement audit\n\n"
             "Would you like an immediate estimate tailored to your project?"
         )
         buttons = [
-            {"id": "action:agent", "title": "📞 Get Custom Quote"},
-            {"id": "menu:services", "title": "🌟 Browse Services"},
-            {"id": "menu:main", "title": "🔙 Main Menu"},
+            {"id": "action:agent", "title": "Get Custom Quote"},
+            {"id": "menu:services", "title": "Browse Services"},
+            {"id": "menu:main", "title": "Main Menu"},
         ]
         await provider.send_interactive_buttons(
             to=contact.value,
@@ -479,14 +479,14 @@ async def handle_navigation_menu(
         settings_row = await get_settings_row(session)
         biz_hours = f"{settings_row.business_hours_start}:00 - {settings_row.business_hours_end}:00 ({settings_row.business_timezone})"
         body = (
-            f"📍 *Office Location & Timings*\n\n"
-            f"⏰ Working Hours: Monday - Friday, {biz_hours}\n"
-            "🌍 Available 24/7 online for automated inquiries and order booking.\n\n"
+            f"*Office Location & Timings*\n\n"
+            f"Working Hours: Monday - Friday, {biz_hours}\n"
+            "Available 24/7 online for automated inquiries and order booking.\n\n"
             "Tap below to speak with an agent or return to the menu."
         )
         buttons = [
-            {"id": "action:agent", "title": "📞 Talk to Agent"},
-            {"id": "menu:main", "title": "🔙 Main Menu"},
+            {"id": "action:agent", "title": "Talk to Agent"},
+            {"id": "menu:main", "title": "Main Menu"},
         ]
         await provider.send_interactive_buttons(
             to=contact.value,
@@ -527,7 +527,7 @@ async def send_welcome_greeting(
     settings_row = await get_settings_row(session)
     biz_name = settings_row.business_name or "NEWAX"
     greeting_text = (
-        f"👋 Hello! Welcome to *{biz_name}* on WhatsApp.\n\n"
+        f"Hello! Welcome to *{biz_name}* on WhatsApp.\n\n"
         "We're here to assist you with services, instant pricing, and expert support. "
         "How can we help you today?"
     )
@@ -536,9 +536,9 @@ async def send_welcome_greeting(
     if isinstance(provider, MetaWhatsAppProvider):
         try:
             buttons = [
-                {"id": "menu:services", "title": "🌟 View Services"},
-                {"id": "menu:pricing", "title": "💰 Pricing & Rates"},
-                {"id": "action:agent", "title": "📞 Talk to Human"},
+                {"id": "menu:services", "title": "View Services"},
+                {"id": "menu:pricing", "title": "Pricing & Rates"},
+                {"id": "action:agent", "title": "Talk to Human"},
             ]
             await provider.send_interactive_buttons(
                 to=contact.value,
@@ -924,8 +924,8 @@ async def run_inactivity_nudges(session: AsyncSession) -> list[uuid.UUID]:
             "or had further questions before our active chat session wraps up!"
         )
         buttons = [
-            {"id": "menu:services", "title": "🌟 View Services"},
-            {"id": "action:agent", "title": "📞 Talk to Agent"},
+            {"id": "menu:services", "title": "View Services"},
+            {"id": "action:agent", "title": "Talk to Agent"},
         ]
         try:
             await provider.send_interactive_buttons(
@@ -989,9 +989,9 @@ async def seed_default_whatsapp_automations(session: AsyncSession) -> int:
                 {
                     "body": "Welcome to our WhatsApp Center! Please select an option to get started immediately:",
                     "buttons": [
-                        {"id": "menu:services", "title": "🌟 Browse Services"},
-                        {"id": "menu:pricing", "title": "💰 Pricing & Plans"},
-                        {"id": "action:agent", "title": "📞 Talk to Human"},
+                        {"id": "menu:services", "title": "Browse Services"},
+                        {"id": "menu:pricing", "title": "Pricing & Plans"},
+                        {"id": "action:agent", "title": "Talk to Human"},
                     ],
                     "header": "Main Menu",
                     "footer": "Select an option or reply with your question",
@@ -1030,9 +1030,9 @@ async def seed_default_whatsapp_automations(session: AsyncSession) -> int:
                 {
                     "body": "We specialize in custom web software, AI automations, and digital marketing systems.",
                     "buttons": [
-                        {"id": "menu:pricing", "title": "💰 Pricing & Rates"},
-                        {"id": "action:agent", "title": "📞 Speak with Sales"},
-                        {"id": "menu:main", "title": "🔙 Main Menu"},
+                        {"id": "menu:pricing", "title": "Pricing & Rates"},
+                        {"id": "action:agent", "title": "Speak with Sales"},
+                        {"id": "menu:main", "title": "Main Menu"},
                     ],
                     "header": "Services Catalog",
                 }
@@ -1050,9 +1050,9 @@ async def seed_default_whatsapp_automations(session: AsyncSession) -> int:
                 {
                     "body": "Our solutions start with flexible monthly plans, or fixed-price milestones with 100% upfront quotes.",
                     "buttons": [
-                        {"id": "action:agent", "title": "📞 Get Custom Quote"},
-                        {"id": "menu:services", "title": "🌟 Our Services"},
-                        {"id": "menu:main", "title": "🔙 Main Menu"},
+                        {"id": "action:agent", "title": "Get Custom Quote"},
+                        {"id": "menu:services", "title": "Our Services"},
+                        {"id": "menu:main", "title": "Main Menu"},
                     ],
                     "header": "Pricing Information",
                 }
@@ -1069,7 +1069,7 @@ async def seed_default_whatsapp_automations(session: AsyncSession) -> int:
             action_value=json.dumps(
                 {
                     "body": "Ready to discuss your project? Schedule a 15-minute discovery call directly on our calendar:",
-                    "display_text": "📅 Book Free Demo",
+                    "display_text": "Book Free Demo",
                     "url": "https://calendly.com",
                     "header": "Schedule Discovery",
                 }
@@ -1083,7 +1083,7 @@ async def seed_default_whatsapp_automations(session: AsyncSession) -> int:
             trigger_keyword="location",
             match_type=RuleMatchType.CONTAINS,
             action_type=RuleActionType.AUTO_REPLY,
-            action_value="📍 Office Address: Main Commercial Hub\n⏰ Working Hours: Monday - Friday, 9:00 AM - 6:00 PM\n📞 WhatsApp inquiries are accepted 24/7!",
+            action_value="Office Address: Main Commercial Hub\nWorking Hours: Monday - Friday, 9:00 AM - 6:00 PM\nWhatsApp inquiries are accepted 24/7!",
             priority=70,
             is_active=True,
         ),

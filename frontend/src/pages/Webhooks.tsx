@@ -1,3 +1,14 @@
+import {
+  Zap,
+  Radio,
+  Scroll,
+  BookOpen,
+  RefreshCw,
+  Repeat,
+  X,
+  Plus,
+  KeyRound,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import {
   api,
@@ -17,6 +28,21 @@ export function Webhooks() {
   const [editingEndpoint, setEditingEndpoint] = useState<WebhookEndpoint | null>(null)
   const [loading, setLoading] = useState(false)
   const [testingId, setTestingId] = useState<string | null>(null)
+  const [rotatingId, setRotatingId] = useState<string | null>(null)
+
+  async function handleRotateSecret(epId: string, epName: string) {
+    if (!confirm(`Are you sure you want to rotate the HMAC secret for "${epName}"? Any external consumers validating signatures will need the new secret immediately.`)) return
+    setRotatingId(epId)
+    try {
+      const res = await api.updateWebhookEndpoint(epId, { rotate_secret: true })
+      setNotice(`HMAC secret rotated successfully for "${res.name}". New secret: ${res.secret_masked}`)
+      loadEndpoints()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setRotatingId(null)
+    }
+  }
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -117,7 +143,7 @@ export function Webhooks() {
           }}
           className="inline-flex items-center gap-1.5 self-start rounded-md bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] px-3.5 py-1.5 text-xs font-medium text-white shadow-xs transition-colors"
         >
-          <span>+</span>
+          <Plus className="h-3.5 w-3.5" />
           <span>Add Webhook Endpoint</span>
         </button>
       </div>
@@ -159,7 +185,7 @@ export function Webhooks() {
               : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
-          📡 Webhook Endpoints ({endpoints.length})
+          <span className="flex items-center gap-1.5"><Radio className="h-4 w-4" /> <span>Webhook Endpoints ({endpoints.length})</span></span>
         </button>
         <button
           onClick={() => setActiveTab('deliveries')}
@@ -169,7 +195,7 @@ export function Webhooks() {
               : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
-          📜 Delivery History & Logs
+          <span className="flex items-center gap-1.5"><Scroll className="h-4 w-4" /> <span>Delivery History & Logs</span></span>
         </button>
         <button
           onClick={() => setActiveTab('catalog')}
@@ -179,7 +205,7 @@ export function Webhooks() {
               : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
-          📖 Event Catalog & Verification Guide
+          <span className="flex items-center gap-1.5"><BookOpen className="h-4 w-4" /> <span>Event Catalog & Verification Guide</span></span>
         </button>
       </div>
 
@@ -257,10 +283,20 @@ export function Webhooks() {
                     </div>
 
                     {/* Secret & Telemetry */}
-                    <div className="grid grid-cols-2 gap-2 text-2xs text-[var(--color-ink-muted)] pt-2 border-t border-[var(--color-border)]">
-                      <div>
+                    <div className="grid grid-cols-2 gap-2 text-2xs text-[var(--color-ink-muted)] pt-2 border-t border-[var(--color-border)] items-center">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-[var(--color-ink-faint)]">Secret: </span>
                         <code className="text-[var(--color-ink)] font-mono">{ep.secret_masked}</code>
+                        <button
+                          type="button"
+                          onClick={() => handleRotateSecret(ep.id, ep.name)}
+                          disabled={rotatingId === ep.id}
+                          className="inline-flex items-center gap-1 text-3xs font-medium text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer disabled:opacity-50 ml-1"
+                          title="Rotate HMAC signing secret"
+                        >
+                          <RefreshCw className={`h-2.5 w-2.5 ${rotatingId === ep.id ? 'animate-spin' : ''}`} />
+                          <span>{rotatingId === ep.id ? 'Rotating…' : 'Rotate'}</span>
+                        </button>
                       </div>
                       <div className="text-right">
                         <span>Delivered: <strong className="text-slate-800">{ep.total_delivered}</strong></span>
@@ -279,16 +315,17 @@ export function Webhooks() {
                         disabled={testingId === ep.id}
                         className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-50"
                       >
-                        {testingId === ep.id ? 'Pinging…' : '⚡ Test Ping'}
+                        {testingId === ep.id ? 'Pinging…' : <span className="flex items-center gap-1"><Zap className="h-3 w-3 text-amber-500" /> Test Ping</span>}
                       </button>
                       <button
                         onClick={() => {
                           setSelectedEndpointId(ep.id)
                           setActiveTab('deliveries')
                         }}
-                        className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 font-medium text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-page)]"
+                        className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 font-medium text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-page)] flex items-center gap-1"
                       >
-                        📜 Logs
+                        <Scroll className="h-3 w-3 inline text-[var(--color-ink-muted)]" />
+                        <span>Logs</span>
                       </button>
                       <button
                         onClick={() => {
@@ -303,10 +340,10 @@ export function Webhooks() {
 
                     <button
                       onClick={() => handleDelete(ep.id)}
-                      className="text-[var(--color-ink-faint)] hover:text-red-600 transition-colors p-1"
+                      className="text-[var(--color-ink-faint)] hover:text-red-600 transition-colors p-1 cursor-pointer"
                       title="Delete Webhook"
                     >
-                      ✕
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
@@ -338,9 +375,10 @@ export function Webhooks() {
 
             <button
               onClick={() => loadDeliveries(selectedEndpointId || undefined)}
-              className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-xs font-medium text-[var(--color-ink-muted)] hover:bg-[var(--color-page)]"
+              className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-xs font-medium text-[var(--color-ink-muted)] hover:bg-[var(--color-page)] flex items-center gap-1.5"
             >
-              🔄 Refresh Logs
+              <RefreshCw className="h-3.5 w-3.5 inline text-[var(--color-ink-muted)]" />
+              <span>Refresh Logs</span>
             </button>
           </div>
 
@@ -397,9 +435,10 @@ export function Webhooks() {
                           </button>
                           <button
                             onClick={() => handleResend(d.id)}
-                            className="text-xs font-medium text-[var(--color-ink-muted)] hover:text-slate-800"
+                            className="text-xs font-medium text-[var(--color-ink-muted)] hover:text-slate-800 inline-flex items-center gap-1"
                           >
-                            🔄 Resend
+                            <Repeat className="h-3 w-3 inline text-[var(--color-ink-muted)]" />
+                            <span>Resend</span>
                           </button>
                         </td>
                       </tr>
@@ -503,6 +542,7 @@ function AddEditWebhookModal({
   const [isActive, setIsActive] = useState(endpoint ? endpoint.is_active : true)
   const [retryCount, setRetryCount] = useState(endpoint ? endpoint.retry_count : 3)
   const [timeoutSeconds, setTimeoutSeconds] = useState(endpoint ? endpoint.timeout_seconds : 10)
+  const [rotateSecret, setRotateSecret] = useState(false)
   const [saving, setSaving] = useState(false)
 
   function toggleEvent(ev: string) {
@@ -539,6 +579,7 @@ function AddEditWebhookModal({
           is_active: isActive,
           retry_count: Number(retryCount),
           timeout_seconds: Number(timeoutSeconds),
+          rotate_secret: rotateSecret,
         })
       } else {
         await api.createWebhookEndpoint({
@@ -565,9 +606,9 @@ function AddEditWebhookModal({
       <div className="w-full max-w-lg rounded-xl bg-[var(--color-surface)] shadow-xl border border-[var(--color-border)] overflow-hidden max-h-[90vh] flex flex-col text-xs">
         <div className="border-b border-[var(--color-border)] px-5 py-3.5 flex items-center justify-between bg-[var(--color-page)]">
           <h2 className="text-sm font-semibold text-[var(--color-ink)]">
-            {endpoint ? 'Edit Webhook Endpoint' : '+ Add Webhook Endpoint'}
+            {endpoint ? 'Edit Webhook Endpoint' : 'Add Webhook Endpoint'}
           </h2>
-          <button onClick={onClose} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)]">✕</button>
+          <button onClick={onClose} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] p-1 cursor-pointer"><X className="h-4 w-4" /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
@@ -666,15 +707,35 @@ function AddEditWebhookModal({
                     <button
                       type="button"
                       onClick={() => handleRemoveHeader(k)}
-                      className="text-[var(--color-ink-faint)] hover:text-red-600"
+                      className="text-[var(--color-ink-faint)] hover:text-red-600 p-0.5 cursor-pointer"
                     >
-                      ✕
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 ))}
               </div>
             )}
           </div>
+
+          {endpoint && (
+            <div className="p-3 rounded-lg border border-indigo-200 bg-indigo-50/50 flex items-start gap-2.5">
+              <KeyRound className="h-4 w-4 text-indigo-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <label className="flex items-center gap-2 cursor-pointer font-medium text-indigo-900">
+                  <input
+                    type="checkbox"
+                    checked={rotateSecret}
+                    onChange={(e) => setRotateSecret(e.target.checked)}
+                    className="rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span>Rotate HMAC Signing Secret</span>
+                </label>
+                <p className="mt-0.5 text-3xs text-indigo-700">
+                  Generate a new high-entropy secret on save. Current: <code className="font-mono">{endpoint.secret_masked}</code>
+                </p>
+              </div>
+            </div>
+          )}
 
           {!endpoint && (
             <div>
@@ -765,7 +826,7 @@ function InspectPayloadModal({
             </h3>
             <span className="text-2xs text-[var(--color-ink-muted)]">ID: {log.id}</span>
           </div>
-          <button onClick={onClose} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)]">✕</button>
+          <button onClick={onClose} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] p-1 cursor-pointer"><X className="h-4 w-4" /></button>
         </div>
 
         <div className="p-5 space-y-4 overflow-y-auto flex-1">

@@ -1,25 +1,46 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
-  api,
-  type AutomationRule,
-  type AutomationStats,
-  type RuleTestResult,
+  MessageSquare,
+  CircleDot,
+  List,
+  Image,
+  Link as LinkIcon,
+  FileText,
+  User,
+  Tag,
+  Scissors,
+  Users,
+  Clock,
+  Star,
+  Zap,
+  FlaskConical,
+  CheckCircle2,
+  Info,
+  Plus,
+  X,
+  Loader2,
+} from 'lucide-react'
+import { api } from '../lib/api'
+import type {
+  AutomationRule,
+  AutomationStats,
+  RuleTestResult,
 } from '../lib/api'
 
-const ACTION_LABELS: Record<string, { label: string; icon: string; color: string }> = {
-  auto_reply: { label: 'Text Reply', icon: '💬', color: 'bg-blue-50 text-blue-700' },
-  interactive_buttons: { label: 'Quick Buttons', icon: '🔘', color: 'bg-emerald-50 text-emerald-700' },
-  interactive_list: { label: 'List Menu', icon: '📋', color: 'bg-purple-50 text-purple-700' },
-  send_media: { label: 'Send Media', icon: '🖼️', color: 'bg-amber-50 text-amber-700' },
-  send_cta_url: { label: 'CTA Link', icon: '🔗', color: 'bg-[var(--color-accent-soft)] text-[var(--color-accent)]' },
-  send_template: { label: 'Meta Template', icon: '📄', color: 'bg-cyan-50 text-cyan-700' },
-  handoff: { label: 'Agent Handoff', icon: '👤', color: 'bg-rose-50 text-rose-700' },
-  add_tag: { label: 'Add Tag', icon: '🏷️', color: 'bg-teal-50 text-teal-700' },
-  remove_tag: { label: 'Remove Tag', icon: '✂️', color: 'bg-[var(--color-page)] text-[var(--color-ink)]' },
-  assign_team: { label: 'Assign Team', icon: '👥', color: 'bg-orange-50 text-orange-700' },
-  enroll_sequence: { label: 'Enroll Drip', icon: '⏳', color: 'bg-sky-50 text-sky-700' },
-  send_csat: { label: 'CSAT Survey', icon: '⭐', color: 'bg-yellow-50 text-yellow-800' },
-  trigger_webhook: { label: 'Webhook', icon: '⚡', color: 'bg-fuchsia-50 text-fuchsia-700' },
+const ACTION_LABELS: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
+  auto_reply: { label: 'Text Reply', icon: <MessageSquare className="h-4 w-4" />, color: 'bg-blue-50 text-blue-700' },
+  interactive_buttons: { label: 'Quick Buttons', icon: <CircleDot className="h-4 w-4" />, color: 'bg-emerald-50 text-emerald-700' },
+  interactive_list: { label: 'List Menu', icon: <List className="h-4 w-4" />, color: 'bg-purple-50 text-purple-700' },
+  send_media: { label: 'Send Media', icon: <Image className="h-4 w-4" />, color: 'bg-amber-50 text-amber-700' },
+  send_cta_url: { label: 'CTA Link', icon: <LinkIcon className="h-4 w-4" />, color: 'bg-[var(--color-accent-soft)] text-[var(--color-accent)]' },
+  send_template: { label: 'Meta Template', icon: <FileText className="h-4 w-4" />, color: 'bg-cyan-50 text-cyan-700' },
+  handoff: { label: 'Agent Handoff', icon: <User className="h-4 w-4" />, color: 'bg-rose-50 text-rose-700' },
+  add_tag: { label: 'Add Tag', icon: <Tag className="h-4 w-4" />, color: 'bg-teal-50 text-teal-700' },
+  remove_tag: { label: 'Remove Tag', icon: <Scissors className="h-4 w-4" />, color: 'bg-[var(--color-page)] text-[var(--color-ink)]' },
+  assign_team: { label: 'Assign Team', icon: <Users className="h-4 w-4" />, color: 'bg-orange-50 text-orange-700' },
+  enroll_sequence: { label: 'Enroll Drip', icon: <Clock className="h-4 w-4" />, color: 'bg-sky-50 text-sky-700' },
+  send_csat: { label: 'CSAT Survey', icon: <Star className="h-4 w-4 text-amber-500 fill-amber-500" />, color: 'bg-yellow-50 text-yellow-800' },
+  trigger_webhook: { label: 'Webhook', icon: <Zap className="h-4 w-4" />, color: 'bg-fuchsia-50 text-fuchsia-700' },
 }
 
 export function Automation() {
@@ -27,6 +48,10 @@ export function Automation() {
   const [stats, setStats] = useState<AutomationStats | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+
+  // Loading states
+  const [seeding, setSeeding] = useState(false)
+  const [runningNudges, setRunningNudges] = useState(false)
 
   // Form state
   const [showForm, setShowForm] = useState(false)
@@ -86,7 +111,7 @@ export function Automation() {
     }
 
     try {
-      await api.createAutomationRule({
+      const created = await api.createAutomationRule({
         name,
         description,
         trigger_keyword: keyword,
@@ -100,11 +125,15 @@ export function Automation() {
       setDescription('')
       setKeyword('')
       setActionValue('')
+      setPriority(0)
       setButton1('')
       setButton2('')
       setButton3('')
       setShowForm(false)
       setSuccess('Automation rule created successfully!')
+      if (created && created.id) {
+        setRules((prev) => (prev ? [created, ...prev] : [created]))
+      }
       load()
     } catch (e) {
       setError((e as Error).message)
@@ -115,23 +144,29 @@ export function Automation() {
 
   async function handleSeedDefaults() {
     setError(null)
+    setSeeding(true)
     try {
       const res = await api.seedDefaultAutomations()
       setSuccess(res.message || '11 WhatsApp automations loaded successfully!')
       load()
     } catch (e) {
       setError((e as Error).message)
+    } finally {
+      setSeeding(false)
     }
   }
 
   async function handleRunNudges() {
     setError(null)
+    setRunningNudges(true)
     try {
       const res = await api.runInactivityNudges()
       setSuccess(`Ran 24h window watcher: ${res.nudgedCount} inactive conversations nudged.`)
       load()
     } catch (e) {
       setError((e as Error).message)
+    } finally {
+      setRunningNudges(false)
     }
   }
 
@@ -153,6 +188,19 @@ export function Automation() {
   }
 
   async function toggleActive(rule: AutomationRule) {
+    const nextActive = !rule.isActive
+    // Optimistic immediate UI update
+    setRules((prev) =>
+      prev ? prev.map((r) => (r.id === rule.id ? { ...r, isActive: nextActive } : r)) : null
+    )
+    setStats((prev) =>
+      prev
+        ? {
+            ...prev,
+            activeRules: nextActive ? prev.activeRules + 1 : Math.max(0, prev.activeRules - 1),
+          }
+        : null
+    )
     try {
       await api.updateAutomationRule(rule.id, {
         name: rule.name,
@@ -162,20 +210,41 @@ export function Automation() {
         action_type: rule.actionType,
         action_value: rule.actionValue,
         priority: rule.priority,
-        is_active: !rule.isActive,
+        is_active: nextActive,
       })
       load()
     } catch (e) {
+      // Revert on error
+      setRules((prev) =>
+        prev ? prev.map((r) => (r.id === rule.id ? { ...r, isActive: rule.isActive } : r)) : null
+      )
+      load()
       setError((e as Error).message)
     }
   }
 
   async function remove(id: string) {
+    const prevRules = rules
+    // Optimistic immediate removal
+    setRules((prev) => prev?.filter((r) => r.id !== id) ?? null)
+    setStats((prev) =>
+      prev
+        ? {
+            ...prev,
+            totalRules: Math.max(0, prev.totalRules - 1),
+            activeRules: prevRules?.find((r) => r.id === id)?.isActive
+              ? Math.max(0, prev.activeRules - 1)
+              : prev.activeRules,
+          }
+        : null
+    )
     try {
       await api.deleteAutomationRule(id)
-      setRules((prev) => prev?.filter((r) => r.id !== id) ?? null)
       setSuccess('Automation rule deleted.')
+      load()
     } catch (e) {
+      setRules(prevRules)
+      load()
       setError((e as Error).message)
     }
   }
@@ -198,29 +267,41 @@ export function Automation() {
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleSeedDefaults}
-            className="rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-2 text-xs font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-sm"
+            disabled={seeding}
+            className="flex items-center gap-1.5 rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-2 text-xs font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-sm disabled:opacity-50"
             title="Install 11 standard WhatsApp automations in one click"
           >
-            ⚡ Load Pre-Built Rules
+            {seeding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4 text-amber-500" />}
+            <span>{seeding ? 'Loading Pre-Built...' : 'Load Pre-Built Rules'}</span>
           </button>
           <button
             onClick={handleRunNudges}
-            className="rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-2 text-xs font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-sm"
+            disabled={runningNudges}
+            className="flex items-center gap-1.5 rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-2 text-xs font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-sm disabled:opacity-50"
             title="Check for conversations nearing the 24h Meta session window cutoff"
           >
-            ⏰ Run 24h Nudges
+            {runningNudges ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clock className="h-4 w-4" />}
+            <span>{runningNudges ? 'Running Nudges...' : 'Run 24h Nudges'}</span>
           </button>
           <button
             onClick={() => setShowTester((v) => !v)}
-            className="rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-2 text-xs font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-sm"
+            className="flex items-center gap-1.5 rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-2 text-xs font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-sm"
           >
-            🧪 {showTester ? 'Hide Simulator' : 'Test Simulator'}
+            <FlaskConical className="h-4 w-4 text-indigo-600" />
+            <span>{showTester ? 'Hide Simulator' : 'Test Simulator'}</span>
           </button>
           <button
             onClick={() => setShowForm((v) => !v)}
-            className="rounded-md bg-[var(--color-accent)] px-3 py-2 text-xs font-medium text-white hover:bg-[var(--color-accent-hover)] shadow-sm"
+            className="flex items-center gap-1.5 rounded-md bg-[var(--color-accent)] px-3 py-2 text-xs font-medium text-white hover:bg-[var(--color-accent-hover)] shadow-sm"
           >
-            {showForm ? 'Cancel' : '+ Add Custom Rule'}
+            {showForm ? (
+              <span>Cancel</span>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
+                <span>Add Custom Rule</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -229,13 +310,13 @@ export function Automation() {
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex justify-between items-center">
           <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-red-500 font-bold">×</button>
+          <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700"><X className="h-4 w-4" /></button>
         </div>
       )}
       {success && (
         <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 flex justify-between items-center">
           <span>{success}</span>
-          <button onClick={() => setSuccess(null)} className="text-emerald-500 font-bold">×</button>
+          <button onClick={() => setSuccess(null)} className="text-emerald-500 hover:text-emerald-700"><X className="h-4 w-4" /></button>
         </div>
       )}
 
@@ -245,22 +326,29 @@ export function Automation() {
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
             <p className="text-xs font-medium text-[var(--color-ink-muted)]">Active Rules</p>
             <p className="mt-1 text-2xl font-bold text-[var(--color-ink)]">
-              {stats.activeRules} <span className="text-xs text-[var(--color-ink-faint)] font-normal">/ {stats.totalRules}</span>
+              {stats.activeRules ?? 0} <span className="text-xs text-[var(--color-ink-faint)] font-normal">/ {stats.totalRules ?? 0}</span>
             </p>
           </div>
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
             <p className="text-xs font-medium text-[var(--color-ink-muted)]">Total Executions</p>
-            <p className="mt-1 text-2xl font-bold text-[var(--color-ink)]">{stats.totalExecutions.toLocaleString()}</p>
+            <p className="mt-1 text-2xl font-bold text-[var(--color-ink)]">{(stats.totalExecutions ?? 0).toLocaleString()}</p>
           </div>
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
             <p className="text-xs font-medium text-[var(--color-ink-muted)]">Avg CSAT Rating</p>
-            <p className="mt-1 text-2xl font-bold text-amber-500">
-              {stats.csatAverage ? `⭐ ${stats.csatAverage}` : '—'}
-            </p>
+            <div className="mt-1 flex items-center gap-1.5 text-2xl font-bold text-amber-500">
+              {stats.csatAverage ? (
+                <>
+                  <Star className="h-5 w-5 fill-amber-500 text-amber-500 inline" />
+                  <span>{stats.csatAverage}</span>
+                </>
+              ) : (
+                '-'
+              )}
+            </div>
           </div>
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
             <p className="text-xs font-medium text-[var(--color-ink-muted)]">CSAT Feedback Count</p>
-            <p className="mt-1 text-2xl font-bold text-[var(--color-ink)]">{stats.csatResponsesCount}</p>
+            <p className="mt-1 text-2xl font-bold text-[var(--color-ink)]">{stats.csatResponsesCount ?? 0}</p>
           </div>
         </div>
       )}
@@ -270,7 +358,8 @@ export function Automation() {
         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-accent-soft)]/50 p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-indigo-900 flex items-center gap-2">
-              <span>🧪 WhatsApp Message & Button Simulator</span>
+              <FlaskConical className="h-4 w-4 text-indigo-600" />
+              <span>WhatsApp Message & Button Simulator</span>
             </h2>
             <span className="text-xs text-[var(--color-accent)]">Simulate incoming customer actions without sending real texts</span>
           </div>
@@ -297,9 +386,10 @@ export function Automation() {
               <button
                 type="submit"
                 disabled={testing || (!testInput && !testPayload)}
-                className="rounded-md bg-[var(--color-accent)] px-4 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-md bg-[var(--color-accent)] px-4 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
               >
-                {testing ? 'Testing…' : 'Simulate WhatsApp Rule'}
+                {testing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                <span>{testing ? 'Testing...' : 'Simulate WhatsApp Rule'}</span>
               </button>
             </div>
           </form>
@@ -309,10 +399,11 @@ export function Automation() {
               {testResult.matched ? (
                 <>
                   <div className="flex items-center gap-2 font-medium text-emerald-700">
-                    <span>✅ Matched Rule:</span>
-                    <span className="font-semibold">{testResult.rule?.name}</span>
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    <span>Matched Rule:</span>
+                    <span className="font-semibold">{testResult.rule?.name || 'Automation Rule'}</span>
                     <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-[var(--color-ink-muted)]">
-                      Priority: {testResult.rule?.priority}
+                      Priority: {testResult.rule?.priority ?? 0}
                     </span>
                   </div>
                   <div className="text-xs text-[var(--color-ink-muted)]">
@@ -324,7 +415,10 @@ export function Automation() {
                 </>
               ) : (
                 <div className="text-[var(--color-ink-muted)]">
-                  <span className="font-medium text-amber-600">ℹ️ No deterministic rule matched.</span>
+                  <div className="flex items-center gap-1.5 font-medium text-amber-600">
+                    <Info className="h-4 w-4 text-amber-600" />
+                    <span>No deterministic rule matched.</span>
+                  </div>
                   <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
                     The autonomous AI reply engine will handle this message using your service catalog, business profile, and knowledge base.
                   </p>
@@ -385,17 +479,17 @@ export function Automation() {
                 onChange={(e) => setActionType(e.target.value)}
                 className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm bg-[var(--color-surface)]"
               >
-                <option value="auto_reply">💬 Plain Text Reply</option>
-                <option value="interactive_buttons">🔘 Quick-Reply Interactive Buttons</option>
-                <option value="interactive_list">📋 Interactive List Menu (JSON)</option>
-                <option value="send_media">🖼️ Send Media (Image/PDF Document)</option>
-                <option value="send_cta_url">🔗 Call-To-Action Link (URL)</option>
-                <option value="handoff">👤 Live Agent Handoff (Pause Bot)</option>
-                <option value="add_tag">🏷️ Add Contact Tag</option>
-                <option value="remove_tag">✂️ Remove Contact Tag</option>
-                <option value="assign_team">👥 Assign to Team Member</option>
-                <option value="send_csat">⭐ Send CSAT Rating Survey</option>
-                <option value="trigger_webhook">⚡ Dispatch Webhook</option>
+                <option value="auto_reply">Plain Text Reply</option>
+                <option value="interactive_buttons">Quick-Reply Buttons</option>
+                <option value="interactive_list">Interactive List Menu</option>
+                <option value="send_media">Send Media</option>
+                <option value="send_cta_url">Call-To-Action Link</option>
+                <option value="handoff">Live Agent Handoff</option>
+                <option value="add_tag">Add Contact Tag</option>
+                <option value="remove_tag">Remove Contact Tag</option>
+                <option value="assign_team">Assign Team Member</option>
+                <option value="send_csat">CSAT Survey</option>
+                <option value="trigger_webhook">Dispatch Webhook</option>
               </select>
             </div>
             <div className="sm:col-span-2">
@@ -513,9 +607,10 @@ export function Automation() {
             <button
               type="submit"
               disabled={saving}
-              className="rounded-md bg-[var(--color-accent)] px-4 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-md bg-[var(--color-accent)] px-4 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
             >
-              {saving ? 'Saving…' : 'Save Rule'}
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+              <span>{saving ? 'Saving...' : 'Save Rule'}</span>
             </button>
           </div>
         </form>
@@ -523,7 +618,10 @@ export function Automation() {
 
       {/* Rules Listing */}
       {rules === null ? (
-        <div className="p-8 text-center text-sm text-[var(--color-ink-muted)]">Loading automation suite…</div>
+        <div className="p-8 text-center text-sm text-[var(--color-ink-muted)] flex items-center justify-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Loading automation suite...</span>
+        </div>
       ) : rules.length === 0 ? (
         <div className="rounded-lg border border-dashed border-slate-300 bg-[var(--color-surface)] p-12 text-center">
           <p className="text-sm font-medium text-[var(--color-ink)]">No automation rules configured yet.</p>
@@ -532,9 +630,11 @@ export function Automation() {
           </p>
           <button
             onClick={handleSeedDefaults}
-            className="mt-4 rounded-md bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] shadow"
+            disabled={seeding}
+            className="mt-4 flex items-center gap-1.5 mx-auto rounded-md bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] shadow disabled:opacity-50"
           >
-            ⚡ Load All Pre-Built WhatsApp Automations
+            {seeding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+            <span>{seeding ? 'Loading Pre-Built Rules...' : 'Load All Pre-Built WhatsApp Automations'}</span>
           </button>
         </div>
       ) : (
@@ -547,7 +647,7 @@ export function Automation() {
             {rules.map((r) => {
               const meta = ACTION_LABELS[r.actionType] ?? {
                 label: r.actionType,
-                icon: '⚡',
+                icon: <Zap className="h-4 w-4" />,
                 color: 'bg-slate-100 text-[var(--color-ink)]',
               }
               return (
@@ -556,8 +656,8 @@ export function Automation() {
                     <div className="min-w-0 space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-semibold text-sm text-[var(--color-ink)]">{r.name}</span>
-                        <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium ${meta.color}`}>
-                          <span>{meta.icon}</span>
+                        <span className={`inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium ${meta.color}`}>
+                          <span className="flex items-center">{meta.icon}</span>
                           <span>{meta.label}</span>
                         </span>
                         {r.executionCount ? (
@@ -568,7 +668,18 @@ export function Automation() {
                       </div>
 
                       <p className="text-xs text-[var(--color-ink-muted)]">
-                        When input <span className="font-semibold">{r.matchType}</span>: "{r.triggerKeyword}"
+                        When input <span className="font-semibold">{r.matchType}</span>:{' '}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTestInput(r.triggerKeyword)
+                            setShowTester(true)
+                          }}
+                          className="font-mono text-[var(--color-accent)] hover:underline inline cursor-pointer"
+                          title="Click to test this trigger in simulator"
+                        >
+                          "{r.triggerKeyword}"
+                        </button>
                       </p>
 
                       {r.description && (

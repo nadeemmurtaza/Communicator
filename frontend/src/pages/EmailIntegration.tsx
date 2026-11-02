@@ -1,3 +1,20 @@
+import {
+  AlertCircle,
+  AlertTriangle,
+  Bot,
+  Check,
+  CheckCircle2,
+  ClipboardList,
+  Download,
+  Inbox,
+  Mail,
+  Palette,
+  RefreshCw,
+  Save,
+  Send,
+  ShieldCheck,
+  X,
+} from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../lib/api'
@@ -16,46 +33,51 @@ export function EmailIntegration() {
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
   // Channel Data & Telemetry
-  const [_data, setData] = useState<EmailChannelData | null>(null)
+  const [data, setData] = useState<EmailChannelData | null>(null)
   const [events, setEvents] = useState<SocialEvent[]>([])
 
   // Form Fields: SMTP
   const [name, setName] = useState('Support Email Inbox')
-  const [emailFromAddress, setEmailFromAddress] = useState('support@bayworks.co')
-  const [emailFromName, setEmailFromName] = useState('Bay Works Support')
-  const [emailReplyTo, setEmailReplyTo] = useState('support@bayworks.co')
-  const [smtpHost, setSmtpHost] = useState('smtp.bayworks.co')
+  const [emailFromAddress, setEmailFromAddress] = useState('')
+  const [emailFromName, setEmailFromName] = useState('')
+  const [emailReplyTo, setEmailReplyTo] = useState('')
+  const [smtpHost, setSmtpHost] = useState('')
   const [smtpPort, setSmtpPort] = useState(587)
-  const [smtpUsername, setSmtpUsername] = useState('support@bayworks.co')
+  const [smtpUsername, setSmtpUsername] = useState('')
   const [smtpPassword, setSmtpPassword] = useState('')
   const [smtpEncryption, setSmtpEncryption] = useState('tls')
 
   // Form Fields: IMAP
-  const [imapHost, setImapHost] = useState('imap.bayworks.co')
+  const [imapHost, setImapHost] = useState('')
   const [imapPort, setImapPort] = useState(993)
-  const [imapUsername, setImapUsername] = useState('support@bayworks.co')
+  const [imapUsername, setImapUsername] = useState('')
   const [imapPassword, setImapPassword] = useState('')
   const [imapSsl, setImapSsl] = useState(true)
   const [imapFolder, setImapFolder] = useState('INBOX')
 
   // Form Fields: Templates & Automations
-  const [emailSignature, setEmailSignature] = useState('--\nBest regards,\n{{agent.name}}\nBay Works Support Team')
-  const [emailFooter, setEmailFooter] = useState('Bay Works Inc. · 100 Market St, San Francisco, CA')
+  const [emailSignature, setEmailSignature] = useState('--\nBest regards,\n{{agent.name}}\nNewax Support Team')
+  const [emailFooter, setEmailFooter] = useState('Newax Technologies Inc.')
   const [greetingEnabled, setGreetingEnabled] = useState(true)
-  const [greetingMessage, setGreetingMessage] = useState('Thank you for contacting Bay Works Support. A support agent has been assigned to your ticket and will reply shortly.')
+  const [greetingMessage, setGreetingMessage] = useState('Thank you for contacting Newax Support. A support agent has been assigned to your ticket and will reply shortly.')
   const [outOfOfficeEnabled, setOutOfOfficeEnabled] = useState(false)
   const [outOfOfficeMessage, setOutOfOfficeMessage] = useState('We have received your email! Our team is currently out of the office; we will respond first thing upon returning.')
   const [csatEnabled, setCsatEnabled] = useState(true)
 
   // Test Outbound Email State
-  const [testRecipient, setTestRecipient] = useState('victoria.vance@vancetech.io')
-  const [testRecipientName, setTestRecipientName] = useState('Victoria Vance')
-  const [testSubject, setTestSubject] = useState('Verification email from Bay Works Support')
+  const [testRecipient, setTestRecipient] = useState('support@newax.co')
+  const [testRecipientName, setTestRecipientName] = useState('Test User')
+  const [testSubject, setTestSubject] = useState('Verification email from Newax Support')
   const [testMessage, setTestMessage] = useState('Hello! This is a test message to confirm outbound SMTP email delivery is operational.')
   const [sendingTest, setSendingTest] = useState(false)
 
   // Copy Feedback
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
+
+  const cleanVal = (val?: string) => {
+    if (!val || val.includes('bayworks')) return ''
+    return val
+  }
 
   const loadData = async () => {
     try {
@@ -63,22 +85,29 @@ export function EmailIntegration() {
       const res = await api.getEmailChannel()
       setData(res)
       setName(res.inbox.name || 'Support Email Inbox')
-      setEmailFromAddress(res.smtpConfig.fromAddress || 'support@bayworks.co')
-      setEmailFromName(res.smtpConfig.fromName || 'Bay Works Support')
-      setEmailReplyTo(res.smtpConfig.replyTo || 'support@bayworks.co')
-      setSmtpHost(res.smtpConfig.host || 'smtp.bayworks.co')
+      setEmailFromAddress(cleanVal(res.smtpConfig.fromAddress))
+      setEmailFromName(cleanVal(res.smtpConfig.fromName))
+      setEmailReplyTo(cleanVal(res.smtpConfig.replyTo))
+      setSmtpHost(cleanVal(res.smtpConfig.host))
       setSmtpPort(res.smtpConfig.port || 587)
-      setSmtpUsername(res.smtpConfig.username || 'support@bayworks.co')
+      setSmtpUsername(cleanVal(res.smtpConfig.username))
       setSmtpEncryption(res.smtpConfig.encryption || 'tls')
-      setImapHost(res.imapConfig.host || 'imap.bayworks.co')
+      setImapHost(cleanVal(res.imapConfig.host))
       setImapPort(res.imapConfig.port || 993)
-      setImapUsername(res.imapConfig.username || 'support@bayworks.co')
+      setImapUsername(cleanVal(res.imapConfig.username))
       setImapSsl(res.imapConfig.ssl ?? true)
       setImapFolder(res.imapConfig.folder || 'INBOX')
-      setEmailSignature(res.templateConfig.signature || '')
-      setEmailFooter(res.templateConfig.footer || '')
+      if (res.templateConfig.signature && !res.templateConfig.signature.includes('Bay Works')) {
+        setEmailSignature(res.templateConfig.signature)
+      }
+      if (res.templateConfig.footer && !res.templateConfig.footer.includes('Bay Works')) {
+        setEmailFooter(res.templateConfig.footer)
+      }
       setGreetingEnabled((res.inbox as any).greetingEnabled ?? (res.inbox as any).greeting_enabled ?? true)
-      setGreetingMessage((res.inbox as any).greetingMessage || (res.inbox as any).greeting_message || '')
+      const greet = (res.inbox as any).greetingMessage || (res.inbox as any).greeting_message
+      if (greet && !greet.includes('Bay Works')) {
+        setGreetingMessage(greet)
+      }
       setOutOfOfficeEnabled((res.inbox as any).outOfOfficeEnabled ?? (res.inbox as any).out_of_office_enabled ?? false)
       setOutOfOfficeMessage((res.inbox as any).outOfOfficeMessage || (res.inbox as any).out_of_office_message || '')
       setCsatEnabled((res.inbox as any).csatEnabled ?? (res.inbox as any).csat_enabled ?? true)
@@ -189,6 +218,14 @@ export function EmailIntegration() {
 
   const webhookUrl = `${window.location.origin}/api/v1/webhooks/email/inbound`
 
+  const isConnected = Boolean(
+    data?.health?.status === 'healthy' &&
+      smtpHost &&
+      !smtpHost.includes('bayworks') &&
+      smtpUsername &&
+      !smtpUsername.includes('bayworks')
+  )
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -214,10 +251,17 @@ export function EmailIntegration() {
           </div>
           <div className="mt-1 flex items-center gap-2">
             <h1 className="text-xl font-bold text-[var(--color-ink)]">Support Emails via IMAP &amp; SMTP</h1>
-            <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 border border-emerald-200 flex items-center gap-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              Active &amp; Connected
-            </span>
+            {isConnected ? (
+              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                Connected &amp; Healthy
+              </span>
+            ) : (
+              <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 border border-amber-200 flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                Not Configured
+              </span>
+            )}
           </div>
           <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
             Connect support email accounts using standard IMAP/SMTP or inbound webhooks with automatic threaded replies and attachments.
@@ -230,24 +274,38 @@ export function EmailIntegration() {
             disabled={syncing}
             className="rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-xs flex items-center gap-1.5"
           >
-            <span>📥</span> {syncing ? 'Polling IMAP...' : 'Poll Mailbox Now'}
+            <Download className="h-3.5 w-3.5 text-slate-600" /> {syncing ? 'Polling IMAP...' : 'Poll Mailbox Now'}
           </button>
           <button
             onClick={handleVerify}
             disabled={verifying}
             className="rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-xs flex items-center gap-1.5"
           >
-            <span>🔄</span> {verifying ? 'Verifying...' : 'Verify Connections'}
+            <RefreshCw className={`h-3.5 w-3.5 text-slate-600 ${verifying ? 'animate-spin' : ''}`} />{' '}
+            {verifying ? 'Verifying...' : 'Verify Connections'}
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
             className="rounded-md bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 shadow-xs flex items-center gap-1.5"
           >
-            <span>💾</span> {saving ? 'Saving...' : 'Save Settings'}
+            <Save className="h-3.5 w-3.5" /> {saving ? 'Saving...' : 'Save Settings'}
           </button>
         </div>
       </div>
+
+      {/* Real Connection Status Banner */}
+      {!isConnected && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <h4 className="text-sm font-semibold text-amber-900">Channel Not Connected</h4>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Please enter your provider API credentials below and click Save Configuration to activate.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Feedback Alert */}
       {feedback && (
@@ -259,11 +317,18 @@ export function EmailIntegration() {
           }`}
         >
           <div className="flex items-center gap-2">
-            <span>{feedback.type === 'success' ? '✅' : '⚠️'}</span>
+            {feedback.type === 'success' ? (
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            ) : (
+              <AlertCircle className="h-4 w-4 text-rose-600" />
+            )}
             <span>{feedback.message}</span>
           </div>
-          <button onClick={() => setFeedback(null)} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] font-bold">
-            ×
+          <button
+            onClick={() => setFeedback(null)}
+            className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] font-bold"
+          >
+            <X className="h-4 w-4" />
           </button>
         </div>
       )}
@@ -279,7 +344,7 @@ export function EmailIntegration() {
                 : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
             }`}
           >
-            <span>📤</span> SMTP Outbound Delivery
+            <Send className="h-3.5 w-3.5" /> SMTP Outbound Delivery
           </button>
           <button
             onClick={() => setActiveTab('imap')}
@@ -289,7 +354,7 @@ export function EmailIntegration() {
                 : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
             }`}
           >
-            <span>📥</span> IMAP &amp; Inbound Webhooks
+            <Inbox className="h-3.5 w-3.5" /> IMAP &amp; Inbound Webhooks
           </button>
           <button
             onClick={() => setActiveTab('templates')}
@@ -299,7 +364,7 @@ export function EmailIntegration() {
                 : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
             }`}
           >
-            <span>🎨</span> Templates &amp; Signatures
+            <Palette className="h-3.5 w-3.5" /> Templates &amp; Signatures
           </button>
           <button
             onClick={() => setActiveTab('automations')}
@@ -309,7 +374,7 @@ export function EmailIntegration() {
                 : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
             }`}
           >
-            <span>🤖</span> Auto-Reply &amp; Hours
+            <Bot className="h-4 w-4 inline mr-1.5 text-indigo-600" /> Auto-Reply &amp; Hours
           </button>
           <button
             onClick={() => setActiveTab('logs')}
@@ -319,7 +384,7 @@ export function EmailIntegration() {
                 : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
             }`}
           >
-            <span>📋</span> Diagnostics &amp; Logs ({events.length})
+            <ClipboardList className="h-4 w-4 inline mr-1.5 text-indigo-600" /> Diagnostics &amp; Logs ({events.length})
           </button>
         </nav>
       </div>
@@ -330,7 +395,7 @@ export function EmailIntegration() {
           <div className="lg:col-span-2 space-y-6">
             <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
               <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
-                <span>📤</span> Outbound SMTP Mail Server Settings
+                <Send className="h-4 w-4 text-emerald-600" /> Outbound SMTP Mail Server Settings
               </h2>
               <p className="text-xs text-[var(--color-ink-muted)]">
                 Configure your SMTP server to deliver agent responses, email notifications, and customer resolution confirmations.
@@ -352,6 +417,7 @@ export function EmailIntegration() {
                     type="text"
                     value={emailFromName}
                     onChange={(e) => setEmailFromName(e.target.value)}
+                    placeholder="e.g. Newax Support"
                     className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs shadow-xs focus:border-emerald-500 focus:outline-hidden"
                   />
                 </div>
@@ -365,7 +431,7 @@ export function EmailIntegration() {
                     value={emailFromAddress}
                     onChange={(e) => setEmailFromAddress(e.target.value)}
                     className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs shadow-xs focus:border-emerald-500 focus:outline-hidden"
-                    placeholder="support@bayworks.co"
+                    placeholder="hello@newax.co"
                   />
                 </div>
                 <div>
@@ -374,6 +440,7 @@ export function EmailIntegration() {
                     type="email"
                     value={emailReplyTo}
                     onChange={(e) => setEmailReplyTo(e.target.value)}
+                    placeholder="hello@newax.co"
                     className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs shadow-xs focus:border-emerald-500 focus:outline-hidden"
                   />
                 </div>
@@ -387,7 +454,7 @@ export function EmailIntegration() {
                     value={smtpHost}
                     onChange={(e) => setSmtpHost(e.target.value)}
                     className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs font-mono shadow-xs focus:border-emerald-500 focus:outline-hidden"
-                    placeholder="smtp.sendgrid.net or smtp.gmail.com"
+                    placeholder="smtp.newax.co or smtp.sendgrid.net"
                   />
                 </div>
                 <div>
@@ -408,6 +475,7 @@ export function EmailIntegration() {
                     type="text"
                     value={smtpUsername}
                     onChange={(e) => setSmtpUsername(e.target.value)}
+                    placeholder="hello@newax.co"
                     className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs font-mono shadow-xs focus:border-emerald-500 focus:outline-hidden"
                   />
                 </div>
@@ -443,20 +511,20 @@ export function EmailIntegration() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-[var(--color-ink-muted)]">SPF Record:</span>
-                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-800">
-                    ✓ Valid (v=spf1)
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-800 flex items-center gap-1">
+                    <Check className="h-3.5 w-3.5" /> Valid (v=spf1)
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-[var(--color-ink-muted)]">DKIM Signature:</span>
-                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-800">
-                    ✓ 2048-bit Active
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-800 flex items-center gap-1">
+                    <Check className="h-3.5 w-3.5" /> 2048-bit Active
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-[var(--color-ink-muted)]">DMARC Policy:</span>
-                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-800">
-                    ✓ p=quarantine
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-800 flex items-center gap-1">
+                    <Check className="h-3.5 w-3.5" /> p=quarantine
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
@@ -468,7 +536,7 @@ export function EmailIntegration() {
 
             <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-5 shadow-xs space-y-2">
               <h4 className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
-                <span>🛡️</span> Zero-Bounce Anti-Spam Compliance
+                <ShieldCheck className="h-4 w-4 text-emerald-600" /> Zero-Bounce Anti-Spam Compliance
               </h4>
               <p className="text-[11px] text-emerald-800 leading-relaxed">
                 All outbound emails sent from Chatwoot include strict RFC2822 formatting, unsubscription headers, and automatic thread resolution tokens.
@@ -484,7 +552,7 @@ export function EmailIntegration() {
           {/* IMAP Mailbox Settings */}
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
             <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
-              <span>📥</span> IMAP Mailbox Polling
+              <Inbox className="h-4 w-4 text-emerald-600" /> IMAP Mailbox Polling
             </h2>
             <p className="text-xs text-[var(--color-ink-muted)]">
               Fetch incoming customer support emails automatically from your IMAP server.
@@ -499,7 +567,7 @@ export function EmailIntegration() {
                     value={imapHost}
                     onChange={(e) => setImapHost(e.target.value)}
                     className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs font-mono shadow-xs"
-                    placeholder="imap.bayworks.co"
+                    placeholder="imap.newax.co"
                   />
                 </div>
                 <div>
@@ -520,6 +588,7 @@ export function EmailIntegration() {
                     type="text"
                     value={imapUsername}
                     onChange={(e) => setImapUsername(e.target.value)}
+                    placeholder="hello@newax.co"
                     className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs font-mono shadow-xs"
                   />
                 </div>
@@ -563,7 +632,7 @@ export function EmailIntegration() {
           {/* Inbound Email Webhook */}
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
             <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
-              <span>🌐</span> Inbound Email Webhook
+              <Mail className="h-4 w-4 text-blue-600" /> Inbound Email Webhook
             </h2>
             <p className="text-xs text-[var(--color-ink-muted)]">
               Alternatively, stream incoming emails in real-time from Postmark, SendGrid Inbound Parse, Mailgun, or Cloudflare Email Routing:
@@ -577,7 +646,7 @@ export function EmailIntegration() {
                     onClick={() => handleCopy(webhookUrl, 'inbound_email')}
                     className="text-blue-600 hover:text-blue-800 font-medium"
                   >
-                    {copiedKey === 'inbound_email' ? '✓ Copied' : 'Copy'}
+                    {copiedKey === 'inbound_email' ? <span className="flex items-center gap-1"><Check className="h-3.5 w-3.5 text-emerald-600" /> Copied</span> : 'Copy'}
                   </button>
                 </div>
                 <input
@@ -589,9 +658,9 @@ export function EmailIntegration() {
 
               <div className="rounded-md bg-[var(--color-page)] p-3 border border-[var(--color-border)] text-xs text-[var(--color-ink-muted)] space-y-1.5">
                 <div className="font-bold text-slate-800">Supported Inbound Formats:</div>
-                <div>• <strong>Postmark Inbound</strong>: JSON payload with `FromFull`, `TextBody`, and attachments.</div>
-                <div>• <strong>SendGrid Inbound Parse</strong>: Multipart form-data with automatic thread headers.</div>
-                <div>• <strong>Universal JSON</strong>: Raw RFC2822 or structured &#123; from, to, subject, body &#125;.</div>
+                <div><span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-400 mr-1.5" /><strong>Postmark Inbound</strong>: JSON payload with `FromFull`, `TextBody`, and attachments.</div>
+                <div><span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-400 mr-1.5" /><strong>SendGrid Inbound Parse</strong>: Multipart form-data with automatic thread headers.</div>
+                <div><span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-400 mr-1.5" /><strong>Universal JSON</strong>: Raw RFC2822 or structured &#123; from, to, subject, body &#125;.</div>
               </div>
             </div>
           </div>
@@ -603,7 +672,7 @@ export function EmailIntegration() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
             <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
-              <span>✍️</span> Dynamic Agent Signature
+              <Palette className="h-4 w-4 text-emerald-600" /> Dynamic Agent Signature
             </h2>
             <p className="text-xs text-[var(--color-ink-muted)]">
               Customize the signature appended to outgoing emails. Use variables like <code className="bg-slate-100 px-1 py-0.5 rounded text-[11px] font-mono">{'{{agent.name}}'}</code> and <code className="bg-slate-100 px-1 py-0.5 rounded text-[11px] font-mono">{'{{inbox.name}}'}</code>.
@@ -635,12 +704,12 @@ export function EmailIntegration() {
             <h3 className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">Live Email Preview</h3>
             <div className="rounded-md border border-[var(--color-border)] p-4 bg-[var(--color-page)]/50 space-y-3 text-xs text-slate-800">
               <div className="border-b border-[var(--color-border)] pb-2 text-[11px] text-[var(--color-ink-muted)] space-y-1">
-                <div>From: <strong>{emailFromName} &lt;{emailFromAddress}&gt;</strong></div>
+                <div>From: <strong>{emailFromName || 'Support Team'} &lt;{emailFromAddress || 'hello@newax.co'}&gt;</strong></div>
                 <div>To: <strong>Customer &lt;customer@example.com&gt;</strong></div>
                 <div>Subject: <strong>Re: Assistance with enterprise account [#CONV-8491]</strong></div>
               </div>
               <p className="leading-relaxed">
-                Hi Alex, thank you for writing in! Our engineering team has deployed the requested rate limit configuration. Let us know if you need any additional assistance.
+                Hi Alex, thank you for writing in! Our engineering team has deployed the requested configuration. Let us know if you need any additional assistance.
               </p>
               <div className="pt-2 border-t border-[var(--color-border)] text-[var(--color-ink-muted)] whitespace-pre-line font-mono text-[11px]">
                 {emailSignature.replace('{{agent.name}}', 'Riley Brooks')}
@@ -658,7 +727,7 @@ export function EmailIntegration() {
         <div className="space-y-6">
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
             <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
-              <span>🤖</span> Automated Email Auto-Responders
+              <Bot className="h-4 w-4 inline mr-1.5 text-indigo-600" /> Automated Email Auto-Responders
             </h2>
             <p className="text-xs text-[var(--color-ink-muted)]">
               Keep customers informed automatically with welcome receipts, out-of-office notices, and CSAT satisfaction rating surveys.
@@ -725,7 +794,7 @@ export function EmailIntegration() {
           {/* Outbound Test Email Sender */}
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
             <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
-              <span>✉️</span> Send Diagnostic Outbound Email
+              <Send className="h-4 w-4 text-emerald-600" /> Send Diagnostic Outbound Email
             </h2>
             <p className="text-xs text-[var(--color-ink-muted)]">
               Dispatch a test message through your configured SMTP mail server to verify end-to-end deliverability.
@@ -780,7 +849,7 @@ export function EmailIntegration() {
                 disabled={sendingTest}
                 className="w-full rounded-md bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 shadow-xs disabled:opacity-50 flex items-center justify-center gap-1.5"
               >
-                <span>🚀</span> {sendingTest ? 'Sending Email...' : 'Send Test Outbound Email'}
+                <Send className="h-3.5 w-3.5" /> {sendingTest ? 'Sending Email...' : 'Send Test Outbound Email'}
               </button>
             </form>
           </div>
@@ -794,9 +863,9 @@ export function EmailIntegration() {
                   const evs = await api.listEmailEvents()
                   setEvents(evs)
                 }}
-                className="text-xs text-blue-600 hover:text-blue-800 font-semibold"
+                className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1"
               >
-                Refresh
+                <RefreshCw className="h-3 w-3" /> Refresh
               </button>
             </div>
 

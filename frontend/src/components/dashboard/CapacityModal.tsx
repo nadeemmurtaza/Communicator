@@ -1,3 +1,4 @@
+import { Users, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 interface CapacityModalProps {
@@ -29,7 +30,7 @@ export function CapacityModal(props: CapacityModalProps) {
             <div className="flex items-start justify-between border-b border-[var(--color-border)] pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-sm">
-                  👥
+                  <Users className="h-4 w-4" />
                 </div>
                 <div>
                   <h3 className="font-bold text-[var(--color-ink)] text-base">Team Routing &amp; Capacity Manager</h3>
@@ -44,7 +45,7 @@ export function CapacityModal(props: CapacityModalProps) {
                   onClick={() => setShowCapacityModal(false)}
                   className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] font-bold text-sm p-1 cursor-pointer"
                 >
-                  ✕
+                  <X className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -84,7 +85,7 @@ export function CapacityModal(props: CapacityModalProps) {
                 onClick={handleBatchAutoAssign}
                 className="px-3.5 py-1.5 rounded-lg bg-teal-800 hover:bg-teal-900 text-white font-semibold text-xs shadow-xs transition-colors cursor-pointer"
               >
-                ⚡ Run Batch Auto-Assign
+                Run Batch Auto-Assign
               </button>
             </div>
 
@@ -136,9 +137,9 @@ export function CapacityModal(props: CapacityModalProps) {
                           }}
                           className="text-xs border border-[var(--color-border)] rounded px-2 py-1 bg-[var(--color-surface)] focus:outline-hidden cursor-pointer"
                         >
-                          <option value="online">🟢 Online</option>
-                          <option value="busy">🟡 Busy</option>
-                          <option value="offline">⚪ Offline</option>
+                          <option value="online">Online</option>
+                          <option value="busy">Busy</option>
+                          <option value="offline">Offline</option>
                         </select>
                       </div>
 

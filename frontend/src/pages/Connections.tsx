@@ -1,3 +1,25 @@
+import {
+  ArrowRight,
+  Bot,
+  Globe,
+  CreditCard,
+  Target,
+  MessageSquare,
+  Building2,
+  ClipboardList,
+  Zap,
+  Phone,
+  Mail,
+  Star,
+  Send,
+  X,
+  CheckCircle2,
+  XCircle,
+  Layers,
+  GitFork,
+  Hash,
+  Plus,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -39,9 +61,9 @@ export function Connections() {
           to="/self-improving"
           className="inline-flex items-center gap-1.5 self-start rounded-md bg-[var(--color-accent-soft)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-accent)] hover:bg-indigo-100 transition-colors"
         >
-          <span>🤖</span>
+          <Bot className="h-4 w-4" />
           <span>Configure AI Model Hub</span>
-          <span className="text-indigo-400">→</span>
+          <ArrowRight className="h-3.5 w-3.5 text-indigo-400" />
         </Link>
       </div>
 
@@ -58,7 +80,7 @@ export function Connections() {
               : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
-          🌐 Universal Gateways (Any SMS, Email, VoIP/SIP)
+          <Globe className="h-4 w-4 inline mr-1.5" /> Universal Gateways (Any SMS, Email, VoIP/SIP)
         </button>
         <button
           onClick={() => setActiveTab('stripe')}
@@ -68,7 +90,7 @@ export function Connections() {
               : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
-          <span>💳</span>
+          <CreditCard className="h-4 w-4 inline mr-1.5" />
           <span>Stripe Billing & Payments</span>
         </button>
         <button
@@ -79,7 +101,7 @@ export function Connections() {
               : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
-          <span>🎯</span>
+          <Target className="h-4 w-4 inline mr-1.5" />
           <span>Issue Trackers & Slack (Linear / GitHub / Jira)</span>
         </button>
         <button
@@ -90,7 +112,7 @@ export function Connections() {
               : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
-          💬 WhatsApp Cloud API
+          <MessageSquare className="h-4 w-4 inline mr-1.5" /> WhatsApp Cloud API
         </button>
         <button
           onClick={() => setActiveTab('business')}
@@ -100,7 +122,7 @@ export function Connections() {
               : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
-          🏢 Business Profile & Hours
+          <Building2 className="h-4 w-4 inline mr-1.5" /> Business Profile & Hours
         </button>
         <button
           onClick={() => setActiveTab('templates')}
@@ -110,7 +132,7 @@ export function Connections() {
               : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
-          📋 Meta HSM Templates
+          <ClipboardList className="h-4 w-4 inline mr-1.5" /> Meta HSM Templates
         </button>
       </div>
 
@@ -245,20 +267,20 @@ function UniversalGatewaysSection({
           <span className="text-xs font-semibold text-[var(--color-ink-muted)] uppercase tracking-wider mr-2">Filter:</span>
           {[
             { id: 'all', label: 'All Gateways' },
-            { id: 'sms', label: '📱 SMS Gateways' },
-            { id: 'email', label: '📧 Email Transports' },
-            { id: 'voice_sip', label: '📞 VoIP & SIP Trunks' },
+            { id: 'sms', label: 'SMS Gateways', icon: <Phone className="h-3 w-3 inline mr-1" /> },
+            { id: 'email', label: 'Email Transports', icon: <Mail className="h-3 w-3 inline mr-1" /> },
+            { id: 'voice_sip', label: 'VoIP & SIP Trunks', icon: <Phone className="h-3 w-3 inline mr-1" /> },
           ].map((item) => (
             <button
               key={item.id}
               onClick={() => setFilterType(item.id)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors flex items-center ${
                 filterType === item.id
                   ? 'bg-[var(--color-accent)] text-white'
                   : 'bg-slate-100 text-[var(--color-ink-muted)] hover:bg-slate-200'
               }`}
             >
-              {item.label}
+              {item.icon}{item.label}
             </button>
           ))}
         </div>
@@ -267,7 +289,7 @@ function UniversalGatewaysSection({
           onClick={() => setShowAddModal(true)}
           className="inline-flex items-center gap-1.5 rounded-md bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] px-3.5 py-1.5 text-xs font-medium text-white shadow-sm transition-colors"
         >
-          <span>+</span>
+          <Plus className="h-3.5 w-3.5" />
           <span>Connect Any Provider</span>
         </button>
       </div>
@@ -282,7 +304,7 @@ function UniversalGatewaysSection({
             onClick={() => setShowAddModal(true)}
             className="mt-3 text-xs font-medium text-[var(--color-accent)] hover:underline"
           >
-            + Connect your first provider
+            <Plus className="h-3.5 w-3.5 inline mr-1" />Connect your first provider
           </button>
         </div>
       ) : (
@@ -300,8 +322,9 @@ function UniversalGatewaysSection({
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-base font-semibold text-[var(--color-ink)] truncate">{gw.name}</span>
                       {gw.is_default && (
-                        <span className="inline-flex items-center rounded-full bg-[var(--color-accent-soft)] px-2 py-0.5 text-3xs font-semibold text-[var(--color-accent)] border border-[var(--color-border)]">
-                          ★ Default
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-accent-soft)] px-2 py-0.5 text-3xs font-semibold text-[var(--color-accent)] border border-[var(--color-border)]">
+                          <Star className="h-2.5 w-2.5 fill-[var(--color-accent)] text-[var(--color-accent)] inline" />
+                          <span>Default</span>
                         </span>
                       )}
                     </div>
@@ -377,30 +400,32 @@ function UniversalGatewaysSection({
                     disabled={testingId === gw.id}
                     className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-50"
                   >
-                    {testingId === gw.id ? 'Pinging…' : '⚡ Test'}
+                    {testingId === gw.id ? 'Pinging…' : '<Zap className="h-3 w-3 text-amber-500 inline mr-1" /> Test'}
                   </button>
                   <button
                     onClick={() => setPingModalGateway(gw)}
-                    className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)]"
+                    className="flex items-center gap-1 rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)]"
                   >
-                    ✉ Ping
+                    <Send className="h-3 w-3 text-[var(--color-ink-muted)] inline" />
+                    <span>Ping</span>
                   </button>
                   {!gw.is_default && (
                     <button
                       onClick={() => handleSetDefault(gw.id)}
-                      className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 font-medium text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-page)]"
+                      className="flex items-center gap-1 rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 font-medium text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-page)]"
                     >
-                      ★ Default
+                      <Star className="h-3 w-3 text-amber-500 inline" />
+                      <span>Default</span>
                     </button>
                   )}
                 </div>
 
                 <button
                   onClick={() => handleDelete(gw.id)}
-                  className="text-[var(--color-ink-faint)] hover:text-red-600 transition-colors p-1"
+                  className="text-[var(--color-ink-faint)] hover:text-red-600 transition-colors p-1 cursor-pointer"
                   title="Delete Gateway"
                 >
-                  ✕
+                  <X className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -499,10 +524,10 @@ function AddGatewayModal({
       } else if (provider === 'vonage') {
         credentials.api_key = apiKey
         credentials.api_secret = authToken
-        config.from = fromNumber || 'BayWorks'
+        config.from = fromNumber || 'Newax Technologies'
       } else if (provider === 'messagebird') {
         credentials.access_key = apiKey
-        config.originator = fromNumber || 'BayWorks'
+        config.originator = fromNumber || 'Newax Technologies'
       } else {
         credentials.account_sid = accountSid
         credentials.auth_token = authToken
@@ -560,7 +585,7 @@ function AddGatewayModal({
       <div className="w-full max-w-lg rounded-xl bg-[var(--color-surface)] shadow-xl border border-[var(--color-border)] overflow-hidden max-h-[90vh] flex flex-col">
         <div className="border-b border-[var(--color-border)] px-5 py-3.5 flex items-center justify-between bg-[var(--color-page)]">
           <h2 className="text-sm font-semibold text-[var(--color-ink)]">+ Connect Any Provider</h2>
-          <button onClick={onClose} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] text-sm">✕</button>
+          <button onClick={onClose} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] p-1 cursor-pointer"><X className="h-4 w-4" /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
@@ -569,21 +594,21 @@ function AddGatewayModal({
             <label className="block font-medium text-[var(--color-ink)] mb-1">Gateway Type</label>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { id: 'sms', label: '📱 SMS' },
-                { id: 'email', label: '📧 Email' },
-                { id: 'voice_sip', label: '📞 VoIP / SIP' },
+                { id: 'sms', label: 'SMS', icon: <Phone className="h-3 w-3 inline mr-1" /> },
+                { id: 'email', label: 'Email', icon: <Mail className="h-3 w-3 inline mr-1" /> },
+                { id: 'voice_sip', label: 'VoIP / SIP', icon: <Phone className="h-3 w-3 inline mr-1" /> },
               ].map((t) => (
                 <button
                   key={t.id}
                   type="button"
                   onClick={() => setGatewayType(t.id as any)}
-                  className={`py-1.5 px-3 rounded-md border text-center font-medium ${
+                  className={`py-1.5 px-3 rounded-md border text-center font-medium flex items-center justify-center ${
                     gatewayType === t.id
                       ? 'border-indigo-600 bg-[var(--color-accent-soft)] text-[var(--color-accent)]'
                       : 'border-[var(--color-border)] hover:bg-[var(--color-page)] text-[var(--color-ink)]'
                   }`}
                 >
-                  {t.label}
+                  {t.icon}<span>{t.label}</span>
                 </button>
               ))}
             </div>
@@ -895,7 +920,7 @@ function SendPingModal({
       <div className="w-full max-w-md rounded-xl bg-[var(--color-surface)] shadow-xl border border-[var(--color-border)] p-5 space-y-4 text-xs">
         <div className="flex items-center justify-between border-b pb-3 border-[var(--color-border)]">
           <h3 className="font-semibold text-[var(--color-ink)] text-sm">Send Test Ping · {gateway.name}</h3>
-          <button onClick={onClose} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)]">✕</button>
+          <button onClick={onClose} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] p-1 cursor-pointer"><X className="h-4 w-4" /></button>
         </div>
 
         <form onSubmit={handleSend} className="space-y-3">
@@ -1531,7 +1556,7 @@ function StripeBillingSection({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[var(--color-border)] pb-5">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-accent-soft)] border border-indigo-100 text-2xl">
-              💳
+              <CreditCard className="h-6 w-6 text-indigo-600" />
             </div>
             <div>
               <h2 className="text-base font-bold text-[var(--color-ink)] flex items-center gap-2">
@@ -1556,7 +1581,7 @@ function StripeBillingSection({
               disabled={testing}
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-50 shadow-2xs cursor-pointer transition-colors"
             >
-              <span>{testing ? 'Testing...' : '⚡ Test Connection'}</span>
+              <span className="flex items-center gap-1">{testing ? 'Testing...' : <><Zap className="h-3.5 w-3.5 text-amber-500" /> Test Connection</>}</span>
             </button>
             <button
               onClick={handleSave}
@@ -1575,7 +1600,7 @@ function StripeBillingSection({
               : 'bg-rose-50 text-rose-800 border-rose-200'
           }`}>
             <div className="flex items-center gap-2">
-              <span>{testResult.status === 'connected' || testResult.status === 'connected_simulated' ? '✅' : '❌'}</span>
+              <span>{testResult.status === 'connected' || testResult.status === 'connected_simulated' ? <CheckCircle2 className="h-4 w-4 text-emerald-600 inline" /> : <XCircle className="h-4 w-4 text-rose-600 inline" />}</span>
               <span className="font-medium">{testResult.message}</span>
             </div>
             <span className="text-[10px] opacity-75 font-mono">Mode: {testResult.mode}</span>
@@ -1850,7 +1875,7 @@ function IssueTrackersSection({
       <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-xs space-y-2">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50 border border-purple-100 text-2xl">
-            🎯
+            <Target className="h-6 w-6 text-purple-600" />
           </div>
           <div>
             <h2 className="text-base font-bold text-[var(--color-ink)]">
@@ -1868,7 +1893,7 @@ function IssueTrackersSection({
         <div className="rounded-xl border border-purple-100 bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
             <div className="flex items-center gap-2">
-              <span className="text-xl">🟣</span>
+              <Layers className="h-5 w-5 text-purple-600" />
               <div>
                 <h3 className="font-bold text-sm text-[var(--color-ink)]">Linear</h3>
                 <span className="text-[10px] text-[var(--color-ink-faint)] font-mono">
@@ -1882,7 +1907,7 @@ function IssueTrackersSection({
                 disabled={testingProvider === 'linear'}
                 className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[11px] font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] cursor-pointer"
               >
-                {testingProvider === 'linear' ? 'Testing...' : '⚡ Test'}
+                {testingProvider === 'linear' ? 'Testing...' : (<span className="inline-flex items-center gap-1"><Zap className="h-3 w-3 text-amber-500" /><span>Test</span></span>)}
               </button>
               <button
                 onClick={handleSaveLinear}
@@ -1926,7 +1951,7 @@ function IssueTrackersSection({
         <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
             <div className="flex items-center gap-2">
-              <span className="text-xl">🐙</span>
+              <GitFork className="h-5 w-5 text-slate-800" />
               <div>
                 <h3 className="font-bold text-sm text-[var(--color-ink)]">GitHub Issues</h3>
                 <span className="text-[10px] text-[var(--color-ink-faint)] font-mono">
@@ -1940,7 +1965,7 @@ function IssueTrackersSection({
                 disabled={testingProvider === 'github'}
                 className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[11px] font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] cursor-pointer"
               >
-                {testingProvider === 'github' ? 'Testing...' : '⚡ Test'}
+                {testingProvider === 'github' ? 'Testing...' : (<span className="inline-flex items-center gap-1"><Zap className="h-3 w-3 text-amber-500" /><span>Test</span></span>)}
               </button>
               <button
                 onClick={handleSaveGitHub}
@@ -1994,7 +2019,7 @@ function IssueTrackersSection({
         <div className="rounded-xl border border-blue-100 bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
             <div className="flex items-center gap-2">
-              <span className="text-xl">🔷</span>
+              <Hash className="h-5 w-5 text-blue-600" />
               <div>
                 <h3 className="font-bold text-sm text-[var(--color-ink)]">Jira Cloud</h3>
                 <span className="text-[10px] text-[var(--color-ink-faint)] font-mono">
@@ -2008,7 +2033,7 @@ function IssueTrackersSection({
                 disabled={testingProvider === 'jira'}
                 className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[11px] font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] cursor-pointer"
               >
-                {testingProvider === 'jira' ? 'Testing...' : '⚡ Test'}
+                {testingProvider === 'jira' ? 'Testing...' : (<span className="inline-flex items-center gap-1"><Zap className="h-3 w-3 text-amber-500" /><span>Test</span></span>)}
               </button>
               <button
                 onClick={handleSaveJira}
@@ -2070,7 +2095,7 @@ function IssueTrackersSection({
         <div className="rounded-xl border border-emerald-100 bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
             <div className="flex items-center gap-2">
-              <span className="text-xl">💬</span>
+              <MessageSquare className="h-5 w-5 text-emerald-600" />
               <div>
                 <h3 className="font-bold text-sm text-[var(--color-ink)]">Slack Workspace Sync</h3>
                 <span className="text-[10px] text-[var(--color-ink-faint)] font-mono">
@@ -2084,7 +2109,7 @@ function IssueTrackersSection({
                 disabled={testingProvider === 'slack'}
                 className="rounded border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[11px] font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] cursor-pointer"
               >
-                {testingProvider === 'slack' ? 'Testing...' : '⚡ Test'}
+                {testingProvider === 'slack' ? 'Testing...' : (<span className="inline-flex items-center gap-1"><Zap className="h-3 w-3 text-amber-500" /><span>Test</span></span>)}
               </button>
               <button
                 onClick={handleSaveSlack}

@@ -1,3 +1,4 @@
+import { X, Zap } from 'lucide-react'
 
 interface CreateMacroModalProps {
   conversations: any
@@ -49,7 +50,7 @@ export function CreateMacroModal(props: CreateMacroModalProps) {
             <div className="flex items-start justify-between border-b border-[var(--color-border)] pb-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">
-                  ⚡
+                  <Zap className="h-4 w-4 text-amber-700" />
                 </div>
                 <div>
                   <h3 className="font-bold text-[var(--color-ink)] text-base">Create One-Click Macro</h3>
@@ -60,7 +61,7 @@ export function CreateMacroModal(props: CreateMacroModalProps) {
                 onClick={() => setShowCreateMacroModal(false)}
                 className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] font-bold text-sm p-1 cursor-pointer"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
 

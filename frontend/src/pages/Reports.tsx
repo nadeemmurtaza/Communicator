@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { CheckCircle2, RefreshCw, Star } from 'lucide-react'
 import { api } from '../lib/api'
 import type {
   AgentReportItem,
@@ -95,19 +96,7 @@ export function Reports() {
             disabled={loading}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-xs font-medium text-[var(--color-ink)] shadow-sm hover:bg-[var(--color-page)] disabled:opacity-50"
           >
-            <svg
-              className={`w-3.5 h-3.5 text-[var(--color-ink-muted)] ${loading ? 'animate-spin' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
+            <RefreshCw className={`w-3.5 h-3.5 text-[var(--color-ink-muted)] ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
         </div>
@@ -514,7 +503,7 @@ export function Reports() {
                       <td className="px-5 py-3.5 text-[var(--color-ink)]">{agent.avgResolutionHours}h</td>
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-amber-500 font-bold">★</span>
+                          <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-500 inline" />
                           <span className="font-bold text-[var(--color-ink)]">{agent.csatRating}</span>
                           <span className="text-xs text-[var(--color-ink-faint)]">({agent.csatResponsesCount} ratings)</span>
                         </div>
@@ -575,7 +564,7 @@ export function Reports() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-5 shadow-sm flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-500 text-3xl font-extrabold">
-                ★
+                <Star className="h-7 w-7 fill-amber-400 text-amber-500" />
               </div>
               <div>
                 <span className="text-xs font-medium text-[var(--color-ink-muted)] uppercase tracking-wider">Average Rating</span>
@@ -595,13 +584,13 @@ export function Reports() {
                 <div className="text-3xl font-extrabold text-emerald-700 mt-0.5">
                   {csatData.metrics.satisfactionPercentage}%
                 </div>
-                <span className="text-xs text-emerald-600/80">Percentage of 4★ and 5★ reviews</span>
+                <span className="text-xs text-emerald-600/80">Percentage of 4-star and 5-star reviews</span>
               </div>
             </div>
 
             <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-5 shadow-sm flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-[var(--color-accent-soft)] border border-indigo-100 flex items-center justify-center text-[var(--color-accent)] text-2xl font-bold">
-                ✓
+                <CheckCircle2 className="h-7 w-7 text-indigo-600" />
               </div>
               <div>
                 <span className="text-xs font-medium text-[var(--color-ink-muted)] uppercase tracking-wider">Total Responses</span>
@@ -626,7 +615,7 @@ export function Reports() {
                   return (
                     <div key={stars} className="flex items-center gap-3 text-xs">
                       <span className="w-12 font-semibold text-[var(--color-ink)] flex items-center gap-1">
-                        {stars} <span className="text-amber-500">★</span>
+                        {stars} <Star className="h-3 w-3 fill-amber-400 text-amber-500 inline ml-0.5" />
                       </span>
                       <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
                         <div
@@ -659,7 +648,11 @@ export function Reports() {
                         <span className="text-xs text-[var(--color-ink-faint)]">• Agent: {fb.assignedAgent}</span>
                       </div>
                       <div className="flex items-center gap-1 text-amber-500 font-bold text-xs">
-                        {'★'.repeat(fb.score)}
+                        <span className="flex items-center gap-0.5">
+                          {Array.from({ length: fb.score }).map((_, sIdx) => (
+                            <Star key={sIdx} className="h-3 w-3 fill-amber-400 text-amber-500" />
+                          ))}
+                        </span>
                         <span className="text-[var(--color-ink-faint)] ml-1 text-[11px] font-normal">{fb.date}</span>
                       </div>
                     </div>

@@ -1,3 +1,14 @@
+import {
+  ClipboardList,
+  FlaskConical,
+  Target,
+  Search,
+  Check,
+  ShieldCheck,
+  AlertTriangle,
+  CheckCircle2,
+  X,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import {
   api,
@@ -192,7 +203,7 @@ export function Simulations() {
             disabled={batchRunning}
             className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
           >
-            {batchRunning ? 'Running Test Suite...' : '⚡ Run Batch Test Suite'}
+            {batchRunning ? 'Running Test Suite...' : 'Run Batch Test Suite'}
           </button>
         </div>
       </div>
@@ -264,7 +275,7 @@ export function Simulations() {
               : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
           }`}
         >
-          <span>🧪 Interactive Policy Sandbox</span>
+          <span className="flex items-center gap-1.5"><FlaskConical className="h-4 w-4" /> <span>Interactive Policy Sandbox</span></span>
         </button>
         <button
           onClick={() => setActiveTab('scenarios')}
@@ -274,7 +285,7 @@ export function Simulations() {
               : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
           }`}
         >
-          <span>🎯 Scenarios & Test Suite ({scenarios.length})</span>
+          <span className="flex items-center gap-1.5"><Target className="h-4 w-4" /> <span>Scenarios & Test Suite ({scenarios.length})</span></span>
         </button>
         <button
           onClick={() => setActiveTab('policies')}
@@ -284,7 +295,7 @@ export function Simulations() {
               : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
           }`}
         >
-          <span>📋 Agent Training SOPs ({policies.length})</span>
+          <span className="flex items-center gap-1.5"><ClipboardList className="h-4 w-4 inline mr-1" /> Agent Training SOPs ({policies.length})</span>
         </button>
       </div>
 
@@ -407,7 +418,7 @@ export function Simulations() {
               <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm space-y-4">
                 <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
                   <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                    <span>🔍 Real-time Policy Inspector</span>
+                    <span className="flex items-center gap-1.5"><Search className="h-4 w-4 text-blue-600" /> <span>Real-time Policy Inspector</span></span>
                   </h3>
                   <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-[var(--color-ink-muted)]">
                     Live Diagnostics
@@ -430,12 +441,13 @@ export function Simulations() {
                         Active Rules Triggered:
                       </span>
                       <div className="space-y-1">
-                        {latestSandboxResult.matched_rules.map((rule, i) => (
+                        {(latestSandboxResult.matched_rules || []).map((rule, i) => (
                           <div
                             key={i}
-                            className="rounded bg-[var(--color-page)] border border-[var(--color-border)] p-2 text-slate-800 font-medium"
+                            className="rounded bg-[var(--color-page)] border border-[var(--color-border)] p-2 text-slate-800 font-medium flex items-center gap-1.5"
                           >
-                            ✓ {rule}
+                            <Check className="h-3.5 w-3.5 text-blue-600 inline shrink-0" />
+                            <span>{rule}</span>
                           </div>
                         ))}
                       </div>
@@ -446,12 +458,13 @@ export function Simulations() {
                         Guardrails Enforced:
                       </span>
                       <div className="space-y-1">
-                        {latestSandboxResult.guardrails_applied.map((g, i) => (
+                        {(latestSandboxResult.guardrails_applied || []).map((g, i) => (
                           <div
                             key={i}
-                            className="rounded bg-emerald-50 border border-emerald-200 p-2 text-emerald-900 font-medium"
+                            className="rounded bg-emerald-50 border border-emerald-200 p-2 text-emerald-900 font-medium flex items-center gap-1.5"
                           >
-                            🛡️ {g}
+                            <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 inline shrink-0" />
+                            <span>{g}</span>
                           </div>
                         ))}
                       </div>
@@ -462,15 +475,23 @@ export function Simulations() {
                         Escalation Flag:
                       </span>
                       <span
-                        className={`inline-block rounded px-2 py-1 text-xs font-semibold ${
+                        className={`inline-flex items-center rounded px-2 py-1 text-xs font-semibold ${
                           latestSandboxResult.escalated_for_approval
                             ? 'bg-amber-100 text-amber-800'
                             : 'bg-emerald-100 text-emerald-800'
                         }`}
                       >
-                        {latestSandboxResult.escalated_for_approval
-                          ? '⚠️ Teammate Approval Triggered'
-                          : '✅ Autonomous Resolution Allowed'}
+                        {latestSandboxResult.escalated_for_approval ? (
+                          <span className="flex items-center gap-1.5">
+                            <AlertTriangle className="h-3.5 w-3.5 text-amber-700 inline" />
+                            <span>Teammate Approval Triggered</span>
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1.5">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700 inline" />
+                            <span>Autonomous Resolution Allowed</span>
+                          </span>
+                        )}
                       </span>
                     </div>
                   </div>
@@ -500,7 +521,7 @@ export function Simulations() {
                   disabled={batchRunning}
                   className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
                 >
-                  {batchRunning ? 'Running Test Suite...' : '⚡ Run All Scenarios'}
+                  {batchRunning ? 'Running Test Suite...' : 'Run All Scenarios'}
                 </button>
               </div>
 
@@ -537,10 +558,10 @@ export function Simulations() {
                       <div className="flex items-center justify-between text-[var(--color-ink-muted)]">
                         <span>
                           Customer Persona:{' '}
-                          <strong className="text-slate-800">{s.customer_persona.name}</strong>
+                          <strong className="text-slate-800">{s.customer_persona?.name || 'Customer'}</strong>
                         </span>
                         <span className="capitalize">
-                          Sentiment: <strong>{s.customer_persona.sentiment}</strong>
+                          Sentiment: <strong>{s.customer_persona?.sentiment || 'Neutral'}</strong>
                         </span>
                       </div>
                       <div className="text-[11px] text-[var(--color-ink-faint)]">
@@ -552,10 +573,10 @@ export function Simulations() {
                     {/* Multi-turn Prompts preview */}
                     <div className="space-y-1 text-xs">
                       <span className="text-[11px] font-semibold text-[var(--color-ink-muted)]">
-                        Multi-turn Prompts ({s.customer_messages.length}):
+                        Multi-turn Prompts ({(s.customer_messages || []).length}):
                       </span>
                       <div className="rounded bg-[var(--color-page)] p-2 text-[var(--color-ink)] line-clamp-2 italic text-[11px]">
-                        "{s.customer_messages[0]}"
+                        "{(s.customer_messages || [])[0] || 'Hello'}"
                       </div>
                     </div>
 
@@ -626,7 +647,7 @@ export function Simulations() {
                         Step-by-Step Process Flow:
                       </span>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                        {p.process_steps.map((st) => (
+                        {(p.process_steps || []).map((st) => (
                           <div
                             key={st.step}
                             className="rounded-xl border border-[var(--color-border)] bg-[var(--color-page)] p-2.5 text-xs"
@@ -648,12 +669,13 @@ export function Simulations() {
                         Active Guardrails:
                       </span>
                       <div className="flex flex-wrap gap-1.5">
-                        {p.guardrails.map((g, idx) => (
+                        {(p.guardrails || []).map((g, idx) => (
                           <span
                             key={idx}
-                            className="rounded-lg bg-rose-50 border border-rose-200 px-2.5 py-1 text-xs text-rose-900 font-medium"
+                            className="inline-flex items-center gap-1 rounded-lg bg-rose-50 border border-rose-200 px-2.5 py-1 text-xs text-rose-900 font-medium"
                           >
-                            🛡️ {g}
+                            <ShieldCheck className="h-3.5 w-3.5 text-rose-600 inline shrink-0" />
+                            <span>{g}</span>
                           </span>
                         ))}
                       </div>
@@ -688,9 +710,9 @@ export function Simulations() {
               </div>
               <button
                 onClick={() => setActiveRunResult(null)}
-                className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] font-bold"
+                className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)]"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -751,8 +773,9 @@ export function Simulations() {
                       </div>
                       <p className="whitespace-pre-wrap">{t.content}</p>
                       {t.policy_check && (
-                        <div className="mt-1.5 pt-1.5 border-t border-[var(--color-border)] text-[10.5px] text-emerald-700 font-medium">
-                          ✓ {t.policy_check}
+                        <div className="mt-1.5 pt-1.5 border-t border-[var(--color-border)] text-[10.5px] text-emerald-700 font-medium flex items-center gap-1">
+                          <Check className="h-3 w-3 inline text-emerald-600 shrink-0" />
+                          <span>{t.policy_check}</span>
                         </div>
                       )}
                     </div>
@@ -765,7 +788,7 @@ export function Simulations() {
                 <div className="space-y-1">
                   <span className="text-xs font-bold text-[var(--color-ink)]">Coaching Takeaways:</span>
                   <ul className="list-disc list-inside text-xs text-[var(--color-ink-muted)] space-y-0.5">
-                    {activeRunResult.recommendations.map((rec, i) => (
+                    {(activeRunResult.recommendations || []).map((rec, i) => (
                       <li key={i}>{rec}</li>
                     ))}
                   </ul>
@@ -793,9 +816,9 @@ export function Simulations() {
               <h3 className="text-lg font-bold text-[var(--color-ink)]">Create Agent SOP Policy</h3>
               <button
                 onClick={() => setShowCreatePolicyModal(false)}
-                className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] font-bold"
+                className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)]"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
 

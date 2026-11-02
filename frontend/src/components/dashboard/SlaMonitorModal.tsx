@@ -1,3 +1,4 @@
+import { AlertTriangle, Award, Clock, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 interface SlaMonitorModalProps {
@@ -23,7 +24,7 @@ export function SlaMonitorModal(props: SlaMonitorModalProps) {
             <div className="flex items-start justify-between border-b border-[var(--color-border)] pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-sm">
-                  ⏱️
+                  <Clock className="h-4 w-4" />
                 </div>
                 <div>
                   <h3 className="font-bold text-[var(--color-ink)] text-base">SLA Compliance &amp; Breach Monitor</h3>
@@ -38,7 +39,7 @@ export function SlaMonitorModal(props: SlaMonitorModalProps) {
                   onClick={() => setShowSLAMonitorModal(false)}
                   className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] font-bold text-sm p-1 cursor-pointer"
                 >
-                  ✕
+                  <X className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -104,8 +105,9 @@ export function SlaMonitorModal(props: SlaMonitorModalProps) {
                 <span className="text-[11px] font-normal text-[var(--color-ink-muted)]">{slaBreaches.length} tickets</span>
               </h4>
               {slaBreaches.length === 0 ? (
-                <div className="p-4 rounded-lg bg-emerald-50/50 border border-emerald-200 text-center text-xs text-emerald-800">
-                  🎉 No active SLA breaches! All response and resolution targets are currently fulfilled.
+                <div className="p-4 rounded-lg bg-emerald-50/50 border border-emerald-200 text-center text-xs text-emerald-800 flex items-center justify-center gap-1.5">
+                  <Award className="h-4 w-4 text-emerald-600 inline shrink-0" />
+                  <span>No active SLA breaches! All response and resolution targets are currently fulfilled.</span>
                 </div>
               ) : (
                 <div className="border border-[var(--color-border)] rounded-lg overflow-hidden divide-y divide-[var(--color-border)] text-xs">
@@ -115,7 +117,7 @@ export function SlaMonitorModal(props: SlaMonitorModalProps) {
                       className="p-2.5 flex items-center justify-between hover:bg-[var(--color-page)] transition-colors"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="text-base">{b.isBreached ? '⚠️' : '⏰'}</span>
+                        {b.isBreached ? <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" /> : <Clock className="h-4 w-4 text-amber-500 shrink-0" />}
                         <div>
                           <p className="font-semibold text-[var(--color-ink)]">{b.contactName}</p>
                           <p className="text-[10px] text-[var(--color-ink-muted)]">{b.channel} · Priority: {b.priority}</p>

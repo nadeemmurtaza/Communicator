@@ -31,7 +31,7 @@ DEFAULT_WIDGET_CONFIG: dict[str, Any] = {
     "launcher_icon": "chat_bubble",  # chat_bubble | sparkle_ai | headset_support | envelope
     "launcher_text": "Chat with us",
     "widget_position": "right",  # right | left
-    "greeting_title": "Hi there! 👋",
+    "greeting_title": "Hi there!",
     "greeting_tagline": "We typically reply in under 2 minutes.",
     "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128&h=128&fit=crop",
     "border_radius": "rounded_2xl",  # rounded_lg (12px) | rounded_2xl (16px) | rounded_full (24px)
@@ -54,7 +54,7 @@ async def get_or_create_website_inbox(session: AsyncSession) -> Inbox:
             name="Website Live Chat",
             channel_type=ChannelType.WEBSITE,
             greeting_enabled=True,
-            greeting_message="👋 Welcome to our live chat! How can our support team help you today?",
+            greeting_message="Welcome to our live chat! How can our support team help you today?",
             credentials={
                 "websiteToken": token,
                 "websiteDomain": "bayworks.com",
@@ -141,7 +141,7 @@ def generate_preview_page_html(token: str, base_url: str, styling: dict[str, Any
     token = _sanitize_token(token)
     color = styling.get("widget_color", "#1570EF")
     pos = styling.get("widget_position", "right")
-    greeting_title = escape(str(styling.get("greeting_title", "Hi there! 👋")))
+    greeting_title = escape(str(styling.get("greeting_title", "Hi there!")))
     greeting_tagline = escape(
         str(styling.get("greeting_tagline", "We typically reply in under 2 minutes."))
     )

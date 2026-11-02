@@ -9,6 +9,7 @@ from communicator.api.routes import (
     audit_logs,
     automation,
     broadcasts,
+    business_profile,
     canned_responses,
     captain_ai,
     contacts,
@@ -77,6 +78,7 @@ app.include_router(translation.router, prefix="/api/v1")
 app.include_router(custom_attributes.router, prefix="/api/v1")
 app.include_router(discovery.router, prefix="/api/v1")
 app.include_router(inboxes.router, prefix="/api/v1")
+app.include_router(business_profile.router, prefix="/api/v1")
 app.include_router(drafts.router, prefix="/api/v1")
 app.include_router(services.router, prefix="/api/v1")
 app.include_router(conversations.router, prefix="/api/v1")

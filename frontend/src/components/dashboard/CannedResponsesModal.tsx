@@ -1,3 +1,4 @@
+import { Lightbulb, Plus, Trash2, X, Zap } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 interface CannedResponsesModalProps {
@@ -37,7 +38,7 @@ export function CannedResponsesModal(props: CannedResponsesModalProps) {
             <div className="flex items-start justify-between border-b border-[var(--color-border)] pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm">
-                  ⚡
+                  <Zap className="h-4 w-4 text-blue-700" />
                 </div>
                 <div>
                   <h3 className="font-bold text-[var(--color-ink)] text-base">Canned Responses &amp; Slash Commands</h3>
@@ -54,7 +55,7 @@ export function CannedResponsesModal(props: CannedResponsesModalProps) {
                   onClick={() => setShowCannedModal(false)}
                   className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] font-bold text-sm p-1 cursor-pointer"
                 >
-                  ✕
+                  <X className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -62,7 +63,8 @@ export function CannedResponsesModal(props: CannedResponsesModalProps) {
             {/* Create New Canned Snippet Form */}
             <div className="bg-blue-50/50 border border-blue-200/70 rounded-xl p-4 space-y-3">
               <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
-                <span>➕ Create New Canned Snippet</span>
+                <Plus className="h-4 w-4" />
+                <span>Create New Canned Snippet</span>
               </h4>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -175,7 +177,7 @@ export function CannedResponsesModal(props: CannedResponsesModalProps) {
                       title="Delete canned response"
                       className="text-[var(--color-ink-faint)] hover:text-rose-600 text-xs p-1 rounded hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
                     >
-                      🗑️
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 ))}
@@ -183,7 +185,7 @@ export function CannedResponsesModal(props: CannedResponsesModalProps) {
             </div>
 
             <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)] text-xs text-[var(--color-ink-muted)]">
-              <span>💡 All canned replies automatically resolve customer and agent names on insert.</span>
+              <span className="flex items-center gap-1.5"><Lightbulb className="h-4 w-4 text-amber-500 shrink-0" /> All canned replies automatically resolve customer and agent names on insert.</span>
               <button
                 type="button"
                 onClick={() => setShowCannedModal(false)}

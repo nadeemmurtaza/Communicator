@@ -679,7 +679,7 @@ META_RATES_USD = {
         "utility": 0.0180,
         "auth": 0.0150,
         "service": 0.0090,
-        "name": "Rest of World 🌐",
+        "name": "Rest of World",
     },
 }
 

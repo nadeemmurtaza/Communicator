@@ -1,3 +1,4 @@
+import { AlertTriangle, X, Zap } from 'lucide-react'
 
 interface RefundModalProps {
   activeConv: any
@@ -33,7 +34,7 @@ export function RefundModal(props: RefundModalProps) {
           <div className="w-full max-w-md rounded-2xl bg-[var(--color-surface)] p-6 shadow-2xl border border-[var(--color-border)] space-y-4">
             <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
               <div className="flex items-center gap-2">
-                <span className="text-xl">⚡</span>
+                <Zap className="h-6 w-6 text-amber-500" />
                 <div>
                   <h3 className="font-bold text-sm text-[var(--color-ink)]">Issue Stripe Customer Refund</h3>
                   <p className="text-[11px] text-[var(--color-ink-muted)]">
@@ -45,7 +46,7 @@ export function RefundModal(props: RefundModalProps) {
                 onClick={() => setRefundModalOpen(false)}
                 className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] text-lg font-bold cursor-pointer"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -121,8 +122,9 @@ export function RefundModal(props: RefundModalProps) {
                 </select>
               </div>
 
-              <div className="rounded-lg bg-amber-50 p-2.5 border border-amber-200 text-[11px] text-amber-800 leading-snug">
-                ⚠️ Refunds are recorded immediately in Stripe and an immutable audit log is generated.
+              <div className="rounded-lg bg-amber-50 p-2.5 border border-amber-200 text-[11px] text-amber-800 leading-snug flex items-start gap-1.5">
+                <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                <span>Refunds are recorded immediately in Stripe and an immutable audit log is generated.</span>
               </div>
             </div>
 

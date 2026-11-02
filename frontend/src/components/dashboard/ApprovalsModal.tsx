@@ -1,3 +1,4 @@
+import { Bot, CheckCircle2, Clock, Handshake, Plus, X, XCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 interface ApprovalsModalProps {
@@ -27,7 +28,7 @@ export function ApprovalsModal(props: ApprovalsModalProps) {
             <div className="flex items-start justify-between border-b border-[var(--color-border)] pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">
-                  🤝
+                  <Handshake className="h-4 w-4" />
                 </div>
                 <div>
                   <h3 className="font-bold text-[var(--color-ink)] text-base">Copilot Teammate Approvals Center</h3>
@@ -44,7 +45,7 @@ export function ApprovalsModal(props: ApprovalsModalProps) {
                   onClick={() => setShowApprovalsModal(false)}
                   className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] font-bold text-sm p-1 cursor-pointer"
                 >
-                  ✕
+                  <X className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -81,7 +82,7 @@ export function ApprovalsModal(props: ApprovalsModalProps) {
                 onClick={handleTriggerRefundApprovalDemo}
                 className="ml-auto text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-300 px-3 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
               >
-                <span>➕</span>
+                <Plus className="h-4 w-4" />
                 <span>Simulate AI Refund Request</span>
               </button>
             </div>
@@ -104,7 +105,7 @@ export function ApprovalsModal(props: ApprovalsModalProps) {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--color-border)] pb-2.5">
                       <div className="flex items-center gap-2">
                         <span className="text-base">
-                          {app.status === 'pending' ? '⏳' : app.status === 'approved' || app.status === 'amended' ? '✅' : '❌'}
+                          {app.status === 'pending' ? <Clock className="h-4 w-4 text-amber-500" /> : app.status === 'approved' || app.status === 'amended' ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <XCircle className="h-4 w-4 text-rose-600" />}
                         </span>
                         <div>
                           <h4 className="font-bold text-[var(--color-ink)] text-xs">{app.title}</h4>
@@ -201,7 +202,7 @@ export function ApprovalsModal(props: ApprovalsModalProps) {
             </div>
 
             <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)] text-xs text-[var(--color-ink-muted)]">
-              <span>🤖 Once approved, the AI Agent dispatches the message directly to the customer and finalizes the ticket.</span>
+              <span className="flex items-center gap-2"><Bot className="h-4 w-4 text-indigo-600 shrink-0" /> Once approved, the AI Agent dispatches the message directly to the customer and finalizes the ticket.</span>
               <button
                 type="button"
                 onClick={() => setShowApprovalsModal(false)}

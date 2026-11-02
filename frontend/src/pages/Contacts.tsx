@@ -1,4 +1,28 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
+import {
+  Globe,
+  MessageCircle,
+  Mail,
+  Smartphone,
+  Music,
+  Send,
+  Camera,
+  Users,
+  MessageSquare,
+  Phone,
+  RefreshCw,
+  Download,
+  Upload,
+  Plus,
+  Search,
+  AlertCircle,
+  CheckCircle2,
+  X,
+  Tag as TagIcon,
+  Pencil,
+  Check,
+} from 'lucide-react'
 import {
   api,
   type ContactRecord,
@@ -7,19 +31,20 @@ import {
 } from '../lib/api'
 
 const CHANNELS = [
-  { id: 'all', label: 'All Channels', icon: '🌐' },
-  { id: 'whatsapp', label: 'WhatsApp', icon: '💬' },
-  { id: 'email', label: 'Email', icon: '✉️' },
-  { id: 'sms', label: 'SMS', icon: '📱' },
-  { id: 'tiktok', label: 'TikTok', icon: '🎵' },
-  { id: 'telegram', label: 'Telegram', icon: '✈️' },
-  { id: 'instagram', label: 'Instagram', icon: '📸' },
-  { id: 'facebook', label: 'Facebook', icon: '👥' },
-  { id: 'line', label: 'LINE', icon: '🟢' },
-  { id: 'voice', label: 'Voice', icon: '📞' },
+  { id: 'all', label: 'All Channels', icon: Globe },
+  { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
+  { id: 'email', label: 'Email', icon: Mail },
+  { id: 'sms', label: 'SMS', icon: Smartphone },
+  { id: 'tiktok', label: 'TikTok', icon: Music },
+  { id: 'telegram', label: 'Telegram', icon: Send },
+  { id: 'instagram', label: 'Instagram', icon: Camera },
+  { id: 'facebook', label: 'Facebook', icon: Users },
+  { id: 'line', label: 'LINE', icon: MessageSquare },
+  { id: 'voice', label: 'Voice', icon: Phone },
 ]
 
 export function Contacts() {
+  const navigate = useNavigate()
   const [contacts, setContacts] = useState<ContactRecord[] | null>(null)
   const [segments, setSegments] = useState<ContactSegment[]>([])
   const [tags, setTags] = useState<string[]>([])
@@ -29,6 +54,7 @@ export function Contacts() {
   const [searchQuery, setSearchQuery] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [syncingMeta, setSyncingMeta] = useState(false)
 
   // Modals state
   const [showImportModal, setShowImportModal] = useState(false)
@@ -95,6 +121,22 @@ export function Contacts() {
       setContacts(data)
     } catch (err: any) {
       setError(err.message || 'Failed to load contacts')
+    }
+  }
+
+  async function handleSyncMeta() {
+    try {
+      setSyncingMeta(true)
+      setError(null)
+      const res = await api.syncMetaContacts()
+      setNotice(res.message || 'Successfully synchronized contacts from Meta Cloud API.')
+      await loadContacts()
+      await loadSegments()
+      await loadTags()
+    } catch (err: any) {
+      setError(err.message || 'Failed to synchronize contacts from Meta')
+    } finally {
+      setSyncingMeta(false)
     }
   }
 
@@ -242,31 +284,51 @@ export function Contacts() {
     }
   }
 
+  async function handleToggleConsent(contactId: string) {
+    try {
+      const res = await api.toggleContactConsent(contactId)
+      setNotice(`Consent updated to ${res.optInStatus.toUpperCase()}`)
+      loadContacts()
+    } catch (err: any) {
+      setError(err.message || 'Failed to toggle consent')
+    }
+  }
+
+  async function handleOpenChat(contactId: string) {
+    try {
+      const conv = await api.getOrCreateContactConversation(contactId)
+      navigate(`/conversations/${conv.id}`)
+    } catch (err: any) {
+      setError(err.message || 'Failed to open conversation')
+    }
+  }
+
   function getChannelIcon(channel: string) {
     const found = CHANNELS.find((c) => c.id === channel)
-    return found?.icon || '💬'
+    const IconComp = found?.icon || MessageSquare
+    return <IconComp className="h-3.5 w-3.5 shrink-0" />
   }
 
   function getChannelBadge(channel: string) {
     switch (channel) {
       case 'whatsapp':
-        return 'bg-emerald-100 text-emerald-800 border-emerald-200'
+        return 'bg-emerald-50 text-emerald-800 border-emerald-200'
       case 'email':
-        return 'bg-indigo-100 text-indigo-800 border-[var(--color-border)]'
+        return 'bg-indigo-50 text-indigo-800 border-indigo-200'
       case 'sms':
-        return 'bg-blue-100 text-blue-800 border-blue-200'
+        return 'bg-blue-50 text-blue-800 border-blue-200'
       case 'tiktok':
-        return 'bg-[var(--color-accent)] text-white border-slate-700'
+        return 'bg-slate-900 text-white border-slate-700'
       case 'telegram':
-        return 'bg-sky-100 text-sky-800 border-sky-200'
+        return 'bg-sky-50 text-sky-800 border-sky-200'
       case 'instagram':
-        return 'bg-pink-100 text-pink-800 border-pink-200'
+        return 'bg-pink-50 text-pink-800 border-pink-200'
       case 'facebook':
-        return 'bg-blue-100 text-blue-900 border-blue-200'
+        return 'bg-blue-50 text-blue-900 border-blue-200'
       case 'line':
-        return 'bg-green-100 text-green-800 border-green-200'
+        return 'bg-green-50 text-green-800 border-green-200'
       default:
-        return 'bg-slate-100 text-[var(--color-ink)] border-[var(--color-border)]'
+        return 'bg-slate-50 text-slate-700 border-slate-200'
     }
   }
 
@@ -282,11 +344,20 @@ export function Contacts() {
             </span>
           </div>
           <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
-            Omnichannel customer directory with multi-channel CSV import, smart duplicate resolution, and dynamic targeting segments.
+            Omnichannel customer directory with dynamic Meta Cloud sync, multi-channel CSV import, and targeting segments.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleSyncMeta}
+            disabled={syncingMeta}
+            className="rounded-md border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 shadow-xs flex items-center gap-1.5 transition-colors"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 text-emerald-600 ${syncingMeta ? 'animate-spin' : ''}`} />
+            {syncingMeta ? 'Syncing with Meta...' : 'Sync with Meta'}
+          </button>
           <button
             type="button"
             onClick={() =>
@@ -299,9 +370,11 @@ export function Contacts() {
             }
             className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-xs flex items-center gap-1.5"
           >
-            <span>📥</span> Export CSV
+            <Download className="h-3.5 w-3.5 text-slate-500" />
+            Export CSV
           </button>
           <button
+            type="button"
             onClick={() => {
               setEditingSegment(null)
               resetSegmentForm()
@@ -309,42 +382,45 @@ export function Contacts() {
             }}
             className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-xs flex items-center gap-1.5"
           >
-            <span>🏷️</span> + New Segment
+            <TagIcon className="h-3.5 w-3.5 text-slate-500" />
+            + New Segment
           </button>
           <button
+            type="button"
             onClick={() => {
               setImportFile(null)
               setImportPreview(null)
               setShowImportModal(true)
             }}
-            className="rounded-md bg-[var(--color-accent)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] shadow-xs flex items-center gap-1.5"
+            className="rounded-md bg-slate-900 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 shadow-xs flex items-center gap-1.5"
           >
-            <span>📤</span> Import CSV
+            <Upload className="h-3.5 w-3.5 text-white" />
+            Import CSV
           </button>
         </div>
       </div>
 
       {/* Notifications */}
       {error && (
-        <div className="rounded-lg bg-rose-50 border border-rose-200 p-3.5 text-xs text-rose-800 flex items-center justify-between">
+        <div className="rounded-lg bg-rose-50 border border-rose-200 p-3.5 text-xs text-rose-800 flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-2">
-            <span>⚠️</span>
+            <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
             <span>{error}</span>
           </div>
           <button onClick={() => setError(null)} className="text-rose-600 hover:text-rose-900">
-            ✕
+            <X className="h-4 w-4" />
           </button>
         </div>
       )}
 
       {notice && (
-        <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3.5 text-xs text-emerald-800 flex items-center justify-between">
+        <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3.5 text-xs text-emerald-800 flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-2">
-            <span>✅</span>
+            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
             <span>{notice}</span>
           </div>
           <button onClick={() => setNotice(null)} className="text-emerald-600 hover:text-emerald-900">
-            ✕
+            <X className="h-4 w-4" />
           </button>
         </div>
       )}
@@ -364,7 +440,7 @@ export function Contacts() {
             onClick={() => setSelectedSegmentId('all')}
             className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-medium text-left transition-all ${
               selectedSegmentId === 'all'
-                ? 'bg-[var(--color-accent)] text-white border-slate-900 shadow-xs'
+                ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
                 : 'bg-[var(--color-surface)] text-[var(--color-ink)] border-[var(--color-border)] hover:border-slate-300'
             }`}
           >
@@ -377,7 +453,7 @@ export function Contacts() {
               key={seg.id}
               className={`shrink-0 rounded-lg border px-3 py-2 text-xs text-left transition-all flex items-center gap-3 ${
                 selectedSegmentId === seg.id
-                  ? 'bg-[var(--color-accent-soft)] border-indigo-300 ring-1 ring-indigo-200'
+                  ? 'bg-indigo-50/60 border-indigo-300 ring-1 ring-indigo-200'
                   : 'bg-[var(--color-surface)] border-[var(--color-border)] hover:border-slate-300'
               }`}
             >
@@ -390,20 +466,20 @@ export function Contacts() {
                   {seg.memberCount} members · {seg.filters?.channels?.join(', ') || 'all channels'}
                 </div>
               </button>
-              <div className="flex items-center gap-1 border-l border-[var(--color-border)] pl-2">
+              <div className="flex items-center gap-1.5 border-l border-[var(--color-border)] pl-2">
                 <button
                   onClick={() => openEditSegment(seg)}
                   title="Edit Segment"
-                  className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] text-xs"
+                  className="text-slate-400 hover:text-slate-700 p-0.5"
                 >
-                  ✏️
+                  <Pencil className="h-3 w-3" />
                 </button>
                 <button
                   onClick={() => handleDeleteSegment(seg)}
                   title="Delete Segment"
-                  className="text-[var(--color-ink-faint)] hover:text-rose-600 text-xs"
+                  className="text-slate-400 hover:text-rose-600 p-0.5"
                 >
-                  ✕
+                  <X className="h-3 w-3" />
                 </button>
               </div>
             </div>
@@ -416,8 +492,8 @@ export function Contacts() {
         {/* Search & Channel Filters */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="relative flex-1">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-[var(--color-ink-faint)] text-xs">
-              🔍
+            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-3.5 w-3.5 text-slate-400" />
             </span>
             <input
               type="text"
@@ -430,20 +506,23 @@ export function Contacts() {
 
           {/* Channel Selector Pills */}
           <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto">
-            {CHANNELS.map((ch) => (
-              <button
-                key={ch.id}
-                onClick={() => setSelectedChannel(ch.id)}
-                className={`rounded-full px-2.5 py-1 text-xs font-medium flex items-center gap-1 transition-all ${
-                  selectedChannel === ch.id
-                    ? 'bg-[var(--color-accent)] text-white shadow-xs'
-                    : 'bg-slate-100 text-[var(--color-ink-muted)] hover:bg-slate-200'
-                }`}
-              >
-                <span>{ch.icon}</span>
-                <span>{ch.label}</span>
-              </button>
-            ))}
+            {CHANNELS.map((ch) => {
+              const IconComp = ch.icon
+              return (
+                <button
+                  key={ch.id}
+                  onClick={() => setSelectedChannel(ch.id)}
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium flex items-center gap-1.5 transition-all ${
+                    selectedChannel === ch.id
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-100 text-[var(--color-ink-muted)] hover:bg-slate-200'
+                  }`}
+                >
+                  <IconComp className="h-3 w-3" />
+                  <span>{ch.label}</span>
+                </button>
+              )
+            })}
           </div>
         </div>
 
@@ -490,30 +569,42 @@ export function Contacts() {
         </div>
       ) : contacts.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-300 bg-[var(--color-surface)] p-10 text-center space-y-3">
-          <span className="text-3xl">👥</span>
+          <Users className="h-10 w-10 text-slate-300 mx-auto" />
           <h3 className="text-sm font-bold text-[var(--color-ink)]">No matching contacts found</h3>
           <p className="text-xs text-[var(--color-ink-muted)] max-w-sm mx-auto">
-            Try adjusting your search criteria, channel filters, or import audience contacts via Multi-Channel CSV.
+            Try adjusting your search criteria, channel filters, or synchronize contacts directly from Meta Cloud.
           </p>
-          <button
-            onClick={() => {
-              setSelectedChannel('all')
-              setSelectedSegmentId('all')
-              setSelectedTag('all')
-              setSearchQuery('')
-            }}
-            className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)]"
-          >
-            Clear Filters
-          </button>
+          <div className="flex items-center justify-center gap-2">
+            <button
+              onClick={handleSyncMeta}
+              disabled={syncingMeta}
+              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 text-emerald-600 ${syncingMeta ? 'animate-spin' : ''}`} />
+              Sync with Meta
+            </button>
+            <button
+              onClick={() => {
+                setSelectedChannel('all')
+                setSelectedSegmentId('all')
+                setSelectedTag('all')
+                setSearchQuery('')
+              }}
+              className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)]"
+            >
+              Clear Filters
+            </button>
+          </div>
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xs">
           <table className="w-full text-xs">
             <thead className="border-b border-[var(--color-border)] bg-[var(--color-page)] text-left font-semibold uppercase tracking-wider text-[var(--color-ink-muted)]">
               <tr>
-                <th className="px-4 py-3">Customer Contact</th>
-                <th className="px-4 py-3">Channel &amp; Reach</th>
+                <th className="px-4 py-3">Phone Number</th>
+                <th className="px-4 py-3">Customer Name</th>
+                <th className="px-4 py-3">Channel</th>
+                <th className="px-4 py-3">Consent</th>
                 <th className="px-4 py-3">Language</th>
                 <th className="px-4 py-3">Audience Tags</th>
                 <th className="px-4 py-3 text-right">Actions</th>
@@ -521,38 +612,75 @@ export function Contacts() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {contacts.map((c) => (
-                <tr key={c.id} className="hover:bg-[var(--color-page)]/50 transition-colors">
-                  {/* Name & Initials */}
+                <tr
+                  key={c.id}
+                  onClick={(e) => {
+                    if ((e.target as HTMLElement).closest('button, input, a')) return
+                    navigate(`/contacts/${c.id}`)
+                  }}
+                  className="hover:bg-slate-50/70 transition-colors cursor-pointer"
+                >
+                  {/* Phone Number */}
+                  <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-800">
+                    <div className="flex items-center gap-1.5">
+                      <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                      <span>{c.value || '—'}</span>
+                    </div>
+                  </td>
+
+                  {/* Customer Name */}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
-                      <div className="h-7 w-7 rounded-full bg-slate-100 border border-[var(--color-border)] flex items-center justify-center font-bold text-[var(--color-ink)] text-[11px] shrink-0">
-                        {c.personName ? c.personName.slice(0, 2).toUpperCase() : '??'}
+                      <div className="h-7 w-7 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-800 text-[11px] shrink-0">
+                        {c.personName ? c.personName.slice(0, 2).toUpperCase() : 'CU'}
                       </div>
                       <div>
-                        <div className="font-semibold text-[var(--color-ink)]">{c.personName || 'Unnamed Contact'}</div>
-                        <div className="text-[10px] text-[var(--color-ink-faint)] font-mono">ID: {c.id.slice(0, 8)}</div>
+                        <Link
+                          to={`/contacts/${c.id}`}
+                          className="font-semibold text-slate-900 hover:text-emerald-700 hover:underline"
+                        >
+                          {c.personName || 'Unnamed Contact'}
+                        </Link>
+                        <div className="text-[10px] text-slate-400 font-mono">ID: {c.id.slice(0, 8)}</div>
                       </div>
                     </div>
                   </td>
 
-                  {/* Channel & Address */}
+                  {/* Channel */}
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${getChannelBadge(
-                          c.channel
-                        )}`}
-                      >
-                        <span>{getChannelIcon(c.channel)}</span>
-                        <span className="uppercase">{c.channel}</span>
-                      </span>
-                      <span className="font-mono text-[var(--color-ink)]">{c.value}</span>
-                    </div>
+                    <span
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${getChannelBadge(
+                        c.channel
+                      )}`}
+                    >
+                      {getChannelIcon(c.channel)}
+                      <span className="capitalize">{c.channel}</span>
+                    </span>
+                  </td>
+
+                  {/* Consent */}
+                  <td className="px-4 py-3">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleToggleConsent(c.id)
+                      }}
+                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors cursor-pointer ${
+                        c.optInStatus?.toUpperCase() === 'OPTED_IN'
+                          ? 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                          : 'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100'
+                      }`}
+                      title="Click to toggle consent"
+                    >
+                      <CheckCircle2 className="h-2.5 w-2.5" />
+                      <span>{c.optInStatus?.toUpperCase() === 'OPTED_IN' ? 'Opted-In' : 'Opted-Out'}</span>
+                    </button>
                   </td>
 
                   {/* Language */}
                   <td className="px-4 py-3">
-                    <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono text-[var(--color-ink-muted)] uppercase">
+                    <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono text-slate-600 uppercase">
                       {c.language || 'en'}
                     </span>
                   </td>
@@ -563,20 +691,24 @@ export function Contacts() {
                       {c.tags.map((t) => (
                         <span
                           key={t}
-                          className="inline-flex items-center gap-1 rounded-md bg-slate-100 border border-[var(--color-border)] px-1.5 py-0.5 text-[10px] text-[var(--color-ink)]"
+                          className="inline-flex items-center gap-1 rounded-md bg-slate-100 border border-slate-200 px-1.5 py-0.5 text-[10px] text-slate-700"
                         >
                           <span>#{t}</span>
                           <button
-                            onClick={() => handleRemoveTag(c.id, t)}
-                            className="text-[var(--color-ink-faint)] hover:text-rose-600"
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleRemoveTag(c.id, t)
+                            }}
+                            className="text-slate-400 hover:text-rose-600"
                           >
-                            ✕
+                            <X className="h-3 w-3" />
                           </button>
                         </span>
                       ))}
 
                       {taggingContactId === c.id ? (
-                        <div className="inline-flex items-center gap-1">
+                        <div className="inline-flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="text"
                             placeholder="Tag name"
@@ -590,37 +722,56 @@ export function Contacts() {
                             className="rounded border border-slate-300 px-1.5 py-0.5 text-[10px] w-20 focus:outline-none focus:ring-1 focus:ring-slate-900"
                           />
                           <button
+                            type="button"
                             onClick={() => handleAddTag(c.id)}
                             className="text-emerald-700 font-bold text-xs"
                           >
-                            ✓
+                            <Check className="h-3.5 w-3.5" />
                           </button>
                           <button
+                            type="button"
                             onClick={() => setTaggingContactId(null)}
-                            className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] text-xs"
+                            className="text-slate-400 hover:text-slate-600 text-xs"
                           >
-                            ✕
+                            <X className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       ) : (
                         <button
-                          onClick={() => {
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
                             setTaggingContactId(c.id)
                             setNewTagInput('')
                           }}
-                          className="rounded border border-dashed border-slate-300 px-1.5 py-0.5 text-[10px] text-[var(--color-ink-muted)] hover:border-slate-400 hover:text-[var(--color-ink)]"
+                          className="rounded border border-dashed border-slate-300 px-1.5 py-0.5 text-[10px] text-slate-500 hover:border-slate-400 hover:text-slate-800 flex items-center gap-0.5"
                         >
-                          + Tag
+                          <Plus className="h-2.5 w-2.5" />
+                          <span>Tag</span>
                         </button>
                       )}
                     </div>
                   </td>
 
-                  {/* Actions */}
+                  {/* Actions / Added */}
                   <td className="px-4 py-3 text-right">
-                    <span className="text-[11px] text-[var(--color-ink-faint)]">
-                      {c.createdAt ? new Date(c.createdAt).toLocaleDateString() : 'Active'}
-                    </span>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleOpenChat(c.id)
+                        }}
+                        title="Open Conversation"
+                        className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 hover:text-emerald-700 transition-colors shadow-2xs"
+                      >
+                        <MessageSquare className="h-3 w-3 text-emerald-600" />
+                        <span>Chat</span>
+                      </button>
+                      <span className="text-[11px] text-slate-400">
+                        {c.createdAt ? new Date(c.createdAt).toLocaleDateString() : 'Active'}
+                      </span>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -633,7 +784,7 @@ export function Contacts() {
       {/* MODAL 1: Multi-Channel CSV Import & Preview Modal */}
       {/* ========================================================================= */}
       {showImportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-accent)]/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
           <div className="w-full max-w-2xl rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="border-b border-[var(--color-border)] p-4 flex items-center justify-between">
               <div>
@@ -648,9 +799,9 @@ export function Contacts() {
                   setImportFile(null)
                   setImportPreview(null)
                 }}
-                className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)]"
+                className="text-slate-400 hover:text-slate-700"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -660,7 +811,7 @@ export function Contacts() {
                 <label className="block text-xs font-semibold text-[var(--color-ink)]">Select CSV File</label>
                 <div
                   onClick={() => fileRef.current?.click()}
-                  className="rounded-lg border-2 border-dashed border-slate-300 p-6 text-center hover:border-slate-400 cursor-pointer bg-[var(--color-page)]/50 transition-colors"
+                  className="rounded-lg border-2 border-dashed border-slate-300 p-6 text-center hover:border-slate-400 cursor-pointer bg-slate-50/50 transition-colors"
                 >
                   <input
                     ref={fileRef}
@@ -669,7 +820,7 @@ export function Contacts() {
                     onChange={handleFileSelect}
                     className="hidden"
                   />
-                  <span className="text-2xl block mb-1">📄</span>
+                  <Upload className="h-8 w-8 text-slate-400 mx-auto mb-1" />
                   {importFile ? (
                     <div>
                       <div className="text-xs font-bold text-[var(--color-ink)]">{importFile.name}</div>
@@ -788,7 +939,7 @@ export function Contacts() {
                 <button
                   onClick={handleExecuteImport}
                   disabled={!importFile || importing}
-                  className="rounded-md bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] shadow-xs disabled:opacity-50"
+                  className="rounded-md bg-slate-900 px-4 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 shadow-xs disabled:opacity-50"
                 >
                   {importing ? 'Importing Contacts...' : 'Confirm & Import Audience'}
                 </button>
@@ -802,7 +953,7 @@ export function Contacts() {
       {/* MODAL 2: Dynamic Segment Builder Modal */}
       {/* ========================================================================= */}
       {showSegmentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-accent)]/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
           <div className="w-full max-w-lg rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl overflow-hidden">
             <div className="border-b border-[var(--color-border)] p-4 flex items-center justify-between">
               <div>
@@ -815,9 +966,9 @@ export function Contacts() {
               </div>
               <button
                 onClick={() => setShowSegmentModal(false)}
-                className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)]"
+                className="text-slate-400 hover:text-slate-700"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -850,31 +1001,34 @@ export function Contacts() {
                   Channel Targeting (Leave empty for all channels)
                 </label>
                 <div className="grid grid-cols-3 gap-2">
-                  {CHANNELS.filter((c) => c.id !== 'all').map((ch) => (
-                    <label
-                      key={ch.id}
-                      className={`flex items-center gap-1.5 rounded-md border p-2 text-xs cursor-pointer transition-all ${
-                        segmentChannels.includes(ch.id)
-                          ? 'border-slate-900 bg-[var(--color-accent)] text-white font-semibold'
-                          : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:bg-[var(--color-page)]'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={segmentChannels.includes(ch.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSegmentChannels([...segmentChannels, ch.id])
-                          } else {
-                            setSegmentChannels(segmentChannels.filter((c) => c !== ch.id))
-                          }
-                        }}
-                        className="sr-only"
-                      />
-                      <span>{ch.icon}</span>
-                      <span className="truncate">{ch.label}</span>
-                    </label>
-                  ))}
+                  {CHANNELS.filter((c) => c.id !== 'all').map((ch) => {
+                    const IconComp = ch.icon
+                    return (
+                      <label
+                        key={ch.id}
+                        className={`flex items-center gap-1.5 rounded-md border p-2 text-xs cursor-pointer transition-all ${
+                          segmentChannels.includes(ch.id)
+                            ? 'border-slate-900 bg-slate-900 text-white font-semibold'
+                            : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-ink)] hover:bg-[var(--color-page)]'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={segmentChannels.includes(ch.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSegmentChannels([...segmentChannels, ch.id])
+                            } else {
+                              setSegmentChannels(segmentChannels.filter((c) => c !== ch.id))
+                            }
+                          }}
+                          className="sr-only"
+                        />
+                        <IconComp className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{ch.label}</span>
+                      </label>
+                    )
+                  })}
                 </div>
               </div>
 
@@ -921,7 +1075,7 @@ export function Contacts() {
                         }}
                         className={`rounded-full px-2 py-0.5 text-[11px] font-medium transition-all ${
                           segmentTags.includes(t)
-                            ? 'bg-[var(--color-accent)] text-white'
+                            ? 'bg-slate-900 text-white'
                             : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-ink)] hover:bg-slate-100'
                         }`}
                       >
@@ -943,7 +1097,7 @@ export function Contacts() {
               <button
                 onClick={handleSaveSegment}
                 disabled={savingSegment}
-                className="rounded-md bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] shadow-xs"
+                className="rounded-md bg-slate-900 px-4 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 shadow-xs"
               >
                 {savingSegment ? 'Saving...' : editingSegment ? 'Update Segment' : 'Create Segment'}
               </button>

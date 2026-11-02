@@ -10,19 +10,23 @@ export function timeAgo(iso: string): string {
 }
 
 export function stateLabel(state: string): string {
+  if (!state) return 'Unknown'
   return state
+    .toLowerCase()
     .split('_')
-    .map((w) => w[0].toUpperCase() + w.slice(1))
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : ''))
     .join(' ')
 }
 
 export function stateBadgeClass(state: string): string {
-  switch (state) {
+  const s = (state || '').toLowerCase()
+  switch (s) {
     case 'hot_lead':
       return 'badge-error'
     case 'engaged':
     case 'awaiting_reply':
       return 'badge-info'
+    case 'resolved':
     case 'closed_won':
       return 'badge-success'
     case 'closed_lost':
@@ -30,6 +34,8 @@ export function stateBadgeClass(state: string): string {
       return 'badge-neutral'
     case 'handed_off':
       return 'badge-warning'
+    case 'new':
+      return 'badge-primary'
     default:
       return 'badge-ghost'
   }

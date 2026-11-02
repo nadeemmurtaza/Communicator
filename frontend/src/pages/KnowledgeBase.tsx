@@ -1,3 +1,27 @@
+import {
+  BookOpen,
+  Bot,
+  Zap,
+  Plus,
+  Link as LinkIcon,
+  FileText,
+  Sparkles,
+  X,
+  MessageSquare,
+  Target,
+  Folder,
+  BarChart3,
+  ThumbsUp,
+  Trash2,
+  Globe,
+  CreditCard,
+  Truck,
+  Package,
+  Layers,
+  ShieldCheck,
+  Lightbulb,
+  Rocket,
+} from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import {
   api,
@@ -6,6 +30,23 @@ import {
   type KnowledgeHubOverview,
   type KnowledgeRecommendation,
 } from '../lib/api'
+
+function renderTopicIcon(topicName: string) {
+  switch (topicName) {
+    case 'Billing & Refunds':
+      return <CreditCard className="h-5 w-5 text-indigo-600 shrink-0" />
+    case 'Shipping & Delivery':
+      return <Truck className="h-5 w-5 text-blue-600 shrink-0" />
+    case 'Orders & Returns':
+      return <Package className="h-5 w-5 text-amber-600 shrink-0" />
+    case 'Product & Catalog':
+      return <Layers className="h-5 w-5 text-purple-600 shrink-0" />
+    case 'Account & VIP Access':
+      return <ShieldCheck className="h-5 w-5 text-emerald-600 shrink-0" />
+    default:
+      return <Folder className="h-5 w-5 text-slate-600 shrink-0" />
+  }
+}
 
 export function KnowledgeBase() {
   const [activeTab, setActiveTab] = useState<'library' | 'performance' | 'recommendations' | 'gaps'>('library')
@@ -208,7 +249,7 @@ export function KnowledgeBase() {
         <div>
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
-              📚
+              <BookOpen className="h-5 w-5" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-[var(--color-ink)] flex items-center gap-2">
@@ -233,7 +274,7 @@ export function KnowledgeBase() {
             }}
             className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-surface)] border border-slate-300 px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-2xs transition-colors cursor-pointer"
           >
-            <span>➕ Add Source Note</span>
+            <Plus className="h-4 w-4" /> <span>Add Source Note</span>
           </button>
 
           <button
@@ -243,7 +284,7 @@ export function KnowledgeBase() {
             }}
             className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 shadow-2xs transition-colors cursor-pointer"
           >
-            <span>🔗 Ingest URL</span>
+            <LinkIcon className="h-4 w-4" /> <span>Ingest URL</span>
           </button>
 
           <input
@@ -258,7 +299,7 @@ export function KnowledgeBase() {
             disabled={uploadingDoc}
             className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent-soft)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-semibold text-[var(--color-accent)] hover:bg-indigo-100 shadow-2xs transition-colors disabled:opacity-50 cursor-pointer"
           >
-            <span>📄 {uploadingDoc ? 'Parsing...' : 'Upload PDF/Doc'}</span>
+            <span className="flex items-center gap-1.5"><FileText className="h-4 w-4" /> <span>{uploadingDoc ? 'Parsing...' : 'Upload PDF/Doc'}</span></span>
           </button>
 
           <button
@@ -266,7 +307,7 @@ export function KnowledgeBase() {
             disabled={scanningGaps}
             className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
           >
-            <span>✨ {scanningGaps ? 'Scanning...' : 'Scan Gaps'}</span>
+            <span className="flex items-center gap-1.5"><Sparkles className="h-4 w-4" /> <span>{scanningGaps ? 'Scanning...' : 'Scan Gaps'}</span></span>
           </button>
         </div>
       </div>
@@ -275,13 +316,13 @@ export function KnowledgeBase() {
       {error && (
         <div className="flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 shadow-xs">
           <span>{error}</span>
-          <button onClick={() => setError(null)} className="font-bold text-sm cursor-pointer">✕</button>
+          <button onClick={() => setError(null)} className="cursor-pointer text-rose-600 hover:text-rose-800"><X className="h-4 w-4" /></button>
         </div>
       )}
       {success && (
         <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-800 shadow-xs">
           <span>{success}</span>
-          <button onClick={() => setSuccess(null)} className="font-bold text-sm cursor-pointer">✕</button>
+          <button onClick={() => setSuccess(null)} className="cursor-pointer text-emerald-600 hover:text-emerald-800"><X className="h-4 w-4" /></button>
         </div>
       )}
 
@@ -290,7 +331,7 @@ export function KnowledgeBase() {
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4 shadow-2xs">
           <div className="flex items-center justify-between text-xs text-[var(--color-ink-muted)] mb-1">
             <span>Total Knowledge Sources</span>
-            <span>📚</span>
+            <BookOpen className="h-4 w-4 text-purple-600" />
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-black text-[var(--color-ink)]">{totalSourcesCount}</span>
@@ -302,7 +343,7 @@ export function KnowledgeBase() {
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4 shadow-2xs">
           <div className="flex items-center justify-between text-xs text-[var(--color-ink-muted)] mb-1">
             <span>Fin Agent Resolution Rate</span>
-            <span>🤖</span>
+            <Bot className="h-4 w-4 inline mr-1" />
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-black text-emerald-600">{totalResolutionRate}%</span>
@@ -314,7 +355,7 @@ export function KnowledgeBase() {
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4 shadow-2xs">
           <div className="flex items-center justify-between text-xs text-[var(--color-ink-muted)] mb-1">
             <span>Copilot Inbox Assistance</span>
-            <span>💬</span>
+            <MessageSquare className="h-4 w-4 text-purple-600" />
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-black text-purple-600">93.7%</span>
@@ -326,7 +367,7 @@ export function KnowledgeBase() {
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4 shadow-2xs">
           <div className="flex items-center justify-between text-xs text-[var(--color-ink-muted)] mb-1">
             <span>Content Gap Recommendations</span>
-            <span>🎯</span>
+            <Target className="h-4 w-4 text-amber-600" />
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-black text-amber-600">{openRecsCount}</span>
@@ -347,7 +388,7 @@ export function KnowledgeBase() {
                 : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
             }`}
           >
-            <span>📁 Content Library by Topic</span>
+            <span className="flex items-center gap-1.5"><Folder className="h-4 w-4" /> <span>Content Library by Topic</span></span>
             <span className="rounded-full bg-slate-100 text-[var(--color-ink)] px-2 py-0.5 text-[10px] font-semibold">
               {totalSourcesCount}
             </span>
@@ -361,7 +402,7 @@ export function KnowledgeBase() {
                 : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
             }`}
           >
-            <span>📊 Cross-Touchpoint Reporting</span>
+            <span className="flex items-center gap-1.5"><BarChart3 className="h-4 w-4" /> <span>Cross-Touchpoint Reporting</span></span>
           </button>
 
           <button
@@ -372,7 +413,7 @@ export function KnowledgeBase() {
                 : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
             }`}
           >
-            <span>🎯 Content &amp; Action Gaps</span>
+            <span className="flex items-center gap-1.5"><Target className="h-4 w-4" /> <span>Content &amp; Action Gaps</span></span>
             {openRecsCount > 0 && (
               <span className="rounded-full bg-amber-500 text-white font-bold px-1.5 py-0.2 text-[10px] animate-pulse">
                 {openRecsCount}
@@ -388,7 +429,7 @@ export function KnowledgeBase() {
                 : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
             }`}
           >
-            <span>✨ FAQ Gaps ({gaps.length})</span>
+            <span className="flex items-center gap-1.5"><Sparkles className="h-4 w-4" /> <span>FAQ Gaps ({gaps.length})</span></span>
           </button>
         </div>
       </div>
@@ -427,9 +468,9 @@ export function KnowledgeBase() {
                   className="text-xs border border-slate-300 rounded-lg px-2 py-1 bg-[var(--color-surface)] focus:outline-hidden cursor-pointer"
                 >
                   <option value="all">All Touchpoints</option>
-                  <option value="agent">🤖 Fin Agent</option>
-                  <option value="copilot">💬 Inbox Copilot</option>
-                  <option value="help_center">🌐 Help Center</option>
+                  <option value="agent">Fin Agent</option>
+                  <option value="copilot">Inbox Copilot</option>
+                  <option value="help_center">Help Center</option>
                 </select>
               </div>
 
@@ -478,7 +519,7 @@ export function KnowledgeBase() {
                   {/* Topic Group Header */}
                   <div className="bg-[var(--color-page)]/80 px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-xl">{group.icon}</span>
+                      <span>{renderTopicIcon(group.name)}</span>
                       <div>
                         <h3 className="font-bold text-[var(--color-ink)] text-sm">{group.name}</h3>
                         <p className="text-[11px] text-[var(--color-ink-muted)]">
@@ -530,19 +571,19 @@ export function KnowledgeBase() {
                                   key={tp}
                                   className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-purple-50 text-purple-700 border border-purple-200"
                                 >
-                                  {tp === 'agent' ? '🤖 Fin Agent' : tp === 'copilot' ? '💬 Copilot' : '🌐 Help Center'}
+                                  {tp === 'agent' ? 'Fin Agent' : tp === 'copilot' ? 'Copilot' : 'Help Center'}
                                 </span>
                               ))}
                             </div>
 
                             <span>•</span>
                             <span className="text-emerald-700 font-semibold">
-                              ⚡ {source.resolutionRate}% Resolution
+                              <Zap className="h-3 w-3 inline mr-1 text-amber-500" />{source.resolutionRate}% Resolution
                             </span>
                             <span>•</span>
-                            <span>📊 {source.usageCount} Invocations</span>
+                            <span className="flex items-center gap-1"><BarChart3 className="h-3 w-3 inline text-[var(--color-ink-muted)]" /><span>{source.usageCount} Invocations</span></span>
                             <span>•</span>
-                            <span>👍 {source.helpfulCount} helpful</span>
+                            <span className="flex items-center gap-1"><ThumbsUp className="h-3 w-3 inline text-emerald-600" /><span>{source.helpfulCount} helpful</span></span>
                           </div>
                         </div>
 
@@ -561,7 +602,7 @@ export function KnowledgeBase() {
                             className="text-xs text-rose-500 hover:text-rose-700 p-1 rounded hover:bg-rose-50 cursor-pointer transition-colors"
                             title="Delete article"
                           >
-                            🗑️
+                            <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       </div>
@@ -590,7 +631,7 @@ export function KnowledgeBase() {
               <div className="border border-purple-200 bg-purple-50/40 rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 font-bold text-xs text-purple-900">
-                    <span className="text-base">🤖</span>
+                    <Bot className="h-4 w-4 text-indigo-600 inline mr-1" />
                     <span>Fin Autonomous Agent</span>
                   </div>
                   <span className="text-[10px] bg-purple-200 text-purple-800 font-bold px-2 py-0.5 rounded-full">
@@ -616,7 +657,7 @@ export function KnowledgeBase() {
               <div className="border border-blue-200 bg-blue-50/40 rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 font-bold text-xs text-blue-900">
-                    <span className="text-base">💬</span>
+                    <MessageSquare className="h-4 w-4 text-blue-600" />
                     <span>Inbox Copilot Assistant</span>
                   </div>
                   <span className="text-[10px] bg-blue-200 text-blue-800 font-bold px-2 py-0.5 rounded-full">
@@ -642,7 +683,7 @@ export function KnowledgeBase() {
               <div className="border border-emerald-200 bg-emerald-50/40 rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 font-bold text-xs text-emerald-900">
-                    <span className="text-base">🌐</span>
+                    <Globe className="h-4 w-4 text-emerald-600" />
                     <span>Customer Help Center</span>
                   </div>
                   <span className="text-[10px] bg-emerald-200 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
@@ -689,7 +730,7 @@ export function KnowledgeBase() {
                   {hubOverview?.topics.map((t) => (
                     <tr key={t.name} className="hover:bg-[var(--color-page)]/70">
                       <td className="px-4 py-3 font-semibold text-[var(--color-ink)] flex items-center gap-2">
-                        <span>{t.icon}</span>
+                        <span>{renderTopicIcon(t.name)}</span>
                         <span>{t.name}</span>
                       </td>
                       <td className="px-4 py-3 text-[var(--color-ink-muted)]">{t.sourcesCount} articles</td>
@@ -724,7 +765,7 @@ export function KnowledgeBase() {
           {/* Header Banner */}
           <div className="bg-linear-to-r from-amber-500 via-orange-500 to-amber-600 rounded-2xl p-5 text-white shadow-md space-y-2">
             <div className="flex items-center gap-2">
-              <span className="text-xl">🎯</span>
+              <Target className="h-5 w-5 text-white" />
               <h3 className="font-bold text-base">Recommendations to Improve Agent Resolution Rate</h3>
             </div>
             <p className="text-xs text-amber-100 max-w-3xl leading-relaxed">
@@ -768,7 +809,7 @@ export function KnowledgeBase() {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--color-border)] pb-3">
                     <div className="flex items-center gap-2">
                       <span className="text-lg">
-                        {rec.gapType === 'content_gap' ? '📝' : rec.gapType === 'customer_data_gap' ? '🔌' : '⚡'}
+                        {rec.gapType === 'content_gap' ? 'Content' : rec.gapType === 'customer_data_gap' ? 'Data' : 'Speed'}
                       </span>
                       <div>
                         <div className="flex items-center gap-2">
@@ -794,8 +835,9 @@ export function KnowledgeBase() {
 
                   {/* Suggested Solution & Content Box */}
                   <div className="bg-amber-50/60 border border-amber-200 rounded-xl p-3 space-y-1.5 text-xs">
-                    <span className="font-bold text-amber-900 text-[11px] block">
-                      💡 Recommended Action: {rec.suggestedAction}
+                    <span className="font-bold text-amber-900 text-[11px] flex items-center gap-1.5">
+                      <Lightbulb className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                      <span>Recommended Action: {rec.suggestedAction}</span>
                     </span>
                     <p className="text-slate-800 italic bg-[var(--color-surface)]/80 p-2 rounded-lg border border-amber-200/50">
                       "{rec.suggestedContent}"
@@ -817,7 +859,7 @@ export function KnowledgeBase() {
                       onClick={() => handleApplyRecommendation(rec)}
                       className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                     >
-                      <span>🚀</span>
+                      <Rocket className="h-3.5 w-3.5" />
                       <span>{processingRecId === rec.id ? 'Publishing…' : 'Apply with 1-Click'}</span>
                     </button>
                   </div>
@@ -890,9 +932,9 @@ export function KnowledgeBase() {
               </div>
               <button
                 onClick={() => setSelectedEntryPreview(null)}
-                className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] font-bold p-1 cursor-pointer"
+                className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] p-1 cursor-pointer"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -901,7 +943,7 @@ export function KnowledgeBase() {
             </div>
 
             <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)] text-xs text-[var(--color-ink-muted)]">
-              <span className="text-emerald-700 font-bold">⚡ {selectedEntryPreview.resolutionRate}% Resolution Efficiency</span>
+              <span className="text-emerald-700 font-bold"><Zap className="h-3.5 w-3.5 inline mr-1 text-amber-500" />{selectedEntryPreview.resolutionRate}% Resolution Efficiency</span>
               <button
                 onClick={() => setSelectedEntryPreview(null)}
                 className="px-4 py-1.5 bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white rounded-lg font-semibold cursor-pointer"
@@ -921,7 +963,7 @@ export function KnowledgeBase() {
           <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl max-w-lg w-full p-6 space-y-4 animate-in fade-in zoom-in-95">
             <div className="flex items-start justify-between border-b border-[var(--color-border)] pb-2">
               <h3 className="font-bold text-[var(--color-ink)] text-base">Add Centralized Knowledge Source</h3>
-              <button onClick={() => setShowNoteForm(false)} className="text-[var(--color-ink-faint)] font-bold p-1 cursor-pointer">✕</button>
+              <button onClick={() => setShowNoteForm(false)} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] p-1 cursor-pointer"><X className="h-4 w-4" /></button>
             </div>
 
             <form onSubmit={submitNote} className="space-y-3 text-xs">
@@ -994,7 +1036,7 @@ export function KnowledgeBase() {
           <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95">
             <div className="flex items-start justify-between border-b border-[var(--color-border)] pb-2">
               <h3 className="font-bold text-[var(--color-ink)] text-base">Ingest Knowledge from URL</h3>
-              <button onClick={() => setShowUrlModal(false)} className="text-[var(--color-ink-faint)] font-bold p-1 cursor-pointer">✕</button>
+              <button onClick={() => setShowUrlModal(false)} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] p-1 cursor-pointer"><X className="h-4 w-4" /></button>
             </div>
 
             <form onSubmit={submitUrl} className="space-y-3 text-xs">

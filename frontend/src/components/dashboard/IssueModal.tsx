@@ -1,4 +1,6 @@
 
+import { GitPullRequest, Square, Target, X } from 'lucide-react'
+
 interface IssueModalProps {
   activeConv: any
   handleCreateLinkedIssue: any
@@ -41,7 +43,7 @@ export function IssueModal(props: IssueModalProps) {
           <div className="w-full max-w-lg rounded-2xl bg-[var(--color-surface)] p-6 shadow-2xl border border-[var(--color-border)] space-y-4">
             <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
               <div className="flex items-center gap-2">
-                <span className="text-xl">🎯</span>
+                <Target className="h-5 w-5 text-purple-600" />
                 <div>
                   <h3 className="font-bold text-sm text-[var(--color-ink)]">Create & Link Issue</h3>
                   <p className="text-[11px] text-[var(--color-ink-muted)]">
@@ -53,7 +55,7 @@ export function IssueModal(props: IssueModalProps) {
                 onClick={() => setIssueModalOpen(false)}
                 className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] text-lg font-bold cursor-pointer"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -80,7 +82,7 @@ export function IssueModal(props: IssueModalProps) {
                     : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
                 }`}
               >
-                <span>🟣</span>
+                <span className="h-2.5 w-2.5 rounded-full bg-purple-600 inline-block" />
                 <span>Linear</span>
               </button>
               <button
@@ -92,7 +94,7 @@ export function IssueModal(props: IssueModalProps) {
                     : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
                 }`}
               >
-                <span>🐙</span>
+                <GitPullRequest className="h-3.5 w-3.5 text-slate-800" />
                 <span>GitHub Issues</span>
               </button>
               <button
@@ -104,7 +106,7 @@ export function IssueModal(props: IssueModalProps) {
                     : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
                 }`}
               >
-                <span>🔷</span>
+                <Square className="h-3 w-3 text-blue-600 fill-blue-600" />
                 <span>Jira Cloud</span>
               </button>
             </div>
@@ -128,10 +130,10 @@ export function IssueModal(props: IssueModalProps) {
                     onChange={(e) => setIssuePriority(e.target.value)}
                     className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs text-[var(--color-ink)] focus:border-purple-500 focus:outline-hidden"
                   >
-                    <option value="urgent">🔴 Urgent</option>
-                    <option value="high">🟠 High</option>
-                    <option value="medium">🟡 Medium</option>
-                    <option value="low">⚪ Low</option>
+                    <option value="urgent">Urgent</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
                   </select>
                 </div>
 
@@ -142,9 +144,9 @@ export function IssueModal(props: IssueModalProps) {
                     onChange={(e) => setIssueType(e.target.value)}
                     className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs text-[var(--color-ink)] focus:border-purple-500 focus:outline-hidden"
                   >
-                    <option value="bug">🐛 Bug</option>
-                    <option value="feature">✨ Feature Request</option>
-                    <option value="task">📋 Improvement / Task</option>
+                    <option value="bug">Bug</option>
+                    <option value="feature">Feature Request</option>
+                    <option value="task">Improvement / Task</option>
                   </select>
                 </div>
               </div>

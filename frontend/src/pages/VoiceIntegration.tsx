@@ -1,3 +1,4 @@
+import { AlertTriangle, PhoneCall, Zap, RefreshCw, Save, CheckCircle2, Mic, MicOff, Pause, PhoneOff, Lock, Sliders, Phone, Globe, Check, Lightbulb, Delete, FileText, X } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../lib/api'
@@ -27,14 +28,14 @@ export function VoiceIntegration() {
   const [authToken, setAuthToken] = useState('')
   const [voiceNumber, setVoiceNumber] = useState('+14155550199')
   const [callerId, setCallerId] = useState('+14155550199')
-  const [twimlAppSid, setTwimlAppSid] = useState('AP_mock_twiml_app_sid')
-  const [sipDomain, setSipDomain] = useState('bayworks.sip.twilio.com')
+  const [twimlAppSid, setTwimlAppSid] = useState('')
+  const [sipDomain, setSipDomain] = useState('')
   const [fallbackNumber, setFallbackNumber] = useState('+14155550100')
   const [recordingEnabled, setRecordingEnabled] = useState(true)
   const [recordingChannels, setRecordingChannels] = useState('dual')
   const [transcriptionEnabled, setTranscriptionEnabled] = useState(true)
   const [ivrEnabled, setIvrEnabled] = useState(true)
-  const [ivrPrompt, setIvrPrompt] = useState('Thank you for calling Bay Works. Press 1 for Sales, 2 for Technical Support, or 3 to leave a Voicemail.')
+  const [ivrPrompt, setIvrPrompt] = useState('Thank you for calling our team. Press 1 for Sales, 2 for Technical Support, or 3 to leave a Voicemail.')
   const [ivrMenu, setIvrMenu] = useState<Array<{ digit: string; label: string; action: string; target: string }>>([
     { digit: '1', label: 'Sales', action: 'queue', target: 'sales-queue' },
     { digit: '2', label: 'Technical Support', action: 'queue', target: 'support-queue' },
@@ -42,7 +43,7 @@ export function VoiceIntegration() {
   ])
   const [webrtcEnabled, setWebrtcEnabled] = useState(true)
   const [greetingEnabled, setGreetingEnabled] = useState(true)
-  const [greetingMessage, setGreetingMessage] = useState('Thank you for calling Bay Works. Connecting you to an agent.')
+  const [greetingMessage, setGreetingMessage] = useState('Thank you for calling our support team. Connecting you to an agent.')
   const [outOfOfficeEnabled, setOutOfOfficeEnabled] = useState(false)
   const [outOfOfficeMessage, setOutOfOfficeMessage] = useState('Our phone lines are currently closed. Please leave a voicemail after the tone.')
   const [csatEnabled, setCsatEnabled] = useState(true)
@@ -70,8 +71,10 @@ export function VoiceIntegration() {
       setAccountSid(res.inbox.credentials?.voiceAccountSid || res.inbox.credentials?.accountSid || '')
       setVoiceNumber((res.inbox as any).phoneNumber || (res.inbox as any).phone_number || res.inbox.credentials?.voiceNumber || '+14155550199')
       setCallerId(res.sipConfig?.callerId || '+14155550199')
-      setTwimlAppSid(res.sipConfig?.twimlAppSid || 'AP_mock_twiml_app_sid')
-      setSipDomain(res.sipConfig?.sipDomain || 'bayworks.sip.twilio.com')
+      const rawTwiml = res.sipConfig?.twimlAppSid || ''
+      setTwimlAppSid(rawTwiml)
+      const rawSip = res.sipConfig?.sipDomain || ''
+      setSipDomain(rawSip)
       setFallbackNumber(res.sipConfig?.fallbackNumber || '+14155550100')
       setRecordingEnabled(res.recordingConfig?.recordingEnabled ?? true)
       setRecordingChannels(res.recordingConfig?.recordingChannels || 'dual')
@@ -184,7 +187,7 @@ export function VoiceIntegration() {
       const res = await api.initiateVoiceCall({
         recipient_phone: target,
         agent_name: 'Current Agent',
-        message: 'Connecting call from Bay Works Voice dialer.',
+        message: 'Connecting call from Voice dialer.',
       })
       setActiveCall({
         callSid: res.callSid,
@@ -193,9 +196,8 @@ export function VoiceIntegration() {
         duration: 0,
         isMuted: false,
       })
-      setTimeout(() => {
-        setActiveCall(prev => prev ? { ...prev, status: 'connected' } : null)
-      }, 1500)
+      // Real call status from gateway
+      setActiveCall(prev => prev ? { ...prev, status: res.status === 'ringing' ? 'calling' : 'connected' } : null)
       setFeedback({ type: 'success', message: `Call initiated to ${target}.` })
       const logs = await api.getVoiceCallLogs()
       setCallLogs(logs)
@@ -245,6 +247,12 @@ export function VoiceIntegration() {
     )
   }
 
+  const isConnected = Boolean(
+    _data?.health?.status === 'CONNECTED' ||
+    _data?.health?.status === 'ready' ||
+    (accountSid && twimlAppSid)
+  )
+
   return (
     <div className="space-y-6">
       {/* Top Banner / Breadcrumb */}
@@ -275,17 +283,43 @@ export function VoiceIntegration() {
             disabled={verifying}
             className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs flex items-center gap-1.5"
           >
-            <span>🔄</span> {verifying ? 'Pinging Trunk...' : 'Verify SIP Trunk'}
+            <RefreshCw className="h-4 w-4" /> {verifying ? 'Pinging Trunk...' : 'Verify SIP Trunk'}
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
             className="rounded-md bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 shadow-xs flex items-center gap-1.5"
           >
-            <span>💾</span> {saving ? 'Saving...' : 'Save Settings'}
+            <Save className="h-4 w-4" /> {saving ? 'Saving...' : 'Save Settings'}
           </button>
         </div>
       </div>
+
+      {/* Real Connection Status Banner */}
+
+      {!isConnected && (
+
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 flex items-start gap-3">
+
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+
+          <div>
+
+            <h4 className="text-sm font-semibold text-amber-900">Channel Not Connected</h4>
+
+            <p className="text-xs text-amber-700 mt-0.5">
+
+              Please enter your provider API credentials below and click Save Configuration to activate.
+
+            </p>
+
+          </div>
+
+        </div>
+
+      )}
+
+
 
       {/* Feedback Alert */}
       {feedback && (
@@ -297,12 +331,10 @@ export function VoiceIntegration() {
           }`}
         >
           <div className="flex items-center gap-2">
-            <span>{feedback.type === 'success' ? '✅' : '⚠️'}</span>
+            {feedback.type === 'success' ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertTriangle className="h-4 w-4 text-amber-500" />}
             <span>{feedback.message}</span>
           </div>
-          <button onClick={() => setFeedback(null)} className="text-slate-400 hover:text-slate-600 font-bold">
-            ×
-          </button>
+          <button onClick={() => setFeedback(null)} className="text-slate-400 hover:text-slate-600 font-bold"><X className="h-4 w-4" /></button>
         </div>
       )}
 
@@ -335,7 +367,7 @@ export function VoiceIntegration() {
                 activeCall.isMuted ? 'bg-amber-500 text-slate-900' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
               }`}
             >
-              <span>{activeCall.isMuted ? '🔇' : '🎙️'}</span>
+              {activeCall.isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               <span>{activeCall.isMuted ? 'Muted' : 'Mute'}</span>
             </button>
             <button
@@ -344,14 +376,14 @@ export function VoiceIntegration() {
                 activeCall.status === 'on_hold' ? 'bg-blue-500 text-white' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
               }`}
             >
-              <span>⏸️</span>
+              <Pause className="h-4 w-4" />
               <span>{activeCall.status === 'on_hold' ? 'Resume' : 'Hold'}</span>
             </button>
             <button
               onClick={handleHangup}
               className="rounded-md bg-rose-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-rose-700 shadow-md flex items-center gap-1.5"
             >
-              <span>🔴</span> End Call
+              <PhoneOff className="h-4 w-4" /> End Call
             </button>
           </div>
         </div>
@@ -368,7 +400,7 @@ export function VoiceIntegration() {
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
-            <span>🔐</span> Credentials &amp; SIP Trunk
+            <Lock className="h-4 w-4" /> Credentials &amp; SIP Trunk
           </button>
           <button
             onClick={() => setActiveTab('dialpad')}
@@ -378,7 +410,7 @@ export function VoiceIntegration() {
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
-            <span>📟</span> In-Inbox Softphone &amp; Dialer
+            <PhoneCall className="h-4 w-4" /> In-Inbox Softphone &amp; Dialer
           </button>
           <button
             onClick={() => setActiveTab('ivr')}
@@ -388,7 +420,7 @@ export function VoiceIntegration() {
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
-            <span>🎛️</span> IVR &amp; Routing
+            <Sliders className="h-4 w-4" /> IVR &amp; Routing
           </button>
           <button
             onClick={() => setActiveTab('recordings')}
@@ -398,7 +430,7 @@ export function VoiceIntegration() {
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
-            <span>🎙️</span> Recordings &amp; AI Transcripts
+            <Mic className="h-4 w-4" /> Recordings &amp; AI Transcripts
           </button>
           <button
             onClick={() => setActiveTab('logs')}
@@ -408,7 +440,7 @@ export function VoiceIntegration() {
                 : 'border-transparent text-slate-500 hover:text-slate-700'
             }`}
           >
-            <span>📋</span> Call History &amp; Diagnostics ({callLogs.length})
+            <PhoneCall className="h-4 w-4 inline mr-1.5 text-indigo-600" /> Call History &amp; Diagnostics ({callLogs.length})
           </button>
         </nav>
       </div>
@@ -419,7 +451,7 @@ export function VoiceIntegration() {
           <div className="lg:col-span-2 space-y-6">
             <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
               <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <span>📞</span> Twilio Voice &amp; SIP Trunk Configuration
+                <Phone className="h-4 w-4" /> Twilio Voice &amp; SIP Trunk Configuration
               </h2>
               <p className="text-xs text-slate-500">
                 Connect your Twilio Voice account or SIP trunking provider to send and receive phone calls inside the agent workspace.
@@ -516,7 +548,7 @@ export function VoiceIntegration() {
             {/* Webhook Endpoints Box */}
             <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
               <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <span>🌐</span> Twilio Voice Webhook Configuration
+                <Globe className="h-4 w-4" /> Twilio Voice Webhook Configuration
               </h2>
               <p className="text-xs text-slate-500">
                 Configure these endpoints in your Twilio Console Phone Number configuration under Voice &amp; Fax:
@@ -530,7 +562,7 @@ export function VoiceIntegration() {
                       onClick={() => handleCopy(`${webhookBaseUrl}/api/v1/webhooks/voice/inbound`, 'inbound_url')}
                       className="text-blue-600 hover:text-blue-800 font-medium"
                     >
-                      {copiedKey === 'inbound_url' ? '✓ Copied' : 'Copy'}
+                      {copiedKey === 'inbound_url' ? <span className="flex items-center gap-1"><Check className="h-3.5 w-3.5 text-emerald-600" /> Copied</span> : 'Copy'}
                     </button>
                   </div>
                   <input
@@ -547,7 +579,7 @@ export function VoiceIntegration() {
                       onClick={() => handleCopy(`${webhookBaseUrl}/api/v1/webhooks/voice/status`, 'status_url')}
                       className="text-blue-600 hover:text-blue-800 font-medium"
                     >
-                      {copiedKey === 'status_url' ? '✓ Copied' : 'Copy'}
+                      {copiedKey === 'status_url' ? <span className="flex items-center gap-1"><Check className="h-3.5 w-3.5 text-emerald-600" /> Copied</span> : 'Copy'}
                     </button>
                   </div>
                   <input
@@ -564,7 +596,7 @@ export function VoiceIntegration() {
                       onClick={() => handleCopy(`${webhookBaseUrl}/api/v1/webhooks/voice/recording`, 'rec_url')}
                       className="text-blue-600 hover:text-blue-800 font-medium"
                     >
-                      {copiedKey === 'rec_url' ? '✓ Copied' : 'Copy'}
+                      {copiedKey === 'rec_url' ? <span className="flex items-center gap-1"><Check className="h-3.5 w-3.5 text-emerald-600" /> Copied</span> : 'Copy'}
                     </button>
                   </div>
                   <input
@@ -585,7 +617,7 @@ export function VoiceIntegration() {
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-slate-500">Channel Status:</span>
                   <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-800">
-                    Active &amp; Operational
+                    Active &amp; Configured
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
@@ -609,7 +641,7 @@ export function VoiceIntegration() {
 
             <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-5 shadow-xs space-y-2">
               <h4 className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
-                <span>💡</span> Omnichannel Voice Benefits
+                <Lightbulb className="h-4 w-4 text-amber-500" /> Omnichannel Voice Benefits
               </h4>
               <p className="text-[11px] text-blue-800 leading-relaxed">
                 When phone calls arrive, the agent inbox creates or links the contact record, records the audio session, and streams an AI transcript with automatic customer sentiment tagging.
@@ -643,7 +675,7 @@ export function VoiceIntegration() {
                     onClick={() => setDialNumber(dialNumber.slice(0, -1))}
                     className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 font-bold"
                   >
-                    ⌫
+                    <Delete className="h-4 w-4" />
                   </button>
                 )}
               </div>
@@ -684,7 +716,7 @@ export function VoiceIntegration() {
                   disabled={!dialNumber || !!activeCall}
                   className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:opacity-50 py-3 text-sm font-bold text-white shadow-md flex items-center justify-center gap-2 transition-all"
                 >
-                  <span className="text-base">📞</span> Call Customer
+                  <span className="flex items-center gap-1.5"><PhoneCall className="h-4 w-4" /> Call Customer</span>
                 </button>
               </div>
             </div>
@@ -693,7 +725,7 @@ export function VoiceIntegration() {
           <div className="lg:col-span-2 space-y-6">
             <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
               <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <span>⚡</span> Quick Click-To-Call Hotlist
+                <Zap className="h-4 w-4 inline mr-1.5 text-amber-500" /> Quick Click-To-Call Hotlist
               </h2>
               <p className="text-xs text-slate-500">
                 Click any contact to instantly initiate an outbound voice call from your agent workspace.
@@ -718,7 +750,7 @@ export function VoiceIntegration() {
                       disabled={!!activeCall}
                       className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 flex items-center gap-1"
                     >
-                      <span>📞</span> Dial
+                      <Phone className="h-3.5 w-3.5" /> Dial
                     </button>
                   </div>
                 ))}
@@ -731,13 +763,13 @@ export function VoiceIntegration() {
                 <div className="rounded-md bg-slate-50 p-3 border border-slate-200">
                   <div className="text-[11px] text-slate-500">Microphone Input</div>
                   <div className="text-xs font-bold text-emerald-700 mt-0.5 flex items-center gap-1">
-                    <span>✓</span> Permitted &amp; Ready
+                    <Check className="h-3.5 w-3.5 text-emerald-600 inline" /> Permitted &amp; Ready
                   </div>
                 </div>
                 <div className="rounded-md bg-slate-50 p-3 border border-slate-200">
                   <div className="text-[11px] text-slate-500">WebRTC Capability Token</div>
                   <div className="text-xs font-bold text-emerald-700 mt-0.5 flex items-center gap-1">
-                    <span>✓</span> Generated &amp; Signed
+                    <Check className="h-3.5 w-3.5 text-emerald-600 inline" /> Generated &amp; Signed
                   </div>
                 </div>
                 <div className="rounded-md bg-slate-50 p-3 border border-slate-200">
@@ -757,7 +789,7 @@ export function VoiceIntegration() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <span>🎛️</span> Interactive Voice Response (IVR) Auto-Attendant
+                  <Sliders className="h-4 w-4" /> Interactive Voice Response (IVR) Auto-Attendant
                 </h2>
                 <p className="text-xs text-slate-500">
                   Greet callers with customized voice prompts and route calls to specific team queues or voicemail based on DTMF keypad digits.
@@ -888,7 +920,7 @@ export function VoiceIntegration() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
             <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <span>🎙️</span> Dual-Channel Call Recording
+              <Mic className="h-4 w-4" /> Dual-Channel Call Recording
             </h2>
             <p className="text-xs text-slate-500">
               Record conversations in high fidelity dual-track audio to isolate the agent voice and customer voice for compliance and review.
@@ -931,7 +963,7 @@ export function VoiceIntegration() {
 
           <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
             <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <span>📝</span> Automated AI Speech-To-Text Transcriptions
+              <FileText className="h-4 w-4" /> Automated AI Speech-To-Text Transcriptions
             </h2>
             <p className="text-xs text-slate-500">
               Convert every recorded call into a timestamped, searchable text transcript and extract key action items automatically.
@@ -976,7 +1008,7 @@ export function VoiceIntegration() {
           <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <span>📋</span> Recent Voice Call Logs
+                <PhoneCall className="h-4 w-4 inline mr-1.5 text-indigo-600" /> Recent Voice Call Logs
               </h2>
               <button
                 onClick={async () => {
@@ -1004,7 +1036,7 @@ export function VoiceIntegration() {
                         }`}>
                           {log.direction}
                         </span>
-                        <span className="font-semibold text-xs text-slate-900 font-mono">{log.from} → {log.to}</span>
+                        <span className="font-semibold text-xs text-slate-900 font-mono">{log.from} &rarr; {log.to}</span>
                         <span className="text-slate-400 text-xs">·</span>
                         <span className="text-xs text-slate-600">Duration: <strong>{log.duration}s</strong></span>
                         <span className={`px-2 py-0.2 rounded-full text-[10px] font-semibold ${

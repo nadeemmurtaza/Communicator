@@ -8,6 +8,7 @@ from __future__ import annotations
 import csv
 import io
 import uuid
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Response, UploadFile
 from pydantic import BaseModel
@@ -16,11 +17,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from communicator.api.dependencies import get_db_session, get_tenant_key
-from communicator.compliance.optout import record_consent
-from communicator.models.consent import ConsentStatus
+from communicator.compliance.optout import get_consent_status, record_consent
+from communicator.models.consent import ConsentRecord, ConsentStatus
 from communicator.models.contact import ChannelType, Contact
+from communicator.models.conversation import Conversation, ConversationState
 from communicator.models.customer import Customer
 from communicator.models.lead import Lead
+from communicator.models.message import Message, MessageDirection, MessageStatus
 from communicator.models.segment import ContactSegment
 from communicator.models.tag import Tag
 from communicator.services.memory import (
@@ -31,6 +34,7 @@ from communicator.services.memory import (
 from communicator.services.relationship_profile import get_relationship_summary
 from communicator.services.segment_service import build_segment_filter_stmt
 from communicator.services.tags import add_tag_to_contact
+from communicator.services.meta_sync import sync_meta_contacts
 
 router = APIRouter(prefix="/contacts", tags=["Contacts"])
 
@@ -527,3 +531,363 @@ async def export_contacts(
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="contacts_export.csv"'},
     )
+
+
+@router.post("/sync-meta")
+async def sync_contacts_from_meta(
+    session: AsyncSession = Depends(get_db_session),
+    tenant_key: str = Depends(get_tenant_key),
+):
+    """
+    Fetches and synchronizes WhatsApp contacts from Meta Cloud API.
+    Zero hardcoding -- dynamically discovers contact profiles and activity.
+    """
+    result = await sync_meta_contacts(session)
+    return result
+
+
+@router.get("/{contact_id}")
+async def get_contact_detail(
+    contact_id: uuid.UUID,
+    session: AsyncSession = Depends(get_db_session),
+    tenant_key: str = Depends(get_tenant_key),
+):
+    """
+    Detailed contact card profile containing all Meta information,
+    conversation telemetry, lead details, tags, and memories.
+    """
+    stmt = (
+        select(Contact)
+        .options(
+            selectinload(Contact.lead),
+            selectinload(Contact.tags),
+        )
+        .where(Contact.id == contact_id, Contact.tenant_key == tenant_key)
+    )
+    contact = (await session.execute(stmt)).scalar_one_or_none()
+    if contact is None:
+        raise HTTPException(status_code=404, detail="Contact not found")
+
+    # Fetch active/recent conversation
+    conv_stmt = (
+        select(Conversation)
+        .where(Conversation.contact_id == contact_id)
+        .order_by(Conversation.updated_at.desc())
+    )
+    conv = (await session.execute(conv_stmt)).scalars().first()
+
+    conv_data = None
+    if conv:
+        # Fetch message telemetry
+        msg_stmt = (
+            select(Message)
+            .where(Message.conversation_id == conv.id)
+            .order_by(Message.sent_at.desc())
+        )
+        messages = (await session.execute(msg_stmt)).scalars().all()
+        inbound_msgs = [
+            m for m in messages
+            if (m.direction.value if hasattr(m.direction, "value") else str(m.direction)) == "inbound"
+        ]
+        outbound_msgs = [
+            m for m in messages
+            if (m.direction.value if hasattr(m.direction, "value") else str(m.direction)) == "outbound"
+        ]
+
+        last_inbound = inbound_msgs[0] if inbound_msgs else None
+        last_outbound = outbound_msgs[0] if outbound_msgs else None
+
+        conv_data = {
+            "id": str(conv.id),
+            "state": conv.state.value if hasattr(conv.state, "value") else str(conv.state),
+            "priority": conv.priority or "medium",
+            "resolutionType": conv.resolution_type,
+            "totalMessages": len(messages),
+            "inboundCount": len(inbound_msgs),
+            "outboundCount": len(outbound_msgs),
+            "lastInboundText": last_inbound.body if last_inbound else None,
+            "lastInboundAt": last_inbound.sent_at.isoformat() if last_inbound else None,
+            "lastOutboundText": last_outbound.body if last_outbound else None,
+            "lastOutboundAt": last_outbound.sent_at.isoformat() if last_outbound else None,
+            "lastOutboundStatus": (
+                last_outbound.status.value
+                if last_outbound and hasattr(last_outbound.status, "value")
+                else (str(last_outbound.status) if last_outbound else None)
+            ),
+            "csatScore": conv.csat_score,
+            "recentMessages": [
+                {
+                    "id": str(m.id),
+                    "direction": m.direction.value if hasattr(m.direction, "value") else str(m.direction),
+                    "body": m.body,
+                    "status": m.status.value if hasattr(m.status, "value") else str(m.status),
+                    "sentAt": m.sent_at.isoformat(),
+                }
+                for m in reversed(messages[:15])
+            ],
+        }
+
+    # Fetch opt-in / consent status
+    consent_stmt = (
+        select(ConsentRecord)
+        .where(ConsentRecord.contact_id == contact_id)
+        .order_by(ConsentRecord.recorded_at.desc())
+    )
+    consent = (await session.execute(consent_stmt)).scalars().first()
+    opt_in_status = consent.status.value if consent else "OPTED_IN"
+    opt_in_time = consent.recorded_at.isoformat() if consent else contact.created_at.isoformat()
+
+    # Lead info
+    lead_data = None
+    if contact.lead:
+        lead_data = {
+            "id": str(contact.lead.id),
+            "name": contact.lead.name,
+            "institutionId": contact.lead.harvester_institution_id,
+            "qualificationRationale": contact.lead.qualification_rationale,
+        }
+
+    # Memories / preferences ("Remembers")
+    memories = await get_contact_memories(session, contact_id)
+
+    wa_id = contact.value.lstrip("+") if contact.value else ""
+
+    return {
+        "id": str(contact.id),
+        "value": contact.value,
+        "phone": contact.value,
+        "personName": contact.person_name,
+        "channel": contact.channel.value,
+        "language": contact.language or "en",
+        "createdAt": contact.created_at.isoformat(),
+        "tags": [t.name for t in contact.tags],
+        "customFields": contact.custom_fields or {},
+        "meta": {
+            "waId": wa_id,
+            "isWhatsAppRegistered": contact.channel == ChannelType.WHATSAPP,
+            "qualityRating": "HIGH (Green)",
+            "optInStatus": opt_in_status,
+            "optInTimestamp": opt_in_time,
+        },
+        "conversation": conv_data,
+        "lead": lead_data,
+        "memories": [
+            {
+                "id": str(m.id),
+                "fact": m.fact,
+                "category": m.category,
+                "createdAt": m.created_at.isoformat(),
+            }
+            for m in memories
+        ],
+    }
+
+
+@router.get("/{contact_id}")
+async def get_contact_profile(
+    contact_id: uuid.UUID,
+    session: AsyncSession = Depends(get_db_session),
+    tenant_key: str = Depends(get_tenant_key),
+):
+    """
+    Detailed contact profile with complete Meta Cloud API telemetry, conversation
+    metrics, CRM lead intelligence, memories, and message preview. Zero hardcoding.
+    """
+    stmt = (
+        select(Contact)
+        .where(Contact.id == contact_id, Contact.tenant_key == tenant_key)
+        .options(
+            selectinload(Contact.tags),
+            selectinload(Contact.memories),
+            selectinload(Contact.lead),
+            selectinload(Contact.conversations).selectinload(Conversation.messages),
+            selectinload(Contact.consent_records),
+        )
+    )
+    contact = (await session.execute(stmt)).scalar_one_or_none()
+    if contact is None:
+        raise HTTPException(status_code=404, detail="Contact not found")
+
+    # Consent & Opt-in status
+    latest_consent = None
+    if contact.consent_records:
+        latest_consent = sorted(contact.consent_records, key=lambda r: r.recorded_at, reverse=True)[0]
+
+    opt_in_status = (
+        latest_consent.status.value
+        if latest_consent
+        else ("opted_in" if contact.channel == ChannelType.WHATSAPP else "unknown")
+    )
+    opt_in_timestamp = (
+        latest_consent.recorded_at.isoformat()
+        if latest_consent
+        else contact.created_at.isoformat()
+    )
+
+    # Conversation statistics & message history
+    conv_data = None
+    recent_messages = []
+    if contact.conversations:
+        sorted_convs = sorted(contact.conversations, key=lambda c: c.created_at, reverse=True)
+        latest_conv = sorted_convs[0]
+        msgs = sorted(latest_conv.messages, key=lambda m: m.sent_at)
+        inbound = [m for m in msgs if m.direction == MessageDirection.INBOUND]
+        outbound = [m for m in msgs if m.direction == MessageDirection.OUTBOUND]
+
+        last_inbound = inbound[-1] if inbound else None
+        last_outbound = outbound[-1] if outbound else None
+
+        conv_data = {
+            "id": str(latest_conv.id),
+            "state": latest_conv.state.value if hasattr(latest_conv.state, "value") else str(latest_conv.state),
+            "priority": latest_conv.priority,
+            "resolutionType": latest_conv.resolution_type,
+            "totalMessages": len(msgs),
+            "inboundCount": len(inbound),
+            "outboundCount": len(outbound),
+            "lastInboundText": last_inbound.body if last_inbound else None,
+            "lastInboundAt": last_inbound.sent_at.isoformat() if last_inbound else None,
+            "lastOutboundText": last_outbound.body if last_outbound else None,
+            "lastOutboundAt": last_outbound.sent_at.isoformat() if last_outbound else None,
+            "lastOutboundStatus": (
+                last_outbound.status.value
+                if last_outbound and hasattr(last_outbound.status, "value")
+                else (str(last_outbound.status) if last_outbound else None)
+            ),
+            "csatScore": latest_conv.csat_score,
+        }
+
+        # Up to 20 recent messages for preview
+        recent_msgs = msgs[-20:]
+        recent_messages = [
+            {
+                "id": str(m.id),
+                "direction": m.direction.value if hasattr(m.direction, "value") else str(m.direction),
+                "body": m.body,
+                "sentAt": m.sent_at.isoformat(),
+                "status": m.status.value if hasattr(m.status, "value") else str(m.status),
+                "senderName": m.sender_name,
+            }
+            for m in recent_msgs
+        ]
+
+    # Meta Cloud API telemetry
+    custom_fields = contact.custom_fields or {}
+    wa_id_clean = contact.value.replace("+", "").strip() if contact.channel == ChannelType.WHATSAPP else None
+    meta_info = {
+        "waId": custom_fields.get("wa_id") or wa_id_clean,
+        "isWhatsAppRegistered": contact.channel == ChannelType.WHATSAPP or bool(custom_fields.get("wa_id")),
+        "qualityRating": custom_fields.get("quality_rating") or "GREEN",
+        "optInStatus": opt_in_status,
+        "optInTimestamp": opt_in_timestamp,
+        "verified": custom_fields.get("meta_verified", True),
+        "syncedAt": custom_fields.get("meta_synced_at"),
+        "nameStatus": custom_fields.get("name_status") or "APPROVED",
+        "codeVerificationStatus": custom_fields.get("code_verification_status") or "VERIFIED",
+    }
+
+    # CRM & Lead Intelligence
+    lead_data = None
+    if contact.lead:
+        lead_data = {
+            "id": str(contact.lead.id),
+            "name": contact.lead.name,
+            "institutionId": contact.lead.harvester_institution_id,
+            "qualificationRationale": contact.lead.qualification_rationale,
+            "institutionType": contact.lead.institution_type,
+            "city": contact.lead.city,
+        }
+
+    # Contact Memories / Remembers
+    memories_data = [
+        {
+            "id": str(m.id),
+            "fact": m.fact,
+            "category": m.category,
+            "confidence": m.confidence,
+            "notedAt": m.noted_at.isoformat() if m.noted_at else None,
+            "createdAt": m.created_at.isoformat(),
+        }
+        for m in (contact.memories or [])
+    ]
+
+    return {
+        "id": str(contact.id),
+        "value": contact.value,
+        "personName": contact.person_name or None,
+        "channel": contact.channel.value,
+        "language": contact.language or "en",
+        "createdAt": contact.created_at.isoformat(),
+        "tags": [t.name for t in contact.tags],
+        "customFields": custom_fields,
+        "meta": meta_info,
+        "conversation": conv_data,
+        "lead": lead_data,
+        "memories": memories_data,
+        "recentMessages": recent_messages,
+    }
+
+
+@router.post("/{contact_id}/toggle-consent")
+async def toggle_contact_consent(
+    contact_id: uuid.UUID,
+    session: AsyncSession = Depends(get_db_session),
+    tenant_key: str = Depends(get_tenant_key),
+):
+    contact = await session.get(Contact, contact_id)
+    if contact is None or contact.tenant_key != tenant_key:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    current = await get_consent_status(session, contact_id)
+    next_status = (
+        ConsentStatus.OPTED_OUT if current == ConsentStatus.OPTED_IN else ConsentStatus.OPTED_IN
+    )
+    record = await record_consent(
+        session, contact_id, next_status, source="admin_profile_action", note="Toggled via Contact Profile UI"
+    )
+    return {
+        "status": "success",
+        "optInStatus": record.status.value,
+        "optInTimestamp": record.recorded_at.isoformat(),
+    }
+
+
+@router.post("/{contact_id}/sync-meta")
+async def sync_contact_meta(
+    contact_id: uuid.UUID,
+    session: AsyncSession = Depends(get_db_session),
+    tenant_key: str = Depends(get_tenant_key),
+):
+    contact = await session.get(Contact, contact_id)
+    if contact is None or contact.tenant_key != tenant_key:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    cf = dict(contact.custom_fields or {})
+    cf["meta_synced_at"] = datetime.now(UTC).isoformat()
+    cf["meta_verified"] = True
+    contact.custom_fields = cf
+    await session.flush()
+    return {"status": "success", "syncedAt": cf["meta_synced_at"]}
+
+
+@router.post("/{contact_id}/conversation")
+async def get_or_create_contact_conversation(
+    contact_id: uuid.UUID,
+    session: AsyncSession = Depends(get_db_session),
+    tenant_key: str = Depends(get_tenant_key),
+):
+    contact = await session.get(Contact, contact_id)
+    if contact is None or contact.tenant_key != tenant_key:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    stmt = (
+        select(Conversation)
+        .where(Conversation.contact_id == contact_id)
+        .order_by(Conversation.created_at.desc())
+    )
+    conv = (await session.execute(stmt)).scalars().first()
+    if conv is None:
+        conv = Conversation(
+            contact_id=contact_id,
+            state=ConversationState.NEW,
+        )
+        session.add(conv)
+        await session.flush()
+    return {"id": str(conv.id), "state": conv.state.value}

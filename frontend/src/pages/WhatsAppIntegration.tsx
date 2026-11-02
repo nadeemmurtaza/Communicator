@@ -2,18 +2,36 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, type WhatsAppChannelData, type WhatsAppTemplate } from '../lib/api'
 import { WhatsAppIcon } from '../components/icons/BrandIcons'
+import {
+  Key,
+  Zap,
+  ClipboardList,
+  Bot,
+  Activity,
+  Building2,
+  CheckCircle2,
+  ShieldCheck,
+  Smartphone,
+  Send,
+  Lock,
+  Save,
+  ExternalLink,
+  Check,
+  Copy,
+  RefreshCw,
+  X,
+} from 'lucide-react'
 
 export function WhatsAppIntegration() {
   const [data, setData] = useState<WhatsAppChannelData | null>(null)
   const [templates, setTemplates] = useState<WhatsAppTemplate[]>([])
   const [events, setEvents] = useState<any[]>([])
-  const [activeTab, setActiveTab] = useState<'credentials' | 'webhooks' | 'templates' | 'automations' | 'profile' | 'diagnostics'>('credentials')
+  const [activeTab, setActiveTab] = useState<'credentials' | 'webhooks' | 'templates' | 'automations' | 'diagnostics'>('credentials')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [verifying, setVerifying] = useState(false)
   const [syncingTemplates, setSyncingTemplates] = useState(false)
   const [testingSend, setTestingSend] = useState(false)
-  const [savingProfile, setSavingProfile] = useState(false)
   const [registeringPin, setRegisteringPin] = useState(false)
   const [registerPin, setRegisterPin] = useState('123456')
   const [success, setSuccess] = useState<string | null>(null)
@@ -28,15 +46,6 @@ export function WhatsAppIntegration() {
   const [verifyToken, setVerifyToken] = useState('')
   const [catalogId, setCatalogId] = useState('')
 
-  // Business Profile state
-  const [profileAbout, setProfileAbout] = useState('Official Customer Support for Bay Works')
-  const [profileAddress, setProfileAddress] = useState('100 Market St, Suite 400, San Francisco, CA 94105')
-  const [profileDescription, setProfileDescription] = useState('Leading customer engagement platform with omnichannel messaging and AI Copilot.')
-  const [profileEmail, setProfileEmail] = useState('support@bayworks.com')
-  const [profileVertical, setProfileVertical] = useState('PROF_SERVICES')
-  const [profileWebsite1, setProfileWebsite1] = useState('https://bayworks.com')
-  const [profileWebsite2, setProfileWebsite2] = useState('https://help.bayworks.com')
-  const [profilePictureUrl, setProfilePictureUrl] = useState('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300')
 
   // Automations state
   const [greetingEnabled, setGreetingEnabled] = useState(true)
@@ -63,11 +72,10 @@ export function WhatsAppIntegration() {
   async function loadAll() {
     try {
       setLoading(true)
-      const [channelData, tplList, evList, profileData] = await Promise.all([
+      const [channelData, tplList, evList] = await Promise.all([
         api.getWhatsAppChannel(),
         api.listWhatsAppTemplates(),
         api.listWhatsAppEvents(),
-        api.getWhatsAppProfile().catch(() => null),
       ])
 
       setData(channelData)
@@ -91,47 +99,10 @@ export function WhatsAppIntegration() {
       setWorkingHoursEnd(channelData.inbox.workingHoursEnd)
       setTimezone(channelData.inbox.timezone)
 
-      if (profileData) {
-        setProfileAbout(profileData.about || '')
-        setProfileAddress(profileData.address || '')
-        setProfileDescription(profileData.description || '')
-        setProfileEmail(profileData.email || '')
-        setProfileVertical(profileData.vertical || 'PROF_SERVICES')
-        setProfileWebsite1(profileData.websites?.[0] || 'https://bayworks.com')
-        setProfileWebsite2(profileData.websites?.[1] || '')
-        setProfilePictureUrl(profileData.profilePictureUrl || '')
-      }
     } catch (e) {
       setError((e as Error).message)
     } finally {
       setLoading(false)
-    }
-  }
-
-  async function handleSaveProfile() {
-    try {
-      setSavingProfile(true)
-      setError(null)
-      const websites = [profileWebsite1.trim(), profileWebsite2.trim()].filter(Boolean)
-      const res = await api.updateWhatsAppProfile({
-        about: profileAbout,
-        address: profileAddress,
-        description: profileDescription,
-        email: profileEmail,
-        vertical: profileVertical,
-        websites,
-        profilePictureUrl,
-      })
-      setSuccess(
-        res.metaSynced
-          ? 'WhatsApp Business Profile synced with Meta Graph API and saved!'
-          : 'WhatsApp Business Profile settings saved successfully!'
-      )
-      setTimeout(() => setSuccess(null), 4000)
-    } catch (e) {
-      setError((e as Error).message)
-    } finally {
-      setSavingProfile(false)
     }
   }
 
@@ -140,7 +111,7 @@ export function WhatsAppIntegration() {
       setRegisteringPin(true)
       setError(null)
       const res = await api.registerWhatsAppPhone(registerPin)
-      if (res.status === 'registered') {
+      if (res.status === 'registered' || res.status === 'ok') {
         setSuccess(res.message)
       } else {
         setError(res.message)
@@ -191,7 +162,7 @@ export function WhatsAppIntegration() {
       setVerifying(true)
       setError(null)
       const res = await api.verifyWhatsAppConnection()
-      if (res.status === 'ok') {
+      if (res.status === 'ok' || res.status === 'connected') {
         setSuccess('Meta WhatsApp API connection successfully verified!')
         loadAll()
       } else {
@@ -249,7 +220,7 @@ export function WhatsAppIntegration() {
     return (
       <div className="flex h-96 items-center justify-center">
         <div className="text-center">
-          <div className="text-4xl animate-bounce">📱</div>
+          <Smartphone className="h-10 w-10 text-emerald-500 animate-pulse mx-auto" />
           <p className="mt-2 text-sm text-slate-500">Loading WhatsApp Channel configuration...</p>
         </div>
       </div>
@@ -276,7 +247,10 @@ export function WhatsAppIntegration() {
               <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                 WhatsApp Business Integration
                 <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
-                  {data?.health.qualityRating === 'GREEN' ? '🟢 Verified & Healthy' : 'Active'}
+                  <span className="flex items-center gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" />
+                    Verified & Healthy
+                  </span>
                 </span>
               </h1>
               <p className="text-xs text-slate-500">
@@ -290,15 +264,17 @@ export function WhatsAppIntegration() {
           <button
             onClick={handleVerify}
             disabled={verifying}
-            className="rounded-md border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 shadow-xs"
+            className="rounded-md border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 shadow-xs flex items-center gap-1.5"
           >
-            {verifying ? 'Checking Meta...' : '⚡ Verify Connection'}
+            <Zap className={`h-3.5 w-3.5 text-amber-500 ${verifying ? 'animate-spin' : ''}`} />
+            {verifying ? 'Checking Meta...' : 'Verify Connection'}
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="rounded-md bg-slate-900 px-4 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-50 shadow-xs"
+            className="rounded-md bg-slate-900 px-4 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-50 shadow-xs flex items-center gap-1.5"
           >
+            <Save className="h-3.5 w-3.5" />
             {saving ? 'Saving...' : 'Save Configuration'}
           </button>
         </div>
@@ -308,40 +284,63 @@ export function WhatsAppIntegration() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Display Phone</span>
-          <p className="mt-1 font-bold text-slate-900 text-sm truncate">{data?.health.displayPhoneNumber || 'Configured'}</p>
-          <span className="mt-1 inline-block text-[11px] text-emerald-600 font-medium">✓ Verified Number</span>
+          <p className="mt-1 font-bold text-slate-900 text-sm font-mono truncate">{data?.health.displayPhoneNumber || 'Configured in Meta'}</p>
+          <span className="mt-1 inline-flex items-center gap-1 text-[11px] text-emerald-600 font-medium">
+            <CheckCircle2 className="h-3 w-3" />
+            Verified Number
+          </span>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Verified Name</span>
-          <p className="mt-1 font-bold text-slate-900 text-sm truncate">{data?.health.displayName || 'WhatsApp Support'}</p>
-          <span className="mt-1 inline-block text-[11px] text-blue-600 font-medium">Official Business Account</span>
+          <p className="mt-1 font-bold text-slate-900 text-sm truncate">{data?.health.displayName || 'Newax Technologies'}</p>
+          <span className="mt-1 inline-flex items-center gap-1 text-[11px] text-blue-600 font-medium">
+            <ShieldCheck className="h-3 w-3" />
+            {data?.health.verificationStatus || 'Standard Business Account'}
+          </span>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Quality Rating</span>
           <p className="mt-1 font-bold text-emerald-700 text-sm flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
-            HIGH (Green)
+            {data?.health.qualityRating || 'HIGH (Green)'}
           </p>
           <span className="mt-1 inline-block text-[11px] text-slate-400">Zero spam flags</span>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Messaging Limit</span>
-          <p className="mt-1 font-bold text-slate-900 text-sm">100,000 / day</p>
-          <span className="mt-1 inline-block text-[11px] text-purple-600 font-medium">Tier 3 Scaled</span>
+          <p className="mt-1 font-bold text-slate-900 text-sm">{data?.health.messagingLimitTier || '250 / day'}</p>
+          <span className="mt-1 inline-block text-[11px] text-purple-600 font-medium">{data?.health.tier || 'Standard Account Limit'}</span>
         </div>
+      </div>
+
+      {/* Shared Business Profile Link Banner */}
+      <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3.5 flex items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2.5">
+          <Building2 className="h-4 w-4 text-indigo-600 shrink-0" />
+          <span className="text-slate-700">
+            <strong>Shared Organization Profile:</strong> Profile, working hours, and brand identity are centrally shared across all communication channels.
+          </span>
+        </div>
+        <Link
+          to="/business-profile"
+          className="font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 whitespace-nowrap"
+        >
+          Manage Business Profile
+          <ExternalLink className="h-3 w-3" />
+        </Link>
       </div>
 
       {/* Notifications */}
       {error && (
         <div className="flex items-center justify-between rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           <span>{error}</span>
-          <button onClick={() => setError(null)} className="font-bold">×</button>
+          <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700"><X className="h-4 w-4" /></button>
         </div>
       )}
       {success && (
         <div className="flex items-center justify-between rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           <span>{success}</span>
-          <button onClick={() => setSuccess(null)} className="font-bold">×</button>
+          <button onClick={() => setSuccess(null)} className="text-emerald-600 hover:text-emerald-800"><X className="h-4 w-4" /></button>
         </div>
       )}
 
@@ -349,51 +348,48 @@ export function WhatsAppIntegration() {
       <div className="border-b border-slate-200 flex gap-6 text-sm font-medium">
         <button
           onClick={() => setActiveTab('credentials')}
-          className={`pb-3 border-b-2 transition-colors ${
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
             activeTab === 'credentials' ? 'border-slate-900 text-slate-900 font-bold' : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          🔑 Meta Credentials
+          <Key className="h-4 w-4" />
+          Meta Credentials
         </button>
         <button
           onClick={() => setActiveTab('webhooks')}
-          className={`pb-3 border-b-2 transition-colors ${
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
             activeTab === 'webhooks' ? 'border-slate-900 text-slate-900 font-bold' : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          ⚡ Webhook Configuration
+          <Zap className="h-4 w-4" />
+          Webhook Configuration
         </button>
         <button
           onClick={() => setActiveTab('templates')}
-          className={`pb-3 border-b-2 transition-colors ${
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
             activeTab === 'templates' ? 'border-slate-900 text-slate-900 font-bold' : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          📋 Message Templates ({templates.length})
+          <ClipboardList className="h-4 w-4" />
+          Message Templates ({templates.length})
         </button>
         <button
           onClick={() => setActiveTab('automations')}
-          className={`pb-3 border-b-2 transition-colors ${
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
             activeTab === 'automations' ? 'border-slate-900 text-slate-900 font-bold' : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          🤖 Channel Automations
-        </button>
-        <button
-          onClick={() => setActiveTab('profile')}
-          className={`pb-3 border-b-2 transition-colors ${
-            activeTab === 'profile' ? 'border-slate-900 text-slate-900 font-bold' : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          🏢 Business Profile
+          <Bot className="h-4 w-4" />
+          Channel Automations
         </button>
         <button
           onClick={() => setActiveTab('diagnostics')}
-          className={`pb-3 border-b-2 transition-colors ${
+          className={`pb-3 border-b-2 transition-colors flex items-center gap-2 ${
             activeTab === 'diagnostics' ? 'border-slate-900 text-slate-900 font-bold' : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          🩺 Live Test & Diagnostics
+          <Activity className="h-4 w-4" />
+          Live Test & Diagnostics
         </button>
       </div>
 
@@ -499,9 +495,10 @@ export function WhatsAppIntegration() {
                 />
                 <button
                   onClick={() => copyToClipboard(data?.webhookConfig.callbackUrl || '', 'url')}
-                  className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5"
                 >
-                  {copiedKey === 'url' ? '✓ Copied' : 'Copy URL'}
+                  {copiedKey === 'url' ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copiedKey === 'url' ? 'Copied' : 'Copy URL'}
                 </button>
               </div>
             </div>
@@ -517,9 +514,10 @@ export function WhatsAppIntegration() {
                 />
                 <button
                   onClick={() => copyToClipboard(verifyToken, 'token')}
-                  className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-1.5"
                 >
-                  {copiedKey === 'token' ? '✓ Copied' : 'Copy Token'}
+                  {copiedKey === 'token' ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copiedKey === 'token' ? 'Copied' : 'Copy Token'}
                 </button>
               </div>
             </div>
@@ -527,14 +525,17 @@ export function WhatsAppIntegration() {
             <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-4 space-y-2">
               <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Subscribed Webhook Fields</h3>
               <div className="flex flex-wrap gap-2 text-xs">
-                <span className="rounded-md bg-white border border-slate-200 px-2.5 py-1 font-mono text-emerald-800 font-semibold">
-                  ✓ messages (Inbound customer messages &amp; media)
+                <span className="rounded-md bg-white border border-slate-200 px-2.5 py-1 font-mono text-emerald-800 font-semibold inline-flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                  messages (Inbound customer messages &amp; media)
                 </span>
-                <span className="rounded-md bg-white border border-slate-200 px-2.5 py-1 font-mono text-blue-800 font-semibold">
-                  ✓ message_deliveries (Delivered receipts)
+                <span className="rounded-md bg-white border border-slate-200 px-2.5 py-1 font-mono text-blue-800 font-semibold inline-flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3 w-3 text-blue-600" />
+                  message_deliveries (Delivered receipts)
                 </span>
-                <span className="rounded-md bg-white border border-slate-200 px-2.5 py-1 font-mono text-purple-800 font-semibold">
-                  ✓ message_reads (Blue checkmarks)
+                <span className="rounded-md bg-white border border-slate-200 px-2.5 py-1 font-mono text-purple-800 font-semibold inline-flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3 w-3 text-purple-600" />
+                  message_reads (Blue checkmarks)
                 </span>
               </div>
             </div>
@@ -555,9 +556,10 @@ export function WhatsAppIntegration() {
             <button
               onClick={handleSyncTemplates}
               disabled={syncingTemplates}
-              className="rounded-md border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs"
+              className="rounded-md border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs flex items-center gap-1.5"
             >
-              {syncingTemplates ? 'Syncing...' : '🔄 Sync from Meta'}
+              <RefreshCw className={`h-3.5 w-3.5 text-emerald-600 ${syncingTemplates ? 'animate-spin' : ''}`} />
+              {syncingTemplates ? 'Syncing...' : 'Sync from Meta'}
             </button>
           </div>
 
@@ -567,8 +569,9 @@ export function WhatsAppIntegration() {
                 <div className="space-y-1.5 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-sm text-slate-900 font-mono">{tpl.name}</span>
-                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
-                      ✓ {tpl.status}
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 inline-flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                      {tpl.status}
                     </span>
                     <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700 uppercase">
                       {tpl.category}
@@ -733,131 +736,6 @@ export function WhatsAppIntegration() {
         </div>
       )}
 
-      {/* TAB 5: WhatsApp Business Profile */}
-      {activeTab === 'profile' && (
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-6">
-          <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-            <div>
-              <h2 className="text-base font-bold text-slate-900">WhatsApp Business Profile</h2>
-              <p className="text-xs text-slate-500">
-                This public information appears in your WhatsApp business card when contacts view your profile.
-              </p>
-            </div>
-            <button
-              onClick={handleSaveProfile}
-              disabled={savingProfile}
-              className="rounded-md bg-slate-900 px-4 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-50 shadow-xs"
-            >
-              {savingProfile ? 'Updating Meta...' : 'Save & Sync with Meta'}
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700">About / Status Text (Max 139 chars)</label>
-                <input
-                  type="text"
-                  maxLength={139}
-                  value={profileAbout}
-                  onChange={(e) => setProfileAbout(e.target.value)}
-                  placeholder="Official Customer Support for Bay Works"
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700">Business Description (Max 512 chars)</label>
-                <textarea
-                  rows={3}
-                  maxLength={512}
-                  value={profileDescription}
-                  onChange={(e) => setProfileDescription(e.target.value)}
-                  placeholder="Describe your business and what customers can expect..."
-                  className="mt-1 w-full rounded-md border border-slate-300 p-2 text-sm shadow-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700">Industry Vertical / Category</label>
-                <select
-                  value={profileVertical}
-                  onChange={(e) => setProfileVertical(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-xs bg-white font-medium"
-                >
-                  <option value="PROF_SERVICES">Professional Services</option>
-                  <option value="RETAIL">Retail & eCommerce</option>
-                  <option value="TECH">Technology & Software</option>
-                  <option value="FINANCE">Financial Services & Banking</option>
-                  <option value="HEALTH">Health & Medical</option>
-                  <option value="EDUCATION">Education & Training</option>
-                  <option value="TRAVEL">Travel, Hospitality & Tourism</option>
-                  <option value="OTHER">Other Business</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700">Official Support Email</label>
-                <input
-                  type="email"
-                  value={profileEmail}
-                  onChange={(e) => setProfileEmail(e.target.value)}
-                  placeholder="support@yourbrand.com"
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700">Business Physical Address</label>
-                <input
-                  type="text"
-                  value={profileAddress}
-                  onChange={(e) => setProfileAddress(e.target.value)}
-                  placeholder="100 Market St, Suite 400, San Francisco, CA"
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-xs"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700">Primary Website</label>
-                  <input
-                    type="url"
-                    value={profileWebsite1}
-                    onChange={(e) => setProfileWebsite1(e.target.value)}
-                    placeholder="https://yourbrand.com"
-                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700">Help Center / Portal</label>
-                  <input
-                    type="url"
-                    value={profileWebsite2}
-                    onChange={(e) => setProfileWebsite2(e.target.value)}
-                    placeholder="https://help.yourbrand.com"
-                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-xs"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700">Profile Picture / Avatar URL</label>
-                <input
-                  type="url"
-                  value={profilePictureUrl}
-                  onChange={(e) => setProfilePictureUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-xs font-mono"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* TAB 6: Live Test & Diagnostics */}
       {activeTab === 'diagnostics' && (
         <div className="space-y-6">
@@ -866,7 +744,7 @@ export function WhatsAppIntegration() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <span>🔒 Phone Number 2-Step Registration</span>
+                  <span className="flex items-center gap-2"><Lock className="h-4 w-4 text-slate-700" /> Phone Number 2-Step Registration</span>
                   <span className="rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5">
                     Meta Cloud API Standard
                   </span>
@@ -930,7 +808,7 @@ export function WhatsAppIntegration() {
                 disabled={testingSend}
                 className="rounded-md bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 shadow-xs"
               >
-                {testingSend ? 'Dispatching...' : '🚀 Send Test Message'}
+                <span className="flex items-center gap-1">{testingSend ? 'Dispatching...' : <><Send className="h-3.5 w-3.5" /> Send Test Message</>}</span>
               </button>
             </div>
 

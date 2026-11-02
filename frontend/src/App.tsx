@@ -9,6 +9,7 @@ import { Broadcasts } from './pages/Broadcasts'
 import { ChannelsHub } from './pages/ChannelsHub'
 import { Connections } from './pages/Connections'
 import { Contacts } from './pages/Contacts'
+import { ContactProfile } from './pages/ContactProfile'
 import { ConversationDetail } from './pages/ConversationDetail'
 import { Conversations } from './pages/Conversations'
 import { Dashboard } from './pages/Dashboard'
@@ -23,6 +24,7 @@ import { Team } from './pages/Team'
 import { Tickets } from './pages/Tickets'
 import { Webhooks } from './pages/Webhooks'
 import { WhatsAppIntegration } from './pages/WhatsAppIntegration'
+import { BusinessProfile } from './pages/BusinessProfile'
 import { LiveChatIntegration } from './pages/LiveChatIntegration'
 import { SMSIntegration } from './pages/SMSIntegration'
 import { FacebookIntegration } from './pages/FacebookIntegration'
@@ -70,6 +72,7 @@ function App() {
         <Route path="/channels/email" element={<EmailIntegration />} />
         <Route path="/channels/tiktok" element={<TikTokIntegration />} />
         <Route path="/contacts" element={<Contacts />} />
+        <Route path="/contacts/:id" element={<ContactProfile />} />
         <Route path="/broadcasts" element={<Broadcasts />} />
         <Route path="/automation" element={<Automation />} />
         <Route path="/knowledge-base" element={<KnowledgeBase />} />
@@ -79,6 +82,7 @@ function App() {
         <Route path="/simulations" element={<Simulations />} />
         <Route path="/self-improving" element={<SelfImproving />} />
         <Route path="/team" element={<Team />} />
+        <Route path="/business-profile" element={<BusinessProfile />} />
         <Route path="/connections" element={<Connections />} />
         <Route path="/webhooks" element={<Webhooks />} />
         <Route path="/audit-logs" element={<AuditLogs />} />

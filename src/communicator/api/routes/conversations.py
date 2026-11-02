@@ -55,11 +55,30 @@ class ContactNoteIn(BaseModel):
 
 
 def _serialize_conversation(c: Conversation) -> dict[str, Any]:
+    customer_name = ""
+    if c.contact:
+        if c.contact.person_name and not c.contact.person_name.startswith("Contact ") and not c.contact.person_name.startswith("Customer "):
+            customer_name = c.contact.person_name
+        elif c.contact.lead and c.contact.lead.name and not c.contact.lead.name.startswith("WhatsApp Lead ("):
+            customer_name = c.contact.lead.name
+        elif c.contact.person_name:
+            customer_name = c.contact.person_name
+        elif c.contact.value:
+            customer_name = c.contact.value
+
+    if not customer_name:
+        customer_name = f"Customer ({str(c.id)[:8]})"
+
+    phone_num = c.contact.value if c.contact else ""
+
     return {
         "id": str(c.id),
         "contactId": str(c.contact_id),
-        "contactName": c.contact.person_name if c.contact and c.contact.person_name else "Contact",
-        "contactPhone": c.contact.value if c.contact else "",
+        "contactName": customer_name,
+        "customerName": customer_name,
+        "leadName": (c.contact.lead.name if c.contact and c.contact.lead else None) or customer_name,
+        "contactPhone": phone_num,
+        "phone": phone_num,
         "channel": c.contact.channel.value if c.contact else "whatsapp",
         "state": c.state.value,
         "priority": c.priority or "medium",
@@ -85,7 +104,7 @@ async def list_conversations(session: AsyncSession = Depends(get_db_session)):
     stmt = (
         select(Conversation)
         .options(
-            selectinload(Conversation.contact),
+            selectinload(Conversation.contact).selectinload(Contact.lead),
             selectinload(Conversation.broadcast),
             selectinload(Conversation.team),
             selectinload(Conversation.assigned_to),
@@ -103,7 +122,7 @@ async def get_conversation(
     stmt = (
         select(Conversation)
         .options(
-            selectinload(Conversation.contact),
+            selectinload(Conversation.contact).selectinload(Contact.lead),
             selectinload(Conversation.broadcast),
             selectinload(Conversation.team),
             selectinload(Conversation.assigned_to),

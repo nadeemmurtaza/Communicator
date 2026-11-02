@@ -1,3 +1,21 @@
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  ExternalLink,
+  Check,
+  CheckCircle2,
+  Copy,
+  FlaskConical,
+  Key,
+  Radio,
+  RefreshCw,
+  Rocket,
+  Settings,
+  ShieldCheck,
+  X,
+  Zap,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -42,7 +60,7 @@ export function SMSIntegration() {
   // Automations & Schedule State
   const [greetingEnabled, setGreetingEnabled] = useState(true)
   const [greetingMessage, setGreetingMessage] = useState(
-    '👋 Hello from Bay Works SMS Support! Reply to this message to chat with an agent.'
+    'Hello from Bay Works SMS Support! Reply to this message to chat with an agent.'
   )
   const [outOfOfficeEnabled, setOutOfOfficeEnabled] = useState(false)
   const [outOfOfficeMessage, setOutOfOfficeMessage] = useState(
@@ -211,7 +229,7 @@ export function SMSIntegration() {
         <div>
           <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
             <Link to="/channels" className="hover:text-blue-600 flex items-center gap-1 font-medium">
-              <span>← Channels Hub</span>
+              <span className="flex items-center gap-1"><ArrowLeft className="h-3.5 w-3.5" /> Channels Hub</span>
             </Link>
             <span>/</span>
             <span>Channel 3</span>
@@ -245,7 +263,7 @@ export function SMSIntegration() {
             to="/"
             className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
           >
-            Open Shared Inbox ↗
+            <span className="flex items-center gap-1.5">Open Shared Inbox <ExternalLink className="h-3 w-3" /></span>
           </Link>
           <button
             onClick={handleVerify}
@@ -258,7 +276,7 @@ export function SMSIntegration() {
             onClick={() => setActiveTab('diagnostics')}
             className="rounded-lg border border-blue-200 bg-blue-50 px-3.5 py-2 text-xs font-semibold text-blue-700 shadow-sm hover:bg-blue-100"
           >
-            ⚡ Test Diagnostic SMS
+            <span className="flex items-center gap-1.5"><Zap className="h-3.5 w-3.5 text-amber-500" /> Test Diagnostic SMS</span>
           </button>
           <button
             onClick={handleSave}
@@ -282,7 +300,7 @@ export function SMSIntegration() {
         <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
           <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">A2P 10DLC Status</div>
           <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-base font-bold text-emerald-600">● {a2pStatus}</span>
+            <span className="inline-flex items-center gap-1.5 text-base font-bold text-emerald-600"><span className="h-2 w-2 rounded-full bg-emerald-500"></span>{a2pStatus}</span>
           </div>
           <p className="text-[11px] text-slate-400 mt-0.5">{brandTier}</p>
         </div>
@@ -308,19 +326,19 @@ export function SMSIntegration() {
       {success && (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span>✅</span>
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             <span className="font-medium">{success}</span>
           </div>
-          <button onClick={() => setSuccess(null)} className="text-emerald-600 hover:text-emerald-900">×</button>
+          <button onClick={() => setSuccess(null)} className="text-emerald-600 hover:text-emerald-900 p-1 cursor-pointer"><X className="h-4 w-4" /></button>
         </div>
       )}
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs text-red-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span>⚠️</span>
+            <AlertTriangle className="h-4 w-4 text-red-600" />
             <span className="font-medium">{error}</span>
           </div>
-          <button onClick={() => setError(null)} className="text-red-600 hover:text-red-900">×</button>
+          <button onClick={() => setError(null)} className="text-red-600 hover:text-red-900 p-1 cursor-pointer"><X className="h-4 w-4" /></button>
         </div>
       )}
 
@@ -328,11 +346,11 @@ export function SMSIntegration() {
       <div className="border-b border-slate-200">
         <nav className="flex space-x-6 overflow-x-auto">
           {[
-            { id: 'credentials', label: 'Credentials & Number', icon: '🔑' },
-            { id: 'webhooks', label: 'Webhooks & Carrier Sync', icon: '📡' },
-            { id: 'compliance', label: 'A2P 10DLC & Opt-Out', icon: '🛡️' },
-            { id: 'automations', label: 'Automations & Schedule', icon: '⚙️' },
-            { id: 'diagnostics', label: 'Live Sender & Events', icon: '🧪' },
+            { id: 'credentials', label: 'Credentials & Number', icon: <Key className="h-3.5 w-3.5" /> },
+            { id: 'webhooks', label: 'Webhooks & Carrier Sync', icon: <Radio className="h-3.5 w-3.5" /> },
+            { id: 'compliance', label: 'A2P 10DLC & Opt-Out', icon: <ShieldCheck className="h-3.5 w-3.5" /> },
+            { id: 'automations', label: 'Automations & Schedule', icon: <Settings className="h-3.5 w-3.5" /> },
+            { id: 'diagnostics', label: 'Live Sender & Events', icon: <FlaskConical className="h-3.5 w-3.5" /> },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -462,11 +480,11 @@ export function SMSIntegration() {
                   onClick={() => copyToClipboard(callbackUrl, 'webhook')}
                   className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 shrink-0"
                 >
-                  {copiedKey === 'webhook' ? '✓ Copied' : '📋 Copy URL'}
+                  {copiedKey === 'webhook' ? <span className="flex items-center gap-1"><Check className="h-3 w-3 inline" /> Copied</span> : <span className="flex items-center gap-1"><Copy className="h-3 w-3 inline" /> Copy URL</span>}
                 </button>
               </div>
               <p className="text-[11px] text-slate-500">
-                Configure this URL in your Twilio Console under <span className="font-semibold text-slate-700">Phone Numbers → Active Numbers → A Message Comes In</span>.
+                Configure this URL in your Twilio Console under <span className="font-semibold text-slate-700">Phone Numbers &gt; Active Numbers &gt; A Message Comes In</span>.
               </p>
             </div>
 
@@ -494,7 +512,7 @@ export function SMSIntegration() {
               <div className="font-bold">Step-by-Step Twilio Console Setup:</div>
               <ol className="list-decimal list-inside space-y-1 text-[11.5px] text-blue-800">
                 <li>Log into your <span className="font-semibold">Twilio Console</span>.</li>
-                <li>Navigate to <span className="font-semibold">Phone Numbers → Manage → Active Numbers</span> and click your phone number.</li>
+                <li>Navigate to <span className="font-semibold">Phone Numbers &gt; Manage &gt; Active Numbers</span> and click your phone number.</li>
                 <li>Scroll down to the <span className="font-semibold">Messaging</span> configuration section.</li>
                 <li>Under <span className="font-semibold">A MESSAGE COMES IN</span>, select <span className="font-semibold">Webhook</span>.</li>
                 <li>Paste the Inbound Callback URL above and select <span className="font-semibold">HTTP POST</span>.</li>
@@ -801,14 +819,14 @@ export function SMSIntegration() {
                   disabled={sendingTest}
                   className="rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
                 >
-                  <span>{sendingTest ? 'Dispatching...' : '🚀 Dispatch Test SMS'}</span>
+                  <span>{sendingTest ? 'Dispatching...' : <span className="flex items-center gap-1.5"><Rocket className="h-3.5 w-3.5" /> Dispatch Test SMS</span>}</span>
                 </button>
                 {testResult && (
                   <Link
                     to="/"
                     className="rounded-lg border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100"
                   >
-                    View in Shared Inbox →
+                    <span className="flex items-center gap-1">View in Shared Inbox <ArrowRight className="h-3 w-3" /></span>
                   </Link>
                 )}
               </div>
@@ -816,7 +834,7 @@ export function SMSIntegration() {
               {testResult && (
                 <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3.5 text-xs text-emerald-900 space-y-1">
                   <div className="font-bold flex items-center gap-2">
-                    <span>✓ Message Queued with Twilio:</span>
+                    <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-emerald-700" /> Message Queued with Twilio:</span>
                     <span className="font-mono text-emerald-700">{testResult.sid}</span>
                   </div>
                   <p className="text-[11px] text-emerald-800">{testResult.message}</p>
@@ -840,7 +858,7 @@ export function SMSIntegration() {
                   }}
                   className="text-xs font-semibold text-red-600 hover:text-red-800"
                 >
-                  🔄 Refresh
+                  <span className="inline-flex items-center gap-1"><RefreshCw className="h-3 w-3" /> Refresh</span>
                 </button>
               </div>
 
@@ -874,7 +892,7 @@ export function SMSIntegration() {
                         to="/"
                         className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 shrink-0 mt-1"
                       >
-                        Open ↗
+                        <span className="flex items-center gap-1">Open <ExternalLink className="h-3 w-3" /></span>
                       </Link>
                     </div>
                   ))}

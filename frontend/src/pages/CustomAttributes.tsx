@@ -1,3 +1,18 @@
+import {
+  ListFilter,
+  FileText,
+  Hash,
+  DollarSign,
+  ToggleLeft,
+  Calendar,
+  Link2,
+  CheckCircle2,
+  AlertTriangle,
+  User,
+  MessageSquare,
+  Plus,
+  X,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { api, type CustomAttributeDefinitionItem } from '../lib/api'
 
@@ -134,19 +149,47 @@ export function CustomAttributes() {
   const getTypeBadge = (type: string) => {
     switch (type) {
       case 'text':
-        return <span className="bg-slate-100 text-[var(--color-ink)] px-2 py-0.5 rounded font-mono text-[10px] font-bold border border-[var(--color-border)]">📝 TEXT</span>
+        return (
+          <span className="inline-flex items-center gap-1 bg-slate-100 text-[var(--color-ink)] px-2 py-0.5 rounded font-mono text-[10px] font-bold border border-[var(--color-border)]">
+            <FileText className="h-3 w-3 inline" /> TEXT
+          </span>
+        )
       case 'number':
-        return <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-mono text-[10px] font-bold border border-emerald-200">🔢 NUMBER</span>
+        return (
+          <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-mono text-[10px] font-bold border border-emerald-200">
+            <Hash className="h-3 w-3 inline" /> NUMBER
+          </span>
+        )
       case 'currency':
-        return <span className="bg-green-50 text-green-700 px-2 py-0.5 rounded font-mono text-[10px] font-bold border border-green-200">💲 CURRENCY</span>
+        return (
+          <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 px-2 py-0.5 rounded font-mono text-[10px] font-bold border border-green-200">
+            <DollarSign className="h-3 w-3 inline" /> CURRENCY
+          </span>
+        )
       case 'boolean':
-        return <span className="bg-purple-50 text-purple-700 px-2 py-0.5 rounded font-mono text-[10px] font-bold border border-purple-200">🔘 BOOLEAN</span>
+        return (
+          <span className="inline-flex items-center gap-1 bg-purple-50 text-purple-700 px-2 py-0.5 rounded font-mono text-[10px] font-bold border border-purple-200">
+            <ToggleLeft className="h-3 w-3 inline" /> BOOLEAN
+          </span>
+        )
       case 'list':
-        return <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-mono text-[10px] font-bold border border-blue-200">📋 LIST / DROPDOWN</span>
+        return (
+          <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-mono text-[10px] font-bold border border-blue-200">
+            <ListFilter className="h-3 w-3 inline" /> LIST / DROPDOWN
+          </span>
+        )
       case 'date':
-        return <span className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-mono text-[10px] font-bold border border-amber-200">📅 DATE</span>
+        return (
+          <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-mono text-[10px] font-bold border border-amber-200">
+            <Calendar className="h-3 w-3 inline" /> DATE
+          </span>
+        )
       case 'link':
-        return <span className="bg-cyan-50 text-cyan-700 px-2 py-0.5 rounded font-mono text-[10px] font-bold border border-cyan-200">🔗 URL</span>
+        return (
+          <span className="inline-flex items-center gap-1 bg-cyan-50 text-cyan-700 px-2 py-0.5 rounded font-mono text-[10px] font-bold border border-cyan-200">
+            <Link2 className="h-3 w-3 inline" /> URL
+          </span>
+        )
       default:
         return <span className="bg-slate-100 text-[var(--color-ink-muted)] px-2 py-0.5 rounded font-mono text-[10px]">{type.toUpperCase()}</span>
     }
@@ -174,21 +217,31 @@ export function CustomAttributes() {
           onClick={openCreateModal}
           className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 cursor-pointer transition-colors"
         >
-          <span>+ Add Custom Attribute</span>
+          <Plus className="h-4 w-4" /> <span>Add Custom Attribute</span>
         </button>
       </div>
 
       {success && (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-800 flex items-center justify-between">
-          <span>✅ {success}</span>
-          <button onClick={() => setSuccess(null)} className="text-emerald-600 hover:text-emerald-900">✕</button>
+          <span className="flex items-center gap-1.5">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            <span>{success}</span>
+          </span>
+          <button onClick={() => setSuccess(null)} className="text-emerald-600 hover:text-emerald-900 cursor-pointer">
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
 
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs text-red-800 flex items-center justify-between">
-          <span>⚠️ {error}</span>
-          <button onClick={() => setError(null)} className="text-red-600 hover:text-red-900">✕</button>
+          <span className="flex items-center gap-1.5">
+            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <span>{error}</span>
+          </span>
+          <button onClick={() => setError(null)} className="text-red-600 hover:text-red-900 cursor-pointer">
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
 
@@ -203,7 +256,7 @@ export function CustomAttributes() {
                 : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
             }`}
           >
-            👤 Contact Attributes ({attributes.filter((a) => a.attribute_model === 'contact_attribute').length})
+            <span className="flex items-center gap-1.5"><User className="h-3.5 w-3.5" /><span>Contact Attributes ({attributes.filter((a) => a.attribute_model === 'contact_attribute').length})</span></span>
           </button>
           <button
             onClick={() => setActiveModel('conversation_attribute')}
@@ -213,7 +266,7 @@ export function CustomAttributes() {
                 : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
             }`}
           >
-            💬 Conversation Attributes ({attributes.filter((a) => a.attribute_model === 'conversation_attribute').length})
+            <span className="flex items-center gap-1.5"><MessageSquare className="h-3.5 w-3.5" /><span>Conversation Attributes ({attributes.filter((a) => a.attribute_model === 'conversation_attribute').length})</span></span>
           </button>
         </div>
 
@@ -234,7 +287,7 @@ export function CustomAttributes() {
           <div className="p-10 text-center text-xs text-[var(--color-ink-faint)]">Loading CRM schema...</div>
         ) : filtered.length === 0 ? (
           <div className="p-10 text-center space-y-2">
-            <div className="text-2xl">📋</div>
+            <ListFilter className="h-8 w-8 text-blue-600" />
             <p className="text-xs font-semibold text-[var(--color-ink)]">No custom attributes found</p>
             <p className="text-[11px] text-[var(--color-ink-faint)]">Click "+ Add Custom Attribute" to define your first field.</p>
           </div>
@@ -328,7 +381,7 @@ export function CustomAttributes() {
                 onClick={() => setShowModal(false)}
                 className="h-7 w-7 rounded-full bg-slate-200 text-[var(--color-ink-muted)] hover:bg-slate-300 flex items-center justify-center text-xs font-bold cursor-pointer"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -369,13 +422,13 @@ export function CustomAttributes() {
                   onChange={(e) => setAttrType(e.target.value as any)}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none disabled:bg-slate-100"
                 >
-                  <option value="text">📝 Text (Single-line string)</option>
-                  <option value="number">🔢 Number (Integer or decimal)</option>
-                  <option value="currency">💲 Currency (Formatted monetary amount)</option>
-                  <option value="boolean">🔘 Boolean (True / False toggle)</option>
-                  <option value="list">📋 List / Dropdown (Predefined choices)</option>
-                  <option value="date">📅 Date (YYYY-MM-DD)</option>
-                  <option value="link">🔗 Link (Web URL)</option>
+                  <option value="text">Text (Single-line string)</option>
+                  <option value="number">Number (Integer or decimal)</option>
+                  <option value="currency">Currency (Formatted monetary amount)</option>
+                  <option value="boolean">Boolean (True / False toggle)</option>
+                  <option value="list">List / Dropdown (Predefined choices)</option>
+                  <option value="date">Date (YYYY-MM-DD)</option>
+                  <option value="link">Link (Web URL)</option>
                 </select>
               </div>
 

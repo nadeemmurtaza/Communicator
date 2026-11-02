@@ -17,10 +17,12 @@ Handles:
 
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, datetime
 
 import httpx
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.channels import get_provider
@@ -66,11 +68,38 @@ class UnknownContactError(RuntimeError):
     """Raised when an inbound message doesn't match a Contact we know about."""
 
 
-async def _find_contact(session: AsyncSession, channel: ChannelType, value: str) -> Contact:
-    stmt = select(Contact).where(Contact.channel == channel, Contact.value == value)
+async def _find_contact(
+    session: AsyncSession,
+    channel: ChannelType,
+    value: str,
+    sender_name: str = "",
+) -> Contact:
+    stmt = (
+        select(Contact)
+        .options(selectinload(Contact.lead))
+        .where(Contact.channel == channel, Contact.value == value)
+    )
     contact = (await session.execute(stmt)).scalar_one_or_none()
     if contact is None:
         raise UnknownContactError(f"No Contact found for {channel.value}:{value}")
+
+    if sender_name and sender_name.strip():
+        if (
+            not contact.person_name
+            or contact.person_name.startswith("Contact ")
+            or contact.person_name.startswith("Customer ")
+            or contact.person_name.startswith("WhatsApp User")
+            or contact.person_name.startswith("WhatsApp Lead")
+        ):
+            contact.person_name = sender_name.strip()
+        if contact.lead and (
+            not contact.lead.name
+            or contact.lead.name.startswith("WhatsApp Lead")
+            or contact.lead.name.startswith("Whatsapp Contact")
+        ):
+            contact.lead.name = sender_name.strip()
+        await session.flush()
+
     return contact
 
 
@@ -84,6 +113,7 @@ async def process_inbound_message(
     provider_message_id: str,
     harvester_client: HarvesterClient,
     interactive_payload_id: str | None = None,
+    sender_name: str = "",
 ) -> Message:
     if provider_message_id:
         existing_stmt = select(Message).where(Message.provider_message_id == provider_message_id)
@@ -91,7 +121,7 @@ async def process_inbound_message(
         if existing_msg is not None:
             return existing_msg
 
-    contact = await _find_contact(session, channel, from_value)
+    contact = await _find_contact(session, channel, from_value, sender_name=sender_name)
     conversation = await get_or_create_conversation(session, contact)
 
     now = datetime.now(UTC)

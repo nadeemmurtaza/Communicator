@@ -1,3 +1,4 @@
+import { Zap, Key, MessageSquare, Bot, Activity, AlertTriangle, CheckCircle2, AlertCircle, Send, ArrowLeft, Check, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -24,7 +25,7 @@ export function FacebookIntegration() {
   // Credentials State
   const [inboxName, setInboxName] = useState('Facebook Messenger')
   const [pageId, setPageId] = useState('100234567890123')
-  const [pageName, setPageName] = useState('Bay Works Official')
+  const [pageName, setPageName] = useState('')
   const [pageAccessToken, setPageAccessToken] = useState('')
   const [appSecret, setAppSecret] = useState('')
   const [webhookVerifyToken, setWebhookVerifyToken] = useState('meta_facebook_verify_token')
@@ -41,7 +42,7 @@ export function FacebookIntegration() {
   // Automations & Schedule State
   const [greetingEnabled, setGreetingEnabled] = useState(true)
   const [greetingMessage, setGreetingMessage] = useState(
-    '👋 Hi! Thanks for reaching out to us on Facebook Messenger. How can our team help you today?'
+    'Hi! Thanks for reaching out to us on Facebook Messenger. How can our team help you today?'
   )
   const [outOfOfficeEnabled, setOutOfOfficeEnabled] = useState(false)
   const [outOfOfficeMessage, setOutOfOfficeMessage] = useState(
@@ -57,7 +58,7 @@ export function FacebookIntegration() {
   const [testPsid, setTestPsid] = useState('psid_test_902184')
   const [testRecipientName, setTestRecipientName] = useState('Sarah Jenkins')
   const [testMessage, setTestMessage] = useState(
-    'Hello! This is a test message from your Bay Works Facebook Messenger integration.'
+    'Hello! This is a test message from your Facebook Messenger integration.'
   )
   const [testResult, setTestResult] = useState<{ mid: string; message: string } | null>(null)
 
@@ -78,7 +79,8 @@ export function FacebookIntegration() {
 
       setInboxName(channelData.inbox.name)
       setPageId(channelData.pageProfile?.pageId || channelData.inbox.credentials?.pageId || '')
-      setPageName(channelData.pageProfile?.pageName || channelData.inbox.credentials?.pageName || 'Bay Works Official')
+      const rawPage = channelData.pageProfile?.pageName || channelData.inbox.credentials?.pageName || ''
+      setPageName(rawPage === 'Bay Works Official' ? '' : rawPage)
       setWebhookVerifyToken(channelData.webhookConfig?.verifyToken || 'meta_facebook_verify_token')
 
       if (channelData.icebreakers && channelData.icebreakers.length > 0) {
@@ -207,6 +209,8 @@ export function FacebookIntegration() {
     )
   }
 
+  const isConnected = Boolean(data?.health?.isConnected && pageName && pageName !== 'Bay Works Official' && pageId)
+
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6">
       {/* Top Banner Navigation */}
@@ -214,7 +218,8 @@ export function FacebookIntegration() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Link to="/channels" className="text-sm font-medium text-blue-600 hover:text-blue-800">
-              ← Back to Channels Hub
+              <ArrowLeft className="h-4 w-4 inline mr-1" />
+              <span>Back to Channels Hub</span>
             </Link>
             <span className="text-gray-300">/</span>
             <span className="text-sm font-medium text-gray-500">Facebook Messenger</span>
@@ -224,7 +229,20 @@ export function FacebookIntegration() {
               <FacebookIcon className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Facebook Messenger Integration</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Facebook Messenger Integration</h1>
+                {isConnected ? (
+                  <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Connected &amp; Healthy
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 border border-amber-200 flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                    Not Configured
+                  </span>
+                )}
+              </div>
               <p className="text-sm text-gray-500">
                 Official Meta Graph API v21.0 connector with Page messaging, 24h window compliance, and Icebreakers.
               </p>
@@ -238,7 +256,7 @@ export function FacebookIntegration() {
             disabled={verifying}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 shadow-sm transition disabled:opacity-50"
           >
-            {verifying ? 'Checking Meta...' : '⚡ Test Connection'}
+            {verifying ? 'Checking Meta...' : <span className="flex items-center gap-1"><Zap className="h-3.5 w-3.5 text-amber-500" /> Test Connection</span>}
           </button>
           <button
             onClick={handleSaveSettings}
@@ -250,15 +268,28 @@ export function FacebookIntegration() {
         </div>
       </div>
 
+      {/* Real Connection Status Banner */}
+      {!isConnected && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <h4 className="text-sm font-semibold text-amber-900">Channel Not Connected</h4>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Please enter your provider API credentials below and click Save Configuration to activate.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Alert Notices */}
       {success && (
         <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-sm flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span>✅</span>
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             <span>{success}</span>
           </div>
           <button onClick={() => setSuccess(null)} className="text-emerald-600 hover:text-emerald-900 font-bold">
-            ×
+            <X className="h-4 w-4" />
           </button>
         </div>
       )}
@@ -266,11 +297,11 @@ export function FacebookIntegration() {
       {error && (
         <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-sm flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span>⚠️</span>
+            <AlertCircle className="h-4 w-4 text-rose-600" />
             <span>{error}</span>
           </div>
           <button onClick={() => setError(null)} className="text-rose-600 hover:text-rose-900 font-bold">
-            ×
+            <X className="h-4 w-4" />
           </button>
         </div>
       )}
@@ -280,9 +311,11 @@ export function FacebookIntegration() {
         <div className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
           <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Page Connection</div>
           <div className="flex items-center justify-between">
-            <span className="text-lg font-bold text-gray-900">{pageName || 'Bay Works Official'}</span>
-            <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-              Connected
+            <span className="text-lg font-bold text-gray-900">{pageName || 'Your Facebook Page Name'}</span>
+            <span className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${
+              isConnected ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+            }`}>
+              {isConnected ? 'Connected' : 'Not Configured'}
             </span>
           </div>
           <p className="text-xs text-gray-500 mt-1">Page ID: {pageId}</p>
@@ -326,11 +359,11 @@ export function FacebookIntegration() {
       <div className="border-b border-gray-200">
         <nav className="flex space-x-8">
           {[
-            { id: 'credentials', label: 'Page Credentials & IDs', icon: '🔑' },
-            { id: 'webhooks', label: 'Webhooks & Graph Sync', icon: '⚡' },
-            { id: 'icebreakers', label: 'Messenger Icebreakers', icon: '💡' },
-            { id: 'automations', label: 'Automations & Schedule', icon: '🤖' },
-            { id: 'diagnostics', label: 'Diagnostic Sender & Events', icon: '📡' },
+            { id: 'credentials', label: 'Page Credentials & IDs', icon: Key },
+            { id: 'webhooks', label: 'Webhooks & Graph Sync', icon: Zap },
+            { id: 'icebreakers', label: 'Messenger Icebreakers', icon: MessageSquare },
+            { id: 'automations', label: 'Automations & Schedule', icon: Bot },
+            { id: 'diagnostics', label: 'Diagnostic Sender & Events', icon: Activity },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -341,7 +374,7 @@ export function FacebookIntegration() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <span>{tab.icon}</span>
+              <tab.icon className="h-4 w-4" />
               <span>{tab.label}</span>
             </button>
           ))}
@@ -377,7 +410,7 @@ export function FacebookIntegration() {
                 value={pageName}
                 onChange={(e) => setPageName(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                placeholder="e.g. Bay Works Official"
+                placeholder="e.g. Your Facebook Page Name"
               />
             </div>
 
@@ -390,7 +423,7 @@ export function FacebookIntegration() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 placeholder="e.g. 100234567890123"
               />
-              <p className="text-xs text-gray-400 mt-1">Found in Facebook Page Settings → About → Page ID.</p>
+              <p className="text-xs text-gray-400 mt-1">Found in Facebook Page Settings &gt; About &gt; Page ID.</p>
             </div>
 
             <div>
@@ -432,7 +465,7 @@ export function FacebookIntegration() {
           <div>
             <h3 className="text-base font-semibold text-gray-900">Meta Webhook Configuration</h3>
             <p className="text-sm text-gray-500 mt-0.5">
-              Configure these webhook parameters in your Meta App Dashboard under <strong>Messenger → Webhooks</strong>.
+              Configure these webhook parameters in your Meta App Dashboard under <strong>Messenger &gt; Webhooks</strong>.
             </p>
           </div>
 
@@ -455,7 +488,7 @@ export function FacebookIntegration() {
                   }
                   className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 transition"
                 >
-                  {copiedKey === 'callback' ? '✓ Copied' : 'Copy'}
+                  {copiedKey === 'callback' ? <span className="inline-flex items-center gap-1"><Check className="h-4 w-4 text-emerald-600" /> Copied</span> : 'Copy'}
                 </button>
               </div>
             </div>
@@ -473,7 +506,7 @@ export function FacebookIntegration() {
                   onClick={() => copyToClipboard(webhookVerifyToken, 'verifyToken')}
                   className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 transition"
                 >
-                  {copiedKey === 'verifyToken' ? '✓ Copied' : 'Copy'}
+                  {copiedKey === 'verifyToken' ? <span className="inline-flex items-center gap-1"><Check className="h-4 w-4 text-emerald-600" /> Copied</span> : 'Copy'}
                 </button>
               </div>
               <p className="text-xs text-gray-400 mt-1">Enter this identical string into Meta when verifying your webhook endpoint.</p>
@@ -484,7 +517,7 @@ export function FacebookIntegration() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {['messages', 'messaging_postbacks', 'message_deliveries', 'message_reads'].map((field) => (
                   <div key={field} className="p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-2">
-                    <span className="text-emerald-500">✓</span>
+                    <Check className="h-4 w-4 text-emerald-500 shrink-0" />
                     <span className="text-xs font-mono font-medium text-gray-700">{field}</span>
                   </div>
                 ))}
@@ -736,7 +769,7 @@ export function FacebookIntegration() {
                 disabled={sendingTest || !testPsid.trim() || !testMessage.trim()}
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm transition disabled:opacity-50 flex items-center gap-2"
               >
-                {sendingTest ? 'Dispatching...' : '🚀 Send Diagnostic Message'}
+                {sendingTest ? 'Dispatching...' : <span className="flex items-center gap-1.5"><Send className="h-3.5 w-3.5" /> Send Diagnostic Message</span>}
               </button>
 
               {testResult && (
@@ -758,7 +791,7 @@ export function FacebookIntegration() {
                 onClick={async () => setEvents(await api.listFacebookEvents())}
                 className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
               >
-                🔄 Refresh
+                Refresh
               </button>
             </div>
 
@@ -796,7 +829,7 @@ export function FacebookIntegration() {
                         <td className="py-3 px-4 font-medium text-gray-900">{ev.senderName}</td>
                         <td className="py-3 px-4 text-gray-700 max-w-xs truncate">{ev.body}</td>
                         <td className="py-3 px-4">
-                          <span className="text-xs font-medium text-emerald-600">● {ev.status}</span>
+                          <span className="text-xs font-medium text-emerald-600 inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />{ev.status}</span>
                         </td>
                         <td className="py-3 px-4 font-mono text-xs text-gray-400">
                           {ev.providerMessageId ? ev.providerMessageId.slice(0, 16) + '...' : '—'}

@@ -160,7 +160,25 @@ async def meta_whatsapp_inbound(
 
     for entry in body.get("entry", []):
         for change in entry.get("changes", []):
+            field = change.get("field", "")
+            if field in ("phone_number_quality_update", "phone_number_name_update", "account_update"):
+                try:
+                    from communicator.services.meta_sync import fetch_meta_channel_info
+                    await fetch_meta_channel_info(session, force_remote=True)
+                except Exception as e:
+                    logger.warning(f"Error handling Meta field update {field}: {e}")
+
             value = change.get("value") or {}
+
+            # Build sender name map from incoming Meta contacts
+            contacts_map: dict[str, str] = {}
+            for ct in value.get("contacts", []):
+                wa_id = ct.get("wa_id", "")
+                profile_name = (ct.get("profile") or {}).get("name", "")
+                if wa_id and profile_name:
+                    contacts_map[wa_id] = profile_name
+                    contacts_map["+" + wa_id.lstrip("+")] = profile_name
+
             for msg in value.get("messages", []):
                 msg_id = msg.get("id", "")
                 # Webhook idempotency: skip already-processed messages
@@ -181,15 +199,18 @@ async def meta_whatsapp_inbound(
                     text = payload_id
 
                 try:
+                    from_num = msg.get("from", "")
+                    sender_name = contacts_map.get(from_num) or contacts_map.get("+" + from_num.lstrip("+")) or ""
                     await process_inbound_message(
                         session,
                         channel=ChannelType.WHATSAPP,
-                        from_value=_normalize_meta_sender(msg.get("from", "")),
+                        from_value=_normalize_meta_sender(from_num),
                         body=text,
                         provider="meta",
                         provider_message_id=msg_id,
                         harvester_client=harvester_client,
                         interactive_payload_id=payload_id,
+                        sender_name=sender_name,
                     )
                 except UnknownContactError:
                     pass
@@ -882,7 +903,7 @@ async def voice_inbound_webhook(
         conversation_id=conv.id,
         direction=MessageDirection.INBOUND,
         channel=ChannelType.VOICE,
-        body=f"📞 Inbound Call from {from_number} ({action_note})",
+        body=f"Inbound Call from {from_number} ({action_note})",
         provider="twilio_voice",
         provider_message_id=call_sid,
         status=MessageStatus.RECEIVED,
@@ -968,7 +989,7 @@ async def voice_recording_webhook(
             meta["recording_duration"] = recording_duration
             meta["recording_sid"] = recording_sid
             msg.provider_metadata = meta
-            msg.body += f" · 🎙️ Recording ({recording_duration}s)"
+            msg.body += f" · Recording ({recording_duration}s)"
             await session.flush()
 
     return {
@@ -1009,7 +1030,7 @@ async def voice_transcription_webhook(
             meta["transcription_text"] = transcription_text
             meta["transcription_status"] = transcription_status
             msg.provider_metadata = meta
-            msg.body += f'\n📝 Transcript: "{transcription_text}"'
+            msg.body += f'\nTranscript: "{transcription_text}"'
             await session.flush()
 
     return {"status": "ok", "call_sid": call_sid, "transcription_status": transcription_status}

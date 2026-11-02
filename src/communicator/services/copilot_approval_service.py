@@ -95,7 +95,7 @@ async def create_approval_request(
 
     # Post an internal private note in the shared conversation record
     note_body = (
-        f"🤖 [Copilot Approval Requested] {title}\n"
+        f"[Copilot Approval Requested] {title}\n"
         f"Type: {request_type.upper()} • Status: PENDING TEAMMATE APPROVAL\n"
         f"Note: {approval.internal_note}\n"
         f'Proposed Reply: "{proposed_reply}"'

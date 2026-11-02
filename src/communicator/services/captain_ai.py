@@ -296,7 +296,7 @@ def rewrite_text(text: str, tone: str) -> dict[str, Any]:
             "or clarifications are required on your end."
         )
     elif tone_lower == "friendly":
-        rewritten = f"Hi there! 😊 {cleaned} Hope you are having a wonderful day! Let me know if you need anything else."
+        rewritten = f"Hi there! {cleaned} 😊 Hope you are having a wonderful day! Let me know if you need anything else."
     elif tone_lower == "shorten":
         # Remove fluff words
         shortened = re.sub(

@@ -1,3 +1,4 @@
+import { AlertTriangle, ArrowLeft, Check, CheckCircle2, FlaskConical, Key, Lightbulb, MessageSquare, Radio, RefreshCw, Settings, ShieldCheck, X, Zap } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -24,22 +25,22 @@ export function TikTokIntegration() {
 
   // Credentials State
   const [inboxName, setInboxName] = useState('TikTok DMs & Comments')
-  const [appId, setAppId] = useState('tt_app_mock_6789')
+  const [appId, setAppId] = useState('')
   const [appSecret, setAppSecret] = useState('')
   const [accessToken, setAccessToken] = useState('')
-  const [businessAccountId, setBusinessAccountId] = useState('tt_biz_acc_1001')
+  const [businessAccountId, setBusinessAccountId] = useState('')
   const [webhookVerifyToken, setWebhookVerifyToken] = useState('tiktok_verify_token_xyz')
 
   // Comments Auto-Reply State
   const [commentAutoReplyEnabled, setCommentAutoReplyEnabled] = useState(true)
   const [commentAutoReplyText, setCommentAutoReplyText] = useState(
-    'Thanks for your comment! Send us a direct message for personal support. ✨'
+    'Thanks for your comment! Send us a direct message for personal support.'
   )
 
   // Automations & Schedule State
   const [greetingEnabled, setGreetingEnabled] = useState(true)
   const [greetingMessage, setGreetingMessage] = useState(
-    '👋 Hi there! Thanks for reaching out on TikTok. How can our support team assist you today?'
+    'Hi there! Thanks for reaching out on TikTok. How can our support team assist you today?'
   )
   const [outOfOfficeEnabled, setOutOfOfficeEnabled] = useState(false)
   const [outOfOfficeMessage, setOutOfOfficeMessage] = useState(
@@ -82,8 +83,8 @@ export function TikTokIntegration() {
       setEvents(evList)
 
       setInboxName(channelData.inbox.name)
-      setAppId(channelData.businessProfile?.appId || 'tt_app_mock_6789')
-      setBusinessAccountId(channelData.businessProfile?.businessAccountId || 'tt_biz_acc_1001')
+      setAppId(channelData.businessProfile?.appId || '')
+      setBusinessAccountId(channelData.businessProfile?.businessAccountId || '')
       setWebhookVerifyToken(channelData.webhookConfig?.verifyToken || 'tiktok_verify_token_xyz')
 
       if (channelData.commentAutoReply) {
@@ -234,7 +235,7 @@ export function TikTokIntegration() {
         <div>
           <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
             <Link to="/channels" className="hover:text-slate-700">
-              ← Back to Channels Hub
+              <span className="flex items-center gap-1"><ArrowLeft className="h-3.5 w-3.5" /> Back to Channels Hub</span>
             </Link>
           </div>
           <div className="flex items-center gap-3">
@@ -259,7 +260,7 @@ export function TikTokIntegration() {
             disabled={verifying}
             className="rounded-md border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs flex items-center gap-1.5"
           >
-            {verifying ? 'Verifying...' : '⚡ Test Connection'}
+            {verifying ? 'Verifying...' : <><Zap className="h-3.5 w-3.5 text-amber-500" /> Test Connection</>}
           </button>
           <button
             onClick={handleSave}
@@ -275,11 +276,11 @@ export function TikTokIntegration() {
       {success && (
         <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3.5 text-xs text-emerald-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span>✅</span>
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             <span>{success}</span>
           </div>
-          <button onClick={() => setSuccess(null)} className="text-emerald-600 hover:text-emerald-900">
-            ✕
+          <button onClick={() => setSuccess(null)} className="text-emerald-600 hover:text-emerald-900 p-1 cursor-pointer">
+            <X className="h-4 w-4" />
           </button>
         </div>
       )}
@@ -287,11 +288,11 @@ export function TikTokIntegration() {
       {error && (
         <div className="rounded-lg bg-rose-50 border border-rose-200 p-3.5 text-xs text-rose-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span>⚠️</span>
+            <AlertTriangle className="h-4 w-4 text-rose-600" />
             <span>{error}</span>
           </div>
-          <button onClick={() => setError(null)} className="text-rose-600 hover:text-rose-900">
-            ✕
+          <button onClick={() => setError(null)} className="text-rose-600 hover:text-rose-900 p-1 cursor-pointer">
+            <X className="h-4 w-4" />
           </button>
         </div>
       )}
@@ -307,7 +308,7 @@ export function TikTokIntegration() {
                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
             }`}
           >
-            🔑 Credentials &amp; Account
+            <span className="flex items-center gap-1.5"><Key className="h-3.5 w-3.5" /> Credentials &amp; Account</span>
           </button>
           <button
             onClick={() => setActiveTab('webhooks')}
@@ -317,7 +318,7 @@ export function TikTokIntegration() {
                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
             }`}
           >
-            📡 Webhooks &amp; Security
+            <span className="flex items-center gap-1.5"><Radio className="h-3.5 w-3.5" /> Webhooks &amp; Security</span>
           </button>
           <button
             onClick={() => setActiveTab('comments')}
@@ -327,7 +328,7 @@ export function TikTokIntegration() {
                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
             }`}
           >
-            💬 Video Comment Auto-Replies
+            <span className="flex items-center gap-1.5"><MessageSquare className="h-3.5 w-3.5" /> Video Comment Auto-Replies</span>
           </button>
           <button
             onClick={() => setActiveTab('automations')}
@@ -337,7 +338,7 @@ export function TikTokIntegration() {
                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
             }`}
           >
-            ⚙️ Automations &amp; Hours
+            <span className="flex items-center gap-1.5"><Settings className="h-3.5 w-3.5" /> Automations &amp; Hours</span>
           </button>
           <button
             onClick={() => setActiveTab('diagnostics')}
@@ -347,7 +348,7 @@ export function TikTokIntegration() {
                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
             }`}
           >
-            🧪 Diagnostics &amp; Live Events
+            <span className="flex items-center gap-1.5"><FlaskConical className="h-3.5 w-3.5" /> Diagnostics &amp; Live Events</span>
           </button>
         </nav>
       </div>
@@ -468,7 +469,7 @@ export function TikTokIntegration() {
                     }
                     className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs"
                   >
-                    {copiedKey === 'webhook' ? 'Copied! ✓' : 'Copy'}
+                    {copiedKey === 'webhook' ? <span className="flex items-center gap-1"><Check className="h-3 w-3 inline" /> Copied!</span> : 'Copy'}
                   </button>
                 </div>
               </div>
@@ -486,7 +487,7 @@ export function TikTokIntegration() {
                     onClick={() => copyToClipboard(webhookVerifyToken, 'token')}
                     className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs"
                   >
-                    {copiedKey === 'token' ? 'Copied! ✓' : 'Copy'}
+                    {copiedKey === 'token' ? <span className="flex items-center gap-1"><Check className="h-3 w-3 inline" /> Copied!</span> : 'Copy'}
                   </button>
                 </div>
               </div>
@@ -498,8 +499,9 @@ export function TikTokIntegration() {
                   <li><code className="font-mono bg-white px-1.5 py-0.5 rounded border text-slate-700">video.comment.receive</code> – Customer comments on brand videos</li>
                   <li><code className="font-mono bg-white px-1.5 py-0.5 rounded border text-slate-700">video.comment.reply</code> – Agent comment responses</li>
                 </ul>
-                <div className="pt-2 text-[11px] text-slate-500">
-                  🛡️ <strong>HMAC-SHA256 Security:</strong> Incoming webhook payloads are automatically verified against the <code className="font-mono bg-white px-1 py-0.5 rounded border">X-TikTok-Signature</code> header using your configured App Secret.
+                <div className="pt-2 text-[11px] text-slate-500 flex items-start gap-1.5">
+                  <ShieldCheck className="h-4 w-4 text-slate-700 shrink-0 mt-0.5" />
+                  <span><strong>HMAC-SHA256 Security:</strong> Incoming webhook payloads are automatically verified against the <code className="font-mono bg-white px-1 py-0.5 rounded border">X-TikTok-Signature</code> header using your configured App Secret.</span>
                 </div>
               </div>
             </div>
@@ -546,8 +548,9 @@ export function TikTokIntegration() {
                 </p>
               </div>
 
-              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3.5 text-xs text-amber-900">
-                💡 <strong>Inbox Integration:</strong> In addition to auto-replies, all comments appear in your team inbox as threaded conversations, allowing agents to respond directly from the message composer.
+              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3.5 text-xs text-amber-900 flex items-start gap-1.5">
+                <Lightbulb className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+                <span><strong>Inbox Integration:</strong> In addition to auto-replies, all comments appear in your team inbox as threaded conversations, allowing agents to respond directly from the message composer.</span>
               </div>
             </div>
           </div>
@@ -803,7 +806,7 @@ export function TikTokIntegration() {
                 onClick={loadChannel}
                 className="text-xs text-slate-500 hover:text-slate-800 font-medium"
               >
-                ↻ Refresh Stream
+                <span className="flex items-center gap-1.5"><RefreshCw className="h-3.5 w-3.5" /> Refresh Stream</span>
               </button>
             </div>
 

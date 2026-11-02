@@ -96,6 +96,7 @@ export const NAV_SECTIONS: NavSection[] = [
     to: '/team',
     icon: Settings,
     children: [
+      { to: '/business-profile', label: 'Business Profile' },
       { to: '/team', label: 'Team' },
       { to: '/connections', label: 'Connections' },
       { to: '/webhooks', label: 'Webhooks' },

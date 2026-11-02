@@ -1,5 +1,19 @@
 import { useEffect, useState } from 'react'
 import {
+  AlertTriangle,
+  Check,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  ExternalLink,
+  Package,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  X,
+} from 'lucide-react'
+import {
   api,
   type AuditLogItem,
   type AuditStatistics,
@@ -114,7 +128,8 @@ export function AuditLogs() {
             download="audit-trail-soc2.csv"
             className="rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] shadow-sm hover:bg-[var(--color-page)] flex items-center gap-1.5"
           >
-            <span>📥 Export CSV</span>
+            <Download className="h-3.5 w-3.5" />
+            <span>Export CSV</span>
           </a>
           <a
             href="/api/v1/audit-logs/export?format=json"
@@ -122,13 +137,15 @@ export function AuditLogs() {
             rel="noreferrer"
             className="rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] shadow-sm hover:bg-[var(--color-page)] flex items-center gap-1.5"
           >
-            <span>📦 Export JSON</span>
+            <Package className="h-3.5 w-3.5" />
+            <span>Export JSON</span>
           </a>
           <button
             onClick={() => loadAuditData()}
             className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-blue-700 flex items-center gap-1.5"
           >
-            <span>↺ Refresh</span>
+            <RefreshCw className="h-3.5 w-3.5" />
+            <span>Refresh</span>
           </button>
         </div>
       </div>
@@ -143,7 +160,7 @@ export function AuditLogs() {
             <span className="text-xl font-bold text-[var(--color-ink)]">
               {stats?.total_events ?? totalCount}
             </span>
-            <span className="text-[11px] font-semibold text-emerald-600">● 100% Retained</span>
+            <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" /> 100% Retained</span>
           </div>
           <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">Immutable compliance ledger</p>
         </div>
@@ -161,7 +178,15 @@ export function AuditLogs() {
                 criticalWarningCount > 0 ? 'text-amber-600' : 'text-emerald-600'
               }`}
             >
-              {criticalWarningCount > 0 ? '⚠ Requires Review' : '✓ Zero Critical Alerts'}
+              {criticalWarningCount > 0 ? (
+                <span className="flex items-center gap-1">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500 inline" /> Requires Review
+                </span>
+              ) : (
+                <span className="flex items-center gap-1">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 inline" /> Zero Critical Alerts
+                </span>
+              )}
             </span>
           </div>
           <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">Warnings & critical anomalies</p>
@@ -198,8 +223,8 @@ export function AuditLogs() {
 
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs text-red-800 flex items-center justify-between">
-          <span>⚠️ {error}</span>
-          <button onClick={() => setError(null)} className="text-red-600 hover:text-red-900">✕</button>
+          <span className="flex items-center gap-1.5"><AlertTriangle className="h-4 w-4 text-rose-500 shrink-0" /> {error}</span>
+          <button onClick={() => setError(null)} className="text-red-600 hover:text-red-900"><X className="h-4 w-4" /></button>
         </div>
       )}
 
@@ -208,7 +233,7 @@ export function AuditLogs() {
         <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row items-center gap-3">
           <div className="relative flex-1 w-full">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-[var(--color-ink-faint)] text-xs">
-              🔍
+              <Search className="h-3.5 w-3.5" />
             </span>
             <input
               type="text"
@@ -271,7 +296,7 @@ export function AuditLogs() {
           </div>
         ) : logs.length === 0 ? (
           <div className="p-12 text-center text-xs text-[var(--color-ink-muted)]">
-            <span className="text-3xl">🛡️</span>
+            <ShieldCheck className="h-10 w-10 text-emerald-600 mx-auto" />
             <div className="font-semibold text-slate-800 mt-2">No Audit Log Entries Found</div>
             <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">
               Try broadening your search term or clearing active severity and category filters.
@@ -375,7 +400,7 @@ export function AuditLogs() {
                           }}
                           className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[11px] font-medium text-[var(--color-ink-muted)] hover:bg-[var(--color-page)]"
                         >
-                          Inspect ↗
+                          <span>Inspect</span> <ExternalLink className="h-3 w-3 inline" />
                         </button>
                       </td>
                     </tr>
@@ -398,7 +423,7 @@ export function AuditLogs() {
               disabled={page <= 1}
               className="rounded-md border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-40"
             >
-              ← Previous
+              <span className="flex items-center gap-1"><ChevronLeft className="h-3.5 w-3.5" /> Previous</span>
             </button>
             <span className="px-2 text-xs text-[var(--color-ink-muted)]">
               Page {page} of {totalPages}
@@ -408,7 +433,7 @@ export function AuditLogs() {
               disabled={page >= totalPages}
               className="rounded-md border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-40"
             >
-              Next →
+              <span className="flex items-center gap-1">Next <ChevronRight className="h-3.5 w-3.5" /></span>
             </button>
           </div>
         </div>
@@ -432,7 +457,7 @@ export function AuditLogs() {
                 onClick={() => setInspectedLog(null)}
                 className="h-7 w-7 rounded-full bg-slate-200 text-[var(--color-ink-muted)] hover:bg-slate-300 flex items-center justify-center text-xs font-bold"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -477,7 +502,13 @@ export function AuditLogs() {
                     onClick={() => copyJsonDetails(inspectedLog.details)}
                     className="text-[11px] font-semibold text-blue-600 hover:text-blue-800"
                   >
-                    {copied ? '✓ Copied' : '📋 Copy JSON'}
+                    {copied ? (
+                      <span className="flex items-center gap-1 text-emerald-600">
+                        <Check className="h-3.5 w-3.5" /> Copied
+                      </span>
+                    ) : (
+                      'Copy JSON'
+                    )}
                   </button>
                 </div>
                 <pre className="rounded-lg bg-slate-950 p-3.5 text-[11px] font-mono text-emerald-400 overflow-x-auto border border-slate-800 max-h-56 leading-relaxed">

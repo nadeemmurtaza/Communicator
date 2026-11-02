@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { AlertTriangle, Check, CheckCheck, ChevronDown, DollarSign, History, Lightbulb, Megaphone, Plus, Tag, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
   api,
@@ -76,7 +77,7 @@ export function Broadcasts() {
     const previewText = `Hi ${customerNameSample}, our spring sale starts Friday. As a VIP customer you get early access and ${discountParam} off until Sunday.`
 
     try {
-      await api.createBroadcast({
+      const created = await api.createBroadcast({
         name,
         template_name: templateName,
         template_language: 'en_US',
@@ -88,8 +89,13 @@ export function Broadcasts() {
         tag_name: selectedTags.join(','),
         scheduled_at: sendImmediately ? null : new Date(scheduleTime).toISOString(),
       })
+      if (sendImmediately && created?.id) {
+        await api.dispatchBroadcast(created.id)
+        setSuccess(`Campaign "${name}" created and dispatched live!`)
+      } else {
+        setSuccess(`Campaign "${name}" scheduled successfully!`)
+      }
       setShowWizard(false)
-      setSuccess(`Campaign "${name}" scheduled successfully!`)
       loadCampaigns()
     } catch (e) {
       setError((e as Error).message)
@@ -188,14 +194,14 @@ export function Broadcasts() {
             onClick={() => setShowPricingCalculator(true)}
             className="rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-xs"
           >
-            💰 Pricing Calculator
+            <span className="flex items-center gap-1.5"><DollarSign className="h-3.5 w-3.5 text-emerald-600" /> Pricing Calculator</span>
           </button>
 
           <button
             onClick={handleSeedDefaults}
             className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 shadow-xs"
           >
-            ⚡ Load Example Data
+            Load Example Data
           </button>
 
           <button
@@ -203,14 +209,14 @@ export function Broadcasts() {
             className="rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-800 hover:bg-blue-100 shadow-xs"
             title="Checks and sends any campaigns whose scheduled time has arrived"
           >
-            🕒 Process Due
+            <span className="flex items-center gap-1.5"><History className="h-3.5 w-3.5" /> Process Due</span>
           </button>
 
           <button
             onClick={() => setShowWizard(true)}
             className="rounded-md bg-[var(--color-accent)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] shadow-xs"
           >
-            + Create campaign
+            <span className="flex items-center gap-1"><Plus className="h-3.5 w-3.5" /> Create campaign</span>
           </button>
         </div>
       </div>
@@ -220,7 +226,7 @@ export function Broadcasts() {
         <div className="flex items-center justify-between rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           <span>{error}</span>
           <button onClick={() => setError(null)} className="font-bold">
-            ×
+            <X className="h-4 w-4" />
           </button>
         </div>
       )}
@@ -228,7 +234,7 @@ export function Broadcasts() {
         <div className="flex items-center justify-between rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           <span>{success}</span>
           <button onClick={() => setSuccess(null)} className="font-bold">
-            ×
+            <X className="h-4 w-4" />
           </button>
         </div>
       )}
@@ -248,7 +254,7 @@ export function Broadcasts() {
           <div className="py-12 text-center text-sm text-[var(--color-ink-muted)]">Loading campaigns...</div>
         ) : campaigns.length === 0 ? (
           <div className="py-12 text-center">
-            <span className="text-3xl">📢</span>
+            <Megaphone className="h-10 w-10 text-indigo-600 mx-auto" />
             <h3 className="mt-2 text-sm font-semibold text-[var(--color-ink)]">No campaigns yet</h3>
             <p className="mt-1 text-xs text-[var(--color-ink-muted)] max-w-sm mx-auto">
               Create your first WhatsApp campaign in 3 easy steps: audience, message, and schedule.
@@ -320,23 +326,76 @@ export function Broadcasts() {
                     <span className="font-medium text-[var(--color-ink-muted)]">Tags: {c.tagName}</span>
                   </p>
 
-                  {/* Delivery Stats Bar */}
-                  <div className="mt-2.5 flex items-center gap-4 text-xs text-[var(--color-ink-muted)]">
-                    <span>
-                      Audience: <strong>{c.audienceCount || c.sentCount}</strong>
-                    </span>
-                    <span>
-                      Delivered: <strong>{c.deliveredCount}</strong>
-                    </span>
-                    <span>
-                      Read: <strong>{c.readCount}</strong>
-                    </span>
-                    {c.failedCount > 0 && (
-                      <span className="text-rose-600">
-                        Failed: <strong>{c.failedCount}</strong>
-                      </span>
-                    )}
-                  </div>
+                  {/* Real Delivery Stats Bar with Delivery Rates */}
+                  {(() => {
+                    const audience = c.audienceCount || c.sentCount || 0
+                    const delivered = c.deliveredCount || 0
+                    const sent = c.sentCount || 0
+                    const read = c.readCount || 0
+                    const failed = c.failedCount || 0
+                    const deliveryRate = audience > 0 ? Math.round((delivered / audience) * 100) : (sent > 0 ? Math.round((delivered / sent) * 100) : 0)
+                    const readRate = delivered > 0 ? Math.round((read / delivered) * 100) : 0
+                    return (
+                      <div className="mt-2.5 space-y-2">
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--color-ink-muted)]">
+                          <span>
+                            Audience: <strong className="text-[var(--color-ink)]">{audience}</strong>
+                          </span>
+                          <span>·</span>
+                          <span>
+                            Sent: <strong className="text-[var(--color-ink)]">{sent}</strong>
+                          </span>
+                          <span>·</span>
+                          <span>
+                            Delivered: <strong className="text-emerald-700">{delivered}</strong>
+                          </span>
+                          <span>·</span>
+                          <span>
+                            Read: <strong className="text-indigo-700">{read}</strong>
+                          </span>
+                          {failed > 0 && (
+                            <>
+                              <span>·</span>
+                              <span className="text-rose-600 font-medium">
+                                Failed: <strong>{failed}</strong>
+                              </span>
+                            </>
+                          )}
+                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800">
+                            {deliveryRate}% Delivery Rate
+                          </span>
+                          {delivered > 0 && (
+                            <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-bold text-indigo-800">
+                              {readRate}% Read Rate
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Mini Delivery Breakdown Bar */}
+                        {audience > 0 && (
+                          <div className="h-1.5 w-full max-w-xs rounded-full bg-slate-200 overflow-hidden flex">
+                            <div
+                              style={{ width: `${Math.min(100, Math.round((read / audience) * 100))}%` }}
+                              className="bg-indigo-600 h-full"
+                              title={`Read: ${read}`}
+                            />
+                            <div
+                              style={{ width: `${Math.min(100, Math.max(0, Math.round(((delivered - read) / audience) * 100)))}%` }}
+                              className="bg-emerald-500 h-full"
+                              title={`Delivered (unread): ${delivered - read}`}
+                            />
+                            {failed > 0 && (
+                              <div
+                                style={{ width: `${Math.min(100, Math.round((failed / audience) * 100))}%` }}
+                                className="bg-rose-500 h-full"
+                                title={`Failed: ${failed}`}
+                              />
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
                 </div>
 
                 <div className="flex items-center gap-2 self-start md:self-center">
@@ -376,7 +435,7 @@ export function Broadcasts() {
                 onClick={() => setShowWizard(false)}
                 className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] text-xl font-bold"
               >
-                ×
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -420,13 +479,14 @@ export function Broadcasts() {
                       key={t}
                       className="inline-flex items-center gap-1 rounded bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-800"
                     >
-                      <span>🏷️ {t}</span>
+                      <Tag className="h-3 w-3" />
+                      <span>{t}</span>
                       <button
                         type="button"
                         onClick={() => removeTag(t)}
                         className="ml-1 text-blue-600 hover:text-blue-900 font-bold"
                       >
-                        ×
+                        <X className="h-4 w-4" />
                       </button>
                     </span>
                   ))}
@@ -538,7 +598,7 @@ export function Broadcasts() {
                       </p>
                       <div className="mt-2 flex items-center justify-end gap-1 text-[10px] text-[var(--color-ink-faint)]">
                         <span>10:00 AM</span>
-                        <span className="text-blue-500 font-bold">✓✓</span>
+                        <CheckCheck className="h-3.5 w-3.5 text-blue-500" />
                       </div>
                     </div>
                   </div>
@@ -640,7 +700,7 @@ export function Broadcasts() {
                 }}
                 className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] text-xl font-bold"
               >
-                ×
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -783,7 +843,7 @@ export function Broadcasts() {
                                 <span className="ml-2 text-[var(--color-ink-faint)]">{r.contactPhone}</span>
                                 {r.error && (
                                   <p className="text-[11px] text-rose-600 font-medium mt-0.5">
-                                    ⚠️ {r.error}
+                                    <span className="flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-rose-500 shrink-0" /> {r.error}</span>
                                   </p>
                                 )}
                               </div>
@@ -792,17 +852,17 @@ export function Broadcasts() {
                             <div className="flex items-center gap-3">
                               {r.status === 'read' && (
                                 <span className="rounded bg-indigo-100 px-2 py-0.5 font-semibold text-indigo-800">
-                                  Read ✓✓
+                                  <span className="flex items-center gap-1">Read <CheckCheck className="h-3 w-3 text-indigo-700" /></span>
                                 </span>
                               )}
                               {r.status === 'delivered' && (
                                 <span className="rounded bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-800">
-                                  Delivered ✓✓
+                                  <span className="flex items-center gap-1">Delivered <CheckCheck className="h-3 w-3 text-emerald-700" /></span>
                                 </span>
                               )}
                               {r.status === 'sent' && (
                                 <span className="rounded bg-blue-100 px-2 py-0.5 font-semibold text-blue-800">
-                                  Sent ✓
+                                  <span className="flex items-center gap-1">Sent <Check className="h-3 w-3 text-blue-700" /></span>
                                 </span>
                               )}
                               {r.status === 'failed' && (
@@ -850,7 +910,7 @@ export function Broadcasts() {
                 onClick={() => setShowPricingCalculator(false)}
                 className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] text-xl font-bold"
               >
-                ×
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -865,14 +925,14 @@ export function Broadcasts() {
                     onChange={(e) => setCalcRegion(e.target.value)}
                     className="w-full rounded-md border border-slate-300 p-2 text-xs font-medium"
                   >
-                    <option value="US">United States 🇺🇸</option>
-                    <option value="UK">United Kingdom 🇬🇧</option>
-                    <option value="EU">European Union 🇪🇺</option>
-                    <option value="IN">India 🇮🇳</option>
-                    <option value="BR">Brazil 🇧🇷</option>
-                    <option value="MX">Mexico 🇲🇽</option>
-                    <option value="UAE">United Arab Emirates 🇦🇪</option>
-                    <option value="ROW">Rest of World 🌐</option>
+                    <option value="US">United States (US)</option>
+                    <option value="UK">United Kingdom (UK)</option>
+                    <option value="EU">European Union (EU)</option>
+                    <option value="IN">India (IN)</option>
+                    <option value="BR">Brazil (BR)</option>
+                    <option value="MX">Mexico (MX)</option>
+                    <option value="UAE">United Arab Emirates (UAE)</option>
+                    <option value="ROW">Rest of World</option>
                   </select>
                 </div>
 
@@ -930,7 +990,7 @@ export function Broadcasts() {
                     <span>~${pricingEstimate.estimatedRoiUsd.toLocaleString()} USD</span>
                   </div>
                   <p className="text-[11px] text-[var(--color-ink-muted)] pt-1">
-                    💡 {pricingEstimate.freeServiceTierIncluded}
+                    <span className="flex items-center gap-1.5"><Lightbulb className="h-4 w-4 text-amber-500 shrink-0" /> {pricingEstimate.freeServiceTierIncluded}</span>
                   </p>
                 </div>
               )}
@@ -950,7 +1010,7 @@ export function Broadcasts() {
           <details className="pt-2 group cursor-pointer">
             <summary className="font-semibold text-slate-800 flex items-center justify-between list-none">
               <span>What do I need to send WhatsApp campaigns?</span>
-              <span className="text-[var(--color-ink-faint)] group-open:rotate-180 transition-transform">⌄</span>
+              <ChevronDown className="h-4 w-4 text-[var(--color-ink-faint)] group-open:rotate-180 transition-transform" />
             </summary>
             <p className="mt-2 text-[var(--color-ink-muted)] leading-relaxed pl-2">
               You need a verified WhatsApp Business account connected through the Meta Cloud API. In
@@ -961,7 +1021,7 @@ export function Broadcasts() {
           <details className="pt-3 group cursor-pointer">
             <summary className="font-semibold text-slate-800 flex items-center justify-between list-none">
               <span>Can I write any message I want in a WhatsApp campaign?</span>
-              <span className="text-[var(--color-ink-faint)] group-open:rotate-180 transition-transform">⌄</span>
+              <ChevronDown className="h-4 w-4 text-[var(--color-ink-faint)] group-open:rotate-180 transition-transform" />
             </summary>
             <p className="mt-2 text-[var(--color-ink-muted)] leading-relaxed pl-2">
               WhatsApp requires bulk marketing messages sent outside the 24-hour service window to use
@@ -973,7 +1033,7 @@ export function Broadcasts() {
           <details className="pt-3 group cursor-pointer">
             <summary className="font-semibold text-slate-800 flex items-center justify-between list-none">
               <span>How do I choose who receives a WhatsApp campaign?</span>
-              <span className="text-[var(--color-ink-faint)] group-open:rotate-180 transition-transform">⌄</span>
+              <ChevronDown className="h-4 w-4 text-[var(--color-ink-faint)] group-open:rotate-180 transition-transform" />
             </summary>
             <p className="mt-2 text-[var(--color-ink-muted)] leading-relaxed pl-2">
               Select one or multiple contact tags (e.g. <code>vip-customers</code>, <code>newsletter</code>).
@@ -985,7 +1045,7 @@ export function Broadcasts() {
           <details className="pt-3 group cursor-pointer">
             <summary className="font-semibold text-slate-800 flex items-center justify-between list-none">
               <span>Can I edit or reschedule a WhatsApp campaign?</span>
-              <span className="text-[var(--color-ink-faint)] group-open:rotate-180 transition-transform">⌄</span>
+              <ChevronDown className="h-4 w-4 text-[var(--color-ink-faint)] group-open:rotate-180 transition-transform" />
             </summary>
             <p className="mt-2 text-[var(--color-ink-muted)] leading-relaxed pl-2">
               Yes. Until dispatch processing begins, you can update the audience, template parameters,
@@ -996,7 +1056,7 @@ export function Broadcasts() {
           <details className="pt-3 group cursor-pointer">
             <summary className="font-semibold text-slate-800 flex items-center justify-between list-none">
               <span>What happens when a customer replies to a campaign?</span>
-              <span className="text-[var(--color-ink-faint)] group-open:rotate-180 transition-transform">⌄</span>
+              <ChevronDown className="h-4 w-4 text-[var(--color-ink-faint)] group-open:rotate-180 transition-transform" />
             </summary>
             <p className="mt-2 text-[var(--color-ink-muted)] leading-relaxed pl-2">
               The reply lands directly in your shared omnichannel inbox. The conversation shows the
