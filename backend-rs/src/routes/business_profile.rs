@@ -39,17 +39,17 @@ pub async fn update_business_profile(
     let now = Utc::now().to_rfc3339();
 
     // 1. Fetch existing integration settings or create default
-    let biz_name = payload.business_name.unwrap_or_else(|| "Newax Technologies".to_string());
+    let biz_name = payload.business_name.unwrap_or_default();
     let verified_name = payload.verified_name.unwrap_or_else(|| biz_name.clone());
-    let display_phone = payload.display_phone.unwrap_or_else(|| "+92 370 9861100".to_string());
+    let display_phone = payload.display_phone.unwrap_or_default();
     let desc = payload.description.unwrap_or_default();
-    let guidelines = payload.agent_guidelines.unwrap_or_else(|| "Be polite, concise, professional, and helpful.".to_string());
+    let guidelines = payload.agent_guidelines.unwrap_or_default();
     let auto_reply = payload.auto_reply_enabled.unwrap_or(true);
-    let hours_enabled = payload.business_hours_enabled.unwrap_or(true);
+    let hours_enabled = payload.business_hours_enabled.unwrap_or(false);
     let hours_start = payload.business_hours_start.unwrap_or(9);
     let hours_end = payload.business_hours_end.unwrap_or(18);
-    let tz = payload.business_timezone.unwrap_or_else(|| "Asia/Karachi".to_string());
-    let away = payload.away_message.unwrap_or_else(|| "Thanks for contacting us! We're currently outside our working hours. We'll reply as soon as we reopen.".to_string());
+    let tz = payload.business_timezone.unwrap_or_else(|| "UTC".to_string());
+    let away = payload.away_message.unwrap_or_default();
 
     // Update integration_settings in database
     let _ = sqlx::query(
@@ -88,8 +88,8 @@ pub async fn update_business_profile(
     let about = payload.about.unwrap_or_default();
     let addr = payload.address.unwrap_or_default();
     let email_val = payload.email.unwrap_or_default();
-    let vertical_val = payload.vertical.unwrap_or_else(|| "PROF_SERVICES".to_string());
-    let websites_val = payload.websites.unwrap_or_else(|| vec!["https://newax.co/".to_string()]);
+    let vertical_val = payload.vertical.unwrap_or_default();
+    let websites_val = payload.websites.unwrap_or_default();
     let pic_url = payload.profile_picture_url.unwrap_or_default();
 
     #[derive(sqlx::FromRow)]
@@ -289,10 +289,10 @@ async fn fetch_full_business_profile(state: &AppState) -> Value {
     .unwrap_or_default();
 
     let mut stored_about = String::new();
-    let mut stored_email = "hello@newax.co".to_string();
-    let mut stored_address = "Building 9, College Road, Township, Lahore, Pakistan, 54700".to_string();
-    let mut stored_vertical = "PROF_SERVICES".to_string();
-    let mut stored_websites = vec!["https://newax.co/".to_string()];
+    let mut stored_email = String::new();
+    let mut stored_address = String::new();
+    let mut stored_vertical = String::new();
+    let mut stored_websites = vec![];
     let mut stored_pic_url = String::new();
 
     if let Some(inbox) = wa_inbox {
@@ -342,7 +342,7 @@ async fn fetch_full_business_profile(state: &AppState) -> Value {
 
     let biz_name = settings.as_ref()
         .and_then(|s| s.business_name.clone())
-        .unwrap_or_else(|| "Newax Technologies".to_string());
+        .unwrap_or_default();
 
     let verified_name = if !meta_profile.verified_name.is_empty() && meta_profile.verified_name != "Not Configured" {
         meta_profile.verified_name
@@ -357,32 +357,32 @@ async fn fetch_full_business_profile(state: &AppState) -> Value {
     } else {
         settings.as_ref()
             .and_then(|s| s.whatsapp_display_number.clone())
-            .unwrap_or_else(|| "+92 370 9861100".to_string())
+            .unwrap_or_default()
     };
 
     let desc = settings.as_ref()
         .and_then(|s| s.business_description.clone())
-        .unwrap_or_else(|| "Newax Technologies is an enterprise automation and custom digital infrastructure service that helps mid-to-large organizations transform manual operations.".to_string());
+        .unwrap_or_default();
 
     let guidelines = settings.as_ref()
         .and_then(|s| s.agent_guidelines.clone())
-        .unwrap_or_else(|| "Be polite, concise, professional, and helpful.".to_string());
+        .unwrap_or_default();
 
     let auto_reply = settings.as_ref().and_then(|s| s.auto_reply_enabled).unwrap_or(true);
-    let hours_enabled = settings.as_ref().and_then(|s| s.business_hours_enabled).unwrap_or(true);
+    let hours_enabled = settings.as_ref().and_then(|s| s.business_hours_enabled).unwrap_or(false);
     let hours_start = settings.as_ref().and_then(|s| s.business_hours_start).unwrap_or(9);
     let hours_end = settings.as_ref().and_then(|s| s.business_hours_end).unwrap_or(18);
-    let tz = settings.as_ref().and_then(|s| s.business_timezone.clone()).unwrap_or_else(|| "Asia/Karachi".to_string());
-    let away = settings.as_ref().and_then(|s| s.away_message.clone()).unwrap_or_else(|| "Thanks for reaching out! Our team is currently outside working hours.".to_string());
-    let waba_id = settings.as_ref().and_then(|s| s.meta_waba_id.clone()).unwrap_or_else(|| "990754184075228".to_string());
-    let verified_at = settings.as_ref().and_then(|s| s.whatsapp_verified_at.clone()).unwrap_or_else(|| Utc::now().to_rfc3339());
+    let tz = settings.as_ref().and_then(|s| s.business_timezone.clone()).unwrap_or_else(|| "UTC".to_string());
+    let away = settings.as_ref().and_then(|s| s.away_message.clone()).unwrap_or_default();
+    let waba_id = settings.as_ref().and_then(|s| s.meta_waba_id.clone()).unwrap_or_default();
+    let verified_at = settings.as_ref().and_then(|s| s.whatsapp_verified_at.clone()).unwrap_or_default();
 
     json!({
         "businessName": biz_name,
         "verifiedName": verified_name,
         "displayPhone": display_phone,
         "isVerified": meta_profile.is_verified,
-        "verificationStatus": "Official Business Account",
+        "verificationStatus": if meta_profile.is_verified { "Official Business Account" } else { "Unverified" },
         "qualityRating": meta_profile.quality_rating,
         "messagingLimit": meta_profile.messaging_limit_tier,
         "tier": "Standard Account Limit",
