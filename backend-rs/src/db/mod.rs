@@ -9,6 +9,7 @@ pub struct AppState {
     pub db: DbPool,
     pub config: Arc<crate::config::Config>,
     pub http_client: reqwest::Client,
+    pub nid: Arc<crate::services::nid_client::NidClient>,
 }
 
 pub async fn init_db(database_url: &str) -> Result<DbPool, sqlx::Error> {

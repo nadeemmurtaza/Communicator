@@ -1,4 +1,5 @@
 pub mod admin_system;
+pub mod auth;
 pub mod automation;
 pub mod broadcasts;
 pub mod business_profile;

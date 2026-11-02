@@ -32,7 +32,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("Starting Communicator Rust Backend (Desktop + Web Unified Engine)...");
 
-    let config = Arc::new(Config::from_env());
+    let mut config = Config::from_env();
+    let vault_secrets = services::vault_loader::load_secrets_from_nid_vault(&config).await;
+    services::vault_loader::apply_vault_secrets(&mut config, &vault_secrets);
+    let config = Arc::new(config);
+
     let db = init_db(&config.database_url).await?;
     let http_client = reqwest::Client::builder().build()?;
 
@@ -40,6 +44,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         db,
         config: Arc::clone(&config),
         http_client,
+        nid: Arc::new(services::nid_client::NidClient::from_config(&config)),
     };
 
     // CORS configuration
@@ -52,6 +57,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let api_routes = Router::new()
         // Health
         .route("/health", get(routes::health::health_check))
+
+        // nID identity provider (Login with nID)
+        .route("/auth/nid/start", get(routes::auth::login_with_nid_start))
+        .route("/auth/nid/callback", get(routes::auth::login_with_nid_callback))
+        .route("/auth/callback", get(routes::auth::login_with_nid_callback))
+        .route("/auth/me", get(routes::auth::get_current_user_profile))
         
         // Business Profile
         .route("/business-profile", get(routes::business_profile::get_business_profile).post(routes::business_profile::update_business_profile))
