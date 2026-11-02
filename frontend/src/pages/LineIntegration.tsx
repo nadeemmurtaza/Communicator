@@ -1,3 +1,4 @@
+import { Zap, Key, Bot, AlertCircle, AlertTriangle, CheckCircle2, RefreshCw, Send, Activity, ArrowLeft, Check, Lightbulb, Lock, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -5,6 +6,7 @@ import {
   type LineChannelData,
   type SocialEvent,
 } from '../lib/api'
+import { LineIcon } from '../components/icons/BrandIcons'
 
 export function LineIntegration() {
   const [data, setData] = useState<LineChannelData | null>(null)
@@ -25,7 +27,7 @@ export function LineIntegration() {
   const [channelId, setChannelId] = useState('1657890123')
   const [channelSecret, setChannelSecret] = useState('')
   const [channelAccessToken, setChannelAccessToken] = useState('')
-  const [lineAccountId, setLineAccountId] = useState('@bayworks')
+  const [lineAccountId, setLineAccountId] = useState('')
 
   // Quick Replies State
   const [quickReplies, setQuickReplies] = useState<Array<{ label: string; text: string }>>([
@@ -39,7 +41,7 @@ export function LineIntegration() {
   // Automations & Schedule State
   const [greetingEnabled, setGreetingEnabled] = useState(true)
   const [greetingMessage, setGreetingMessage] = useState(
-    '👋 Welcome to Bay Works LINE Official Account! How can our support team assist you today?'
+    'Welcome to LINE Official Account! How can our support team assist you today?'
   )
   const [outOfOfficeEnabled, setOutOfOfficeEnabled] = useState(false)
   const [outOfOfficeMessage, setOutOfOfficeMessage] = useState(
@@ -55,7 +57,7 @@ export function LineIntegration() {
   const [testUserId, setTestUserId] = useState('U4af4980629fbcc4c3fffed0cfa255d6')
   const [testRecipientName, setTestRecipientName] = useState('Kenji Sato')
   const [testMessage, setTestMessage] = useState(
-    'Hello! This is a test push notification from your Bay Works LINE Messaging API integration.'
+    'Hello! This is a test push notification from your LINE Messaging API integration.'
   )
   const [testResult, setTestResult] = useState<{ messageId: string; message: string } | null>(null)
 
@@ -76,7 +78,8 @@ export function LineIntegration() {
 
       setInboxName(channelData.inbox.name)
       setChannelId(channelData.accountProfile?.channelId || channelData.inbox.credentials?.channelId || '1657890123')
-      setLineAccountId(channelData.accountProfile?.lineAccountId || channelData.inbox.credentials?.lineAccountId || '@bayworks')
+      const rawLine = channelData.accountProfile?.lineAccountId || channelData.inbox.credentials?.lineAccountId || ''
+      setLineAccountId(rawLine === '@bayworks' ? '' : rawLine)
 
       if (channelData.quickReplies && channelData.quickReplies.length > 0) {
         setQuickReplies(channelData.quickReplies)
@@ -202,6 +205,8 @@ export function LineIntegration() {
     )
   }
 
+  const isConnected = Boolean(data?.health?.isConnected && lineAccountId && lineAccountId !== '@bayworks' && channelId)
+
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6">
       {/* Top Banner Navigation */}
@@ -209,17 +214,31 @@ export function LineIntegration() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Link to="/channels" className="text-sm font-medium text-emerald-600 hover:text-emerald-800">
-              ← Back to Channels Hub
+              <ArrowLeft className="h-4 w-4 inline mr-1" />
+              <span>Back to Channels Hub</span>
             </Link>
             <span className="text-gray-300">/</span>
             <span className="text-sm font-medium text-gray-500">LINE Messaging</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-green-600 flex items-center justify-center text-white shadow-sm font-bold text-xl">
-              🟢
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-green-600 flex items-center justify-center text-white shadow-sm">
+              <LineIcon className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">LINE Messaging API Integration</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-gray-900 tracking-tight">LINE Messaging API Integration</h1>
+                {isConnected ? (
+                  <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Connected &amp; Healthy
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 border border-amber-200 flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                    Not Configured
+                  </span>
+                )}
+              </div>
               <p className="text-sm text-gray-500">
                 Official LINE Messaging API connector with push messaging, HMAC-SHA256 webhook signatures, and quick reply buttons.
               </p>
@@ -233,7 +252,7 @@ export function LineIntegration() {
             disabled={verifying}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 shadow-sm transition disabled:opacity-50"
           >
-            {verifying ? 'Checking LINE...' : '⚡ Test Connection'}
+            {verifying ? 'Checking LINE...' : <span className="flex items-center gap-1"><Zap className="h-3.5 w-3.5 text-amber-500" /> Test Connection</span>}
           </button>
           <button
             onClick={handleSaveSettings}
@@ -245,15 +264,28 @@ export function LineIntegration() {
         </div>
       </div>
 
+      {/* Real Connection Status Banner */}
+      {!isConnected && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <h4 className="text-sm font-semibold text-amber-900">Channel Not Connected</h4>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Please enter your provider API credentials below and click Save Configuration to activate.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Alert Notices */}
       {success && (
         <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-sm flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span>✅</span>
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             <span>{success}</span>
           </div>
           <button onClick={() => setSuccess(null)} className="text-emerald-600 hover:text-emerald-900 font-bold">
-            ×
+            <X className="h-4 w-4" />
           </button>
         </div>
       )}
@@ -261,11 +293,11 @@ export function LineIntegration() {
       {error && (
         <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-sm flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span>⚠️</span>
+            <AlertCircle className="h-4 w-4 text-rose-600" />
             <span>{error}</span>
           </div>
           <button onClick={() => setError(null)} className="text-rose-600 hover:text-rose-900 font-bold">
-            ×
+            <X className="h-4 w-4" />
           </button>
         </div>
       )}
@@ -275,9 +307,11 @@ export function LineIntegration() {
         <div className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
           <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Official Account</div>
           <div className="flex items-center justify-between">
-            <span className="text-lg font-bold text-gray-900">{lineAccountId || '@bayworks'}</span>
-            <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-              Verified
+            <span className="text-lg font-bold text-gray-900">{lineAccountId || 'Not Configured'}</span>
+            <span className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${
+              isConnected ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+            }`}>
+              {isConnected ? 'Connected' : 'Not Configured'}
             </span>
           </div>
           <p className="text-xs text-gray-500 mt-1">Channel ID: {channelId}</p>
@@ -321,11 +355,11 @@ export function LineIntegration() {
       <div className="border-b border-gray-200">
         <nav className="flex space-x-8">
           {[
-            { id: 'credentials', label: 'Channel Credentials & IDs', icon: '🔑' },
-            { id: 'webhooks', label: 'Webhooks & HMAC Security', icon: '⚡' },
-            { id: 'quick_replies', label: 'Quick Replies & Menus', icon: '💡' },
-            { id: 'automations', label: 'Automations & Schedule', icon: '🤖' },
-            { id: 'diagnostics', label: 'Diagnostic Sender & Events', icon: '📡' },
+            { id: 'credentials', label: 'Channel Credentials & IDs', icon: Key },
+            { id: 'webhooks', label: 'Webhooks & HMAC Security', icon: Zap },
+            { id: 'quick_replies', label: 'Quick Replies & Menus', icon: Lightbulb },
+            { id: 'automations', label: 'Automations & Schedule', icon: Bot },
+            { id: 'diagnostics', label: 'Diagnostic Sender & Events', icon: Activity },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -336,7 +370,7 @@ export function LineIntegration() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <span>{tab.icon}</span>
+              <tab.icon className="h-4 w-4" />
               <span>{tab.label}</span>
             </button>
           ))}
@@ -372,7 +406,7 @@ export function LineIntegration() {
                 value={lineAccountId}
                 onChange={(e) => setLineAccountId(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                placeholder="e.g. @bayworks"
+                placeholder="e.g. @your_line_account"
               />
             </div>
 
@@ -424,7 +458,7 @@ export function LineIntegration() {
           <div>
             <h3 className="text-base font-semibold text-gray-900">LINE Webhook Settings</h3>
             <p className="text-sm text-gray-500 mt-0.5">
-              Paste this URL into your LINE Developers Console under <strong>Messaging API → Webhook settings</strong>.
+              Paste this URL into your LINE Developers Console under <strong>Messaging API &gt; Webhook settings</strong>.
             </p>
           </div>
 
@@ -447,14 +481,14 @@ export function LineIntegration() {
                   }
                   className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 transition"
                 >
-                  {copiedKey === 'callback' ? '✓ Copied' : 'Copy'}
+                  {copiedKey === 'callback' ? <span className="inline-flex items-center gap-1"><Check className="h-4 w-4 text-emerald-600" /> Copied</span> : 'Copy'}
                 </button>
               </div>
             </div>
 
             <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl space-y-2">
               <div className="flex items-center gap-2">
-                <span className="text-emerald-700 font-bold">🔒 Cryptographic Verification</span>
+                <span className="text-emerald-700 font-bold flex items-center gap-1.5"><Lock className="h-4 w-4" /> Cryptographic Verification</span>
                 <span className="px-2 py-0.5 text-xs font-semibold rounded bg-emerald-100 text-emerald-800">
                   X-Line-Signature
                 </span>
@@ -709,7 +743,7 @@ export function LineIntegration() {
                 disabled={sendingTest || !testUserId.trim() || !testMessage.trim()}
                 className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow-sm transition disabled:opacity-50 flex items-center gap-2"
               >
-                {sendingTest ? 'Dispatching...' : '🚀 Send Diagnostic Push Message'}
+                {sendingTest ? 'Dispatching...' : <span className="flex items-center gap-1.5"><Send className="h-3.5 w-3.5" /> Send Diagnostic Push Message</span>}
               </button>
 
               {testResult && (
@@ -729,9 +763,9 @@ export function LineIntegration() {
               </div>
               <button
                 onClick={async () => setEvents(await api.listLineEvents())}
-                className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+                className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition flex items-center gap-1"
               >
-                🔄 Refresh
+                <RefreshCw className="h-3 w-3" /> Refresh
               </button>
             </div>
 
@@ -769,7 +803,7 @@ export function LineIntegration() {
                         <td className="py-3 px-4 font-medium text-gray-900">{ev.senderName}</td>
                         <td className="py-3 px-4 text-gray-700 max-w-xs truncate">{ev.body}</td>
                         <td className="py-3 px-4">
-                          <span className="text-xs font-medium text-emerald-600">● {ev.status}</span>
+                          <span className="text-xs font-medium text-emerald-600 inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />{ev.status}</span>
                         </td>
                         <td className="py-3 px-4 font-mono text-xs text-gray-400">
                           {ev.providerMessageId ? ev.providerMessageId.slice(0, 16) + '...' : '—'}

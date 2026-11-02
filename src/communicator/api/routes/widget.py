@@ -83,7 +83,7 @@ async def get_widget_config(
         "websiteToken": creds.get("websiteToken", token),
         "websiteDomain": creds.get("websiteDomain", "bayworks.com"),
         "widgetColor": creds.get("widgetColor", "#1570EF"),
-        "greetingTitle": creds.get("greetingTitle", "Hi there! 👋"),
+        "greetingTitle": creds.get("greetingTitle", "Hi there!"),
         "greetingTagline": creds.get("greetingTagline", "We typically reply in a few minutes."),
         "widgetPosition": creds.get("widgetPosition", "right"),
         "launcherStyle": creds.get("launcherStyle", "round_bubble"),

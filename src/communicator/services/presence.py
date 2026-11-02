@@ -133,7 +133,7 @@ class PresenceManager:
         elif viewers:
             names = ", ".join(v.agent_name for v in viewers)
             warning_message = (
-                f"👀 {names} is viewing this conversation. Overlapping replies will be warned."
+                f"{names} is viewing this conversation. Overlapping replies will be warned."
             )
             severity = "warning"
 

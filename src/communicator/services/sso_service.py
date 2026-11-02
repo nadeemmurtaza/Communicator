@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 from datetime import UTC, datetime
 from typing import Any
 
+from defusedxml.ElementTree import fromstring as safe_xml_fromstring
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -249,7 +250,9 @@ def parse_saml_response_xml(saml_xml: str) -> dict[str, Any]:
     Resilient to namespace prefixes.
     """
     try:
-        root = ET.fromstring(saml_xml)
+        # defusedxml rejects entity expansion (XML bomb) and external entity
+        # references -- a SAML response is attacker-influenceable input.
+        root = safe_xml_fromstring(saml_xml)
     except Exception as e:
         raise ValueError(f"Failed to parse SAML XML payload: {e}") from e
 

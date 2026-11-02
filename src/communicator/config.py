@@ -46,6 +46,31 @@ class Settings(BaseSettings):
     meta_webhook_verify_token: str = ""
     meta_app_secret: str = ""
 
+    # Instagram API with Instagram Login -- a separate app ID/secret from the
+    # main Meta app, used for the business-login OAuth exchange that
+    # connects an Instagram Professional account (/auth/instagram/callback).
+    meta_instagram_app_id: str = ""
+    meta_instagram_app_secret: str = ""
+    meta_instagram_redirect_uri: str = ""
+
+    # nID -- the ecosystem's single identity provider. Communicator never runs
+    # its own competing auth; it's a "Login with nID" relying party. When nID
+    # isn't reachable (local dev, or nID not yet stood up), nid_allow_mock_auth
+    # lets the auth code exchange fall back to a deterministic dev identity
+    # instead of failing closed.
+    nid_base_url: str = "http://localhost:4000"
+    nid_client_id: str = ""
+    nid_client_secret: str = ""
+    # Points at the SPA's own route, not the backend JSON endpoint directly --
+    # nID redirects the browser here, and the frontend's NidCallback page
+    # calls /api/v1/auth/nid/callback itself and stores the resulting
+    # session before routing on, so the browser never lands on raw JSON.
+    nid_redirect_uri: str = "http://localhost:8000/auth/nid/callback"
+    nid_vault_addr: str = "http://localhost:4000"
+    nid_vault_role_id: str = ""
+    nid_vault_secret_id: str = ""
+    nid_allow_mock_auth: bool = False
+
     # Shared secret Postmark's inbound-webhook URL must include as
     # ?token=... -- Postmark doesn't sign inbound webhook requests, unlike
     # Twilio, so this is the only thing standing between the endpoint and

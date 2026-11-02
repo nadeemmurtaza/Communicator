@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from communicator.vault_loader import load_secrets_from_nid_vault
 
@@ -18,6 +20,7 @@ from communicator.api.routes import (
     audit_logs,
     automation,
     broadcasts,
+    business_profile,
     canned_responses,
     captain_ai,
     contacts,
@@ -25,15 +28,18 @@ from communicator.api.routes import (
     copilot_approvals,
     crypto_mesh,
     custom_attributes,
+    discovery,
     drafts,
     gateways,
     inboxes,
+    instagram_auth,
     issue_trackers,
     knowledge_base,
     live_proof,
     live_proof_ui,
     macros,
     nid_auth,
+    organizations,
     outgoing_webhooks,
     prechat,
     presence,
@@ -67,11 +73,6 @@ app = FastAPI(
 )
 
 
-@app.get("/", include_in_schema=False)
-async def root():
-    return RedirectResponse(url="/docs")
-
-
 @app.get("/api/v1/health")
 async def health_check():
     return {"status": "ok"}
@@ -79,6 +80,9 @@ async def health_check():
 
 # Webhooks authenticate themselves (Twilio signature / Postmark shared secret)
 app.include_router(webhooks.router, prefix="/api/v1")
+app.include_router(instagram_auth.router, prefix="/api/v1")
+app.include_router(nid_auth.router, prefix="/api/v1")
+app.include_router(organizations.router, prefix="/api/v1")
 app.include_router(widget.router, prefix="/api/v1")
 app.include_router(widget_customizer.router, prefix="/api/v1")
 app.include_router(prechat.router, prefix="/api/v1")
@@ -87,7 +91,9 @@ app.include_router(roles.router, prefix="/api/v1")
 app.include_router(sso.router, prefix="/api/v1/sso", tags=["sso"])
 app.include_router(translation.router, prefix="/api/v1")
 app.include_router(custom_attributes.router, prefix="/api/v1")
+app.include_router(discovery.router, prefix="/api/v1")
 app.include_router(inboxes.router, prefix="/api/v1")
+app.include_router(business_profile.router, prefix="/api/v1")
 app.include_router(drafts.router, prefix="/api/v1")
 app.include_router(services.router, prefix="/api/v1")
 app.include_router(conversations.router, prefix="/api/v1")
@@ -124,4 +130,30 @@ app.include_router(live_proof_ui.router)
 
 # Zero-Trust Crypto Mesh Ingress & nID Identity Auth
 app.include_router(crypto_mesh.router, prefix="/api/v1")
-app.include_router(nid_auth.router, prefix="/api/v1")
+
+# Built frontend (frontend/dist, from `npm run build`) -- served from the
+# same origin as the API so the Instagram OAuth redirect_uri, webhook URLs
+# etc. all point at one domain in production instead of needing a separate
+# static host. Mounted/registered last so it never shadows an /api/v1/* route.
+FRONTEND_DIST = Path(__file__).resolve().parents[3] / "frontend" / "dist"
+if (FRONTEND_DIST / "assets").is_dir():
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="frontend-assets")
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+async def spa(full_path: str):
+    """SPA fallback: any non-API, non-static path serves index.html and lets
+    react-router handle the route client-side.
+
+    index.html references the current build's hashed asset filenames, so it
+    must never be cached (by the browser or by Cloudflare's edge) -- a
+    cached index.html keeps pointing at a stale JS/CSS bundle after every
+    deploy until the cache expires. The hashed files under /assets are safe
+    to cache indefinitely since a new build always gets new filenames.
+    """
+    index = FRONTEND_DIST / "index.html"
+    if not index.is_file():
+        raise HTTPException(
+            status_code=404, detail="Frontend build not found. Run `npm run build`."
+        )
+    return FileResponse(index, headers={"Cache-Control": "no-store, must-revalidate"})

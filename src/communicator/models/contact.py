@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from communicator.models.contact_memory import ContactMemory
     from communicator.models.contact_note import ContactNote
     from communicator.models.conversation import Conversation
+    from communicator.models.customer import Customer
     from communicator.models.lead import Lead
     from communicator.models.tag import Tag
     from communicator.models.ticket import Ticket
@@ -52,6 +53,14 @@ class Contact(Base):
     __tablename__ = "contacts"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_key: Mapped[str] = mapped_column(
+        String(100), default="newax", nullable=False, index=True
+    )
+    # The person this channel identity belongs to -- shared across every
+    # channel they reach out on within this tenant. See models/customer.py.
+    customer_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("customers.id"), nullable=True, index=True
+    )
     lead_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("leads.id"), nullable=False, index=True)
     harvester_contact_point_id: Mapped[str] = mapped_column(
         String(64), default="", nullable=False, index=True
@@ -72,6 +81,7 @@ class Contact(Base):
     )
 
     lead: Mapped["Lead"] = relationship("Lead", back_populates="contacts")
+    customer: Mapped["Customer | None"] = relationship("Customer", back_populates="contacts")
     consent_records: Mapped[list["ConsentRecord"]] = relationship(
         "ConsentRecord", back_populates="contact", cascade="all, delete-orphan"
     )

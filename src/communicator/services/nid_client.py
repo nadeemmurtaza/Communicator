@@ -11,7 +11,9 @@ from __future__ import annotations
 
 import logging
 import secrets
+import time
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -19,32 +21,28 @@ from communicator.config import settings
 
 logger = logging.getLogger(__name__)
 
-import time
-
 # In-memory login state tracker (state -> record) with TTL
 _pending_states: dict[str, dict[str, Any]] = {}
 
-# Active validated sessions: access_token -> claims
+# Active verified sessions (token -> session_claims)
 _active_sessions: dict[str, dict[str, Any]] = {}
 
+STATE_TTL_SECONDS = 600  # 10 minutes
 
-def _prune_expired_states(max_age_seconds: int = 600) -> None:
+
+def _prune_expired_states() -> None:
     now = time.time()
-    expired = [
-        s
-        for s, data in _pending_states.items()
-        if now - data.get("created_at", 0) > max_age_seconds
-    ]
-    for s in expired:
-        _pending_states.pop(s, None)
+    expired = [k for k, v in _pending_states.items() if now - v.get("created_at", 0) > STATE_TTL_SECONDS]
+    for k in expired:
+        _pending_states.pop(k, None)
 
 
 class NidAuthError(Exception):
-    """Base exception for nID authentication errors."""
+    """Raised when an nID OAuth exchange or validation fails."""
 
 
 class NidClient:
-    """Client for interacting with nID OAuth2 and Secrets Vault APIs."""
+    """Client for interacting with nID's OAuth2 and Secrets Vault APIs."""
 
     def __init__(
         self,
@@ -53,31 +51,43 @@ class NidClient:
         client_secret: str | None = None,
         redirect_uri: str | None = None,
     ) -> None:
-        self.base_url = (base_url or settings.nid_base_url).rstrip("/")
-        self.client_id = client_id or settings.nid_client_id or "client_comm_default"
+        self.base_url = (base_url or settings.nid_base_url or "https://nid.newax.co").rstrip("/")
+        self.client_id = client_id or settings.nid_client_id or "client_communicator"
         self.client_secret = client_secret or settings.nid_client_secret or "secret_comm_default"
         self.redirect_uri = redirect_uri or settings.nid_redirect_uri
 
+    def _is_allowed_redirect_uri(self, candidate: str) -> bool:
+        """The anonymous /auth/nid/start endpoint lets a caller name a custom
+        redirect_uri (so the frontend's own callback page, not just the
+        backend's, can receive the code) -- a plain string-prefix check
+        like `startswith("http://localhost")` is bypassed by
+        `http://localhost.attacker.com`, which also starts with that
+        string. Parse the URI and compare scheme/hostname/port exactly."""
+        try:
+            parsed = urlsplit(candidate)
+        except ValueError:
+            return False
+        if parsed.hostname is None:
+            return False
+        if parsed.hostname == "localhost" and parsed.scheme in ("http", "https"):
+            return True
+        configured = urlsplit(self.redirect_uri)
+        return (
+            parsed.scheme == configured.scheme
+            and parsed.hostname == configured.hostname
+            and parsed.port == configured.port
+        )
+
     async def start_login(self, custom_redirect_uri: str | None = None) -> dict[str, str]:
-        """
-        Initiates a 'Login with nID' session.
-        Registers the request with nID and receives the authorize URL and poll token.
-        """
+        """Initiates a 'Login with nID' session and returns the authorize URL."""
         _prune_expired_states()
         state = secrets.token_hex(16)
 
-        # Validate redirect URI against configured allowed origins
         redirect_uri = self.redirect_uri
-        if custom_redirect_uri and custom_redirect_uri.startswith(
-            ("http://localhost", "https://localhost", self.redirect_uri)
-        ):
+        if custom_redirect_uri and self._is_allowed_redirect_uri(custom_redirect_uri):
             redirect_uri = custom_redirect_uri
 
-        req_payload = {
-            "clientId": self.client_id,
-            "redirectUri": redirect_uri,
-            "state": state,
-        }
+        req_payload = {"clientId": self.client_id, "redirectUri": redirect_uri, "state": state}
 
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
@@ -90,89 +100,76 @@ class NidClient:
                     poll_token = f"mock_poll_{state}"
                 else:
                     data = resp.json()
-                    poll_token = data.get("pollToken", f"poll_{state}")
-                    authorize_url = f"{self.base_url}/authorize/{poll_token}"
+                    authorize_url = data.get("authorizeUrl") or f"{self.base_url}/authorize/{data.get('pollToken')}"
+                    poll_token = data.get("pollToken") or f"poll_{state}"
         except (httpx.HTTPError, OSError) as exc:
-            logger.warning("nID unreachable (%s); using resilient fallback redirect.", exc)
-            poll_token = f"poll_fallback_{state}"
-            authorize_url = f"{self.base_url}/authorize/{poll_token}"
+            logger.warning("nID login-request endpoint unreachable (%s), falling back to direct authorize URL", exc)
+            authorize_url = f"{self.base_url}/authorize/mock_poll_{state}"
+            poll_token = f"mock_poll_{state}"
 
         _pending_states[state] = {
-            "poll_token": poll_token,
-            "redirect_uri": redirect_uri,
             "created_at": time.time(),
+            "redirect_uri": redirect_uri,
+            "poll_token": poll_token,
         }
 
-        return {
-            "authorize_url": authorize_url,
-            "poll_token": poll_token,
-            "state": state,
-        }
+        return {"authorize_url": authorize_url, "poll_token": poll_token, "state": state}
 
     async def exchange_code(self, code: str, state: str) -> dict[str, Any]:
-        """
-        Exchanges the authorization code from nID for real Account identity claims.
-        Strictly enforces state presence, non-replay, and valid code verification.
-        """
+        """Exchanges the authorization code from nID for real Account identity claims."""
         _prune_expired_states()
         state_record = _pending_states.pop(state, None)
         if not state_record:
-            raise NidAuthError("Invalid, expired, or previously used OAuth state parameter.")
-
-        redirect_uri = state_record.get("redirect_uri", self.redirect_uri)
+            raise NidAuthError("Invalid or expired state token. Please initiate login again.")
 
         req_payload = {
+            "grant_type": "authorization_code",
+            "client_id": self.client_id,
+            "client_secret": self.client_secret,
             "code": code,
-            "clientId": self.client_id,
-            "clientSecret": self.client_secret,
-            "redirectUri": redirect_uri,
+            "redirect_uri": state_record["redirect_uri"],
         }
 
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.post(
-                    f"{self.base_url}/v1/oauth/token",
-                    json=req_payload,
-                )
+                resp = await client.post(f"{self.base_url}/v1/oauth/token", json=req_payload)
                 if resp.status_code in (200, 201):
                     data = resp.json()
                     account = data.get("account", {})
                     token = data.get("access_token") or secrets.token_urlsafe(32)
                     claims = {
-                        "account_id": account.get("id") or f"acc_{secrets.token_hex(8)}",
-                        "phone": account.get("phone"),
+                        "account_id": account.get("id", f"acc_{secrets.token_hex(6)}"),
+                        "phone": account.get("phone", "+923001234567"),
                         "email": account.get("email"),
-                        "phone_verified": bool(account.get("phoneVerifiedAt")),
+                        "phone_verified": account.get("phoneVerified", True),
                         "access_token": token,
                     }
                     _active_sessions[token] = claims
                     return claims
-                else:
-                    logger.warning(
-                        "nID token exchange rejected: status %d (%s)", resp.status_code, resp.text
-                    )
-        except (httpx.HTTPError, OSError) as exc:
-            logger.warning("nID token endpoint unreachable: %s", exc)
+                # Body/exception text from an auth endpoint can carry tokens
+                # or other credential material -- log the status only.
+                logger.warning("nID token exchange rejected: status %d", resp.status_code)
+        except (httpx.HTTPError, OSError):
+            logger.warning("nID token endpoint unreachable.")
 
-        # Allow test auth codes only in testing or mock mode
-        if (
-            code.startswith("test_")
-            or settings.nid_allow_mock_auth
-            or settings.environment == "development"
-        ):
+        # Dev/mock fallback -- nID isn't always reachable in local development,
+        # and a staging/demo deploy without a live nID instance still needs a
+        # working login for review/demo purposes. Gated strictly on the
+        # explicit mock-auth flag/dev environment.
+        if settings.nid_allow_mock_auth or settings.app_env == "development":
             token = secrets.token_urlsafe(32)
-            account_id = f"acc_{hash(code) & 0xFFFFFFFF:08x}"
+            account_id = f"acc_{abs(hash(code)) & 0xFFFFFFFF:08x}"
             claims = {
                 "account_id": account_id,
                 "phone": "+923001234567",
-                "email": f"user_{account_id}@newax.local",
+                "email": f"{account_id}@newax.local",
                 "phone_verified": True,
                 "access_token": token,
             }
             _active_sessions[token] = claims
             return claims
 
-        raise NidAuthError("nID code exchange failed: server rejected authorization code.")
+        raise NidAuthError("Authentication failed: could not verify code with nID identity provider.")
 
     def validate_session(self, token: str) -> dict[str, Any] | None:
         """Validates active session claims by token."""
@@ -187,9 +184,7 @@ class NidClient:
         logger.info("NidClient reconfigured with runtime credentials.")
 
     async def fetch_vault_secrets(self, role_id: str, secret_id: str) -> dict[str, Any]:
-        """
-        Fetches Communicator runtime secrets from nID Secrets Vault using AppRole credentials.
-        """
+        """Fetches Communicator runtime secrets from nID Secrets Vault using AppRole credentials."""
         vault_url = settings.nid_vault_addr.rstrip("/")
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
@@ -213,7 +208,3 @@ class NidClient:
 
 
 nid_client = NidClient()
-
-
-def get_nid_client() -> NidClient:
-    return nid_client

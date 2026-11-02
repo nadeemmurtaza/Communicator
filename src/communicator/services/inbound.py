@@ -17,10 +17,12 @@ Handles:
 
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, datetime
 
 import httpx
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.channels import get_provider
@@ -34,6 +36,12 @@ from communicator.models.draft import DraftStatus
 from communicator.models.lead import Lead
 from communicator.models.message import Message, MessageDirection, MessageStatus
 from communicator.services.business_hours import is_within_business_hours
+from communicator.services.discovery_flow import (
+    handle_discovery_reply,
+    is_discovery_active,
+    is_discovery_start,
+    start_discovery,
+)
 from communicator.services.draft_actions import approve_and_send
 from communicator.services.integration_settings import get_settings_row
 from communicator.services.memory import extract_contact_memories
@@ -60,11 +68,38 @@ class UnknownContactError(RuntimeError):
     """Raised when an inbound message doesn't match a Contact we know about."""
 
 
-async def _find_contact(session: AsyncSession, channel: ChannelType, value: str) -> Contact:
-    stmt = select(Contact).where(Contact.channel == channel, Contact.value == value)
+async def _find_contact(
+    session: AsyncSession,
+    channel: ChannelType,
+    value: str,
+    sender_name: str = "",
+) -> Contact:
+    stmt = (
+        select(Contact)
+        .options(selectinload(Contact.lead))
+        .where(Contact.channel == channel, Contact.value == value)
+    )
     contact = (await session.execute(stmt)).scalar_one_or_none()
     if contact is None:
         raise UnknownContactError(f"No Contact found for {channel.value}:{value}")
+
+    if sender_name and sender_name.strip():
+        if (
+            not contact.person_name
+            or contact.person_name.startswith("Contact ")
+            or contact.person_name.startswith("Customer ")
+            or contact.person_name.startswith("WhatsApp User")
+            or contact.person_name.startswith("WhatsApp Lead")
+        ):
+            contact.person_name = sender_name.strip()
+        if contact.lead and (
+            not contact.lead.name
+            or contact.lead.name.startswith("WhatsApp Lead")
+            or contact.lead.name.startswith("Whatsapp Contact")
+        ):
+            contact.lead.name = sender_name.strip()
+        await session.flush()
+
     return contact
 
 
@@ -78,6 +113,7 @@ async def process_inbound_message(
     provider_message_id: str,
     harvester_client: HarvesterClient,
     interactive_payload_id: str | None = None,
+    sender_name: str = "",
 ) -> Message:
     if provider_message_id:
         existing_stmt = select(Message).where(Message.provider_message_id == provider_message_id)
@@ -85,7 +121,7 @@ async def process_inbound_message(
         if existing_msg is not None:
             return existing_msg
 
-    contact = await _find_contact(session, channel, from_value)
+    contact = await _find_contact(session, channel, from_value, sender_name=sender_name)
     conversation = await get_or_create_conversation(session, contact)
 
     now = datetime.now(UTC)
@@ -197,6 +233,18 @@ async def _route_reply(
     if conversation.human_takeover or not integration_settings.auto_reply_enabled:
         return
 
+    # 4b. Business inquiry discovery flow: continue an in-progress flow, or
+    # start one if the visitor just asked to discuss a requirement.
+    if is_discovery_active(conversation):
+        await handle_discovery_reply(session, conversation, contact, body, interactive_payload_id)
+        return
+    # No discovery flow template for this tenant -- fall through to the
+    # normal pipeline below instead of silently sending nothing.
+    if is_discovery_start(interactive_payload_id, body) and await start_discovery(
+        session, conversation, contact
+    ):
+        return
+
     # 5. After-Hours / Business Hours away message
     if not is_within_business_hours(integration_settings) and integration_settings.away_message:
         try:
@@ -209,7 +257,13 @@ async def _route_reply(
         return
 
     # 6. Advanced Automation Rules Engine
-    rule = await match_advanced_rule(session, body, payload_id=interactive_payload_id)
+    rule = await match_advanced_rule(
+        session,
+        body,
+        payload_id=interactive_payload_id,
+        tenant_key=contact.tenant_key or "newax",
+        channel=contact.channel.value if hasattr(contact.channel, "value") else contact.channel,
+    )
     if rule is not None:
         try:
             if await execute_rule_action(session, rule, conversation, contact):

@@ -1,4 +1,5 @@
 import uuid
+from urllib.parse import urlparse
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -136,7 +137,7 @@ async def test_create_customer_portal_session(db_session):
         actor_email="agent@newax.com",
     )
     assert portal["session_id"].startswith("bps_")
-    assert "billing.stripe.com" in portal["url"]
+    assert urlparse(portal["url"]).hostname == "billing.stripe.com"
 
     # Verify action log
     logs = await stripe_service.list_billing_action_logs(db_session, "portal-user@enterprise.com")
@@ -204,7 +205,7 @@ async def test_stripe_api_endpoints(db_session, override_database_dependency):
             },
         )
         assert res.status_code == 200
-        assert "billing.stripe.com" in res.json()["url"]
+        assert urlparse(res.json()["url"]).hostname == "billing.stripe.com"
 
         # 8. Check logs
         res = await client.get("/api/v1/integrations/stripe/logs/alex.turner@arctic.io")

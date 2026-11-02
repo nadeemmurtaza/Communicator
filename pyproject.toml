@@ -24,6 +24,7 @@ dependencies = [
   "pypdf>=5.0",
   "cryptography>=43.0,<45",
   "beautifulsoup4>=4.12",
+  "defusedxml>=0.7,<1",
 ]
 
 [project.optional-dependencies]

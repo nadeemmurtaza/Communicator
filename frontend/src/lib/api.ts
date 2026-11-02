@@ -1,16 +1,63 @@
 const BASE = '/api/v1'
 
+/**
+ * Every request carries the signed-in session token and the tenant the
+ * person has selected (set by AuthContext on login / org switch), so the
+ * backend scopes data to the org actually showing in the UI instead of a
+ * hardcoded default -- switching organizations must change what every
+ * subsequent request can see.
+ */
+function authHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {}
+  try {
+    const session = localStorage.getItem('communicator.session')
+    if (session) {
+      const { token } = JSON.parse(session)
+      if (token) headers['Authorization'] = `Bearer ${token}`
+    }
+    const org = localStorage.getItem('communicator.organization')
+    if (org) {
+      const { tenantKey } = JSON.parse(org)
+      if (tenantKey) headers['X-Tenant-Key'] = tenantKey
+    }
+  } catch {
+    // corrupted storage -- fall back to unauthenticated/default-tenant request
+  }
+  return headers
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...init,
-    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
+    headers: { 'Content-Type': 'application/json', ...authHeaders(), ...(init?.headers ?? {}) },
   })
   if (!res.ok) {
     const detail = await res.text()
-    throw new Error(`${res.status} ${res.statusText}: ${detail}`)
+    let cleanMessage = ''
+    try {
+      const json = JSON.parse(detail)
+      cleanMessage = json.detail || json.message || json.error || detail
+      if (typeof cleanMessage === 'object') {
+        cleanMessage = JSON.stringify(cleanMessage)
+      }
+    } catch {
+      if (detail.includes('<!DOCTYPE') || detail.includes('<html') || detail.includes('Cloudflare')) {
+        cleanMessage = `Service temporarily unreachable or gateway error (${res.status} ${res.statusText}).`
+      } else {
+        cleanMessage = detail.trim().slice(0, 300)
+      }
+    }
+    throw new Error(`${res.status} ${res.statusText}: ${cleanMessage}`)
   }
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
+}
+
+export interface OrganizationItem {
+  id: string
+  tenantKey: string
+  name: string
+  createdAt: string
 }
 
 export interface Draft {
@@ -27,7 +74,10 @@ export interface Conversation {
   id: string
   contactId: string
   contactName?: string
+  customerName?: string
+  leadName?: string
   contactPhone?: string
+  phone?: string
   channel?: string
   state: string
   resolutionType?: string | null
@@ -35,6 +85,11 @@ export interface Conversation {
   broadcastName?: string | null
   humanTakeover: boolean
   assignedToId: string | null
+  assignedToName?: string | null
+  teamId?: string | null
+  teamName?: string | null
+  snoozedUntil?: string | null
+  priority?: string | null
   csatScore?: number | null
   csatComment?: string | null
   customAttributes?: Record<string, any>
@@ -49,6 +104,8 @@ export interface Message {
   intent: string
   status: string
   sentAt: string
+  senderName?: string
+  providerMessageId?: string
   providerMetadata?: Record<string, any>
   translation?: TranslationResult
 }
@@ -58,15 +115,25 @@ export interface ConversationDetail {
   state: string
   humanTakeover: boolean
   assignedToId: string | null
+  assignedToName?: string | null
+  teamId?: string | null
+  teamName?: string | null
   contactId?: string
   contactName?: string
+  customerName?: string
+  leadName?: string
   contactPhone?: string
+  phone?: string
   channel?: string
   language?: string
+  priority?: string | null
+  snoozedUntil?: string | null
   customAttributes?: Record<string, any>
   resolutionType?: string | null
   csatScore?: number | null
   csatComment?: string | null
+  slaStatus?: string
+  sla?: SLAData
   campaign?: {
     id: string
     name: string
@@ -272,9 +339,74 @@ export interface ContactRecord {
   personName: string
   channel: string
   language: string
-  customFields: Record<string, unknown>
+  customFields?: Record<string, unknown>
   tags: string[]
   createdAt?: string
+  optInStatus?: string
+  qualityRating?: string
+  role?: string
+}
+
+export interface ContactProfileData {
+  id: string
+  value: string
+  personName: string | null
+  channel: string
+  language: string
+  createdAt: string
+  updatedAt?: string
+  tags: string[]
+  customFields?: Record<string, any>
+  meta?: {
+    waId?: string
+    isWhatsAppRegistered?: boolean
+    qualityRating?: string
+    optInStatus?: string
+    optInTimestamp?: string
+    verified?: boolean
+    syncedAt?: string
+    nameStatus?: string
+    codeVerificationStatus?: string
+  }
+  conversation?: {
+    id?: string
+    state?: string
+    priority?: string
+    resolutionType?: string | null
+    totalMessages?: number
+    inboundCount?: number
+    outboundCount?: number
+    lastInboundText?: string
+    lastInboundAt?: string
+    lastOutboundText?: string
+    lastOutboundAt?: string
+    lastOutboundStatus?: string
+    csatScore?: number | null
+  }
+  lead?: {
+    id?: string
+    name?: string
+    institutionId?: string
+    qualificationRationale?: string
+    institutionType?: string
+    city?: string
+  }
+  memories?: Array<{
+    id: string
+    fact: string
+    category: string
+    createdAt: string
+    confidence?: number
+    notedAt?: string
+  }>
+  recentMessages?: Array<{
+    id: string
+    direction: 'inbound' | 'outbound'
+    body: string
+    sentAt: string
+    status?: string
+    senderName?: string
+  }>
 }
 
 export interface ContactSegment {
@@ -404,6 +536,14 @@ export interface Inbox {
   updatedAt: string
 }
 
+export interface ChannelHealth {
+  channel: string
+  isConnected: boolean
+  status: string
+  statusLabel: string
+  warning?: string | null
+}
+
 export interface WhatsAppChannelData {
   inbox: Inbox
   webhookConfig: {
@@ -419,6 +559,8 @@ export interface WhatsAppChannelData {
     qualityRating: string
     messagingLimitTier: string
     codeVerificationStatus: string
+    tier?: string
+    verificationStatus?: string
   }
 }
 
@@ -430,6 +572,40 @@ export interface WhatsAppBusinessProfile {
   vertical: string
   websites: string[]
   profilePictureUrl?: string
+}
+
+export interface SharedBusinessProfile {
+  businessName: string
+  verifiedName: string
+  displayPhone: string
+  isVerified: boolean
+  verificationStatus: string
+  qualityRating: string
+  messagingLimit: string
+  tier: string
+  spamFlags: string
+  description: string
+  about: string
+  email: string
+  address: string
+  vertical: string
+  websites: string[]
+  profilePictureUrl: string
+  businessHours: {
+    enabled: boolean
+    start: number
+    end: number
+    timezone: string
+    awayMessage: string
+  }
+  autoReplyEnabled: boolean
+  agentGuidelines: string
+  metaIntegration: {
+    connected: boolean
+    phoneNumberId: string
+    wabaId: string
+    verifiedAt: string
+  }
 }
 
 export interface WhatsAppTemplate {
@@ -2153,10 +2329,12 @@ export const api = {
     }),
 
   listServices: () => request<Service[]>('/services'),
-  createService: (data: { name: string; summary: string }) =>
+  createService: (data: { name: string; summary: string; target_institution_types?: string[] }) =>
     request<Service>('/services', { method: 'POST', body: JSON.stringify(data) }),
 
   listSequences: () => request<Sequence[]>('/sequences'),
+  createSequence: (data: { name: string; description?: string; is_active?: boolean }) =>
+    request<Sequence>('/sequences', { method: 'POST', body: JSON.stringify(data) }),
   sequenceVariantStats: (id: string) => request<VariantStats>(`/sequences/${id}/variant-stats`),
 
   getIntegrationSettings: () => request<IntegrationSettings>('/settings'),
@@ -2251,6 +2429,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  addContactMemory: (contactId: string, fact: string, category?: string) =>
+    request<ContactMemory>(`/contacts/${contactId}/memories`, {
+      method: 'POST',
+      body: JSON.stringify({ fact, category }),
+    }),
   deleteContactMemory: (contactId: string, memoryId: string) =>
     request<{ status: string }>(`/contacts/${contactId}/memories/${memoryId}`, {
       method: 'DELETE',
@@ -2318,6 +2501,24 @@ export const api = {
     request(`/contacts/${contactId}/tags`, { method: 'POST', body: JSON.stringify({ tag }) }),
   removeContactTag: (contactId: string, tag: string) =>
     request(`/contacts/${contactId}/tags/${encodeURIComponent(tag)}`, { method: 'DELETE' }),
+  getContactProfile: (id: string) => request<ContactProfileData>(`/contacts/${id}`),
+  toggleContactConsent: (id: string) =>
+    request<{ status: string; optInStatus: string; optInTimestamp: string }>(`/contacts/${id}/toggle-consent`, {
+      method: 'POST',
+    }),
+  syncContactMeta: (id: string) =>
+    request<{ status: string; syncedAt: string }>(`/contacts/${id}/sync-meta`, {
+      method: 'POST',
+    }),
+  syncMetaContacts: () =>
+    request<{ status: string; totalWhatsAppContacts: number; updatedContacts: number; message: string }>(
+      '/contacts/sync-meta',
+      { method: 'POST' }
+    ),
+  getOrCreateContactConversation: (id: string) =>
+    request<{ id: string; state: string }>(`/contacts/${id}/conversation`, {
+      method: 'POST',
+    }),
   previewContactImport: async (file: File, default_channel?: string) => {
     const formData = new FormData()
     formData.append('file', file)
@@ -2343,6 +2544,35 @@ export const api = {
     if (params?.segment_id) q.set('segment_id', params.segment_id)
     const qs = q.toString()
     return `${BASE}/contacts/export${qs ? `?${qs}` : ''}`
+  },
+  // A plain <a href> can't send the X-Tenant-Key/Authorization headers the
+  // export route now requires -- fetch it with those headers and hand the
+  // browser a Blob to download instead, so a non-default organization's
+  // export doesn't silently fall back to the default tenant's contacts.
+  downloadContactsExport: async (
+    params?: { channel?: string; tag?: string; search?: string; segment_id?: string },
+    filename = 'contacts_export.csv'
+  ) => {
+    const url = `${BASE}/contacts/export${(() => {
+      const q = new URLSearchParams()
+      if (params?.channel) q.set('channel', params.channel)
+      if (params?.tag) q.set('tag', params.tag)
+      if (params?.search) q.set('search', params.search)
+      if (params?.segment_id) q.set('segment_id', params.segment_id)
+      const qs = q.toString()
+      return qs ? `?${qs}` : ''
+    })()}`
+    const res = await fetch(url, { headers: authHeaders() })
+    if (!res.ok) throw new Error('Export failed')
+    const blob = await res.blob()
+    const blobUrl = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = blobUrl
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(blobUrl)
   },
 
   // Saved Dynamic Contact Segments
@@ -2398,7 +2628,20 @@ export const api = {
     request<{ status: string; count?: number }>('/broadcasts/seed-defaults', { method: 'POST' }),
 
   // Channels & Inboxes API (Starting with WhatsApp)
+  // Shared Global Business Profile
+  getBusinessProfile: () => request<SharedBusinessProfile>('/business-profile'),
+  updateBusinessProfile: (data: any) =>
+    request<SharedBusinessProfile>('/business-profile', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  syncBusinessProfileMeta: () =>
+    request<SharedBusinessProfile>('/business-profile/sync-meta', {
+      method: 'POST',
+    }),
+
   listInboxes: () => request<Inbox[]>('/inboxes'),
+  getChannelsHealth: () => request<ChannelHealth[]>('/channels/health'),
   getWhatsAppChannel: () => request<WhatsAppChannelData>('/inboxes/channels/whatsapp'),
   updateWhatsAppChannel: (data: any) =>
     request<WhatsAppChannelData>('/inboxes/channels/whatsapp', {
@@ -3678,6 +3921,14 @@ export const api = {
         body: JSON.stringify({ attributes }),
       }
     ),
+  updateContactAttributeValues: (contactId: string, attributes: Record<string, any>) =>
+    request<{ success: boolean; contact_id: string; custom_fields: Record<string, any> }>(
+      `/custom-attributes/contacts/${contactId}/values`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ attributes }),
+      }
+    ),
   updateConversationAttributes: (conversationId: string, attributes: Record<string, any>) =>
     request<{ success: boolean; conversation_id: string; custom_attributes: Record<string, any> }>(
       `/custom-attributes/conversations/${conversationId}/values`,
@@ -3686,4 +3937,13 @@ export const api = {
         body: JSON.stringify({ attributes }),
       }
     ),
+  // Scoped server-side to the signed-in account (Authorization header via
+  // authHeaders()) -- account_id is no longer accepted as a client-supplied
+  // parameter, so it's not sent here.
+  listOrganizations: () => request<OrganizationItem[]>('/organizations'),
+  createOrganization: (name: string) =>
+    request<OrganizationItem>('/organizations', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
 }

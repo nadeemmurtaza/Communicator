@@ -1,3 +1,41 @@
+import {
+  AlertTriangle,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  ArrowUpRight,
+  Bookmark,
+  Check,
+  CheckCircle2,
+  CircleDot,
+  ClipboardList,
+  Code,
+  FlaskConical,
+  Globe,
+  Headset,
+  Layers,
+  Lock,
+  Mail,
+  MessageSquare,
+  Monitor,
+  Moon,
+  Palette,
+  Plus,
+  RectangleHorizontal,
+  RefreshCw,
+  Rocket,
+  RotateCcw,
+  Send,
+  Settings,
+  Smartphone,
+  Sparkles,
+  Star,
+  Sun,
+  Tag,
+  X,
+  Zap,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -9,6 +47,16 @@ import {
   type PreChatRoutingRule,
   type PreChatTestIntakeResult,
 } from '../lib/api'
+import { LiveChatIcon } from '../components/icons/BrandIcons'
+
+const DEFAULT_AVATAR_URL = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128'
+
+// Only a literal http(s):// prefix is accepted before a saved/branding-config
+// avatar URL reaches an <img src> -- that value is attacker-influenceable,
+// and a javascript:/data: URI there is a DOM XSS sink, not just a broken
+// image. An explicit regex prefix test (rather than parsing the URL and
+// inspecting it) keeps the guard a single, directly-inspectable boolean.
+const SAFE_IMAGE_URL_RE = /^https?:\/\//i
 
 export function LiveChatIntegration() {
   const [data, setData] = useState<LiveChatChannelData | null>(null)
@@ -26,9 +74,9 @@ export function LiveChatIntegration() {
 
   // Form State
   const [inboxName, setInboxName] = useState('Website Live Chat')
-  const [websiteDomain, setWebsiteDomain] = useState('bayworks.com')
+  const [websiteDomain, setWebsiteDomain] = useState('newax.co')
   const [widgetColor, setWidgetColor] = useState('#1570EF')
-  const [greetingTitle, setGreetingTitle] = useState('Hi there! 👋')
+  const [greetingTitle, setGreetingTitle] = useState('Hi there!')
   const [greetingTagline, setGreetingTagline] = useState('We typically reply in a few minutes.')
   const [widgetPosition, setWidgetPosition] = useState<'right' | 'left'>('right')
   const [avatarUrl, setAvatarUrl] = useState('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128&h=128&fit=crop')
@@ -41,7 +89,7 @@ export function LiveChatIntegration() {
   const [borderRadius, setBorderRadius] = useState<'rounded_lg' | 'rounded_2xl' | 'rounded_full'>('rounded_2xl')
   const [playSound, setPlaySound] = useState(true)
   const [showBranding, setShowBranding] = useState(true)
-  const [allowedDomains, setAllowedDomains] = useState('bayworks.com, localhost')
+  const [allowedDomains, setAllowedDomains] = useState('newax.co, localhost')
   const [previewMode, setPreviewMode] = useState<'open' | 'launcher' | 'mobile'>('open')
   const [embedFormat, setEmbedFormat] = useState<'html' | 'react' | 'gtm' | 'raw'>('html')
   const [embedCodes, setEmbedCodes] = useState<WidgetEmbedCodes | null>(null)
@@ -101,7 +149,7 @@ export function LiveChatIntegration() {
 
   // Automations & Schedule State
   const [greetingEnabled, setGreetingEnabled] = useState(true)
-  const [greetingMessage, setGreetingMessage] = useState('👋 Welcome to our live chat! How can our support team help you today?')
+  const [greetingMessage, setGreetingMessage] = useState('Welcome to our live chat! How can our support team help you today?')
   const [outOfOfficeEnabled, setOutOfOfficeEnabled] = useState(false)
   const [outOfOfficeMessage, setOutOfOfficeMessage] = useState('Our team is currently offline. Please leave your email and message, and we will get back to you shortly!')
   const [csatEnabled, setCsatEnabled] = useState(true)
@@ -136,9 +184,9 @@ export function LiveChatIntegration() {
       setEvents(evList)
 
       setInboxName(channelData.inbox.name)
-      setWebsiteDomain(channelData.websiteDomain || 'bayworks.com')
+      setWebsiteDomain(channelData.websiteDomain && channelData.websiteDomain !== 'bayworks.com' ? channelData.websiteDomain : 'newax.co')
       setWidgetColor(channelData.branding.widgetColor || '#1570EF')
-      setGreetingTitle(channelData.branding.greetingTitle || 'Hi there! 👋')
+      setGreetingTitle(channelData.branding.greetingTitle || 'Hi there!')
       setGreetingTagline(channelData.branding.greetingTagline || 'We typically reply in a few minutes.')
       setWidgetPosition(channelData.branding.widgetPosition || 'right')
       setAvatarUrl(channelData.branding.avatarUrl || channelData.inbox.avatarUrl || '')
@@ -488,6 +536,8 @@ export function LiveChatIntegration() {
   })(document, "script");
 </script>`
 
+  const isConnected = Boolean(data?.health?.isOnline && websiteDomain && websiteDomain !== 'bayworks.com')
+
   return (
     <div className="space-y-6">
       {/* Top Breadcrumb & Header */}
@@ -495,7 +545,7 @@ export function LiveChatIntegration() {
         <div>
           <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
             <Link to="/channels" className="hover:text-blue-600 flex items-center gap-1 font-medium">
-              <span>← Channels Hub</span>
+              <ArrowLeft className="h-3.5 w-3.5 inline mr-1" /><span>Channels Hub</span>
             </Link>
             <span>/</span>
             <span>Channel 2</span>
@@ -507,15 +557,22 @@ export function LiveChatIntegration() {
               className="flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-sm"
               style={{ backgroundColor: widgetColor }}
             >
-              <span className="text-xl">🌐</span>
+              <LiveChatIcon className="h-5 w-5 text-white" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold tracking-tight text-slate-900">{inboxName}</h1>
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                  Active & Online
-                </span>
+                {isConnected ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Connected &amp; Healthy
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 border border-amber-200">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                    Not Configured
+                  </span>
+                )}
                 <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 border border-blue-200">
                   Channel 2
                 </span>
@@ -532,13 +589,13 @@ export function LiveChatIntegration() {
             to="/"
             className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
           >
-            Open Shared Inbox ↗
+            Open Shared Inbox <ArrowUpRight className="h-3.5 w-3.5 inline ml-1" />
           </Link>
           <button
             onClick={() => setActiveTab('simulator')}
             className="rounded-lg border border-blue-200 bg-blue-50 px-3.5 py-2 text-xs font-semibold text-blue-700 shadow-sm hover:bg-blue-100"
           >
-            ⚡ Test Live Chat
+            <span className="flex items-center gap-1.5"><Zap className="h-3.5 w-3.5 text-amber-500" /> Test Live Chat</span>
           </button>
           <button
             onClick={handleSave}
@@ -556,7 +613,7 @@ export function LiveChatIntegration() {
           <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Active Visitors</div>
           <div className="mt-1 flex items-baseline gap-2">
             <span className="text-xl font-bold text-slate-900">{data?.health.activeVisitors ?? 4}</span>
-            <span className="text-[11px] font-semibold text-emerald-600">● Real-time</span>
+            <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1"><span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" /> Real-time</span>
           </div>
           <p className="text-[11px] text-slate-400 mt-0.5">Browsing site right now</p>
         </div>
@@ -564,7 +621,7 @@ export function LiveChatIntegration() {
           <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Avg Response Time</div>
           <div className="mt-1 flex items-baseline gap-2">
             <span className="text-xl font-bold text-slate-900">{data?.health.averageResponseTime ?? '1m 30s'}</span>
-            <span className="text-[11px] font-semibold text-blue-600">⚡ High speed</span>
+            <span className="text-[11px] font-semibold text-blue-600 flex items-center gap-1"><Zap className="h-3 w-3" /> High speed</span>
           </div>
           <p className="text-[11px] text-slate-400 mt-0.5">Agent first response speed</p>
         </div>
@@ -572,7 +629,7 @@ export function LiveChatIntegration() {
           <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Resolution Rate</div>
           <div className="mt-1 flex items-baseline gap-2">
             <span className="text-xl font-bold text-slate-900">{data?.health.resolutionRate ?? '94.2%'}</span>
-            <span className="text-[11px] font-semibold text-emerald-600">↑ +3.1%</span>
+            <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-0.5"><ArrowUp className="h-3 w-3" /> +3.1%</span>
           </div>
           <p className="text-[11px] text-slate-400 mt-0.5">Resolved in chat session</p>
         </div>
@@ -586,23 +643,36 @@ export function LiveChatIntegration() {
         </div>
       </div>
 
+      {/* Real Connection Status Banner */}
+      {!isConnected && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <h4 className="text-sm font-semibold text-amber-900">Channel Not Connected</h4>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Please enter your provider API credentials below and click Save Configuration to activate.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Notifications */}
       {success && (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span>✅</span>
+            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
             <span className="font-medium">{success}</span>
           </div>
-          <button onClick={() => setSuccess(null)} className="text-emerald-600 hover:text-emerald-900">×</button>
+          <button onClick={() => setSuccess(null)} className="text-emerald-600 hover:text-emerald-900"><X className="h-4 w-4" /></button>
         </div>
       )}
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs text-red-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span>⚠️</span>
+            <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
             <span className="font-medium">{error}</span>
           </div>
-          <button onClick={() => setError(null)} className="text-red-600 hover:text-red-900">×</button>
+          <button onClick={() => setError(null)} className="text-red-600 hover:text-red-900"><X className="h-4 w-4" /></button>
         </div>
       )}
 
@@ -610,12 +680,12 @@ export function LiveChatIntegration() {
       <div className="border-b border-slate-200">
         <nav className="flex space-x-6 overflow-x-auto">
           {[
-            { id: 'embed', label: 'Embed & SDK Code', icon: '💻' },
-            { id: 'branding', label: 'Branding & Appearance', icon: '🎨' },
-            { id: 'prechat', label: 'Pre-Chat Form', icon: '📋' },
-            { id: 'security', label: 'Security & HMAC', icon: '🔒' },
-            { id: 'automations', label: 'Automations & Hours', icon: '⚙️' },
-            { id: 'simulator', label: 'Live Preview & Simulator', icon: '🧪' },
+            { id: 'embed', label: 'Embed & SDK Code', icon: <Code className="h-4 w-4" /> },
+            { id: 'branding', label: 'Branding & Appearance', icon: <Palette className="h-4 w-4" /> },
+            { id: 'prechat', label: 'Pre-Chat Form', icon: <ClipboardList className="h-4 w-4" /> },
+            { id: 'security', label: 'Security & HMAC', icon: <Lock className="h-4 w-4" /> },
+            { id: 'automations', label: 'Automations & Hours', icon: <Settings className="h-4 w-4" /> },
+            { id: 'simulator', label: 'Live Preview & Simulator', icon: <FlaskConical className="h-4 w-4" /> },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -656,7 +726,7 @@ export function LiveChatIntegration() {
                   rel="noreferrer"
                   className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 flex items-center gap-1.5"
                 >
-                  <span>🚀 Open Live Test Page ↗</span>
+                  <span className="flex items-center gap-1.5"><Rocket className="h-4 w-4" /> Open Live Test Page <ArrowUpRight className="h-3.5 w-3.5" /></span>
                 </a>
                 <button
                   onClick={() => {
@@ -668,7 +738,7 @@ export function LiveChatIntegration() {
                   }}
                   className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 flex items-center gap-1.5"
                 >
-                  <span>{copiedKey === 'embed' ? '✓ Copied' : '📋 Copy Snippet'}</span>
+                  <span>{copiedKey === 'embed' ? <span className="flex items-center gap-1.5"><Check className="h-4 w-4" /> Copied</span> : 'Copy Snippet'}</span>
                 </button>
               </div>
             </div>
@@ -684,7 +754,7 @@ export function LiveChatIntegration() {
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                 }`}
               >
-                🌐 Standard HTML Script
+                <span className="flex items-center gap-1.5"><Globe className="h-4 w-4" /> Standard HTML Script</span>
               </button>
               <button
                 type="button"
@@ -695,7 +765,7 @@ export function LiveChatIntegration() {
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                 }`}
               >
-                ⚛️ React / Next.js Component
+                <span className="flex items-center gap-1.5"><Layers className="h-4 w-4" /> React / Next.js Component</span>
               </button>
               <button
                 type="button"
@@ -706,7 +776,7 @@ export function LiveChatIntegration() {
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                 }`}
               >
-                🏷️ Google Tag Manager (GTM)
+                <span className="flex items-center gap-1.5"><Tag className="h-4 w-4" /> Google Tag Manager (GTM)</span>
               </button>
               <button
                 type="button"
@@ -717,7 +787,7 @@ export function LiveChatIntegration() {
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                 }`}
               >
-                ⚡ Raw JS SDK Init
+                Raw JS SDK Init
               </button>
             </div>
 
@@ -775,7 +845,7 @@ export function LiveChatIntegration() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="rounded-lg border border-slate-200 p-4 hover:border-blue-300 transition-colors">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-lg">⚛️</span>
+                  <Layers className="h-5 w-5 text-blue-500" />
                   <span className="text-xs font-bold text-slate-800">React & Next.js</span>
                 </div>
                 <p className="text-[11px] text-slate-500 mb-3">
@@ -788,14 +858,14 @@ export function LiveChatIntegration() {
 
               <div className="rounded-lg border border-slate-200 p-4 hover:border-blue-300 transition-colors">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-lg">🌐</span>
+                  <Globe className="h-5 w-5 text-indigo-500" />
                   <span className="text-xs font-bold text-slate-800">WordPress & Shopify</span>
                 </div>
                 <p className="text-[11px] text-slate-500 mb-3">
                   Go to theme settings, Header/Footer scripts, and paste the HTML snippet inside the Footer section before <code className="text-blue-600">&lt;/body&gt;</code>.
                 </p>
                 <div className="rounded bg-slate-50 p-2 text-[11px] text-slate-600 border border-slate-200 space-y-1">
-                  <div>1. Online Store → Themes → Edit code</div>
+                  <div>1. Online Store &gt; Themes &gt; Edit code</div>
                   <div>2. Select <code className="text-blue-600 font-mono">theme.liquid</code> or footer</div>
                   <div>3. Paste snippet before <code className="text-blue-600 font-mono">&lt;/body&gt;</code></div>
                 </div>
@@ -803,14 +873,14 @@ export function LiveChatIntegration() {
 
               <div className="rounded-lg border border-slate-200 p-4 hover:border-blue-300 transition-colors">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-lg">🏷️</span>
+                  <Tag className="h-5 w-5 text-amber-500" />
                   <span className="text-xs font-bold text-slate-800">Google Tag Manager</span>
                 </div>
                 <p className="text-[11px] text-slate-500 mb-3">
                   Create a "Custom HTML" tag, paste the GTM snippet, and set the firing trigger to "All Pages - Page View".
                 </p>
                 <div className="rounded bg-slate-50 p-2 text-[11px] text-slate-600 border border-slate-200 space-y-1">
-                  <div>1. New Tag → Custom HTML</div>
+                  <div>1. New Tag &gt; Custom HTML</div>
                   <div>2. Paste the GTM script snippet</div>
                   <div>3. Trigger: Initialization or All Pages</div>
                 </div>
@@ -840,7 +910,7 @@ export function LiveChatIntegration() {
                   disabled={saving}
                   className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
                 >
-                  ↺ Reset Defaults
+                  <span className="flex items-center gap-1"><RotateCcw className="h-3.5 w-3.5" /> Reset Defaults</span>
                 </button>
               </div>
 
@@ -863,7 +933,7 @@ export function LiveChatIntegration() {
                     value={websiteDomain}
                     onChange={(e) => setWebsiteDomain(e.target.value)}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
-                    placeholder="bayworks.com"
+                    placeholder="newax.co"
                   />
                 </div>
               </div>
@@ -904,9 +974,9 @@ export function LiveChatIntegration() {
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Widget Theme Mode</label>
                   <div className="grid grid-cols-3 gap-2">
                     {[
-                      { id: 'light', label: '☀️ Light' },
-                      { id: 'dark', label: '🌙 Dark' },
-                      { id: 'system', label: '🌓 Auto' },
+                      { id: 'light', label: 'Light', icon: <Sun className="h-3.5 w-3.5 mr-1.5 inline" /> },
+                      { id: 'dark', label: 'Dark', icon: <Moon className="h-3.5 w-3.5 mr-1.5 inline" /> },
+                      { id: 'system', label: 'Auto', icon: <Monitor className="h-3.5 w-3.5 mr-1.5 inline" /> },
                     ].map((mode) => (
                       <button
                         key={mode.id}
@@ -918,7 +988,7 @@ export function LiveChatIntegration() {
                             : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                         }`}
                       >
-                        {mode.label}
+                        {mode.icon}{mode.label}
                       </button>
                     ))}
                   </div>
@@ -959,19 +1029,19 @@ export function LiveChatIntegration() {
                       id: 'round_bubble',
                       title: 'Round Bubble',
                       desc: 'Compact circular floating button',
-                      icon: '🔘',
+                      icon: <CircleDot className="h-4 w-4 text-blue-600" />,
                     },
                     {
                       id: 'pill_with_text',
                       title: 'Pill with Text',
                       desc: 'Expanded badge with call to action',
-                      icon: '💊',
+                      icon: <RectangleHorizontal className="h-4 w-4 text-blue-600" />,
                     },
                     {
                       id: 'minimal_tab',
                       title: 'Minimal Tab',
                       desc: 'Pinned corner docked button',
-                      icon: '📑',
+                      icon: <Bookmark className="h-4 w-4 text-blue-600" />,
                     },
                   ].map((style) => (
                     <button
@@ -1000,10 +1070,10 @@ export function LiveChatIntegration() {
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Launcher Icon</label>
                   <div className="grid grid-cols-4 gap-2">
                     {[
-                      { id: 'chat_bubble', icon: '💬', label: 'Chat' },
-                      { id: 'sparkle_ai', icon: '✨', label: 'Captain' },
-                      { id: 'headset_support', icon: '🎧', label: 'Support' },
-                      { id: 'envelope', icon: '✉️', label: 'Mail' },
+                      { id: 'chat_bubble', icon: <MessageSquare className="h-4 w-4 mx-auto text-slate-700" />, label: 'Chat' },
+                      { id: 'sparkle_ai', icon: <Sparkles className="h-4 w-4 mx-auto text-slate-700" />, label: 'Captain' },
+                      { id: 'headset_support', icon: <Headset className="h-4 w-4 mx-auto text-slate-700" />, label: 'Support' },
+                      { id: 'envelope', icon: <Mail className="h-4 w-4 mx-auto text-slate-700" />, label: 'Mail' },
                     ].map((item) => (
                       <button
                         key={item.id}
@@ -1015,7 +1085,7 @@ export function LiveChatIntegration() {
                             : 'border-slate-200 hover:bg-slate-50'
                         }`}
                       >
-                        <div className="text-base">{item.icon}</div>
+                        <div className="text-base flex items-center justify-center">{item.icon}</div>
                         <div className="text-[10px] text-slate-600 font-semibold mt-0.5">{item.label}</div>
                       </button>
                     ))}
@@ -1044,7 +1114,7 @@ export function LiveChatIntegration() {
                     value={greetingTitle}
                     onChange={(e) => setGreetingTitle(e.target.value)}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
-                    placeholder="Hi there! 👋"
+                    placeholder="Hi there!"
                   />
                 </div>
                 <div>
@@ -1074,7 +1144,7 @@ export function LiveChatIntegration() {
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-slate-900">Bottom Right</span>
-                      <span className="text-xs">👉</span>
+                      <ArrowRight className="h-3.5 w-3.5 text-slate-500" />
                     </div>
                     <p className="text-[11px] text-slate-500 mt-1">Standard position for 95% of websites</p>
                   </button>
@@ -1090,7 +1160,7 @@ export function LiveChatIntegration() {
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-slate-900">Bottom Left</span>
-                      <span className="text-xs">👈</span>
+                      <ArrowLeft className="h-3.5 w-3.5 text-slate-500" />
                     </div>
                     <p className="text-[11px] text-slate-500 mt-1">Prevents overlap with right-docked CTAs</p>
                   </button>
@@ -1144,7 +1214,7 @@ export function LiveChatIntegration() {
                     value={allowedDomains}
                     onChange={(e) => setAllowedDomains(e.target.value)}
                     className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
-                    placeholder="e.g. bayworks.com, localhost, *.mycompany.com"
+                    placeholder="e.g. newax.co, localhost, *.mycompany.com"
                   />
                   <p className="text-[10px] text-slate-400 mt-1">Comma-separated domains authorized to load this widget</p>
                 </div>
@@ -1174,7 +1244,7 @@ export function LiveChatIntegration() {
           <div className="lg:col-span-5">
             <div className="sticky top-6 rounded-xl border border-slate-200 bg-slate-100 p-5 shadow-sm space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Live Mockup Studio</span>
+                <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Live Preview Studio</span>
                 <span className="text-[11px] font-semibold text-slate-500 capitalize">{widgetPosition} docked</span>
               </div>
 
@@ -1187,7 +1257,7 @@ export function LiveChatIntegration() {
                     previewMode === 'open' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  💬 Open Chat
+                  <span className="flex items-center gap-1.5"><MessageSquare className="h-3.5 w-3.5" /> Open Chat</span>
                 </button>
                 <button
                   type="button"
@@ -1196,7 +1266,7 @@ export function LiveChatIntegration() {
                     previewMode === 'launcher' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  🔘 Floating Launcher
+                  <span className="flex items-center gap-1.5"><CircleDot className="h-3.5 w-3.5" /> Floating Launcher</span>
                 </button>
                 <button
                   type="button"
@@ -1205,7 +1275,7 @@ export function LiveChatIntegration() {
                     previewMode === 'mobile' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  📱 Mobile View
+                  <span className="flex items-center gap-1.5"><Smartphone className="h-3.5 w-3.5" /> Mobile View</span>
                 </button>
               </div>
 
@@ -1227,8 +1297,9 @@ export function LiveChatIntegration() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
+                        {/* avatarUrl is gated by SAFE_IMAGE_URL_RE (literal http(s):// prefix, else the constant default) before reaching src. */}
                         <img
-                          src={avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128'}
+                          src={SAFE_IMAGE_URL_RE.test(avatarUrl) ? avatarUrl : DEFAULT_AVATAR_URL}
                           alt="Avatar"
                           className="h-9 w-9 rounded-full border-2 border-white/60 object-cover shadow-xs"
                         />
@@ -1257,7 +1328,7 @@ export function LiveChatIntegration() {
                           : 'bg-white border-slate-100 text-slate-700'
                       }`}
                     >
-                      {greetingMessage || '👋 Welcome to our live chat! How can our support team help you today?'}
+                      {greetingMessage || 'Welcome to our live chat! How can our support team help you today?'}
                     </div>
 
                     <div
@@ -1298,7 +1369,7 @@ export function LiveChatIntegration() {
                       className="h-7 w-7 rounded-md flex items-center justify-center text-white text-xs shrink-0 shadow-xs"
                       style={{ backgroundColor: widgetColor }}
                     >
-                      ➤
+                      <Send className="h-3.5 w-3.5 text-white" />
                     </div>
                   </div>
 
@@ -1311,7 +1382,7 @@ export function LiveChatIntegration() {
                           : 'bg-slate-50 text-slate-500 border-slate-100'
                       }`}
                     >
-                      ⚡ Powered by <span className="font-semibold text-blue-600">Captain AI</span>
+                      Powered by <span className="font-semibold text-blue-600">Captain AI</span>
                     </div>
                   )}
                 </div>
@@ -1326,7 +1397,7 @@ export function LiveChatIntegration() {
                       <span className="h-2 w-2 rounded-full bg-red-400"></span>
                       <span className="h-2 w-2 rounded-full bg-amber-400"></span>
                       <span className="h-2 w-2 rounded-full bg-emerald-400"></span>
-                      <span className="ml-2 font-mono text-[10px]">{websiteDomain || 'bayworks.com'}</span>
+                      <span className="ml-2 font-mono text-[10px]">{websiteDomain || 'newax.co'}</span>
                     </div>
                   </div>
 
@@ -1351,10 +1422,10 @@ export function LiveChatIntegration() {
                         className="h-14 w-14 rounded-full shadow-xl flex items-center justify-center text-white text-2xl transition-transform hover:scale-105 cursor-pointer relative"
                         style={{ backgroundColor: widgetColor }}
                       >
-                        {launcherIcon === 'chat_bubble' && '💬'}
-                        {launcherIcon === 'sparkle_ai' && '✨'}
-                        {launcherIcon === 'headset_support' && '🎧'}
-                        {launcherIcon === 'envelope' && '✉️'}
+                        {launcherIcon === 'chat_bubble' && <MessageSquare className="h-5 w-5 text-white" />}
+                        {launcherIcon === 'sparkle_ai' && <Sparkles className="h-5 w-5 text-white" />}
+                        {launcherIcon === 'headset_support' && <Headset className="h-5 w-5 text-white" />}
+                        {launcherIcon === 'envelope' && <Mail className="h-5 w-5 text-white" />}
                         <span className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-red-500 border-2 border-white"></span>
                       </div>
                     )}
@@ -1365,10 +1436,10 @@ export function LiveChatIntegration() {
                         style={{ backgroundColor: widgetColor }}
                       >
                         <span className="text-base">
-                          {launcherIcon === 'chat_bubble' && '💬'}
-                          {launcherIcon === 'sparkle_ai' && '✨'}
-                          {launcherIcon === 'headset_support' && '🎧'}
-                          {launcherIcon === 'envelope' && '✉️'}
+                          {launcherIcon === 'chat_bubble' && <MessageSquare className="h-5 w-5 text-white" />}
+                          {launcherIcon === 'sparkle_ai' && <Sparkles className="h-5 w-5 text-white" />}
+                          {launcherIcon === 'headset_support' && <Headset className="h-5 w-5 text-white" />}
+                          {launcherIcon === 'envelope' && <Mail className="h-5 w-5 text-white" />}
                         </span>
                         <span>{launcherText || 'Chat with us'}</span>
                       </div>
@@ -1380,10 +1451,10 @@ export function LiveChatIntegration() {
                         style={{ backgroundColor: widgetColor }}
                       >
                         <span className="text-sm">
-                          {launcherIcon === 'chat_bubble' && '💬'}
-                          {launcherIcon === 'sparkle_ai' && '✨'}
-                          {launcherIcon === 'headset_support' && '🎧'}
-                          {launcherIcon === 'envelope' && '✉️'}
+                          {launcherIcon === 'chat_bubble' && <MessageSquare className="h-5 w-5 text-white" />}
+                          {launcherIcon === 'sparkle_ai' && <Sparkles className="h-5 w-5 text-white" />}
+                          {launcherIcon === 'headset_support' && <Headset className="h-5 w-5 text-white" />}
+                          {launcherIcon === 'envelope' && <Mail className="h-5 w-5 text-white" />}
                         </span>
                         <span>{launcherText || 'Chat'}</span>
                       </div>
@@ -1406,9 +1477,10 @@ export function LiveChatIntegration() {
 
                     {/* Mobile Header */}
                     <div className="p-3 text-white flex items-center gap-2" style={{ backgroundColor: widgetColor }}>
-                      <span className="text-xs">←</span>
+                      <ArrowLeft className="h-3.5 w-3.5" />
+                      {/* avatarUrl is gated by SAFE_IMAGE_URL_RE (see the first avatar <img> above). */}
                       <img
-                        src={avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128'}
+                        src={SAFE_IMAGE_URL_RE.test(avatarUrl) ? avatarUrl : DEFAULT_AVATAR_URL}
                         alt="Avatar"
                         className="h-7 w-7 rounded-full object-cover border border-white"
                       />
@@ -1421,7 +1493,7 @@ export function LiveChatIntegration() {
                     {/* Mobile Chat Body */}
                     <div className="flex-1 p-2.5 space-y-2 bg-slate-50 text-[11px] overflow-y-auto">
                       <div className="bg-white p-2 rounded-lg border border-slate-200 text-slate-800">
-                        {greetingMessage || '👋 Welcome to live chat!'}
+                        {greetingMessage || 'Welcome to live chat!'}
                       </div>
                       <div className="ml-auto bg-blue-600 text-white p-2 rounded-lg max-w-[85%]">
                         Hello from iPhone mobile browser!
@@ -1440,7 +1512,7 @@ export function LiveChatIntegration() {
                         className="h-6 w-6 rounded flex items-center justify-center text-white text-[10px]"
                         style={{ backgroundColor: widgetColor }}
                       >
-                        ➤
+                        <Send className="h-3.5 w-3.5 text-white" />
                       </div>
                     </div>
                   </div>
@@ -1477,7 +1549,7 @@ export function LiveChatIntegration() {
                     disabled={saving}
                     className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
                   >
-                    ↺ Reset Defaults
+                    <span className="flex items-center gap-1"><RotateCcw className="h-3.5 w-3.5" /> Reset Defaults</span>
                   </button>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -1553,7 +1625,7 @@ export function LiveChatIntegration() {
                         onClick={() => setShowAddField(!showAddField)}
                         className="rounded-lg bg-blue-50 border border-blue-200 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 flex items-center gap-1"
                       >
-                        <span>{showAddField ? '✕ Cancel' : '+ Add Custom Field'}</span>
+                        {showAddField ? <span className="flex items-center gap-1"><X className="h-3.5 w-3.5" /> Cancel</span> : <span className="flex items-center gap-1"><Plus className="h-3.5 w-3.5" /> Add Custom Field</span>}
                       </button>
                     </div>
 
@@ -1685,7 +1757,7 @@ export function LiveChatIntegration() {
                               className="h-6 w-6 rounded border border-slate-200 flex items-center justify-center text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-30"
                               title="Move Up"
                             >
-                              ↑
+                              <ArrowUp className="h-3 w-3" />
                             </button>
                             <button
                               type="button"
@@ -1694,7 +1766,7 @@ export function LiveChatIntegration() {
                               className="h-6 w-6 rounded border border-slate-200 flex items-center justify-center text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-30"
                               title="Move Down"
                             >
-                              ↓
+                              <ArrowDown className="h-3 w-3" />
                             </button>
 
                             {/* Required toggle */}
@@ -1707,7 +1779,7 @@ export function LiveChatIntegration() {
                                   : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
                               }`}
                             >
-                              {field.required ? '★ Required' : 'Optional'}
+                              {field.required ? <span className="flex items-center gap-1"><Star className="h-3 w-3 fill-current" /> Required</span> : <span>Optional</span>}
                             </button>
 
                             {/* Delete field */}
@@ -1717,7 +1789,7 @@ export function LiveChatIntegration() {
                               className="h-6 w-6 rounded border border-red-200 text-red-600 hover:bg-red-50 flex items-center justify-center text-xs"
                               title="Delete Field"
                             >
-                              ✕
+                              <X className="h-3.5 w-3.5" />
                             </button>
                           </div>
                         </div>
@@ -1741,7 +1813,7 @@ export function LiveChatIntegration() {
                         onClick={() => setShowAddRule(!showAddRule)}
                         className="rounded-lg bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 flex items-center gap-1"
                       >
-                        <span>{showAddRule ? '✕ Cancel' : '+ Add Routing Rule'}</span>
+                        {showAddRule ? <span className="flex items-center gap-1"><X className="h-3.5 w-3.5" /> Cancel</span> : <span className="flex items-center gap-1"><Plus className="h-3.5 w-3.5" /> Add Routing Rule</span>}
                       </button>
                     </div>
 
@@ -1801,7 +1873,7 @@ export function LiveChatIntegration() {
                               <option value="low">Low Priority</option>
                               <option value="medium">Medium Priority</option>
                               <option value="high">High Priority</option>
-                              <option value="urgent">⚡ Urgent Priority</option>
+                              <option value="urgent">Urgent Priority</option>
                             </select>
                           </div>
 
@@ -1855,7 +1927,7 @@ export function LiveChatIntegration() {
                             </code>
                             <span className="text-slate-500">{rule.operator}</span>
                             <span className="font-bold text-slate-900">"{rule.value}"</span>
-                            <span className="text-slate-400">➔</span>
+                            <ArrowRight className="h-3.5 w-3.5 text-slate-400" />
                             <span className="rounded bg-amber-50 px-2 py-0.5 font-bold uppercase text-[10px] text-amber-700 border border-amber-200">
                               {rule.assign_priority} Priority
                             </span>
@@ -1876,7 +1948,7 @@ export function LiveChatIntegration() {
                             className="text-red-500 hover:text-red-700 p-1 text-xs shrink-0"
                             title="Remove Rule"
                           >
-                            ✕
+                            <X className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       ))}
@@ -1895,7 +1967,7 @@ export function LiveChatIntegration() {
                 </div>
               ) : (
                 <div className="rounded-lg bg-slate-50 p-6 text-center border border-dashed border-slate-200">
-                  <span className="text-2xl">⚡</span>
+                  <Zap className="h-7 w-7 text-amber-500" />
                   <div className="text-xs font-semibold text-slate-800 mt-2">Pre-Chat Qualification is Disabled</div>
                   <p className="text-[11px] text-slate-500 max-w-sm mx-auto mt-1">
                     Visitors will immediately see the conversation message thread without answering any required form fields.
@@ -1912,7 +1984,7 @@ export function LiveChatIntegration() {
                 <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
                   Live Intake Preview & Simulator
                 </span>
-                <span className="text-[11px] font-semibold text-emerald-600">● Interactive</span>
+                <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1"><span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" /> Interactive</span>
               </div>
 
               {/* Mockup Container */}
@@ -1928,8 +2000,9 @@ export function LiveChatIntegration() {
                 {/* Header */}
                 <div className="p-4 text-white shrink-0 shadow-sm" style={{ backgroundColor: widgetColor }}>
                   <div className="flex items-center gap-3">
+                    {/* avatarUrl is gated by SAFE_IMAGE_URL_RE (see the first avatar <img> above). */}
                     <img
-                      src={avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128'}
+                      src={SAFE_IMAGE_URL_RE.test(avatarUrl) ? avatarUrl : DEFAULT_AVATAR_URL}
                       alt="Avatar"
                       className="h-9 w-9 rounded-full border-2 border-white/60 object-cover shadow-xs"
                     />
@@ -2011,7 +2084,7 @@ export function LiveChatIntegration() {
                         : 'bg-white text-slate-500 border-slate-200'
                     }`}
                   >
-                    ⚡ Powered by <span className="font-semibold text-blue-600">Captain AI</span>
+                    Powered by <span className="font-semibold text-blue-600">Captain AI</span>
                   </div>
                 )}
               </div>
@@ -2026,7 +2099,7 @@ export function LiveChatIntegration() {
                         simIntakeResult.valid ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
                       }`}
                     >
-                      {simIntakeResult.valid ? '✓ Valid Intake' : 'Validation Error'}
+                      {simIntakeResult.valid ? <span className="flex items-center gap-1"><Check className="h-3.5 w-3.5 text-emerald-600" /> Valid Intake</span> : <span className="flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5 text-red-500" /> Validation Error</span>}
                     </span>
                   </div>
 
@@ -2123,7 +2196,7 @@ export function LiveChatIntegration() {
                   value={websiteDomain}
                   onChange={(e) => setWebsiteDomain(e.target.value)}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
-                  placeholder="bayworks.com"
+                  placeholder="newax.co"
                 />
                 <p className="text-[11px] text-slate-400 mt-1">
                   Prevents unauthorized domains from embedding your live chat widget.
@@ -2219,7 +2292,7 @@ def get_identifier_hash(user_id: str) -> str:
                   value={greetingMessage}
                   onChange={(e) => setGreetingMessage(e.target.value)}
                   className="w-full rounded-lg border border-slate-300 p-2.5 text-xs focus:border-blue-500 focus:outline-none"
-                  placeholder="👋 Welcome to our live chat! How can our support team help you today?"
+                  placeholder="Welcome to our live chat! How can our support team help you today?"
                 />
               )}
             </div>
@@ -2253,7 +2326,7 @@ def get_identifier_hash(user_id: str) -> str:
             <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
               <div>
                 <div className="text-xs font-semibold text-slate-800">Customer Satisfaction Survey (CSAT)</div>
-                <div className="text-[11px] text-slate-500">Prompt visitors to rate support satisfaction (⭐ 1-5) once conversation is marked resolved</div>
+                <div className="text-[11px] text-slate-500">Prompt visitors to rate support satisfaction (ratings 1-5 <Star className="h-3 w-3 text-amber-400 fill-current inline" />) once conversation is marked resolved</div>
               </div>
               <input
                 type="checkbox"
@@ -2407,14 +2480,14 @@ def get_identifier_hash(user_id: str) -> str:
                   disabled={simulating}
                   className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
                 >
-                  <span>{simulating ? 'Sending...' : '⚡ Submit Visitor Message'}</span>
+                  <span>{simulating ? 'Sending...' : 'Submit Visitor Message'}</span>
                 </button>
                 {simResult && (
                   <Link
                     to="/"
                     className="rounded-lg border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 flex items-center gap-1.5"
                   >
-                    <span>View in Shared Inbox →</span>
+                    <span className="flex items-center gap-1">View in Shared Inbox <ArrowRight className="h-3.5 w-3.5" /></span>
                   </Link>
                 )}
               </div>
@@ -2422,7 +2495,7 @@ def get_identifier_hash(user_id: str) -> str:
               {simResult && (
                 <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3.5 text-xs text-emerald-900 space-y-1">
                   <div className="font-bold flex items-center gap-1.5">
-                    <span>✓ Conversation Created:</span>
+                    <span className="flex items-center gap-1 text-emerald-700 font-semibold"><Check className="h-3.5 w-3.5 text-emerald-600" /> Conversation Created:</span>
                     <span className="font-mono text-emerald-700">{simResult.conversationId.slice(0, 12)}...</span>
                   </div>
                   <p className="text-[11px] text-emerald-800">{simResult.message}</p>
@@ -2446,7 +2519,7 @@ def get_identifier_hash(user_id: str) -> str:
                   }}
                   className="text-xs font-semibold text-blue-600 hover:text-blue-800"
                 >
-                  🔄 Refresh
+                  <span className="flex items-center gap-1"><RefreshCw className="h-3 w-3" /> Refresh</span>
                 </button>
               </div>
 
@@ -2480,7 +2553,7 @@ def get_identifier_hash(user_id: str) -> str:
                         to="/"
                         className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 shrink-0 mt-1"
                       >
-                        Open ↗
+                        <span className="flex items-center gap-1">Open <ArrowUpRight className="h-3 w-3" /></span>
                       </Link>
                     </div>
                   ))}

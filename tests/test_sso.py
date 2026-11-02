@@ -203,7 +203,7 @@ async def test_sso_api_endpoints(db_session, override_database_dependency):
         assert r_put.status_code == 200
         updated_cfg = r_put.json()["sso_config"]
         assert updated_cfg["provider_type"] == "google_workspace"
-        assert "google-enterprise.com" in updated_cfg["enforced_domains"]
+        assert any(d == "google-enterprise.com" for d in updated_cfg["enforced_domains"])
 
         # 3. GET /api/v1/sso/metadata.xml
         r_meta = await client.get("/api/v1/sso/metadata.xml")

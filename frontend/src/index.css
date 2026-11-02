@@ -3,10 +3,141 @@
   themes: light --default;
 }
 
+/*
+ * NEWAX global design tokens -- the one place colour, radius, elevation,
+ * spacing and motion live. Every component reads these custom properties
+ * (or the Tailwind utilities layered on top of them below) instead of a
+ * literal value, so a rebrand or a theme change is an edit here, not a
+ * hunt through every page.
+ */
+:root {
+  /*
+   * NEWAX ecosystem palette -- charcoal-black primary on a cream-white
+   * page. Every product in the ecosystem (Communicator, core-newax, nID,
+   * erp-1, ...) shares this same token set, this same glass recipe, and
+   * the same three-tier nav + breadcrumb shell (Layout.tsx). A product
+   * does not invent its own palette or spacing scale; it imports these.
+   */
+  --color-page: #faf8f3;
+  --color-surface: #ffffff;
+  --color-surface-glass: rgb(255 255 255 / 0.62);
+  --color-surface-glass-strong: rgb(255 255 255 / 0.82);
+  --color-border-glass: rgb(255 255 255 / 0.55);
+  /* border/ink-faint darkened to clear the WCAG 3:1 non-text floor against
+   * --color-page -- see src/theme.ts's neutral.200/300 comment. */
+  --color-border: #928f88;
+  --color-ink: #1c1917;
+  --color-ink-muted: #57534e;
+  --color-ink-faint: #908b88;
+
+  --color-accent: #1c1917;
+  --color-accent-hover: #0c0a09;
+  --color-accent-soft: #f5f3ef;
+  --color-on-accent: #ffffff;
+
+  --color-positive: #0f7a4d;
+  --color-negative: #b42318;
+
+  /* ---- Shape ---- */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-pill: 9999px;
+
+  /* ---- Elevation: neutral-tinted, two-layer shadows per step ---- */
+  --elevation-raised: 0 1px 2px 0 rgb(16 24 40 / 0.04), 0 1px 3px 0 rgb(16 24 40 / 0.06);
+  --elevation-overlay: 0 4px 8px -2px rgb(16 24 40 / 0.06), 0 12px 24px -6px rgb(16 24 40 / 0.1);
+  --elevation-modal: 0 8px 16px -4px rgb(16 24 40 / 0.1), 0 24px 56px -12px rgb(16 24 40 / 0.22);
+
+  /* ---- Stacking layers (named, never a literal z-index in a component) ---- */
+  --layer-sticky: 10;
+  --layer-dropdown: 20;
+  --layer-overlay: 30;
+  --layer-modal: 40;
+  --layer-toast: 50;
+
+  /* ---- Motion: durations (ms) and easings, transform/opacity only ---- */
+  --motion-fast: 140ms;
+  --motion-normal: 220ms;
+  --motion-slow: 320ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-decelerate: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-settle: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ---- Glass panel recipe ---- */
+  --glass-blur: 16px;
+}
+
 html {
   color-scheme: light;
 }
 
 body {
-  background-color: #f8fafc;
+  background-color: var(--color-page);
+  background-image:
+    radial-gradient(60rem 36rem at 90% -10%, rgb(28 25 23 / 0.05), transparent 60%),
+    radial-gradient(50rem 30rem at -10% 20%, rgb(28 25 23 / 0.035), transparent 55%);
+  background-attachment: fixed;
+  color: var(--color-ink);
+}
+
+/*
+ * Glass surfaces -- the one recipe every card, panel and nav in the product
+ * uses. Translucent, blurred, a thin luminous border, a shallow shadow so
+ * each pane reads as a separate sheet without competing with dense content.
+ */
+.glass-panel {
+  background: var(--color-surface-glass);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  border: 1px solid var(--color-border-glass);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-raised);
+}
+
+.glass-panel-strong {
+  background: var(--color-surface-glass-strong);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  border: 1px solid var(--color-border-glass);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-overlay);
+}
+
+.glass-card {
+  background: var(--color-surface-glass);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  border: 1px solid var(--color-border-glass);
+  border-radius: var(--radius-md);
+  box-shadow: var(--elevation-raised);
+  transition: box-shadow var(--motion-normal) var(--ease-standard), transform var(--motion-fast) var(--ease-standard);
+}
+
+/* Transforms and opacity only -- never layout properties (left/top/width). */
+@media (prefers-reduced-motion: no-preference) {
+  .motion-fade-in {
+    animation: fade-in var(--motion-normal) var(--ease-settle) both;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
 }

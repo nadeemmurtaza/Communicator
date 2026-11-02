@@ -1,119 +1,208 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { ArrowRight, RefreshCw } from 'lucide-react'
+import { CHANNEL_ICONS } from '../components/icons/BrandIcons'
+import { api, type Inbox, type WhatsAppChannelData, type ChannelHealth } from '../lib/api'
 
-const CHANNELS = [
+interface BaseChannelDef {
+  id: string
+  name: string
+  description: string
+  icon: keyof typeof CHANNEL_ICONS
+  link: string
+  defaultConnectedStats: string
+}
+
+const BASE_CHANNELS: BaseChannelDef[] = [
   {
     id: 'whatsapp',
     name: 'WhatsApp Business API',
     description: 'Official WhatsApp Business Cloud API with interactive templates, 24h window, and live analytics.',
-    icon: '💬',
-    status: 'connected',
-    statusLabel: 'Active & Verified',
-    statusColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    icon: 'whatsapp',
     link: '/channels/whatsapp',
-    stats: '100K daily limit · 🟢 Quality Rating: High',
+    defaultConnectedStats: '250 / day · Quality: High',
   },
   {
-    id: 'live_chat',
+    id: 'live-chat',
     name: 'Website Live Chat',
     description: 'Embeddable customizable chat widget for your website with pre-chat forms, visitor presence, and HMAC identity verification.',
-    icon: '🌐',
-    status: 'connected',
-    statusLabel: 'Active & Configured',
-    statusColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    icon: 'live-chat',
     link: '/channels/live-chat',
-    stats: 'SDK Embed · Pre-chat forms · HMAC-SHA256',
+    defaultConnectedStats: 'SDK Embed · Pre-chat forms · HMAC-SHA256',
   },
   {
     id: 'email',
     name: 'Email (IMAP / SMTP / Postmark)',
     description: 'Connect shared support emails, parse threaded replies, and send branded email responses.',
-    icon: '✉️',
-    status: 'connected',
-    statusLabel: 'Active & Connected',
-    statusColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    icon: 'email',
     link: '/channels/email',
-    stats: 'SMTP Outbound · IMAP Polling · Inbound Webhooks · SPF/DKIM',
+    defaultConnectedStats: 'SMTP Outbound · IMAP Polling · Inbound Webhooks · SPF/DKIM',
   },
   {
     id: 'sms',
     name: 'SMS Messaging (Twilio)',
     description: 'Direct SMS outreach and inbound conversation handling via Twilio, A2P 10DLC verification, and carrier compliance.',
-    icon: '📱',
-    status: 'connected',
-    statusLabel: 'Active & Connected',
-    statusColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    icon: 'sms',
     link: '/channels/sms',
-    stats: '10DLC Verified · Automated STOP/START · Twilio REST API',
+    defaultConnectedStats: '10DLC Verified · Automated STOP/START · Twilio REST API',
   },
   {
     id: 'facebook',
     name: 'Facebook Messenger',
     description: 'Manage Facebook business page messages, comments, and customer replies from one inbox.',
-    icon: '👥',
-    status: 'connected',
-    statusLabel: 'Active & Connected',
-    statusColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    icon: 'facebook',
     link: '/channels/facebook',
-    stats: 'Meta Graph API v21.0 · Page IDs · Icebreakers · 24h Window',
+    defaultConnectedStats: 'Meta Graph API v21.0 · Page IDs · Icebreakers · 24h Window',
   },
   {
     id: 'instagram',
     name: 'Instagram Direct Messages',
     description: 'Handle Instagram DMs, story mentions, and post replies in your unified team inbox.',
-    icon: '📸',
-    status: 'connected',
-    statusLabel: 'Active & Connected',
-    statusColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    icon: 'instagram',
     link: '/channels/instagram',
-    stats: 'Professional DMs · Story Mentions Auto-Reply · Icebreakers',
+    defaultConnectedStats: 'Professional DMs · Story Mentions Auto-Reply · Icebreakers',
   },
   {
     id: 'telegram',
     name: 'Telegram Bot API',
     description: 'Connect Telegram support bots and manage high-volume customer messages securely.',
-    icon: '✈️',
-    status: 'connected',
-    statusLabel: 'Active & Connected',
-    statusColor: 'bg-sky-100 text-sky-800 border-sky-200',
+    icon: 'telegram',
     link: '/channels/telegram',
-    stats: 'Bot Token & Secret · Commands · Live Webhook Streaming',
+    defaultConnectedStats: 'Bot Token & Secret · Commands · Live Webhook Streaming',
   },
   {
     id: 'line',
     name: 'LINE Messaging API',
     description: 'Support customers across Japan, Taiwan, and Thailand with official LINE channel integration.',
-    icon: '🟢',
-    status: 'connected',
-    statusLabel: 'Active & Connected',
-    statusColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    icon: 'line',
     link: '/channels/line',
-    stats: 'Channel Secret & Push · Quick Replies · Webhook Verification',
+    defaultConnectedStats: 'Channel Secret & Push · Quick Replies · Webhook Verification',
   },
   {
     id: 'tiktok',
     name: 'TikTok Direct Messages & Comments',
     description: 'Manage incoming TikTok customer conversations and video comment moderation directly in your unified inbox.',
-    icon: '🎵',
-    status: 'connected',
-    statusLabel: 'Active & Connected',
-    statusColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    icon: 'tiktok',
     link: '/channels/tiktok',
-    stats: 'TikTok Business v2 · DMs & Comment Auto-Replies · HMAC Verification',
+    defaultConnectedStats: 'TikTok Business v2 · DMs & Comment Auto-Replies · HMAC Verification',
   },
   {
     id: 'voice',
     name: 'Voice & WebRTC Calling',
     description: 'Phone calls and audio conferencing directly inside the agent inbox with Twilio Voice & WebRTC.',
-    icon: '📞',
-    status: 'connected',
-    statusLabel: 'Active & Connected',
-    statusColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    icon: 'voice',
     link: '/channels/voice',
-    stats: 'Browser Softphone · IVR · Dual-Track Audio & Transcripts',
+    defaultConnectedStats: 'Browser Softphone · IVR · Dual-Track Audio & Transcripts',
   },
 ]
 
+function checkChannelConfigured(
+  channelId: string,
+  inboxes: Inbox[],
+  healthMap: Record<string, ChannelHealth>,
+  waData?: WhatsAppChannelData | null
+): boolean {
+  if (healthMap[channelId]) {
+    return healthMap[channelId].isConnected
+  }
+
+  if (channelId === 'whatsapp') {
+    return Boolean(waData?.health?.isConnected)
+  }
+
+  const typeMap: Record<string, string[]> = {
+    'live-chat': ['website', 'live-chat', 'live_chat'],
+    email: ['email'],
+    sms: ['sms'],
+    facebook: ['facebook'],
+    instagram: ['instagram'],
+    telegram: ['telegram'],
+    line: ['line'],
+    tiktok: ['tiktok'],
+    voice: ['voice', 'voice_sip'],
+  }
+
+  const targetTypes = typeMap[channelId] || [channelId]
+  const inbox = inboxes.find((i) => targetTypes.includes(i.channelType || (i as any).channel))
+  if (!inbox || !inbox.isActive) return false
+
+  const creds = inbox.credentials || {}
+  return Object.keys(creds).length > 0
+}
+
 export function ChannelsHub() {
+  const [inboxes, setInboxes] = useState<Inbox[]>([])
+  const [channelsHealth, setChannelsHealth] = useState<ChannelHealth[]>([])
+  const [waData, setWaData] = useState<WhatsAppChannelData | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  const loadChannels = async () => {
+    try {
+      setLoading(true)
+      const [inboxList, whatsappRes, healthList] = await Promise.all([
+        api.listInboxes().catch(() => []),
+        api.getWhatsAppChannel().catch(() => null),
+        api.getChannelsHealth().catch(() => []),
+      ])
+      setInboxes(inboxList)
+      setWaData(whatsappRes)
+      setChannelsHealth(healthList)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadChannels()
+  }, [])
+
+  const healthMap: Record<string, ChannelHealth> = {}
+  for (const h of channelsHealth) {
+    healthMap[h.channel] = h
+  }
+
+  const channels = BASE_CHANNELS.map((ch) => {
+    const isConfigured = checkChannelConfigured(ch.id, inboxes, healthMap, waData)
+    const health = healthMap[ch.id]
+
+    if (ch.id === 'whatsapp') {
+      if (isConfigured) {
+        return {
+          ...ch,
+          status: 'connected',
+          statusLabel: health?.statusLabel || 'Active & Verified',
+          statusColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+          stats: `${waData?.health?.messagingLimitTier || '250 / day'} · Quality: ${waData?.health?.qualityRating || 'High'}`,
+        }
+      }
+      return {
+        ...ch,
+        status: 'not_configured',
+        statusLabel: 'Not Configured',
+        statusColor: 'bg-amber-50 text-amber-800 border-amber-200',
+        stats: 'Setup required · No active credentials',
+      }
+    }
+
+    if (isConfigured) {
+      return {
+        ...ch,
+        status: 'connected',
+        statusLabel: health?.statusLabel || 'Active & Connected',
+        statusColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+        stats: ch.defaultConnectedStats,
+      }
+    }
+
+    return {
+      ...ch,
+      status: 'not_configured',
+      statusLabel: 'Not Configured',
+      statusColor: 'bg-amber-50 text-amber-800 border-amber-200',
+      stats: 'Setup required · No active credentials',
+    }
+  })
+
   return (
     <div className="space-y-6">
       {/* Top Header */}
@@ -124,6 +213,11 @@ export function ChannelsHub() {
             <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
               Omnichannel Hub
             </span>
+            {loading && (
+              <span className="flex items-center gap-1 text-xs text-slate-400">
+                <RefreshCw className="h-3 w-3 animate-spin" /> Syncing channels...
+              </span>
+            )}
           </div>
           <p className="mt-1 text-xs text-slate-500">
             Connect all customer support channels and manage all conversations from a single, unified inbox.
@@ -135,61 +229,67 @@ export function ChannelsHub() {
             to="/channels/whatsapp"
             className="rounded-md bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 shadow-xs flex items-center gap-1.5"
           >
-            <span>💬</span> Configure WhatsApp
+            <CHANNEL_ICONS.whatsapp className="h-3.5 w-3.5" /> Configure WhatsApp
           </Link>
         </div>
       </div>
 
       {/* Grid of Channels */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {CHANNELS.map((ch) => (
-          <div
-            key={ch.id}
-            className={`rounded-xl border p-5 bg-white shadow-xs transition-all flex flex-col justify-between ${
-              ch.status === 'connected' ? 'border-emerald-300 ring-1 ring-emerald-200' : 'border-slate-200 hover:border-slate-300'
-            }`}
-          >
-            <div>
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{ch.icon}</span>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">{ch.name}</h3>
-                    <span className="text-[11px] text-slate-400 font-mono">{ch.stats}</span>
+        {channels.map((ch) => {
+          const Icon = CHANNEL_ICONS[ch.icon]
+          const isConnected = ch.status === 'connected'
+          return (
+            <div
+              key={ch.id}
+              className={`glass-card p-5 transition-all flex flex-col justify-between ${
+                isConnected ? 'ring-1 ring-emerald-200' : 'ring-1 ring-slate-100'
+              }`}
+            >
+              <div>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-accent-soft)] text-[var(--color-accent)]">
+                      <Icon className="h-6 w-6" />
+                    </span>
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900">{ch.name}</h3>
+                      <span className="text-[11px] text-slate-400 font-mono">{ch.stats}</span>
+                    </div>
                   </div>
+                  <span
+                    className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${ch.statusColor}`}
+                  >
+                    {ch.statusLabel}
+                  </span>
                 </div>
-                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${ch.statusColor}`}>
-                  {ch.statusLabel}
-                </span>
+
+                <p className="mt-3 text-xs text-slate-600 leading-relaxed">{ch.description}</p>
               </div>
 
-              <p className="mt-3 text-xs text-slate-600 leading-relaxed">
-                {ch.description}
-              </p>
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-[11px] text-slate-400">
+                  {isConnected ? 'Primary Active Channel' : 'Setup Required'}
+                </span>
+                {ch.link && ch.link !== '#' ? (
+                  <Link
+                    to={ch.link}
+                    className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 shadow-xs flex items-center gap-1"
+                  >
+                    Configure <ArrowRight className="h-3 w-3" />
+                  </Link>
+                ) : (
+                  <button
+                    disabled
+                    className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-400 cursor-not-allowed"
+                  >
+                    Configure
+                  </button>
+                )}
+              </div>
             </div>
-
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-[11px] text-slate-400">
-                {ch.status === 'connected' ? 'Primary Active Channel' : 'Unified Inbox Ready'}
-              </span>
-              {ch.link && ch.link !== '#' ? (
-                <Link
-                  to={ch.link}
-                  className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 shadow-xs"
-                >
-                  Configure →
-                </Link>
-              ) : (
-                <button
-                  disabled
-                  className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-400 cursor-not-allowed"
-                >
-                  Configure
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

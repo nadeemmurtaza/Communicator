@@ -1,3 +1,4 @@
+import { Activity, AlertCircle, AlertTriangle, ArrowLeft, Camera, CheckCircle2, Flame, Webhook, X, Zap } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -5,6 +6,7 @@ import {
   type InstagramChannelData,
   type SocialEvent,
 } from '../lib/api'
+import { InstagramIcon } from '../components/icons/BrandIcons'
 
 export function InstagramIntegration() {
   const [data, setData] = useState<InstagramChannelData | null>(null)
@@ -22,9 +24,9 @@ export function InstagramIntegration() {
 
   // Account State
   const [inboxName, setInboxName] = useState('Instagram Direct')
-  const [igUsername, setIgUsername] = useState('@bayworks')
-  const [igId, setIgId] = useState('17841405822345678')
-  const [connectedPageId, setConnectedPageId] = useState('100234567890123')
+  const [igUsername, setIgUsername] = useState('')
+  const [igId, setIgId] = useState('')
+  const [connectedPageId, setConnectedPageId] = useState('')
   const [accessToken, setAccessToken] = useState('')
   const [appSecret, setAppSecret] = useState('')
   const [webhookVerifyToken, setWebhookVerifyToken] = useState('meta_instagram_verify_token')
@@ -32,7 +34,7 @@ export function InstagramIntegration() {
   // Story Mentions State
   const [storyMentionsEnabled, setStoryMentionsEnabled] = useState(true)
   const [storyReplyMessage, setStoryReplyMessage] = useState(
-    'Thanks for mentioning us in your story! 🔥 How can we assist you today?'
+    'Thanks for mentioning us in your story! How can we assist you today?'
   )
 
   // Icebreakers State
@@ -47,7 +49,7 @@ export function InstagramIntegration() {
   // Automations & Schedule State
   const [greetingEnabled, setGreetingEnabled] = useState(true)
   const [greetingMessage, setGreetingMessage] = useState(
-    'Hey! Thanks for DMing Bay Works on Instagram. How can we help you today?'
+    'Hey! Thanks for DMing us on Instagram. How can we help you today?'
   )
   const [outOfOfficeEnabled, setOutOfOfficeEnabled] = useState(false)
   const [outOfOfficeMessage, setOutOfOfficeMessage] = useState(
@@ -61,9 +63,9 @@ export function InstagramIntegration() {
 
   // Diagnostic Test Sender State
   const [testIgsid, setTestIgsid] = useState('igsid_test_549120')
-  const [testUsername, setTestUsername] = useState('clara_design')
+  const [testUsername, setTestUsername] = useState('test_user')
   const [testMessage, setTestMessage] = useState(
-    'Hey Clara! This is an automated test DM from your Bay Works Instagram integration.'
+    'Hey there! This is an automated test DM from your Instagram integration.'
   )
   const [testResult, setTestResult] = useState<{ mid: string; message: string } | null>(null)
 
@@ -83,9 +85,12 @@ export function InstagramIntegration() {
       setEvents(evList)
 
       setInboxName(channelData.inbox.name)
-      setIgUsername(channelData.accountProfile?.igUsername || channelData.inbox.credentials?.igUsername || '@bayworks')
-      setIgId(channelData.accountProfile?.igId || channelData.inbox.credentials?.igId || '')
-      setConnectedPageId(channelData.accountProfile?.connectedFacebookPage || channelData.inbox.credentials?.connectedPageId || '')
+      const rawHandle = channelData.accountProfile?.igUsername || channelData.inbox.credentials?.igUsername || ''
+      setIgUsername(rawHandle === '@bayworks' ? '' : rawHandle)
+      const rawIgId = channelData.accountProfile?.igId || channelData.inbox.credentials?.igId || ''
+      setIgId(rawIgId === '17841405822345678' ? '' : rawIgId)
+      const rawPageId = channelData.accountProfile?.connectedFacebookPage || channelData.inbox.credentials?.connectedPageId || ''
+      setConnectedPageId(rawPageId === '100234567890123' ? '' : rawPageId)
       setWebhookVerifyToken(channelData.webhookConfig?.verifyToken || 'meta_instagram_verify_token')
 
       if (channelData.storyMentions) {
@@ -150,6 +155,25 @@ export function InstagramIntegration() {
       setError(err.message || 'Failed to save Instagram Direct settings.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleConnectInstagram() {
+    try {
+      setError(null)
+      // A plain <a href> can't send the operator's session header that
+      // /instagram/start now requires, so fetch the authorize URL via the
+      // authenticated API client and navigate to it ourselves.
+      const session = localStorage.getItem('communicator.session')
+      const token = session ? JSON.parse(session).token : null
+      const res = await fetch('/api/v1/auth/instagram/start', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (!res.ok) throw new Error('Could not start Instagram connection.')
+      const { authorizeUrl } = await res.json()
+      window.location.href = authorizeUrl
+    } catch (err: any) {
+      setError(err.message || 'Failed to start Instagram connection.')
     }
   }
 
@@ -222,6 +246,8 @@ export function InstagramIntegration() {
     )
   }
 
+  const isConnected = Boolean(data?.health?.isConnected && igUsername && igUsername !== '@bayworks')
+
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6">
       {/* Top Banner Navigation */}
@@ -229,17 +255,43 @@ export function InstagramIntegration() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Link to="/channels" className="text-sm font-medium text-pink-600 hover:text-pink-800">
-              ← Back to Channels Hub
+              <span className="flex items-center gap-1"><ArrowLeft className="h-3.5 w-3.5" /> Back to Channels Hub</span>
             </Link>
             <span className="text-gray-300">/</span>
             <span className="text-sm font-medium text-gray-500">Instagram Direct</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-yellow-500 via-pink-600 to-purple-600 flex items-center justify-center text-white shadow-sm font-bold text-xl">
-              📸
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-yellow-500 via-pink-600 to-purple-600 flex items-center justify-center text-white shadow-sm">
+              <InstagramIcon className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Instagram Direct Integration</h1>
+              <div className="flex items-center gap-2">
+
+                <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Instagram Direct Integration</h1>
+
+                {isConnected ? (
+
+                  <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 border border-emerald-200 flex items-center gap-1">
+
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+
+                    Connected &amp; Healthy
+
+                  </span>
+
+                ) : (
+
+                  <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 border border-amber-200 flex items-center gap-1">
+
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+
+                    Not Configured
+
+                  </span>
+
+                )}
+
+              </div>
               <p className="text-sm text-gray-500">
                 Instagram Professional & Business Direct Messages, Story Mentions Auto-Reply, and Icebreaker FAQ chips.
               </p>
@@ -253,7 +305,7 @@ export function InstagramIntegration() {
             disabled={verifying}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 shadow-sm transition disabled:opacity-50"
           >
-            {verifying ? 'Checking Instagram...' : '⚡ Test Connection'}
+            {verifying ? 'Checking Instagram...' : 'Test Connection'}
           </button>
           <button
             onClick={handleSaveSettings}
@@ -265,28 +317,50 @@ export function InstagramIntegration() {
         </div>
       </div>
 
+      {/* Real Connection Status Banner */}
+
+      {!isConnected && (
+
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 flex items-start gap-3">
+
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+
+          <div>
+
+            <h4 className="text-sm font-semibold text-amber-900">Channel Not Connected</h4>
+
+            <p className="text-xs text-amber-700 mt-0.5">
+
+              Please enter your provider API credentials below and click Save Configuration to activate.
+
+            </p>
+
+          </div>
+
+        </div>
+
+      )}
+
+
+
       {/* Alert Notices */}
       {success && (
         <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-sm flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span>✅</span>
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             <span>{success}</span>
           </div>
-          <button onClick={() => setSuccess(null)} className="text-emerald-600 hover:text-emerald-900 font-bold">
-            ×
-          </button>
+          <button onClick={() => setSuccess(null)} className="text-emerald-600 hover:text-emerald-900 font-bold"><X className="h-4 w-4" /></button>
         </div>
       )}
 
       {error && (
         <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-sm flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span>⚠️</span>
+            <AlertCircle className="h-4 w-4 text-rose-600" />
             <span>{error}</span>
           </div>
-          <button onClick={() => setError(null)} className="text-rose-600 hover:text-rose-900 font-bold">
-            ×
-          </button>
+          <button onClick={() => setError(null)} className="text-rose-600 hover:text-rose-900 font-bold"><X className="h-4 w-4" /></button>
         </div>
       )}
 
@@ -295,9 +369,11 @@ export function InstagramIntegration() {
         <div className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
           <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Account Handle</div>
           <div className="flex items-center justify-between">
-            <span className="text-lg font-bold text-gray-900">{igUsername || '@bayworks'}</span>
-            <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-              Verified
+            <span className="text-lg font-bold text-gray-900">{igUsername || 'Not Configured'}</span>
+            <span className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${
+              isConnected ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+            }`}>
+              {isConnected ? 'Connected' : 'Not Configured'}
             </span>
           </div>
           <p className="text-xs text-gray-500 mt-1">IG ID: {igId}</p>
@@ -343,25 +419,28 @@ export function InstagramIntegration() {
       <div className="border-b border-gray-200">
         <nav className="flex space-x-8">
           {[
-            { id: 'account', label: 'Professional Account & IDs', icon: '📸' },
-            { id: 'webhooks', label: 'Webhooks & Graph Sync', icon: '⚡' },
-            { id: 'story_mentions', label: 'Story Mentions & Auto-Reply', icon: '✨' },
-            { id: 'icebreakers', label: 'DM Icebreakers & Automations', icon: '💡' },
-            { id: 'diagnostics', label: 'Diagnostic Sender & Events', icon: '📡' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`py-4 px-1 inline-flex items-center gap-2 border-b-2 font-medium text-sm transition ${
-                activeTab === tab.id
-                  ? 'border-pink-600 text-pink-600 font-semibold'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <span>{tab.icon}</span>
-              <span>{tab.label}</span>
-            </button>
-          ))}
+            { id: 'account', label: 'Professional Account & IDs', icon: Camera },
+            { id: 'webhooks', label: 'Webhooks & Graph Sync', icon: Webhook },
+            { id: 'story_mentions', label: 'Story Mentions & Auto-Reply', icon: Flame },
+            { id: 'icebreakers', label: 'DM Icebreakers & Automations', icon: Zap },
+            { id: 'diagnostics', label: 'Diagnostic Sender & Events', icon: Activity },
+          ].map((tab) => {
+            const IconComp = tab.icon
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`py-4 px-1 inline-flex items-center gap-2 border-b-2 font-medium text-sm transition ${
+                  activeTab === tab.id
+                    ? 'border-pink-600 text-pink-600 font-semibold'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <IconComp className="w-4 h-4" />
+                <span>{tab.label}</span>
+              </button>
+            )
+          })}
         </nav>
       </div>
 
@@ -373,6 +452,28 @@ export function InstagramIntegration() {
             <p className="text-sm text-gray-500 mt-0.5">
               Connect your Instagram Professional or Business account linked to your Meta Facebook Page.
             </p>
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-4">
+            {data?.health.accountConnected ? (
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-pink-500 to-amber-400 flex items-center justify-center text-white text-sm font-semibold">
+                  {(data.accountProfile.igUsername || '?').replace('@', '').slice(0, 1).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{data.accountProfile.igUsername}</p>
+                  <p className="text-xs text-gray-500 font-mono">{data.accountProfile.igId}</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">No Instagram account connected yet.</p>
+            )}
+            <button
+              onClick={handleConnectInstagram}
+              className="px-4 py-2 bg-gradient-to-tr from-pink-500 to-amber-400 text-white text-sm font-medium rounded-lg hover:opacity-90 transition"
+            >
+              {data?.health.accountConnected ? 'Reconnect Instagram Account' : 'Connect Instagram Account'}
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100">
@@ -394,7 +495,7 @@ export function InstagramIntegration() {
                 value={igUsername}
                 onChange={(e) => setIgUsername(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-pink-500 focus:outline-none"
-                placeholder="e.g. @bayworks"
+                placeholder="e.g. @your_instagram_handle"
               />
             </div>
 
@@ -453,7 +554,7 @@ export function InstagramIntegration() {
           <div>
             <h3 className="text-base font-semibold text-gray-900">Instagram Webhook Settings</h3>
             <p className="text-sm text-gray-500 mt-0.5">
-              Subscribe your Meta App to Instagram webhooks under <strong>Instagram → Webhooks</strong>.
+              Subscribe your Meta App to Instagram webhooks under <strong>Instagram &gt; Webhooks</strong>.
             </p>
           </div>
 
@@ -476,7 +577,7 @@ export function InstagramIntegration() {
                   }
                   className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 transition"
                 >
-                  {copiedKey === 'callback' ? '✓ Copied' : 'Copy'}
+                  {copiedKey === 'callback' ? 'Copied' : 'Copy'}
                 </button>
               </div>
             </div>
@@ -494,7 +595,7 @@ export function InstagramIntegration() {
                   onClick={() => copyToClipboard(webhookVerifyToken, 'verifyToken')}
                   className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 transition"
                 >
-                  {copiedKey === 'verifyToken' ? '✓ Copied' : 'Copy'}
+                  {copiedKey === 'verifyToken' ? 'Copied' : 'Copy'}
                 </button>
               </div>
             </div>
@@ -504,7 +605,7 @@ export function InstagramIntegration() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {['messages', 'messaging_seen', 'story_insights', 'mentions'].map((field) => (
                   <div key={field} className="p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-2">
-                    <span className="text-emerald-500">✓</span>
+                    <span className="text-emerald-500"></span>
                     <span className="text-xs font-mono font-medium text-gray-700">{field}</span>
                   </div>
                 ))}
@@ -530,7 +631,7 @@ export function InstagramIntegration() {
                 <div>
                   <h4 className="text-sm font-semibold text-gray-900">Enable Story Mention Auto-Reply</h4>
                   <p className="text-xs text-gray-500">
-                    Triggers within seconds when an Instagram user tags @bayworks in a public or mutual story.
+                    Triggers within seconds when an Instagram user tags your account in a public or mutual story.
                   </p>
                 </div>
                 <input
@@ -549,7 +650,7 @@ export function InstagramIntegration() {
                     value={storyReplyMessage}
                     onChange={(e) => setStoryReplyMessage(e.target.value)}
                     className="w-full p-2.5 bg-white border border-pink-200 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:outline-none"
-                    placeholder="Thanks for mentioning us in your story! 🔥 How can we assist you today?"
+                    placeholder="Thanks for mentioning us in your story! How can we assist you today?"
                   />
                   <p className="text-xs text-gray-400 mt-1">Personalized, friendly greeting to convert brand mentions into customer relationships.</p>
                 </div>
@@ -737,7 +838,7 @@ export function InstagramIntegration() {
                 disabled={sendingTest || !testIgsid.trim() || !testMessage.trim()}
                 className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-pink-600 to-purple-600 rounded-lg hover:from-pink-700 hover:to-purple-700 shadow-sm transition disabled:opacity-50 flex items-center gap-2"
               >
-                {sendingTest ? 'Dispatching...' : '🚀 Send Diagnostic DM'}
+                {sendingTest ? 'Dispatching...' : 'Send Diagnostic DM'}
               </button>
 
               {testResult && (
@@ -759,7 +860,7 @@ export function InstagramIntegration() {
                 onClick={async () => setEvents(await api.listInstagramEvents())}
                 className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
               >
-                🔄 Refresh
+                Refresh
               </button>
             </div>
 
@@ -797,7 +898,7 @@ export function InstagramIntegration() {
                         <td className="py-3 px-4 font-medium text-gray-900">{ev.senderName}</td>
                         <td className="py-3 px-4 text-gray-700 max-w-xs truncate">{ev.body}</td>
                         <td className="py-3 px-4">
-                          <span className="text-xs font-medium text-emerald-600">● {ev.status}</span>
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>{ev.status}</span>
                         </td>
                         <td className="py-3 px-4 font-mono text-xs text-gray-400">
                           {ev.providerMessageId ? ev.providerMessageId.slice(0, 16) + '...' : '—'}

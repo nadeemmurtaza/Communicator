@@ -5,7 +5,7 @@ from communicator.channels.base import ChannelProvider, SendResult
 from communicator.channels.email import UniversalEmailProvider
 from communicator.channels.line import LineProvider
 from communicator.channels.live_chat import WebLiveChatProvider
-from communicator.channels.messenger import MetaMessengerProvider
+from communicator.channels.messenger import InstagramLoginProvider, MetaMessengerProvider
 from communicator.channels.sms import TwilioSMSProvider
 from communicator.channels.telegram import TelegramProvider
 from communicator.channels.tiktok import TikTokProvider
@@ -91,8 +91,30 @@ async def get_provider(channel: ChannelType, session: AsyncSession) -> ChannelPr
                     messaging_service_sid=messaging_service_sid,
                 )
 
-    if channel in (ChannelType.FACEBOOK, ChannelType.INSTAGRAM):
-        stmt = select(Inbox).where(Inbox.channel_type == channel)
+    if channel == ChannelType.INSTAGRAM:
+        stmt = select(Inbox).where(Inbox.channel_type == ChannelType.INSTAGRAM)
+        inbox = (await session.execute(stmt)).scalars().first()
+        creds = inbox.credentials if inbox and inbox.credentials else {}
+        # Page-linked inboxes (manual setup via update_instagram_channel, or
+        # the seeded default) store their Facebook Page under
+        # connectedPageId, not pageId -- checking the wrong key here routes
+        # those inboxes' real/seeded Page tokens to the Instagram Login
+        # endpoint instead, which was finding #4's own bug.
+        if creds.get("igId") and not creds.get("connectedPageId"):
+            # Connected via Instagram Business Login (instagram_auth.py) --
+            # that token is only valid against graph.instagram.com, not the
+            # Facebook Page messaging endpoint below.
+            return InstagramLoginProvider(
+                access_token=creds.get("accessToken"), ig_user_id=creds.get("igId")
+            )
+        return MetaMessengerProvider(
+            page_access_token=creds.get("pageAccessToken") or creds.get("accessToken"),
+            page_id=creds.get("connectedPageId"),
+            channel_name="instagram",
+        )
+
+    if channel == ChannelType.FACEBOOK:
+        stmt = select(Inbox).where(Inbox.channel_type == ChannelType.FACEBOOK)
         inbox = (await session.execute(stmt)).scalars().first()
         token = None
         page_id = None
@@ -102,7 +124,7 @@ async def get_provider(channel: ChannelType, session: AsyncSession) -> ChannelPr
         return MetaMessengerProvider(
             page_access_token=token,
             page_id=page_id,
-            channel_name=channel.value,
+            channel_name="facebook",
         )
 
     if channel == ChannelType.TELEGRAM:

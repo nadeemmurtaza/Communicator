@@ -10,12 +10,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from communicator.models.knowledge_base import KnowledgeBaseEntry, KnowledgeRecommendation
 
 TOPIC_ICONS: dict[str, str] = {
-    "Billing & Refunds": "💳",
-    "Shipping & Delivery": "🚚",
-    "Orders & Returns": "📦",
-    "Product & Catalog": "✨",
-    "Account & VIP Access": "👑",
-    "General": "📚",
+    "Billing & Refunds": "CreditCard",
+    "Shipping & Delivery": "Truck",
+    "Orders & Returns": "Package",
+    "Product & Catalog": "Sparkles",
+    "Account & VIP Access": "Crown",
+    "General": "BookOpen",
 }
 
 
@@ -258,7 +258,7 @@ async def get_knowledge_hub_overview(
         grouped_topics.append(
             {
                 "name": top_name,
-                "icon": TOPIC_ICONS.get(top_name, "📁"),
+                "icon": TOPIC_ICONS.get(top_name, "Folder"),
                 "sourcesCount": len(items),
                 "avgResolutionRate": round(avg_res, 1),
                 "sources": items,

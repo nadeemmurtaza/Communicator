@@ -100,11 +100,13 @@ class UniversalEmailProvider(ChannelProvider):
         )
 
     def _is_simulated(self) -> bool:
+        host = (self.smtp_host or "").lower()
+        is_sandbox_host = not host or any(
+            host == marker or host.endswith(f".{marker}")
+            for marker in ("mock", "example.com", "bayworks.co")
+        )
         return (
-            not self.smtp_host
-            or self.smtp_host.startswith("mock")
-            or "example.com" in self.smtp_host
-            or "bayworks.co" in self.smtp_host
+            is_sandbox_host
             or not self.smtp_password
             or self.smtp_password.startswith("mock")
             or self.smtp_password.startswith("test_")

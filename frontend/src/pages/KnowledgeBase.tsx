@@ -1,3 +1,27 @@
+import {
+  BookOpen,
+  Bot,
+  Zap,
+  Plus,
+  Link as LinkIcon,
+  FileText,
+  Sparkles,
+  X,
+  MessageSquare,
+  Target,
+  Folder,
+  BarChart3,
+  ThumbsUp,
+  Trash2,
+  Globe,
+  CreditCard,
+  Truck,
+  Package,
+  Layers,
+  ShieldCheck,
+  Lightbulb,
+  Rocket,
+} from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import {
   api,
@@ -6,6 +30,23 @@ import {
   type KnowledgeHubOverview,
   type KnowledgeRecommendation,
 } from '../lib/api'
+
+function renderTopicIcon(topicName: string) {
+  switch (topicName) {
+    case 'Billing & Refunds':
+      return <CreditCard className="h-5 w-5 text-indigo-600 shrink-0" />
+    case 'Shipping & Delivery':
+      return <Truck className="h-5 w-5 text-blue-600 shrink-0" />
+    case 'Orders & Returns':
+      return <Package className="h-5 w-5 text-amber-600 shrink-0" />
+    case 'Product & Catalog':
+      return <Layers className="h-5 w-5 text-purple-600 shrink-0" />
+    case 'Account & VIP Access':
+      return <ShieldCheck className="h-5 w-5 text-emerald-600 shrink-0" />
+    default:
+      return <Folder className="h-5 w-5 text-slate-600 shrink-0" />
+  }
+}
 
 export function KnowledgeBase() {
   const [activeTab, setActiveTab] = useState<'library' | 'performance' | 'recommendations' | 'gaps'>('library')
@@ -204,20 +245,20 @@ export function KnowledgeBase() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Top Banner & Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 pb-5">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[var(--color-border)] pb-5">
         <div>
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
-              📚
+              <BookOpen className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <h1 className="text-xl font-bold text-[var(--color-ink)] flex items-center gap-2">
                 <span>Centralized Knowledge Hub</span>
                 <span className="rounded-full bg-purple-100 text-purple-700 px-2.5 py-0.5 text-xs font-semibold">
                   Omni-Touchpoint
                 </span>
               </h1>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-[var(--color-ink-muted)] mt-0.5">
                 Centralize, manage, and optimize all information powering Fin AI Agent, Copilot in the inbox, and customer self-serve support.
               </p>
             </div>
@@ -231,9 +272,9 @@ export function KnowledgeBase() {
               setShowNoteForm(true)
               setShowUrlModal(false)
             }}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-surface)] border border-slate-300 px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-2xs transition-colors cursor-pointer"
           >
-            <span>➕ Add Source Note</span>
+            <Plus className="h-4 w-4" /> <span>Add Source Note</span>
           </button>
 
           <button
@@ -243,7 +284,7 @@ export function KnowledgeBase() {
             }}
             className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 shadow-2xs transition-colors cursor-pointer"
           >
-            <span>🔗 Ingest URL</span>
+            <LinkIcon className="h-4 w-4" /> <span>Ingest URL</span>
           </button>
 
           <input
@@ -256,17 +297,17 @@ export function KnowledgeBase() {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadingDoc}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 border border-indigo-200 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 shadow-2xs transition-colors disabled:opacity-50 cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent-soft)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-semibold text-[var(--color-accent)] hover:bg-indigo-100 shadow-2xs transition-colors disabled:opacity-50 cursor-pointer"
           >
-            <span>📄 {uploadingDoc ? 'Parsing...' : 'Upload PDF/Doc'}</span>
+            <span className="flex items-center gap-1.5"><FileText className="h-4 w-4" /> <span>{uploadingDoc ? 'Parsing...' : 'Upload PDF/Doc'}</span></span>
           </button>
 
           <button
             onClick={handleScanGaps}
             disabled={scanningGaps}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
           >
-            <span>✨ {scanningGaps ? 'Scanning...' : 'Scan Gaps'}</span>
+            <span className="flex items-center gap-1.5"><Sparkles className="h-4 w-4" /> <span>{scanningGaps ? 'Scanning...' : 'Scan Gaps'}</span></span>
           </button>
         </div>
       </div>
@@ -275,80 +316,80 @@ export function KnowledgeBase() {
       {error && (
         <div className="flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 shadow-xs">
           <span>{error}</span>
-          <button onClick={() => setError(null)} className="font-bold text-sm cursor-pointer">✕</button>
+          <button onClick={() => setError(null)} className="cursor-pointer text-rose-600 hover:text-rose-800"><X className="h-4 w-4" /></button>
         </div>
       )}
       {success && (
         <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-800 shadow-xs">
           <span>{success}</span>
-          <button onClick={() => setSuccess(null)} className="font-bold text-sm cursor-pointer">✕</button>
+          <button onClick={() => setSuccess(null)} className="cursor-pointer text-emerald-600 hover:text-emerald-800"><X className="h-4 w-4" /></button>
         </div>
       )}
 
       {/* Performance Summary Banner Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs">
-          <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4 shadow-2xs">
+          <div className="flex items-center justify-between text-xs text-[var(--color-ink-muted)] mb-1">
             <span>Total Knowledge Sources</span>
-            <span>📚</span>
+            <BookOpen className="h-4 w-4 text-purple-600" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-black text-slate-900">{totalSourcesCount}</span>
-            <span className="text-xs text-slate-400 font-normal">sources</span>
+            <span className="text-2xl font-black text-[var(--color-ink)]">{totalSourcesCount}</span>
+            <span className="text-xs text-[var(--color-ink-faint)] font-normal">sources</span>
           </div>
-          <p className="text-[11px] text-slate-500 mt-1">Across 5 structured business topics</p>
+          <p className="text-[11px] text-[var(--color-ink-muted)] mt-1">Across 5 structured business topics</p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs">
-          <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4 shadow-2xs">
+          <div className="flex items-center justify-between text-xs text-[var(--color-ink-muted)] mb-1">
             <span>Fin Agent Resolution Rate</span>
-            <span>🤖</span>
+            <Bot className="h-4 w-4 inline mr-1" />
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-black text-emerald-600">{totalResolutionRate}%</span>
             <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded">+2.4%</span>
           </div>
-          <p className="text-[11px] text-slate-500 mt-1">Autonomous answers without escalation</p>
+          <p className="text-[11px] text-[var(--color-ink-muted)] mt-1">Autonomous answers without escalation</p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs">
-          <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4 shadow-2xs">
+          <div className="flex items-center justify-between text-xs text-[var(--color-ink-muted)] mb-1">
             <span>Copilot Inbox Assistance</span>
-            <span>💬</span>
+            <MessageSquare className="h-4 w-4 text-purple-600" />
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-black text-purple-600">93.7%</span>
-            <span className="text-xs text-slate-400">adoption</span>
+            <span className="text-xs text-[var(--color-ink-faint)]">adoption</span>
           </div>
-          <p className="text-[11px] text-slate-500 mt-1">Teammate reply insertions from Hub</p>
+          <p className="text-[11px] text-[var(--color-ink-muted)] mt-1">Teammate reply insertions from Hub</p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs">
-          <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4 shadow-2xs">
+          <div className="flex items-center justify-between text-xs text-[var(--color-ink-muted)] mb-1">
             <span>Content Gap Recommendations</span>
-            <span>🎯</span>
+            <Target className="h-4 w-4 text-amber-600" />
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-black text-amber-600">{openRecsCount}</span>
             <span className="text-xs font-bold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded">+13.3% impact</span>
           </div>
-          <p className="text-[11px] text-slate-500 mt-1">Gaps to close for higher resolution</p>
+          <p className="text-[11px] text-[var(--color-ink-muted)] mt-1">Gaps to close for higher resolution</p>
         </div>
       </div>
 
       {/* Main Tabs Navigation */}
-      <div className="flex items-center justify-between border-b border-slate-200 text-xs">
+      <div className="flex items-center justify-between border-b border-[var(--color-border)] text-xs">
         <div className="flex items-center gap-6">
           <button
             onClick={() => setActiveTab('library')}
             className={`pb-3 font-bold transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
               activeTab === 'library'
                 ? 'border-purple-600 text-purple-700'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
             }`}
           >
-            <span>📁 Content Library by Topic</span>
-            <span className="rounded-full bg-slate-100 text-slate-700 px-2 py-0.5 text-[10px] font-semibold">
+            <span className="flex items-center gap-1.5"><Folder className="h-4 w-4" /> <span>Content Library by Topic</span></span>
+            <span className="rounded-full bg-slate-100 text-[var(--color-ink)] px-2 py-0.5 text-[10px] font-semibold">
               {totalSourcesCount}
             </span>
           </button>
@@ -358,10 +399,10 @@ export function KnowledgeBase() {
             className={`pb-3 font-bold transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
               activeTab === 'performance'
                 ? 'border-purple-600 text-purple-700'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
             }`}
           >
-            <span>📊 Cross-Touchpoint Reporting</span>
+            <span className="flex items-center gap-1.5"><BarChart3 className="h-4 w-4" /> <span>Cross-Touchpoint Reporting</span></span>
           </button>
 
           <button
@@ -369,10 +410,10 @@ export function KnowledgeBase() {
             className={`pb-3 font-bold transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
               activeTab === 'recommendations'
                 ? 'border-purple-600 text-purple-700'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
             }`}
           >
-            <span>🎯 Content &amp; Action Gaps</span>
+            <span className="flex items-center gap-1.5"><Target className="h-4 w-4" /> <span>Content &amp; Action Gaps</span></span>
             {openRecsCount > 0 && (
               <span className="rounded-full bg-amber-500 text-white font-bold px-1.5 py-0.2 text-[10px] animate-pulse">
                 {openRecsCount}
@@ -385,10 +426,10 @@ export function KnowledgeBase() {
             className={`pb-3 font-bold transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
               activeTab === 'gaps'
                 ? 'border-purple-600 text-purple-700'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
             }`}
           >
-            <span>✨ FAQ Gaps ({gaps.length})</span>
+            <span className="flex items-center gap-1.5"><Sparkles className="h-4 w-4" /> <span>FAQ Gaps ({gaps.length})</span></span>
           </button>
         </div>
       </div>
@@ -399,7 +440,7 @@ export function KnowledgeBase() {
       {activeTab === 'library' && (
         <div className="space-y-6">
           {/* Filter Bar */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-[var(--color-surface)] p-3 rounded-2xl border border-[var(--color-border)]">
             {/* Search */}
             <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 flex-1 max-w-md">
               <input
@@ -411,7 +452,7 @@ export function KnowledgeBase() {
               />
               <button
                 type="submit"
-                className="bg-slate-900 text-white text-xs px-3 py-1.5 rounded-lg font-semibold hover:bg-slate-800 transition-colors cursor-pointer"
+                className="bg-[var(--color-accent)] text-white text-xs px-3 py-1.5 rounded-lg font-semibold hover:bg-[var(--color-accent-hover)] transition-colors cursor-pointer"
               >
                 Search
               </button>
@@ -419,17 +460,17 @@ export function KnowledgeBase() {
 
             <div className="flex flex-wrap items-center gap-3">
               {/* Touchpoint Filter */}
-              <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                <span className="text-[11px] font-semibold text-slate-400">Touchpoint:</span>
+              <div className="flex items-center gap-1.5 text-xs text-[var(--color-ink-muted)]">
+                <span className="text-[11px] font-semibold text-[var(--color-ink-faint)]">Touchpoint:</span>
                 <select
                   value={selectedTouchpoint}
                   onChange={(e) => setSelectedTouchpoint(e.target.value)}
-                  className="text-xs border border-slate-300 rounded-lg px-2 py-1 bg-white focus:outline-hidden cursor-pointer"
+                  className="text-xs border border-slate-300 rounded-lg px-2 py-1 bg-[var(--color-surface)] focus:outline-hidden cursor-pointer"
                 >
                   <option value="all">All Touchpoints</option>
-                  <option value="agent">🤖 Fin Agent</option>
-                  <option value="copilot">💬 Inbox Copilot</option>
-                  <option value="help_center">🌐 Help Center</option>
+                  <option value="agent">Fin Agent</option>
+                  <option value="copilot">Inbox Copilot</option>
+                  <option value="help_center">Help Center</option>
                 </select>
               </div>
 
@@ -443,7 +484,7 @@ export function KnowledgeBase() {
                     className={`px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize transition-all cursor-pointer whitespace-nowrap ${
                       selectedTopic === top
                         ? 'bg-purple-600 text-white shadow-2xs'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        : 'bg-slate-100 text-[var(--color-ink-muted)] hover:bg-slate-200'
                     }`}
                   >
                     {top === 'all' ? 'All Topics' : top}
@@ -455,10 +496,10 @@ export function KnowledgeBase() {
 
           {/* Grouped Topics Content */}
           {loading ? (
-            <div className="py-16 text-center text-xs text-slate-500">Loading Centralized Knowledge Hub...</div>
+            <div className="py-16 text-center text-xs text-[var(--color-ink-muted)]">Loading Centralized Knowledge Hub...</div>
           ) : hubOverview?.topics.length === 0 ? (
-            <div className="py-16 text-center bg-white rounded-2xl border border-slate-200 p-6">
-              <p className="text-xs text-slate-500">No knowledge sources found matching your filters.</p>
+            <div className="py-16 text-center bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] p-6">
+              <p className="text-xs text-[var(--color-ink-muted)]">No knowledge sources found matching your filters.</p>
               <button
                 type="button"
                 onClick={() => {
@@ -474,14 +515,14 @@ export function KnowledgeBase() {
           ) : (
             <div className="space-y-6">
               {hubOverview?.topics.map((group) => (
-                <div key={group.name} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
+                <div key={group.name} className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] overflow-hidden shadow-2xs">
                   {/* Topic Group Header */}
-                  <div className="bg-slate-50/80 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+                  <div className="bg-[var(--color-page)]/80 px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-xl">{group.icon}</span>
+                      <span>{renderTopicIcon(group.name)}</span>
                       <div>
-                        <h3 className="font-bold text-slate-900 text-sm">{group.name}</h3>
-                        <p className="text-[11px] text-slate-500">
+                        <h3 className="font-bold text-[var(--color-ink)] text-sm">{group.name}</h3>
+                        <p className="text-[11px] text-[var(--color-ink-muted)]">
                           {group.sourcesCount} knowledge {group.sourcesCount === 1 ? 'source' : 'sources'}
                         </p>
                       </div>
@@ -489,7 +530,7 @@ export function KnowledgeBase() {
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <span className="text-[10px] text-slate-400 uppercase font-semibold block">Avg Resolution</span>
+                        <span className="text-[10px] text-[var(--color-ink-faint)] uppercase font-semibold block">Avg Resolution</span>
                         <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                           {group.avgResolutionRate}%
                         </span>
@@ -502,47 +543,47 @@ export function KnowledgeBase() {
                     {group.sources.map((source) => (
                       <div
                         key={source.id}
-                        className="p-3 hover:bg-slate-50/70 rounded-xl transition-colors flex flex-col md:flex-row md:items-start justify-between gap-3"
+                        className="p-3 hover:bg-[var(--color-page)]/70 rounded-xl transition-colors flex flex-col md:flex-row md:items-start justify-between gap-3"
                       >
                         <div className="space-y-1.5 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <h4
                               onClick={() => setSelectedEntryPreview(source)}
-                              className="font-bold text-slate-900 text-xs hover:text-purple-700 cursor-pointer"
+                              className="font-bold text-[var(--color-ink)] text-xs hover:text-purple-700 cursor-pointer"
                             >
                               {source.title}
                             </h4>
-                            <span className="text-[10px] uppercase font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">
+                            <span className="text-[10px] uppercase font-semibold text-[var(--color-ink-muted)] bg-slate-100 px-1.5 py-0.2 rounded border border-[var(--color-border)]">
                               {source.sourceType}
                             </span>
                           </div>
 
-                          <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                          <p className="text-xs text-[var(--color-ink-muted)] line-clamp-2 leading-relaxed">
                             {source.content}
                           </p>
 
                           {/* Deployment Touchpoints & Stats */}
-                          <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500 pt-1">
+                          <div className="flex flex-wrap items-center gap-3 text-[11px] text-[var(--color-ink-muted)] pt-1">
                             <div className="flex items-center gap-1">
-                              <span className="text-slate-400 font-medium">Touchpoints:</span>
+                              <span className="text-[var(--color-ink-faint)] font-medium">Touchpoints:</span>
                               {(source.targetTouchpoints || []).map((tp) => (
                                 <span
                                   key={tp}
                                   className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-purple-50 text-purple-700 border border-purple-200"
                                 >
-                                  {tp === 'agent' ? '🤖 Fin Agent' : tp === 'copilot' ? '💬 Copilot' : '🌐 Help Center'}
+                                  {tp === 'agent' ? 'Fin Agent' : tp === 'copilot' ? 'Copilot' : 'Help Center'}
                                 </span>
                               ))}
                             </div>
 
                             <span>•</span>
                             <span className="text-emerald-700 font-semibold">
-                              ⚡ {source.resolutionRate}% Resolution
+                              <Zap className="h-3 w-3 inline mr-1 text-amber-500" />{source.resolutionRate}% Resolution
                             </span>
                             <span>•</span>
-                            <span>📊 {source.usageCount} Invocations</span>
+                            <span className="flex items-center gap-1"><BarChart3 className="h-3 w-3 inline text-[var(--color-ink-muted)]" /><span>{source.usageCount} Invocations</span></span>
                             <span>•</span>
-                            <span>👍 {source.helpfulCount} helpful</span>
+                            <span className="flex items-center gap-1"><ThumbsUp className="h-3 w-3 inline text-emerald-600" /><span>{source.helpfulCount} helpful</span></span>
                           </div>
                         </div>
 
@@ -561,7 +602,7 @@ export function KnowledgeBase() {
                             className="text-xs text-rose-500 hover:text-rose-700 p-1 rounded hover:bg-rose-50 cursor-pointer transition-colors"
                             title="Delete article"
                           >
-                            🗑️
+                            <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       </div>
@@ -579,9 +620,9 @@ export function KnowledgeBase() {
       {/* ========================================================================= */}
       {activeTab === 'performance' && (
         <div className="space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-4">
-            <h3 className="font-bold text-slate-900 text-sm">Touchpoint Deployment &amp; Performance Breakdown</h3>
-            <p className="text-xs text-slate-500">
+          <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] p-5 shadow-2xs space-y-4">
+            <h3 className="font-bold text-[var(--color-ink)] text-sm">Touchpoint Deployment &amp; Performance Breakdown</h3>
+            <p className="text-xs text-[var(--color-ink-muted)]">
               See how your centralized knowledge sources are performing across Fin AI, teammate inbox Copilot, and self-serve customer Help Center.
             </p>
 
@@ -590,7 +631,7 @@ export function KnowledgeBase() {
               <div className="border border-purple-200 bg-purple-50/40 rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 font-bold text-xs text-purple-900">
-                    <span className="text-base">🤖</span>
+                    <Bot className="h-4 w-4 text-indigo-600 inline mr-1" />
                     <span>Fin Autonomous Agent</span>
                   </div>
                   <span className="text-[10px] bg-purple-200 text-purple-800 font-bold px-2 py-0.5 rounded-full">
@@ -598,11 +639,11 @@ export function KnowledgeBase() {
                   </span>
                 </div>
                 <div className="space-y-1">
-                  <div className="flex justify-between text-xs text-slate-600">
+                  <div className="flex justify-between text-xs text-[var(--color-ink-muted)]">
                     <span>Autonomous Resolution Rate:</span>
                     <strong className="text-emerald-700">{hubOverview?.touchpointBreakdown.agent.resolutionRate}%</strong>
                   </div>
-                  <div className="flex justify-between text-xs text-slate-600">
+                  <div className="flex justify-between text-xs text-[var(--color-ink-muted)]">
                     <span>Total Deflections:</span>
                     <strong className="text-slate-800">{hubOverview?.touchpointBreakdown.agent.deflectionsCount} inquiries</strong>
                   </div>
@@ -616,7 +657,7 @@ export function KnowledgeBase() {
               <div className="border border-blue-200 bg-blue-50/40 rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 font-bold text-xs text-blue-900">
-                    <span className="text-base">💬</span>
+                    <MessageSquare className="h-4 w-4 text-blue-600" />
                     <span>Inbox Copilot Assistant</span>
                   </div>
                   <span className="text-[10px] bg-blue-200 text-blue-800 font-bold px-2 py-0.5 rounded-full">
@@ -624,11 +665,11 @@ export function KnowledgeBase() {
                   </span>
                 </div>
                 <div className="space-y-1">
-                  <div className="flex justify-between text-xs text-slate-600">
+                  <div className="flex justify-between text-xs text-[var(--color-ink-muted)]">
                     <span>Teammate Adoption Rate:</span>
                     <strong className="text-blue-700">{hubOverview?.touchpointBreakdown.copilot.resolutionRate}%</strong>
                   </div>
-                  <div className="flex justify-between text-xs text-slate-600">
+                  <div className="flex justify-between text-xs text-[var(--color-ink-muted)]">
                     <span>Replies Inserted:</span>
                     <strong className="text-slate-800">{hubOverview?.touchpointBreakdown.copilot.insertionsCount} insertions</strong>
                   </div>
@@ -642,7 +683,7 @@ export function KnowledgeBase() {
               <div className="border border-emerald-200 bg-emerald-50/40 rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 font-bold text-xs text-emerald-900">
-                    <span className="text-base">🌐</span>
+                    <Globe className="h-4 w-4 text-emerald-600" />
                     <span>Customer Help Center</span>
                   </div>
                   <span className="text-[10px] bg-emerald-200 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
@@ -650,11 +691,11 @@ export function KnowledgeBase() {
                   </span>
                 </div>
                 <div className="space-y-1">
-                  <div className="flex justify-between text-xs text-slate-600">
+                  <div className="flex justify-between text-xs text-[var(--color-ink-muted)]">
                     <span>Helpful Feedback Rate:</span>
                     <strong className="text-emerald-700">{hubOverview?.touchpointBreakdown.help_center.satisfactionPct}%</strong>
                   </div>
-                  <div className="flex justify-between text-xs text-slate-600">
+                  <div className="flex justify-between text-xs text-[var(--color-ink-muted)]">
                     <span>Self-Serve Deflection:</span>
                     <strong className="text-slate-800">3,420 views</strong>
                   </div>
@@ -667,16 +708,16 @@ export function KnowledgeBase() {
           </div>
 
           {/* Topic Performance Matrix */}
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider">
+          <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] overflow-hidden shadow-2xs">
+            <div className="px-5 py-4 border-b border-[var(--color-border)] flex items-center justify-between">
+              <h4 className="font-bold text-[var(--color-ink)] text-xs uppercase tracking-wider">
                 Topic Performance &amp; Deflection Efficiency
               </h4>
-              <span className="text-xs text-slate-500">{hubOverview?.topics.length} active topics</span>
+              <span className="text-xs text-[var(--color-ink-muted)]">{hubOverview?.topics.length} active topics</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold">
+                <thead className="bg-[var(--color-page)] text-[var(--color-ink-muted)] uppercase text-[10px] font-bold">
                   <tr>
                     <th className="px-4 py-3">Topic Name</th>
                     <th className="px-4 py-3">Sources</th>
@@ -687,18 +728,18 @@ export function KnowledgeBase() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {hubOverview?.topics.map((t) => (
-                    <tr key={t.name} className="hover:bg-slate-50/70">
-                      <td className="px-4 py-3 font-semibold text-slate-900 flex items-center gap-2">
-                        <span>{t.icon}</span>
+                    <tr key={t.name} className="hover:bg-[var(--color-page)]/70">
+                      <td className="px-4 py-3 font-semibold text-[var(--color-ink)] flex items-center gap-2">
+                        <span>{renderTopicIcon(t.name)}</span>
                         <span>{t.name}</span>
                       </td>
-                      <td className="px-4 py-3 text-slate-600">{t.sourcesCount} articles</td>
+                      <td className="px-4 py-3 text-[var(--color-ink-muted)]">{t.sourcesCount} articles</td>
                       <td className="px-4 py-3">
                         <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                           {t.avgResolutionRate}%
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-slate-600">
+                      <td className="px-4 py-3 text-[var(--color-ink-muted)]">
                         {t.sources.reduce((acc, curr) => acc + (curr.usageCount || 0), 0)} total inquiries
                       </td>
                       <td className="px-4 py-3">
@@ -724,7 +765,7 @@ export function KnowledgeBase() {
           {/* Header Banner */}
           <div className="bg-linear-to-r from-amber-500 via-orange-500 to-amber-600 rounded-2xl p-5 text-white shadow-md space-y-2">
             <div className="flex items-center gap-2">
-              <span className="text-xl">🎯</span>
+              <Target className="h-5 w-5 text-white" />
               <h3 className="font-bold text-base">Recommendations to Improve Agent Resolution Rate</h3>
             </div>
             <p className="text-xs text-amber-100 max-w-3xl leading-relaxed">
@@ -748,7 +789,7 @@ export function KnowledgeBase() {
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                   recommendationFilter === f.id
                     ? 'bg-amber-600 text-white shadow-2xs'
-                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                    : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-ink-muted)] hover:bg-[var(--color-page)]'
                 }`}
               >
                 {f.label}
@@ -763,21 +804,21 @@ export function KnowledgeBase() {
               .map((rec) => (
                 <div
                   key={rec.id}
-                  className="bg-white rounded-2xl border-2 border-amber-200/80 p-5 shadow-2xs space-y-3.5 hover:border-amber-400 transition-all"
+                  className="bg-[var(--color-surface)] rounded-2xl border-2 border-amber-200/80 p-5 shadow-2xs space-y-3.5 hover:border-amber-400 transition-all"
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--color-border)] pb-3">
                     <div className="flex items-center gap-2">
                       <span className="text-lg">
-                        {rec.gapType === 'content_gap' ? '📝' : rec.gapType === 'customer_data_gap' ? '🔌' : '⚡'}
+                        {rec.gapType === 'content_gap' ? 'Content' : rec.gapType === 'customer_data_gap' ? 'Data' : 'Speed'}
                       </span>
                       <div>
                         <div className="flex items-center gap-2">
-                          <h4 className="font-bold text-slate-900 text-sm">{rec.title}</h4>
+                          <h4 className="font-bold text-[var(--color-ink)] text-sm">{rec.title}</h4>
                           <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
                             {rec.gapType.replace('_', ' ')}
                           </span>
                         </div>
-                        <span className="text-[11px] text-slate-500">Topic: {rec.topic}</span>
+                        <span className="text-[11px] text-[var(--color-ink-muted)]">Topic: {rec.topic}</span>
                       </div>
                     </div>
 
@@ -788,16 +829,17 @@ export function KnowledgeBase() {
                     </div>
                   </div>
 
-                  <p className="text-xs text-slate-700 leading-relaxed font-normal">
+                  <p className="text-xs text-[var(--color-ink)] leading-relaxed font-normal">
                     {rec.description}
                   </p>
 
                   {/* Suggested Solution & Content Box */}
                   <div className="bg-amber-50/60 border border-amber-200 rounded-xl p-3 space-y-1.5 text-xs">
-                    <span className="font-bold text-amber-900 text-[11px] block">
-                      💡 Recommended Action: {rec.suggestedAction}
+                    <span className="font-bold text-amber-900 text-[11px] flex items-center gap-1.5">
+                      <Lightbulb className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                      <span>Recommended Action: {rec.suggestedAction}</span>
                     </span>
-                    <p className="text-slate-800 italic bg-white/80 p-2 rounded-lg border border-amber-200/50">
+                    <p className="text-slate-800 italic bg-[var(--color-surface)]/80 p-2 rounded-lg border border-amber-200/50">
                       "{rec.suggestedContent}"
                     </p>
                   </div>
@@ -807,7 +849,7 @@ export function KnowledgeBase() {
                     <button
                       type="button"
                       onClick={() => handleDismissRecommendation(rec.id)}
-                      className="text-xs text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-100 cursor-pointer font-semibold transition-colors"
+                      className="text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] px-3 py-1.5 rounded-lg hover:bg-slate-100 cursor-pointer font-semibold transition-colors"
                     >
                       Dismiss
                     </button>
@@ -817,7 +859,7 @@ export function KnowledgeBase() {
                       onClick={() => handleApplyRecommendation(rec)}
                       className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                     >
-                      <span>🚀</span>
+                      <Rocket className="h-3.5 w-3.5" />
                       <span>{processingRecId === rec.id ? 'Publishing…' : 'Apply with 1-Click'}</span>
                     </button>
                   </div>
@@ -832,17 +874,17 @@ export function KnowledgeBase() {
       {/* ========================================================================= */}
       {activeTab === 'gaps' && (
         <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs flex items-center justify-between">
+          <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] p-4 shadow-2xs flex items-center justify-between">
             <div>
-              <h3 className="font-bold text-slate-900 text-sm">Autonomous Knowledge Gap Detection ("Fills gaps")</h3>
-              <p className="text-xs text-slate-500">
+              <h3 className="font-bold text-[var(--color-ink)] text-sm">Autonomous Knowledge Gap Detection ("Fills gaps")</h3>
+              <p className="text-xs text-[var(--color-ink-muted)]">
                 Identifies recurring unanswered questions from live customer conversations and turns them into grounded FAQs with 1 click.
               </p>
             </div>
             <button
               onClick={handleScanGaps}
               disabled={scanningGaps}
-              className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+              className="bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
             >
               {scanningGaps ? 'Scanning...' : 'Scan Now'}
             </button>
@@ -850,14 +892,14 @@ export function KnowledgeBase() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             {gaps.map((g) => (
-              <div key={g.id} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs space-y-2.5">
+              <div key={g.id} className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] p-4 shadow-2xs space-y-2.5">
                 <div className="flex items-start justify-between gap-2">
-                  <h4 className="font-bold text-slate-900 text-xs">"{g.question}"</h4>
+                  <h4 className="font-bold text-[var(--color-ink)] text-xs">"{g.question}"</h4>
                   <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full shrink-0">
                     Asked {g.frequency}x
                   </span>
                 </div>
-                <p className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                <p className="text-xs text-[var(--color-ink-muted)] bg-[var(--color-page)] p-2.5 rounded-xl border border-[var(--color-border)]">
                   {g.suggestedAnswer}
                 </p>
                 <div className="flex justify-end pt-1">
@@ -879,32 +921,32 @@ export function KnowledgeBase() {
       {/* SOURCE PREVIEW MODAL                                                       */}
       {/* ========================================================================= */}
       {selectedEntryPreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-2xl w-full p-6 space-y-4 animate-in fade-in zoom-in-95">
-            <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-accent)]/40 backdrop-blur-xs p-4">
+          <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl max-w-2xl w-full p-6 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-start justify-between border-b border-[var(--color-border)] pb-3">
               <div>
                 <span className="text-[10px] uppercase font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">
                   {selectedEntryPreview.topic}
                 </span>
-                <h3 className="font-bold text-slate-900 text-base mt-1">{selectedEntryPreview.title}</h3>
+                <h3 className="font-bold text-[var(--color-ink)] text-base mt-1">{selectedEntryPreview.title}</h3>
               </div>
               <button
                 onClick={() => setSelectedEntryPreview(null)}
-                className="text-slate-400 hover:text-slate-600 font-bold p-1 cursor-pointer"
+                className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] p-1 cursor-pointer"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="text-xs text-slate-700 leading-relaxed max-h-72 overflow-y-auto whitespace-pre-wrap bg-slate-50 p-4 rounded-xl border border-slate-200/70 font-normal">
+            <div className="text-xs text-[var(--color-ink)] leading-relaxed max-h-72 overflow-y-auto whitespace-pre-wrap bg-[var(--color-page)] p-4 rounded-xl border border-[var(--color-border)]/70 font-normal">
               {selectedEntryPreview.content}
             </div>
 
-            <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs text-slate-500">
-              <span className="text-emerald-700 font-bold">⚡ {selectedEntryPreview.resolutionRate}% Resolution Efficiency</span>
+            <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)] text-xs text-[var(--color-ink-muted)]">
+              <span className="text-emerald-700 font-bold"><Zap className="h-3.5 w-3.5 inline mr-1 text-amber-500" />{selectedEntryPreview.resolutionRate}% Resolution Efficiency</span>
               <button
                 onClick={() => setSelectedEntryPreview(null)}
-                className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-semibold cursor-pointer"
+                className="px-4 py-1.5 bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white rounded-lg font-semibold cursor-pointer"
               >
                 Close
               </button>
@@ -917,16 +959,16 @@ export function KnowledgeBase() {
       {/* CREATE KNOWLEDGE NOTE MODAL                                               */}
       {/* ========================================================================= */}
       {showNoteForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-4 animate-in fade-in zoom-in-95">
-            <div className="flex items-start justify-between border-b border-slate-100 pb-2">
-              <h3 className="font-bold text-slate-900 text-base">Add Centralized Knowledge Source</h3>
-              <button onClick={() => setShowNoteForm(false)} className="text-slate-400 font-bold p-1 cursor-pointer">✕</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-accent)]/40 backdrop-blur-xs p-4">
+          <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl max-w-lg w-full p-6 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-start justify-between border-b border-[var(--color-border)] pb-2">
+              <h3 className="font-bold text-[var(--color-ink)] text-base">Add Centralized Knowledge Source</h3>
+              <button onClick={() => setShowNoteForm(false)} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] p-1 cursor-pointer"><X className="h-4 w-4" /></button>
             </div>
 
             <form onSubmit={submitNote} className="space-y-3 text-xs">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">Article / Policy Title</label>
+                <label className="block text-[11px] font-semibold text-[var(--color-ink)] mb-1">Article / Policy Title</label>
                 <input
                   type="text"
                   placeholder="e.g. Expedited Shipping Rules"
@@ -938,11 +980,11 @@ export function KnowledgeBase() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">Topic / Category</label>
+                <label className="block text-[11px] font-semibold text-[var(--color-ink)] mb-1">Topic / Category</label>
                 <select
                   value={noteTopic}
                   onChange={(e) => setNoteTopic(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white focus:outline-hidden focus:border-purple-500"
+                  className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 bg-[var(--color-surface)] focus:outline-hidden focus:border-purple-500"
                 >
                   <option value="Billing & Refunds">Billing &amp; Refunds</option>
                   <option value="Shipping & Delivery">Shipping &amp; Delivery</option>
@@ -954,7 +996,7 @@ export function KnowledgeBase() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">Knowledge Content</label>
+                <label className="block text-[11px] font-semibold text-[var(--color-ink)] mb-1">Knowledge Content</label>
                 <textarea
                   rows={4}
                   placeholder="Write policy details, FAQ instructions, or process steps..."
@@ -965,11 +1007,11 @@ export function KnowledgeBase() {
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <div className="flex justify-end gap-2 pt-2 border-t border-[var(--color-border)]">
                 <button
                   type="button"
                   onClick={() => setShowNoteForm(false)}
-                  className="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-800"
+                  className="px-3 py-1.5 text-xs text-[var(--color-ink-muted)] hover:text-slate-800"
                 >
                   Cancel
                 </button>
@@ -990,16 +1032,16 @@ export function KnowledgeBase() {
       {/* INGEST URL MODAL                                                           */}
       {/* ========================================================================= */}
       {showUrlModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95">
-            <div className="flex items-start justify-between border-b border-slate-100 pb-2">
-              <h3 className="font-bold text-slate-900 text-base">Ingest Knowledge from URL</h3>
-              <button onClick={() => setShowUrlModal(false)} className="text-slate-400 font-bold p-1 cursor-pointer">✕</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-accent)]/40 backdrop-blur-xs p-4">
+          <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-start justify-between border-b border-[var(--color-border)] pb-2">
+              <h3 className="font-bold text-[var(--color-ink)] text-base">Ingest Knowledge from URL</h3>
+              <button onClick={() => setShowUrlModal(false)} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] p-1 cursor-pointer"><X className="h-4 w-4" /></button>
             </div>
 
             <form onSubmit={submitUrl} className="space-y-3 text-xs">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">Help Center or Doc URL</label>
+                <label className="block text-[11px] font-semibold text-[var(--color-ink)] mb-1">Help Center or Doc URL</label>
                 <input
                   type="url"
                   placeholder="https://help.example.com/shipping-policy"
@@ -1010,11 +1052,11 @@ export function KnowledgeBase() {
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <div className="flex justify-end gap-2 pt-2 border-t border-[var(--color-border)]">
                 <button
                   type="button"
                   onClick={() => setShowUrlModal(false)}
-                  className="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-800"
+                  className="px-3 py-1.5 text-xs text-[var(--color-ink-muted)] hover:text-slate-800"
                 >
                   Cancel
                 </button>

@@ -1,5 +1,21 @@
 import { useEffect, useState } from 'react'
 import {
+  Lightbulb,
+  Settings,
+  TrendingUp,
+  Users,
+  Brain,
+  Edit3,
+  FlaskConical,
+  Target,
+  Check,
+  ShieldCheck,
+  Star,
+  BarChart2,
+  ArrowRight,
+  X,
+} from 'lucide-react'
+import {
   api,
   type AgentInsight,
   type AgentRetrainingEvent,
@@ -213,7 +229,7 @@ export function SelfImproving() {
 
   const handleToggleRule = (ruleId: string) => {
     if (!currentCustomPolicy) return
-    const updated = currentCustomPolicy.rules.map((r) =>
+    const updated = (currentCustomPolicy.rules || []).map((r) =>
       r.id === ruleId ? { ...r, enabled: !r.enabled } : r
     )
     setCurrentCustomPolicy({ ...currentCustomPolicy, rules: updated })
@@ -274,14 +290,14 @@ export function SelfImproving() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--color-ink)]">
               Self-Improving AI, Model Hub & Custom Policies
             </h1>
             <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-800">
               Our Own Agent
             </span>
           </div>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
             Set custom policies, rules, and guidelines for self-improving AI and other AI jobs, and connect any AI model you want.
           </p>
         </div>
@@ -290,7 +306,7 @@ export function SelfImproving() {
           {activeView === 'model_hub' ? (
             <button
               onClick={() => setShowConnectModal(true)}
-              className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
+              className="inline-flex items-center justify-center rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-accent-hover)]"
             >
               + Connect Any AI Model
             </button>
@@ -298,9 +314,9 @@ export function SelfImproving() {
             <button
               onClick={handleTriggerScan}
               disabled={scanning}
-              className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+              className="inline-flex items-center justify-center rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
             >
-              {scanning ? 'Scanning Conversations...' : '⚡ Scan Conversations for Learnings'}
+              {scanning ? 'Scanning Conversations...' : 'Scan Conversations for Learnings'}
             </button>
           )}
         </div>
@@ -309,7 +325,7 @@ export function SelfImproving() {
       {/* KPI Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-4 shadow-sm">
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-accent-soft)]/50 p-4 shadow-sm">
             <div className="text-xs font-medium text-indigo-800 uppercase tracking-wider">
               Cumulative Resolution Lift
             </div>
@@ -321,7 +337,7 @@ export function SelfImproving() {
                 Compounding
               </span>
             </div>
-            <div className="mt-2 text-xs text-indigo-700">
+            <div className="mt-2 text-xs text-[var(--color-accent)]">
               {stats.applied_retrainings} retraining cycles deployed
             </div>
           </div>
@@ -370,51 +386,51 @@ export function SelfImproving() {
       )}
 
       {/* Main View Tabs */}
-      <div className="flex border-b border-slate-200 gap-2">
+      <div className="flex border-b border-[var(--color-border)] gap-2">
         <button
           onClick={() => setActiveView('insights')}
           className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
             activeView === 'insights'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              ? 'border-indigo-600 text-[var(--color-accent)]'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
           }`}
         >
-          <span>💡 AI Insights & Rep Exemplars ({insights.length})</span>
+          <span className="flex items-center gap-1.5"><Lightbulb className="h-4 w-4" /> <span>AI Insights & Rep Exemplars ({insights.length})</span></span>
         </button>
         <button
           onClick={() => setActiveView('model_hub')}
           className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
             activeView === 'model_hub'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              ? 'border-indigo-600 text-[var(--color-accent)]'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
           }`}
         >
-          <span>⚙️ Model Hub & Custom Policies ({connections.length})</span>
+          <span className="flex items-center gap-1.5"><Settings className="h-4 w-4" /> <span>Model Hub & Custom Policies ({connections.length})</span></span>
         </button>
         <button
           onClick={() => setActiveView('history')}
           className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
             activeView === 'history'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              ? 'border-indigo-600 text-[var(--color-accent)]'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
           }`}
         >
-          <span>📈 Retraining Timeline ({history.length})</span>
+          <span className="flex items-center gap-1.5"><TrendingUp className="h-4 w-4" /> <span>Retraining Timeline ({history.length})</span></span>
         </button>
         <button
           onClick={() => setActiveView('coaching')}
           className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
             activeView === 'coaching'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              ? 'border-indigo-600 text-[var(--color-accent)]'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
           }`}
         >
-          <span>🤝 Team Coaching ({coachingInsights.length})</span>
+          <span className="flex items-center gap-1.5"><Users className="h-4 w-4" /> <span>Team Coaching ({coachingInsights.length})</span></span>
         </button>
       </div>
 
       {loading ? (
-        <div className="py-12 text-center text-sm text-slate-500">
+        <div className="py-12 text-center text-sm text-[var(--color-ink-muted)]">
           Loading self-improving suite...
         </div>
       ) : error ? (
@@ -425,13 +441,13 @@ export function SelfImproving() {
           {activeView === 'model_hub' && (
             <div className="space-y-6">
               {/* SECTION 1: PER-JOB MODEL ROUTING */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">
+                    <h3 className="text-sm font-bold text-[var(--color-ink)]">
                       AI Job Model Routing (Connect & Route Any Model)
                     </h3>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-[var(--color-ink-muted)]">
                       Choose which AI model powers each distinct capability across your inbox and back-office.
                     </p>
                   </div>
@@ -444,27 +460,32 @@ export function SelfImproving() {
                   {[
                     {
                       key: 'self_improving',
-                      label: '🧠 Self-Improving AI Engine',
+                      label: 'Self-Improving AI Engine',
+                      icon: <Brain className="h-4 w-4 text-purple-600 inline mr-1.5" />,
                       desc: 'Analyzes human rep threads & continuous retraining',
                     },
                     {
                       key: 'autonomous_agent',
-                      label: '🤖 Autonomous Customer Agent',
+                      label: 'Autonomous Customer Agent',
+                      icon: <Brain className="h-4 w-4 text-indigo-600 inline mr-1.5" />,
                       desc: 'Handles live chat, WhatsApp, and multi-channel inquiries',
                     },
                     {
                       key: 'copilot_drafts',
-                      label: '✍️ Copilot & Draft Assistant',
+                      label: 'Copilot & Draft Assistant',
+                      icon: <Edit3 className="h-4 w-4 text-blue-600 inline mr-1.5" />,
                       desc: 'Assists human reps with replies & refund approvals',
                     },
                     {
                       key: 'simulations',
-                      label: '🧪 AI Simulation Runner',
+                      label: 'AI Simulation Runner',
+                      icon: <FlaskConical className="h-4 w-4 text-amber-600 inline mr-1.5" />,
                       desc: 'Tests customer dialogues & policy compliance pre-flight',
                     },
                     {
                       key: 'quality_triage',
-                      label: '🎯 Quality & Sentiment Triage',
+                      label: 'Quality & Sentiment Triage',
+                      icon: <Target className="h-4 w-4 text-rose-600 inline mr-1.5" />,
                       desc: 'Monitors CSAT risk, intent classification & SLAs',
                     },
                   ].map((job) => {
@@ -472,21 +493,21 @@ export function SelfImproving() {
                     return (
                       <div
                         key={job.key}
-                        className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-2"
+                        className="rounded-xl border border-[var(--color-border)] bg-[var(--color-page)] p-3.5 space-y-2"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-slate-900">{job.label}</span>
+                          <span className="text-xs font-bold text-[var(--color-ink)] flex items-center">{job.icon}{job.label}</span>
                         </div>
-                        <p className="text-[11px] text-slate-500 line-clamp-2">{job.desc}</p>
+                        <p className="text-[11px] text-[var(--color-ink-muted)] line-clamp-2">{job.desc}</p>
 
                         <div className="pt-1">
-                          <label className="text-[10px] font-semibold text-slate-400 block mb-1">
+                          <label className="text-[10px] font-semibold text-[var(--color-ink-faint)] block mb-1">
                             Assigned Model:
                           </label>
                           <select
                             value={current?.connection_id || ''}
                             onChange={(e) => handleAssignJobModel(job.key, e.target.value)}
-                            className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-800 focus:border-indigo-500 focus:outline-none"
+                            className="w-full rounded-lg border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1.5 text-xs text-slate-800 focus:border-indigo-500 focus:outline-none"
                           >
                             {connections.map((c) => (
                               <option key={c.id} value={c.id}>
@@ -502,19 +523,19 @@ export function SelfImproving() {
               </div>
 
               {/* SECTION 2: CONNECTED AI MODELS GRID */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">
+                    <h3 className="text-sm font-bold text-[var(--color-ink)]">
                       Connected AI Models & Inference Providers ({connections.length})
                     </h3>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-[var(--color-ink-muted)]">
                       Connect models from Anthropic, OpenAI, Google Gemini, DeepSeek, Groq, Ollama, or custom OpenAI-compatible endpoints.
                     </p>
                   </div>
                   <button
                     onClick={() => setShowConnectModal(true)}
-                    className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700"
+                    className="rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[var(--color-accent-hover)]"
                   >
                     + Connect New Model
                   </button>
@@ -524,15 +545,15 @@ export function SelfImproving() {
                   {connections.map((c) => (
                     <div
                       key={c.id}
-                      className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs space-y-3"
+                      className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-2xs space-y-3"
                     >
                       <div className="flex items-start justify-between">
                         <div>
-                          <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 uppercase">
+                          <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-[var(--color-ink)] uppercase">
                             {c.provider}
                           </span>
-                          <h4 className="text-sm font-bold text-slate-900 mt-1">{c.name}</h4>
-                          <span className="font-mono text-[11px] text-slate-500 block">
+                          <h4 className="text-sm font-bold text-[var(--color-ink)] mt-1">{c.name}</h4>
+                          <span className="font-mono text-[11px] text-[var(--color-ink-muted)] block">
                             {c.model_id}
                           </span>
                         </div>
@@ -540,44 +561,49 @@ export function SelfImproving() {
                           className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                             c.test_status === 'connected'
                               ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-slate-100 text-slate-600'
+                              : 'bg-slate-100 text-[var(--color-ink-muted)]'
                           }`}
                         >
-                          {c.test_status === 'connected'
-                            ? `✓ ${c.latency_ms ?? 150}ms`
-                            : 'Untested'}
+                          {c.test_status === 'connected' ? (
+                            <span className="flex items-center gap-1">
+                              <Check className="h-3 w-3 inline" />
+                              <span>{c.latency_ms ?? 150}ms</span>
+                            </span>
+                          ) : (
+                            'Untested'
+                          )}
                         </span>
                       </div>
 
                       {/* Assigned Jobs */}
                       <div className="text-[11px] space-y-1">
-                        <span className="text-slate-400">Assigned Jobs:</span>
+                        <span className="text-[var(--color-ink-faint)]">Assigned Jobs:</span>
                         <div className="flex flex-wrap gap-1">
                           {c.assigned_jobs && c.assigned_jobs.length > 0 ? (
-                            c.assigned_jobs.map((j) => (
+                            (c.assigned_jobs || []).map((j) => (
                               <span
                                 key={j}
-                                className="rounded bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700"
+                                className="rounded bg-[var(--color-accent-soft)] border border-[var(--color-border)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-accent)]"
                               >
                                 {j.replace(/_/g, ' ')}
                               </span>
                             ))
                           ) : (
-                            <span className="text-slate-400 italic text-[10px]">
+                            <span className="text-[var(--color-ink-faint)] italic text-[10px]">
                               None (available in pool)
                             </span>
                           )}
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
-                        <span className="text-slate-400 font-mono text-[10px]">
+                      <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)] text-xs">
+                        <span className="text-[var(--color-ink-faint)] font-mono text-[10px]">
                           Key: {c.api_key_masked}
                         </span>
                         <button
                           onClick={() => handleTestConnection(c.id)}
                           disabled={testingConnId === c.id}
-                          className="rounded bg-slate-100 hover:bg-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-700 transition-colors disabled:opacity-50"
+                          className="rounded bg-slate-100 hover:bg-slate-200 px-2 py-1 text-[11px] font-semibold text-[var(--color-ink)] transition-colors disabled:opacity-50"
                         >
                           {testingConnId === c.id ? 'Testing...' : 'Test Connection'}
                         </button>
@@ -588,13 +614,13 @@ export function SelfImproving() {
               </div>
 
               {/* SECTION 3: CUSTOM POLICIES, RULES & GUIDELINES EDITOR */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-5">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-3 gap-2">
+              <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-[var(--color-border)] pb-3 gap-2">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">
+                    <h3 className="text-sm font-bold text-[var(--color-ink)]">
                       Custom Policies, Rules & Guidelines Editor
                     </h3>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-[var(--color-ink-muted)]">
                       Configure custom operational guidelines, dynamic rules, and guardrails for each AI job.
                     </p>
                   </div>
@@ -612,8 +638,8 @@ export function SelfImproving() {
                         onClick={() => setSelectedPolicyJob(j.key)}
                         className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors ${
                           selectedPolicyJob === j.key
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            ? 'bg-[var(--color-accent)] text-white'
+                            : 'bg-slate-100 text-[var(--color-ink-muted)] hover:bg-slate-200'
                         }`}
                       >
                         {j.label}
@@ -623,13 +649,13 @@ export function SelfImproving() {
                 </div>
 
                 {loadingPolicy || !currentCustomPolicy ? (
-                  <div className="py-8 text-center text-xs text-slate-400">Loading policy...</div>
+                  <div className="py-8 text-center text-xs text-[var(--color-ink-faint)]">Loading policy...</div>
                 ) : (
                   <div className="space-y-4 text-xs">
                     {/* Tone of Voice & Guidelines */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
-                        <label className="font-semibold text-slate-700 block mb-1">
+                        <label className="font-semibold text-[var(--color-ink)] block mb-1">
                           Tone of Voice & Persona:
                         </label>
                         <select
@@ -637,7 +663,7 @@ export function SelfImproving() {
                           onChange={(e) =>
                             setCurrentCustomPolicy({ ...currentCustomPolicy, tone: e.target.value })
                           }
-                          className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs text-slate-800 focus:border-indigo-500 focus:outline-none"
+                          className="w-full rounded-lg border border-slate-300 bg-[var(--color-surface)] p-2 text-xs text-slate-800 focus:border-indigo-500 focus:outline-none"
                         >
                           <option value="empathetic, helpful & professional">
                             Empathetic & Professional (Recommended)
@@ -657,7 +683,7 @@ export function SelfImproving() {
                       {selectedPolicyJob === 'self_improving' && (
                         <>
                           <div>
-                            <label className="font-semibold text-slate-700 block mb-1">
+                            <label className="font-semibold text-[var(--color-ink)] block mb-1">
                               Min CSAT for Human Exemplar Learning:
                             </label>
                             <input
@@ -677,7 +703,7 @@ export function SelfImproving() {
                           </div>
 
                           <div>
-                            <label className="font-semibold text-slate-700 block mb-1">
+                            <label className="font-semibold text-[var(--color-ink)] block mb-1">
                               Retraining Approval Mode:
                             </label>
                             <select
@@ -688,7 +714,7 @@ export function SelfImproving() {
                                   auto_approval_mode: e.target.value,
                                 })
                               }
-                              className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs text-slate-800 focus:border-indigo-500 focus:outline-none"
+                              className="w-full rounded-lg border border-slate-300 bg-[var(--color-surface)] p-2 text-xs text-slate-800 focus:border-indigo-500 focus:outline-none"
                             >
                               <option value="require_manager_review">
                                 Require Manager Review (Recommended)
@@ -704,7 +730,7 @@ export function SelfImproving() {
 
                     {/* Operational Guidelines Textarea */}
                     <div>
-                      <label className="font-semibold text-slate-700 block mb-1">
+                      <label className="font-semibold text-[var(--color-ink)] block mb-1">
                         Operational Instructions & Custom Guidelines:
                       </label>
                       <textarea
@@ -724,30 +750,30 @@ export function SelfImproving() {
                     {/* Dynamic Rules Manager */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <label className="font-semibold text-slate-700">
+                        <label className="font-semibold text-[var(--color-ink)]">
                           Active Custom Rules ({currentCustomPolicy.rules.length}):
                         </label>
-                        <span className="text-[11px] text-slate-400">
+                        <span className="text-[11px] text-[var(--color-ink-faint)]">
                           Toggle or add specific rules
                         </span>
                       </div>
 
-                      <div className="space-y-1.5 max-h-48 overflow-y-auto rounded-xl border border-slate-200 p-3 bg-slate-50">
-                        {currentCustomPolicy.rules.map((rule) => (
+                      <div className="space-y-1.5 max-h-48 overflow-y-auto rounded-xl border border-[var(--color-border)] p-3 bg-[var(--color-page)]">
+                        {(currentCustomPolicy.rules || []).map((rule) => (
                           <div
                             key={rule.id}
-                            className="flex items-center justify-between rounded-lg bg-white p-2 border border-slate-200"
+                            className="flex items-center justify-between rounded-lg bg-[var(--color-surface)] p-2 border border-[var(--color-border)]"
                           >
                             <div className="flex items-center gap-2">
                               <input
                                 type="checkbox"
                                 checked={rule.enabled}
                                 onChange={() => handleToggleRule(rule.id)}
-                                className="rounded text-indigo-600 focus:ring-indigo-500"
+                                className="rounded text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
                               />
                               <span
                                 className={`text-xs ${
-                                  rule.enabled ? 'text-slate-800' : 'text-slate-400 line-through'
+                                  rule.enabled ? 'text-slate-800' : 'text-[var(--color-ink-faint)] line-through'
                                 }`}
                               >
                                 {rule.rule}
@@ -755,9 +781,9 @@ export function SelfImproving() {
                             </div>
                             <button
                               onClick={() => handleDeleteRule(rule.id)}
-                              className="text-slate-400 hover:text-rose-600 text-xs px-1"
+                              className="text-[var(--color-ink-faint)] hover:text-rose-600 text-xs px-1"
                             >
-                              ✕
+                              <X className="h-3.5 w-3.5" />
                             </button>
                           </div>
                         ))}
@@ -774,7 +800,7 @@ export function SelfImproving() {
                         <button
                           type="button"
                           onClick={handleAddCustomRule}
-                          className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+                          className="rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)]"
                         >
                           + Add Rule
                         </button>
@@ -783,21 +809,21 @@ export function SelfImproving() {
 
                     {/* Guardrails Manager */}
                     <div className="space-y-2">
-                      <label className="font-semibold text-slate-700 block">
+                      <label className="font-semibold text-[var(--color-ink)] block">
                         Forbidden Actions & Guardrails ({currentCustomPolicy.guardrails.length}):
                       </label>
                       <div className="space-y-1.5 max-h-40 overflow-y-auto rounded-xl border border-rose-200 p-3 bg-rose-50/30">
-                        {currentCustomPolicy.guardrails.map((g, idx) => (
+                        {(currentCustomPolicy.guardrails || []).map((g, idx) => (
                           <div
                             key={idx}
-                            className="flex items-center justify-between rounded-lg bg-white p-2 border border-rose-200 text-xs text-rose-950 font-medium"
+                            className="flex items-center justify-between rounded-lg bg-[var(--color-surface)] p-2 border border-rose-200 text-xs text-rose-950 font-medium"
                           >
-                            <span>🛡️ {g}</span>
+                            <span className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-rose-600 shrink-0" /><span>{g}</span></span>
                             <button
                               onClick={() => handleDeleteGuardrail(idx)}
-                              className="text-slate-400 hover:text-rose-600 text-xs px-1"
+                              className="text-[var(--color-ink-faint)] hover:text-rose-600 text-xs px-1"
                             >
-                              ✕
+                              <X className="h-3.5 w-3.5" />
                             </button>
                           </div>
                         ))}
@@ -821,11 +847,11 @@ export function SelfImproving() {
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t border-slate-200 flex justify-end">
+                    <div className="pt-3 border-t border-[var(--color-border)] flex justify-end">
                       <button
                         onClick={handleSavePolicy}
                         disabled={savingPolicy}
-                        className="rounded-xl bg-indigo-600 px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+                        className="rounded-xl bg-[var(--color-accent)] px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
                       >
                         {savingPolicy ? 'Saving Policy...' : 'Save Policy & Recompile Prompt'}
                       </button>
@@ -845,8 +871,8 @@ export function SelfImproving() {
                   onClick={() => setActiveCategory('all')}
                   className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                     activeCategory === 'all'
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                      ? 'bg-[var(--color-accent)] text-white'
+                      : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
                   }`}
                 >
                   All Suggestions ({insights.length})
@@ -856,17 +882,17 @@ export function SelfImproving() {
                   className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1 ${
                     activeCategory === 'human_exemplar'
                       ? 'bg-purple-700 text-white'
-                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                      : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
                   }`}
                 >
-                  <span>⭐ Human Rep Exemplars</span>
+                  <span className="flex items-center gap-1.5"><Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" /><span>Human Rep Exemplars</span></span>
                 </button>
                 <button
                   onClick={() => setActiveCategory('trend')}
                   className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                     activeCategory === 'trend'
                       ? 'bg-blue-700 text-white'
-                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                      : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
                   }`}
                 >
                   Emerging Customer Trends
@@ -876,7 +902,7 @@ export function SelfImproving() {
                   className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                     activeCategory === 'policy_refinement'
                       ? 'bg-emerald-700 text-white'
-                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                      : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
                   }`}
                 >
                   Policy Refinements
@@ -886,7 +912,7 @@ export function SelfImproving() {
                   className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                     activeCategory === 'team_coaching'
                       ? 'bg-amber-700 text-white'
-                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                      : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
                   }`}
                 >
                   Team Coaching
@@ -903,26 +929,29 @@ export function SelfImproving() {
                         ? 'border-purple-200 bg-purple-50/20'
                         : ins.category === 'trend'
                         ? 'border-blue-200 bg-blue-50/20'
-                        : 'border-slate-200 bg-white'
+                        : 'border-[var(--color-border)] bg-[var(--color-surface)]'
                     }`}
                   >
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex items-center gap-2">
                         {ins.category === 'human_exemplar' ? (
-                          <span className="rounded-md bg-purple-100 px-2 py-0.5 text-xs font-bold text-purple-800">
-                            ⭐ Human Rep Exemplar
+                          <span className="rounded-md bg-purple-100 px-2 py-0.5 text-xs font-bold text-purple-800 flex items-center gap-1">
+                            <Star className="h-3 w-3 fill-purple-700 text-purple-700 inline" />
+                            <span>Human Rep Exemplar</span>
                           </span>
                         ) : ins.category === 'trend' ? (
-                          <span className="rounded-md bg-blue-100 px-2 py-0.5 text-xs font-bold text-blue-800">
-                            📊 Emerging Trend
+                          <span className="rounded-md bg-blue-100 px-2 py-0.5 text-xs font-bold text-blue-800 flex items-center gap-1">
+                            <BarChart2 className="h-3 w-3 inline" />
+                            <span>Emerging Trend</span>
                           </span>
                         ) : ins.category === 'team_coaching' ? (
-                          <span className="rounded-md bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800">
-                            🤝 Team Coaching
+                          <span className="rounded-md bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800 flex items-center gap-1">
+                            <Users className="h-3 w-3 inline" />
+                            <span>Team Coaching</span>
                           </span>
                         ) : (
                           <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800">
-                            📋 Policy Refinement
+                            Policy Refinement
                           </span>
                         )}
 
@@ -930,38 +959,39 @@ export function SelfImproving() {
                           +{ins.estimated_resolution_lift}% Est. Resolution Lift
                         </span>
 
-                        <span className="text-xs text-slate-400">
+                        <span className="text-xs text-[var(--color-ink-faint)]">
                           Impact: {ins.impact_score}/10
                         </span>
                       </div>
 
                       <div className="flex items-center gap-2">
                         {ins.status === 'applied' ? (
-                          <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800">
-                            ✓ Retrained into Agent
+                          <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800 flex items-center gap-1">
+                            <Check className="h-3.5 w-3.5 inline" />
+                            <span>Retrained into Agent</span>
                           </span>
                         ) : ins.status === 'dismissed' ? (
-                          <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500">
+                          <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-[var(--color-ink-muted)]">
                             Dismissed
                           </span>
                         ) : (
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleDismiss(ins.id)}
-                              className="text-xs text-slate-400 hover:text-slate-600 px-2 py-1"
+                              className="text-xs text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] px-2 py-1"
                             >
                               Dismiss
                             </button>
                             <button
                               onClick={() => handleApplyRetraining(ins.id)}
                               disabled={applyingId === ins.id}
-                              className="rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+                              className="rounded-lg bg-[var(--color-accent)] px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
                             >
                               {applyingId === ins.id
                                 ? 'Retraining...'
                                 : ins.category === 'human_exemplar'
-                                ? '⚡ Retrain Agent with this Pattern'
-                                : '⚡ Apply & Retrain Agent'}
+                                ? 'Retrain Agent with this Pattern'
+                                : 'Apply & Retrain Agent'}
                             </button>
                           </div>
                         )}
@@ -969,8 +999,8 @@ export function SelfImproving() {
                     </div>
 
                     <div>
-                      <h3 className="text-base font-bold text-slate-900">{ins.title}</h3>
-                      <p className="mt-1 text-xs text-slate-600 leading-relaxed">
+                      <h3 className="text-base font-bold text-[var(--color-ink)]">{ins.title}</h3>
+                      <p className="mt-1 text-xs text-[var(--color-ink-muted)] leading-relaxed">
                         {ins.description}
                       </p>
                     </div>
@@ -982,8 +1012,10 @@ export function SelfImproving() {
                           <span>
                             Top Rep Winning Response (from {ins.human_rep_name || 'Top Human Rep'}):
                           </span>
-                          <span className="bg-purple-200 px-1.5 py-0.2 rounded text-[10px]">
-                            5.0 ★ CSAT Verified
+                          <span className="bg-purple-200 px-1.5 py-0.2 rounded text-[10px] flex items-center gap-1">
+                            <span>5.0</span>
+                            <Star className="h-3 w-3 fill-amber-500 text-amber-500 inline" />
+                            <span>CSAT Verified</span>
                           </span>
                         </div>
                         <p className="text-purple-950 font-medium italic">
@@ -1002,46 +1034,48 @@ export function SelfImproving() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">
+                  <h3 className="text-sm font-bold text-[var(--color-ink)]">
                     Agent Retraining Iteration Timeline
                   </h3>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-[var(--color-ink-muted)]">
                     Chronological audit log of how our Agent has improved across versions with resolution rate lift metrics.
                   </p>
                 </div>
               </div>
 
-              <div className="relative border-l-2 border-indigo-200 ml-4 space-y-6 pl-6 py-2">
+              <div className="relative border-l-2 border-[var(--color-border)] ml-4 space-y-6 pl-6 py-2">
                 {history.map((ev) => (
                   <div key={ev.id} className="relative space-y-2">
-                    <div className="absolute -left-[31px] top-1.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-indigo-600 shadow-xs"></div>
+                    <div className="absolute -left-[31px] top-1.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-[var(--color-accent)] shadow-xs"></div>
 
-                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
+                    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="rounded bg-indigo-100 px-2 py-0.5 text-xs font-bold text-indigo-800">
-                            v{ev.version_from} ➔ v{ev.version_to}
+                          <span className="rounded bg-indigo-100 px-2 py-0.5 text-xs font-bold text-indigo-800 flex items-center gap-1">
+                            <span>v{ev.version_from}</span>
+                            <ArrowRight className="h-3 w-3 inline" />
+                            <span>v{ev.version_to}</span>
                           </span>
-                          <h4 className="text-sm font-bold text-slate-900">{ev.title}</h4>
+                          <h4 className="text-sm font-bold text-[var(--color-ink)]">{ev.title}</h4>
                         </div>
                         <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800">
                           +{ev.resolution_lift}% Lift
                         </span>
                       </div>
 
-                      <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 flex items-center justify-between text-xs">
+                      <div className="rounded-xl bg-[var(--color-page)] border border-[var(--color-border)] p-3 flex items-center justify-between text-xs">
                         <div className="flex items-center gap-4">
                           <div>
-                            <span className="text-slate-400 block text-[11px]">
+                            <span className="text-[var(--color-ink-faint)] block text-[11px]">
                               Baseline Resolution Rate:
                             </span>
-                            <span className="font-bold text-slate-700">
+                            <span className="font-bold text-[var(--color-ink)]">
                               {ev.baseline_resolution_rate}%
                             </span>
                           </div>
-                          <span className="text-slate-300 text-lg">➔</span>
+                          <ArrowRight className="h-4 w-4 text-slate-400" />
                           <div>
-                            <span className="text-slate-400 block text-[11px]">
+                            <span className="text-[var(--color-ink-faint)] block text-[11px]">
                               Post-Retraining Resolution Rate:
                             </span>
                             <span className="font-bold text-emerald-700">
@@ -1050,7 +1084,7 @@ export function SelfImproving() {
                           </div>
                         </div>
 
-                        <span className="text-slate-400 text-xs">
+                        <span className="text-[var(--color-ink-faint)] text-xs">
                           Deployed on{' '}
                           {new Date(ev.created_at).toLocaleDateString([], {
                             month: 'short',
@@ -1061,16 +1095,16 @@ export function SelfImproving() {
                       </div>
 
                       <div>
-                        <span className="text-xs font-semibold text-slate-700 block mb-1">
+                        <span className="text-xs font-semibold text-[var(--color-ink)] block mb-1">
                           Changes & Learnings Incorporated:
                         </span>
                         <div className="space-y-1">
-                          {ev.changes_applied.map((ch, idx) => (
+                          {(ev.changes_applied || []).map((ch, idx) => (
                             <div
                               key={idx}
-                              className="rounded bg-slate-50 p-2 text-xs text-slate-700 flex items-center gap-2"
+                              className="rounded bg-[var(--color-page)] p-2 text-xs text-[var(--color-ink)] flex items-center gap-2"
                             >
-                              <span className="text-indigo-600 font-bold">✓</span>
+                              <Check className="h-3.5 w-3.5 text-[var(--color-accent)] shrink-0" />
                               <span>{ch.detail || ch.title || JSON.stringify(ch)}</span>
                             </div>
                           ))}
@@ -1087,10 +1121,10 @@ export function SelfImproving() {
           {activeView === 'coaching' && (
             <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">
+                <h3 className="text-sm font-bold text-[var(--color-ink)]">
                   Human Team Coaching & Assistance
                 </h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-[var(--color-ink-muted)]">
                   Suggestions and data assistance from our Agent make your human team better, creating a mutual improvement loop.
                 </p>
               </div>
@@ -1102,18 +1136,19 @@ export function SelfImproving() {
                     className="rounded-2xl border border-amber-200 bg-amber-50/20 p-5 shadow-sm space-y-3"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800">
-                        🤝 Human Team Recommendation
+                      <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800 flex items-center gap-1">
+                        <Users className="h-3.5 w-3.5 text-amber-700" />
+                        <span>Human Team Recommendation</span>
                       </span>
                       <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800">
                         +{c.estimated_resolution_lift}% CSAT Lift
                       </span>
                     </div>
 
-                    <h4 className="text-sm font-bold text-slate-900">{c.title}</h4>
-                    <p className="text-xs text-slate-600 leading-relaxed">{c.description}</p>
+                    <h4 className="text-sm font-bold text-[var(--color-ink)]">{c.title}</h4>
+                    <p className="text-xs text-[var(--color-ink-muted)] leading-relaxed">{c.description}</p>
 
-                    <div className="rounded-xl bg-white border border-amber-200 p-3 text-xs text-slate-800">
+                    <div className="rounded-xl bg-[var(--color-surface)] border border-amber-200 p-3 text-xs text-slate-800">
                       <span className="font-semibold text-amber-900 block mb-1">
                         Coaching Action for Reps:
                       </span>
@@ -1129,21 +1164,21 @@ export function SelfImproving() {
 
       {/* Modal: Connect Any AI Model */}
       {showConnectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-              <h3 className="text-lg font-bold text-slate-900">Connect Any AI Model</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-accent)]/40 backdrop-blur-xs p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-[var(--color-surface)] p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
+              <h3 className="text-lg font-bold text-[var(--color-ink)]">Connect Any AI Model</h3>
               <button
                 onClick={() => setShowConnectModal(false)}
-                className="text-slate-400 hover:text-slate-600 font-bold"
+                className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)]"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
 
             <form onSubmit={handleConnectModel} className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                <label className="text-xs font-semibold text-[var(--color-ink)] block mb-1">
                   Connection Display Name:
                 </label>
                 <input
@@ -1158,13 +1193,13 @@ export function SelfImproving() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  <label className="text-xs font-semibold text-[var(--color-ink)] block mb-1">
                     Provider:
                   </label>
                   <select
                     value={newConnProvider}
                     onChange={(e) => setNewConnProvider(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-lg border border-slate-300 bg-[var(--color-surface)] p-2 text-xs focus:border-indigo-500 focus:outline-none"
                   >
                     <option value="anthropic">Anthropic Claude</option>
                     <option value="openai">OpenAI (GPT-4o / o1 / o3)</option>
@@ -1177,7 +1212,7 @@ export function SelfImproving() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  <label className="text-xs font-semibold text-[var(--color-ink)] block mb-1">
                     Model Identifier:
                   </label>
                   <input
@@ -1192,7 +1227,7 @@ export function SelfImproving() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                <label className="text-xs font-semibold text-[var(--color-ink)] block mb-1">
                   API Key (leave blank for local Ollama):
                 </label>
                 <input
@@ -1205,7 +1240,7 @@ export function SelfImproving() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                <label className="text-xs font-semibold text-[var(--color-ink)] block mb-1">
                   Custom Base URL (optional):
                 </label>
                 <input
@@ -1218,7 +1253,7 @@ export function SelfImproving() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                <label className="text-xs font-semibold text-[var(--color-ink)] block mb-1">
                   Temperature: {newConnTemp}
                 </label>
                 <input
@@ -1232,18 +1267,18 @@ export function SelfImproving() {
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--color-border)]">
                 <button
                   type="button"
                   onClick={() => setShowConnectModal(false)}
-                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-[var(--color-ink-muted)] hover:bg-slate-100"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={connectingModel}
-                  className="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+                  className="rounded-lg bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
                 >
                   {connectingModel ? 'Connecting...' : 'Connect Model'}
                 </button>

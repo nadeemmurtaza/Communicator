@@ -1,3 +1,4 @@
+import { AlertCircle, AlertTriangle, CheckCircle2, Zap, Key, Bot, Activity, ArrowLeft, Check, Lightbulb, RefreshCw, Rocket, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -5,6 +6,7 @@ import {
   type TelegramChannelData,
   type SocialEvent,
 } from '../lib/api'
+import { TelegramIcon } from '../components/icons/BrandIcons'
 
 export function TelegramIntegration() {
   const [data, setData] = useState<TelegramChannelData | null>(null)
@@ -23,7 +25,7 @@ export function TelegramIntegration() {
   // Credentials State
   const [inboxName, setInboxName] = useState('Telegram Support')
   const [botToken, setBotToken] = useState('')
-  const [botUsername, setBotUsername] = useState('@bayworks_support_bot')
+  const [botUsername, setBotUsername] = useState('')
   const [secretToken, setSecretToken] = useState('tg_sec_token_xyz')
 
   // Bot Commands State
@@ -38,7 +40,7 @@ export function TelegramIntegration() {
   // Automations & Schedule State
   const [greetingEnabled, setGreetingEnabled] = useState(true)
   const [greetingMessage, setGreetingMessage] = useState(
-    '👋 Hello! Welcome to Bay Works on Telegram. How can our team assist you today?'
+    'Hello! Welcome to our Telegram Support. How can our team assist you today?'
   )
   const [outOfOfficeEnabled, setOutOfOfficeEnabled] = useState(false)
   const [outOfOfficeMessage, setOutOfOfficeMessage] = useState(
@@ -54,7 +56,7 @@ export function TelegramIntegration() {
   const [testChatId, setTestChatId] = useState('987654321')
   const [testRecipientName, setTestRecipientName] = useState('Dmitri Rostov')
   const [testMessage, setTestMessage] = useState(
-    'Hello! This is a test message dispatched via your Bay Works Telegram Bot API integration.'
+    'Hello! This is a test message dispatched via your Telegram Bot API integration.'
   )
   const [testResult, setTestResult] = useState<{ messageId: string; message: string } | null>(null)
 
@@ -74,7 +76,8 @@ export function TelegramIntegration() {
       setEvents(evList)
 
       setInboxName(channelData.inbox.name)
-      setBotUsername(channelData.botProfile?.botUsername || channelData.inbox.credentials?.botUsername || '@bayworks_support_bot')
+      const rawBot = channelData.botProfile?.botUsername || channelData.inbox.credentials?.botUsername || ''
+      setBotUsername(rawBot === '@bayworks_support_bot' ? '' : rawBot)
       setSecretToken(channelData.webhookConfig?.secretToken || 'tg_sec_token_xyz')
 
       if (channelData.commands && channelData.commands.length > 0) {
@@ -201,6 +204,8 @@ export function TelegramIntegration() {
     )
   }
 
+  const isConnected = Boolean(data?.health?.isConnected ?? (botToken && botUsername))
+
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6">
       {/* Top Banner Navigation */}
@@ -208,14 +213,15 @@ export function TelegramIntegration() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Link to="/channels" className="text-sm font-medium text-sky-600 hover:text-sky-800">
-              ← Back to Channels Hub
+              <ArrowLeft className="h-4 w-4 inline mr-1" />
+              <span>Back to Channels Hub</span>
             </Link>
             <span className="text-gray-300">/</span>
             <span className="text-sm font-medium text-gray-500">Telegram Bot</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-400 to-blue-600 flex items-center justify-center text-white shadow-sm font-bold text-xl">
-              ✈️
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-400 to-blue-600 flex items-center justify-center text-white shadow-sm">
+              <TelegramIcon className="h-6 w-6" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Telegram Bot Integration</h1>
@@ -232,7 +238,7 @@ export function TelegramIntegration() {
             disabled={verifying}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 shadow-sm transition disabled:opacity-50"
           >
-            {verifying ? 'Checking Telegram...' : '⚡ Test Connection'}
+            {verifying ? 'Checking Telegram...' : <span className="flex items-center gap-1"><Zap className="h-3.5 w-3.5 text-amber-500" /> Test Connection</span>}
           </button>
           <button
             onClick={handleSaveSettings}
@@ -244,15 +250,28 @@ export function TelegramIntegration() {
         </div>
       </div>
 
+      {/* Real Connection Status Banner */}
+      {!isConnected && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <h4 className="text-sm font-semibold text-amber-900">Channel Not Connected</h4>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Please enter your provider API credentials below and click Save Configuration to activate.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Alert Notices */}
       {success && (
         <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-sm flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span>✅</span>
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             <span>{success}</span>
           </div>
           <button onClick={() => setSuccess(null)} className="text-emerald-600 hover:text-emerald-900 font-bold">
-            ×
+            <X className="h-4 w-4" />
           </button>
         </div>
       )}
@@ -260,11 +279,11 @@ export function TelegramIntegration() {
       {error && (
         <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-sm flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span>⚠️</span>
+            <AlertCircle className="h-4 w-4 text-rose-600" />
             <span>{error}</span>
           </div>
           <button onClick={() => setError(null)} className="text-rose-600 hover:text-rose-900 font-bold">
-            ×
+            <X className="h-4 w-4" />
           </button>
         </div>
       )}
@@ -274,9 +293,11 @@ export function TelegramIntegration() {
         <div className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
           <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Bot Username</div>
           <div className="flex items-center justify-between">
-            <span className="text-lg font-bold text-gray-900">{botUsername || '@bayworks_support_bot'}</span>
-            <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-              Active
+            <span className="text-lg font-bold text-gray-900">{botUsername || 'Not Configured'}</span>
+            <span className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${
+              isConnected ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+            }`}>
+              {isConnected ? 'Connected' : 'Not Configured'}
             </span>
           </div>
           <p className="text-xs text-gray-500 mt-1">Direct bot handle</p>
@@ -320,11 +341,11 @@ export function TelegramIntegration() {
       <div className="border-b border-gray-200">
         <nav className="flex space-x-8">
           {[
-            { id: 'credentials', label: 'Bot Credentials & Setup', icon: '🔑' },
-            { id: 'webhooks', label: 'Webhooks & Secret Token', icon: '⚡' },
-            { id: 'commands', label: 'Bot Menu & Commands', icon: '💡' },
-            { id: 'automations', label: 'Automations & Schedule', icon: '🤖' },
-            { id: 'diagnostics', label: 'Diagnostic Sender & Events', icon: '📡' },
+            { id: 'credentials', label: 'Bot Credentials & Setup', icon: Key },
+            { id: 'webhooks', label: 'Webhooks & Secret Token', icon: Zap },
+            { id: 'commands', label: 'Bot Menu & Commands', icon: Lightbulb },
+            { id: 'automations', label: 'Automations & Schedule', icon: Bot },
+            { id: 'diagnostics', label: 'Diagnostic Sender & Events', icon: Activity },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -335,7 +356,7 @@ export function TelegramIntegration() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <span>{tab.icon}</span>
+              <tab.icon className="h-4 w-4" />
               <span>{tab.label}</span>
             </button>
           ))}
@@ -371,7 +392,7 @@ export function TelegramIntegration() {
                 value={botUsername}
                 onChange={(e) => setBotUsername(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-sky-500 focus:outline-none"
-                placeholder="e.g. @bayworks_support_bot"
+                placeholder="e.g. @your_bot_name"
               />
               <p className="text-xs text-gray-400 mt-1">Must end in 'bot' as required by Telegram.</p>
             </div>
@@ -424,7 +445,7 @@ export function TelegramIntegration() {
                   }
                   className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 transition"
                 >
-                  {copiedKey === 'callback' ? '✓ Copied' : 'Copy'}
+                  {copiedKey === 'callback' ? <span className="inline-flex items-center gap-1"><Check className="h-4 w-4 text-emerald-600" /> Copied</span> : 'Copy'}
                 </button>
               </div>
             </div>
@@ -442,7 +463,7 @@ export function TelegramIntegration() {
                   onClick={() => copyToClipboard(secretToken, 'secretToken')}
                   className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 transition"
                 >
-                  {copiedKey === 'secretToken' ? '✓ Copied' : 'Copy'}
+                  {copiedKey === 'secretToken' ? <span className="inline-flex items-center gap-1"><Check className="h-4 w-4 text-emerald-600" /> Copied</span> : 'Copy'}
                 </button>
               </div>
               <p className="text-xs text-gray-400 mt-1">
@@ -695,7 +716,7 @@ export function TelegramIntegration() {
                 disabled={sendingTest || !testChatId.trim() || !testMessage.trim()}
                 className="px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700 shadow-sm transition disabled:opacity-50 flex items-center gap-2"
               >
-                {sendingTest ? 'Dispatching...' : '🚀 Send Diagnostic Message'}
+                {sendingTest ? 'Dispatching...' : <span className="inline-flex items-center gap-1.5"><Rocket className="h-4 w-4" /> Send Diagnostic Message</span>}
               </button>
 
               {testResult && (
@@ -717,7 +738,7 @@ export function TelegramIntegration() {
                 onClick={async () => setEvents(await api.listTelegramEvents())}
                 className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
               >
-                🔄 Refresh
+                <span className="inline-flex items-center gap-1"><RefreshCw className="h-3.5 w-3.5" /> Refresh</span>
               </button>
             </div>
 
@@ -755,7 +776,7 @@ export function TelegramIntegration() {
                         <td className="py-3 px-4 font-medium text-gray-900">{ev.senderName}</td>
                         <td className="py-3 px-4 text-gray-700 max-w-xs truncate">{ev.body}</td>
                         <td className="py-3 px-4">
-                          <span className="text-xs font-medium text-emerald-600">● {ev.status}</span>
+                          <span className="text-xs font-medium text-emerald-600 inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />{ev.status}</span>
                         </td>
                         <td className="py-3 px-4 font-mono text-xs text-gray-400">
                           {ev.providerMessageId ? ev.providerMessageId.slice(0, 16) + '...' : '—'}
