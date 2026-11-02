@@ -11,8 +11,8 @@ pub async fn fetch_meta_business_profile(
     // If no access token configured, return unconfigured state
     if access_token.is_empty() || phone_number_id.is_empty() {
         return BusinessProfile {
-            display_phone_number: "Not Configured".to_string(),
-            verified_name: "Not Configured".to_string(),
+            display_phone_number: String::new(),
+            verified_name: String::new(),
             quality_rating: "UNKNOWN".to_string(),
             messaging_limit_tier: "NOT_CONFIGURED".to_string(),
             official_business_account: false,
@@ -33,10 +33,10 @@ pub async fn fetch_meta_business_profile(
 
     let mut display_phone = String::new();
     let mut verified_name = String::new();
-    let mut quality_rating = "HIGH (Green)".to_string();
-    let mut messaging_limit = "250 / day".to_string();
-    let is_verified = true;
-    let official_biz = true;
+    let mut quality_rating = "UNKNOWN".to_string();
+    let mut messaging_limit = "UNKNOWN".to_string();
+    let mut is_verified = false;
+    let mut official_biz = false;
 
     // Fetch phone number details from Meta Graph API
     match client
@@ -73,19 +73,17 @@ pub async fn fetch_meta_business_profile(
                         other => other.to_string(),
                     };
                 }
+                if let Some(cvs) = json["code_verification_status"].as_str() {
+                    if cvs.eq_ignore_ascii_case("VERIFIED") {
+                        is_verified = true;
+                        official_biz = true;
+                    }
+                }
             }
         }
         Err(e) => {
             error!("Failed to fetch phone number details from Meta: {}", e);
         }
-    }
-
-    // Fallback if Meta did not return a value
-    if display_phone.is_empty() {
-        display_phone = "+92 370 9861100".to_string();
-    }
-    if verified_name.is_empty() {
-        verified_name = "Newax Technologies".to_string();
     }
 
     // Fetch whatsapp business profile details
