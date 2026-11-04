@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Check, ChevronDown, ChevronUp, GitBranch, Plus, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, GitBranch, Plus, X } from '../components/icons'
 import { api, type Sequence, type VariantStats } from '../lib/api'
 
 export function Sequences() {

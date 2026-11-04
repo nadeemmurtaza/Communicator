@@ -1,4 +1,4 @@
-import { Lightbulb, Plus, Trash2, X, Zap } from 'lucide-react'
+import { Lightbulb, Plus, Trash2, X, Zap } from '../icons'
 import { Link } from 'react-router-dom'
 
 interface CannedResponsesModalProps {

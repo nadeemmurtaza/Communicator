@@ -1,4 +1,4 @@
-import { Users, X } from 'lucide-react'
+import { Users, X } from '../icons'
 import { Link } from 'react-router-dom'
 
 interface CapacityModalProps {

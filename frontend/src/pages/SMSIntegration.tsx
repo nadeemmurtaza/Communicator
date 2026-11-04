@@ -15,7 +15,7 @@ import {
   ShieldCheck,
   X,
   Zap,
-} from 'lucide-react'
+} from '../components/icons'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -23,7 +23,7 @@ import {
   type SMSChannelData,
   type SMSEvent,
 } from '../lib/api'
-import { SmsIcon } from '../components/icons/BrandIcons'
+import { SmsIcon } from '../components/icons'
 
 export function SMSIntegration() {
   const [data, setData] = useState<SMSChannelData | null>(null)

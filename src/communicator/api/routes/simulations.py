@@ -51,7 +51,6 @@ async def list_policies(
     db: AsyncSession = Depends(get_db_session),
 ):
     """Lists all agent training policies and SOP guidelines."""
-    await SimulationService.seed_default_policies_and_scenarios(db)
     policies = await SimulationService.list_policies(db, category=category)
     return [
         {
@@ -103,7 +102,6 @@ async def list_scenarios(
     db: AsyncSession = Depends(get_db_session),
 ):
     """Lists pre-configured customer conversation scenarios for agent testing."""
-    await SimulationService.seed_default_policies_and_scenarios(db)
     return await SimulationService.list_scenarios(db, category=category)
 
 
@@ -116,7 +114,6 @@ async def run_simulation(
     Executes a simulated multi-turn conversation between an AI Customer Persona and our Agent.
     Evaluates step-by-step adherence to policies and guardrails.
     """
-    await SimulationService.seed_default_policies_and_scenarios(db)
     try:
         run = await SimulationService.run_simulation(
             db,
@@ -145,7 +142,6 @@ async def run_simulation(
 @router.post("/batch", response_model=dict[str, Any])
 async def run_batch_simulations(db: AsyncSession = Depends(get_db_session)):
     """Runs all scenarios in batch mode and generates overall suite pass rate and scores."""
-    await SimulationService.seed_default_policies_and_scenarios(db)
     return await SimulationService.run_batch_simulations(db)
 
 
@@ -155,7 +151,6 @@ async def sandbox_chat(
     db: AsyncSession = Depends(get_db_session),
 ):
     """Interactive sandbox test: test any customer message and view real-time policy evaluation."""
-    await SimulationService.seed_default_policies_and_scenarios(db)
     return await SimulationService.interactive_sandbox_turn(
         db=db,
         message=body.message,
@@ -167,5 +162,4 @@ async def sandbox_chat(
 @router.get("/stats", response_model=dict[str, Any])
 async def get_simulation_stats(db: AsyncSession = Depends(get_db_session)):
     """Summary metrics of test suite pass rate, active scenarios, and average scores."""
-    await SimulationService.seed_default_policies_and_scenarios(db)
     return await SimulationService.get_stats_summary(db)

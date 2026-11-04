@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { MessageCircle, Phone, Mail, MessageSquare, RefreshCw } from 'lucide-react'
+import { MessageCircle, Phone, Mail, MessageSquare, RefreshCw } from '../components/icons'
 import { api, type Conversation } from '../lib/api'
 import { stateBadgeClass, stateLabel, timeAgo } from '../lib/format'
 

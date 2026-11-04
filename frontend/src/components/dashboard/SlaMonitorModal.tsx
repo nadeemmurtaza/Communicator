@@ -1,4 +1,4 @@
-import { AlertTriangle, Award, Clock, X } from 'lucide-react'
+import { AlertTriangle, Award, Clock, X } from '../icons'
 import { Link } from 'react-router-dom'
 
 interface SlaMonitorModalProps {

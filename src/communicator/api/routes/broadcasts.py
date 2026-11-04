@@ -718,74 +718,8 @@ async def calculate_whatsapp_pricing(
     }
 
 
-# --- Seed Default Example Campaigns (from Chatwoot Guide) ---
-
-
-@router.post("/seed-defaults")
-async def seed_default_campaigns(session: AsyncSession = Depends(get_db_session)):
-    """
-    Seeds the 3 pre-built campaigns shown in Chatwoot WhatsApp Campaigns:
-    1. Spring sale early access (Scheduled)
-    2. New store opening (Processing)
-    3. Loyalty points reminder (Completed)
-    """
-    existing = (await session.execute(select(Broadcast))).scalars().first()
-    if existing is not None:
-        return {"status": "skipped", "message": "Campaigns already exist"}
-
-    now = datetime.now(UTC)
-
-    c1 = Broadcast(
-        name="Spring sale early access",
-        template_name="spring_sale_offer",
-        template_language="en_US",
-        body_preview="Hi Maya, our spring sale starts Friday. As a VIP customer you get early access and 20% off until Sunday.",
-        template_params={"customer_name": "Maya", "discount": "20%"},
-        tag_name="vip-customers",
-        status=BroadcastStatus.SCHEDULED,
-        scheduled_at=now.replace(hour=10, minute=0, second=0),
-        audience_count=248,
-        sent_count=240,
-        delivered_count=218,
-        read_count=164,
-        failed_count=12,
-        skipped_count=8,
-    )
-    session.add(c1)
-
-    c2 = Broadcast(
-        name="New store opening",
-        template_name="store_launch_announcement",
-        template_language="en_US",
-        body_preview="We are thrilled to invite you to our new flagship store opening! Come by this weekend for exclusive in-store perks.",
-        tag_name="newsletter",
-        status=BroadcastStatus.SENDING,
-        scheduled_at=now.replace(hour=9, minute=30, second=0),
-        audience_count=150,
-        sent_count=120,
-        delivered_count=98,
-        read_count=45,
-        failed_count=4,
-        skipped_count=2,
-    )
-    session.add(c2)
-
-    c3 = Broadcast(
-        name="Loyalty points reminder",
-        template_name="loyalty_rewards_update",
-        template_language="en_US",
-        body_preview="You have 500 loyalty points expiring soon! Redeem them today for $25 off your next purchase.",
-        tag_name="vip-customers",
-        status=BroadcastStatus.COMPLETED,
-        scheduled_at=now.replace(hour=16, minute=0, second=0),
-        audience_count=89,
-        sent_count=89,
-        delivered_count=82,
-        read_count=67,
-        failed_count=3,
-        skipped_count=4,
-    )
-    session.add(c3)
-
-    await session.flush()
-    return {"status": "seeded", "count": 3}
+# --- Default example campaigns ---
+# The former POST /broadcasts/seed-defaults endpoint inserted 3 fabricated
+# campaigns ("Spring sale early access", "New store opening", "Loyalty points
+# reminder") with invented send/deliver/read counts. Removed: campaigns must
+# come from real dispatch only.

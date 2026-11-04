@@ -1,4 +1,4 @@
-import { X, Zap } from 'lucide-react'
+import { X, Zap } from '../icons'
 
 interface CreateMacroModalProps {
   conversations: any

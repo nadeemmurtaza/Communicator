@@ -73,29 +73,6 @@ async def detect_knowledge_gaps(session: AsyncSession) -> list[KnowledgeGap]:
         if not d.citations and d.body:
             pass
 
-    # If database is fresh and has few inbound messages, provide smart starter gaps so the
-    # feature works out of the box ("Fills gaps" as shown in Fin diagram)
-    starter_gaps = [
-        {
-            "question": "What is the standard turnaround time for refunds?",
-            "suggested_answer": "Standard refund requests are processed within 3 to 5 business days back to the original payment method.",
-            "source_query": "How long will my refund take to show up in my account?",
-            "frequency": 4,
-        },
-        {
-            "question": "Do you provide enterprise SLA guarantees with 99.99% uptime?",
-            "suggested_answer": "Yes, our Enterprise tier includes a 99.99% uptime SLA guarantee, dedicated account manager, and 24/7 priority support.",
-            "source_query": "We require a 99.99% SLA commitment before signing.",
-            "frequency": 3,
-        },
-        {
-            "question": "Can I connect custom webhook endpoints for incoming WhatsApp messages?",
-            "suggested_answer": "Yes, you can configure outbound webhook delivery in Settings -> Connections to forward all Meta Cloud API events in real time.",
-            "source_query": "Can we stream WhatsApp inbound webhooks to our internal CRM?",
-            "frequency": 2,
-        },
-    ]
-
     new_gaps: list[KnowledgeGap] = []
 
     # Insert detected candidates
@@ -110,21 +87,6 @@ async def detect_knowledge_gaps(session: AsyncSession) -> list[KnowledgeGap]:
         session.add(gap)
         new_gaps.append(gap)
         existing_questions.add(q.lower())
-
-    # If empty, add starter gaps to ensure the system demonstrates the diagram's gap-filling capability
-    if not existing_gaps and not new_gaps:
-        for item in starter_gaps:
-            if item["question"].lower() not in existing_questions:
-                gap = KnowledgeGap(
-                    question=item["question"],
-                    suggested_answer=item["suggested_answer"],
-                    source_query=item["source_query"],
-                    frequency=item["frequency"],
-                    status="suggested",
-                )
-                session.add(gap)
-                new_gaps.append(gap)
-                existing_questions.add(item["question"].lower())
 
     if new_gaps:
         await session.flush()

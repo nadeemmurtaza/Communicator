@@ -35,7 +35,7 @@ import {
   Tag,
   X,
   Zap,
-} from 'lucide-react'
+} from '../components/icons'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -47,7 +47,7 @@ import {
   type PreChatRoutingRule,
   type PreChatTestIntakeResult,
 } from '../lib/api'
-import { LiveChatIcon } from '../components/icons/BrandIcons'
+import { LiveChatIcon } from '../components/icons'
 
 const DEFAULT_AVATAR_URL = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128'
 

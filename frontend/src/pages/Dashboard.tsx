@@ -1,12 +1,9 @@
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition, type RefObject } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  MessageSquare,
   Sparkles,
-  Flame,
   Radio,
   ArrowRight,
-  ShieldCheck,
   CheckCircle2,
   XCircle,
   RefreshCw,
@@ -14,7 +11,12 @@ import {
   Users,
   Send,
   AlertTriangle,
-} from 'lucide-react'
+  FlameAnimated,
+  MessageSquareAnimated,
+  ShieldCheckAnimated,
+  SparklesAnimated,
+  type AnimatedIconHandle,
+} from '../components/icons'
 import {
   api,
   type Conversation,
@@ -24,6 +26,13 @@ import {
   type Inbox,
 } from '../lib/api'
 import { stateBadgeClass, stateLabel, timeAgo } from '../lib/format'
+
+// A ref hands hover to the caller, so the card -- not the 32px chip inside it --
+// decides when its icon moves.
+const hoverIcon = (icon: RefObject<AnimatedIconHandle | null>) => ({
+  onMouseEnter: () => icon.current?.startAnimation(),
+  onMouseLeave: () => icon.current?.stopAnimation(),
+})
 
 export function Dashboard() {
   const [drafts, setDrafts] = useState<Draft[] | null>(null)
@@ -35,6 +44,10 @@ export function Dashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [busyDraftId, setBusyDraftId] = useState<string | null>(null)
   const [, startTransition] = useTransition()
+  const draftsIcon = useRef<AnimatedIconHandle>(null)
+  const leadsIcon = useRef<AnimatedIconHandle>(null)
+  const conversationsIcon = useRef<AnimatedIconHandle>(null)
+  const slaIcon = useRef<AnimatedIconHandle>(null)
 
   const loadData = async () => {
     setIsRefreshing(true)
@@ -157,13 +170,14 @@ export function Dashboard() {
         <Link
           to="/drafts"
           className="group block rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs transition hover:border-amber-300 hover:shadow-sm"
+          {...hoverIcon(draftsIcon)}
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-muted)]">
               Pending AI Drafts
             </span>
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
-              <Sparkles className="w-4 h-4" />
+              <SparklesAnimated ref={draftsIcon} size={20} />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
@@ -183,13 +197,14 @@ export function Dashboard() {
         <Link
           to="/conversations"
           className="group block rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs transition hover:border-rose-300 hover:shadow-sm"
+          {...hoverIcon(leadsIcon)}
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-muted)]">
               Hot Leads
             </span>
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600">
-              <Flame className="w-4 h-4" />
+              <FlameAnimated ref={leadsIcon} size={20} />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
@@ -209,13 +224,14 @@ export function Dashboard() {
         <Link
           to="/conversations"
           className="group block rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs transition hover:border-indigo-300 hover:shadow-sm"
+          {...hoverIcon(conversationsIcon)}
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-muted)]">
               Open Conversations
             </span>
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
-              <MessageSquare className="w-4 h-4" />
+              <MessageSquareAnimated ref={conversationsIcon} size={20} />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
@@ -235,13 +251,14 @@ export function Dashboard() {
         <Link
           to="/sla"
           className="group block rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs transition hover:border-emerald-300 hover:shadow-sm"
+          {...hoverIcon(slaIcon)}
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-muted)]">
               SLA Health
             </span>
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
-              <ShieldCheck className="w-4 h-4" />
+              <ShieldCheckAnimated ref={slaIcon} size={20} />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">

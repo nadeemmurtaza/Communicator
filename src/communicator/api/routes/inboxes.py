@@ -1074,20 +1074,15 @@ async def _get_or_create_tiktok_inbox(session: AsyncSession) -> Inbox:
 
 @router.get("")
 async def list_inboxes(session: AsyncSession = Depends(get_db_session)):
-    """Lists all configured channel inboxes (WhatsApp, Live Chat, SMS, Facebook, Instagram, Telegram, LINE, Voice, Email, TikTok, etc.)."""
+    """Lists the channel inboxes that actually exist in the database."""
     int_settings = await get_settings_row(session)
     business_name = int_settings.business_name or "Newax Technologies"
-    # Ensure default channel inboxes exist
-    await _get_or_create_whatsapp_inbox(session)
-    await _get_or_create_website_inbox(session)
-    await _get_or_create_sms_inbox(session)
-    await _get_or_create_facebook_inbox(session)
-    await _get_or_create_instagram_inbox(session)
-    await _get_or_create_telegram_inbox(session)
-    await _get_or_create_line_inbox(session)
-    await _get_or_create_voice_inbox(session)
-    await _get_or_create_email_inbox(session)
-    await _get_or_create_tiktok_inbox(session)
+    # The bulk "ensure default channel inboxes exist" provisioning was removed:
+    # a single GET used to fabricate up to 10 inbox rows (including placeholder
+    # Facebook/Instagram rows carrying "mock_secret_facebook",
+    # "EAAB_test_mock_token_instagram", pageId 100234567890123, @bayworks).
+    # An empty inbox list is the honest answer. Per-channel rows are still
+    # provisioned lazily by that channel's own endpoints once it is configured.
     stmt = select(Inbox).order_by(Inbox.created_at)
     inboxes = (await session.execute(stmt)).scalars().all()
     return [_serialize_inbox(i, business_name=business_name) for i in inboxes]

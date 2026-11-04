@@ -13,7 +13,7 @@ import {
   ShieldAlert,
   Trash2,
   X,
-} from 'lucide-react'
+} from '../components/icons'
 import { api } from '../lib/api'
 import type {
   SLAPolicy,

@@ -18,7 +18,6 @@ from communicator.services.knowledge_gaps import (
 from communicator.services.knowledge_hub_service import (
     apply_recommendation,
     dismiss_recommendation,
-    ensure_default_hub_content,
     get_knowledge_hub_overview,
     list_recommendations,
     serialize_hub_entry,
@@ -117,7 +116,6 @@ async def dismiss_content_recommendation(
 
 @router.get("")
 async def list_entries(session: AsyncSession = Depends(get_db_session)):
-    await ensure_default_hub_content(session)
     entries = (
         (
             await session.execute(

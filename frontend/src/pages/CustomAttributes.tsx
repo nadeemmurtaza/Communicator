@@ -12,7 +12,7 @@ import {
   MessageSquare,
   Plus,
   X,
-} from 'lucide-react'
+} from '../components/icons'
 import { useEffect, useState } from 'react'
 import { api, type CustomAttributeDefinitionItem } from '../lib/api'
 

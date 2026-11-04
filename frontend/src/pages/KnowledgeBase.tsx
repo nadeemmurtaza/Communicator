@@ -21,7 +21,7 @@ import {
   ShieldCheck,
   Lightbulb,
   Rocket,
-} from 'lucide-react'
+} from '../components/icons'
 import { useEffect, useRef, useState } from 'react'
 import {
   api,

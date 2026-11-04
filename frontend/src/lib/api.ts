@@ -451,29 +451,50 @@ export interface MultiChannelImportResult {
 export interface Broadcast {
   id: string
   name: string
-  templateName: string
-  templateLanguage: string
-  bodyPreview?: string
-  templateParams?: Record<string, string>
-  tagName: string
+  templateName: string | null
+  templateLanguage: string | null
+  bodyPreview?: string | null
+  templateParams?: Record<string, string> | string | null
+  tagName: string | null
   status: 'draft' | 'scheduled' | 'sending' | 'completed' | 'failed'
   scheduledAt: string | null
-  audienceCount?: number
+  createdAt: string
+  audienceCount?: number | null
   sentCount: number
   deliveredCount: number
   readCount: number
   failedCount: number
   skippedCount?: number
-  createdAt: string
+  tenantKey?: string | null
+  warnings?: string[]
+}
+
+/** One recipient decision returned by `/broadcasts/{id}/dispatch`. */
+export interface DispatchRecipient {
+  contactId: string
+  messageId?: string
+  status: 'sent' | 'failed' | 'not_sent'
+  reason?: string | null
+  provider?: string
+  httpStatus?: number | null
+}
+
+/** What the dispatcher actually did — every count comes from a real send attempt. */
+export interface DispatchOutcome extends Broadcast {
+  totalRecipients?: number
+  templateUsed?: boolean
+  recipients?: DispatchRecipient[]
+  error?: string
 }
 
 export interface BroadcastRecipient {
   id: string
   contactId: string
-  contactName?: string
-  contactPhone?: string
+  messageId?: string | null
+  contactName?: string | null
+  contactPhone?: string | null
   status: string
-  error: string
+  error: string | null
   sentAt?: string | null
   deliveredAt?: string | null
   readAt?: string | null
@@ -500,18 +521,32 @@ export interface CampaignAnalytics {
     failureRate: number
   }
   recipients: BroadcastRecipient[]
+  warnings?: string[]
+  /** Recomputed from the recipient ledger, not from the stored counters. */
+  campaignId?: string
+  totalRecipients?: number
 }
 
 export interface AudiencePreview {
   tags: string[]
   totalSelected: number
-  dailyLimit: number
+  eligibleCount: number
+  optedInCount: number
+  optedOutCount: number
+  unknownConsentCount: number
+  /** Null unless the daily cap was read from Meta's `messaging_limit_tier`. */
+  dailyLimit: number | null
+  dailyLimitSource: string | null
+  tenantKey?: string
   sampleContacts: Array<{
     id: string
-    name: string
+    /** Null when the contact has no stored name — the UI must not invent one. */
+    name: string | null
     phone: string
-    tags: string[]
+    channel?: string
+    consent?: string | null
   }>
+  warnings?: string[]
 }
 
 export interface Inbox {
@@ -884,24 +919,26 @@ export interface SMSUpdatePayload {
 export interface TicketActivity {
   id: string
   author_id?: string | null
-  author_name: string
-  activity_type: string
-  message: string
+  /** NULL when no author was stored -- the backend never substitutes a stand-in. */
+  author_name?: string | null
+  activity_type?: string | null
+  message?: string | null
   metadata?: Record<string, any>
-  created_at: string
+  created_at?: string | null
 }
 
 export interface ChildTicketSummary {
   id: string
-  ticket_number: string
-  title: string
-  status: string
-  priority: string
-  department: string
+  ticket_number?: string | null
+  title?: string | null
+  status?: string | null
+  priority?: string | null
+  department?: string | null
   contact_id?: string | null
+  /** NULL when the ticket has no contact_id, so nobody can be messaged for it. */
   contact_name?: string | null
   conversation_id?: string | null
-  created_at: string
+  created_at?: string | null
 }
 
 export interface Ticket {
@@ -940,8 +977,82 @@ export interface TicketStats {
   back_office_tickets: number
   tracker_tickets: number
   resolved_tickets: number
+  /** Live count of not-yet-resolved urgent tickets; absent means never counted. */
+  urgent_tickets?: number
   department_breakdown: Record<string, number>
   impacted_customers_count: number
+  /** NULL until at least one ticket has both created_at and resolved_at. */
+  avg_resolution_time_hours?: number | null
+  total_activities?: number
+}
+
+/**
+ * One per-recipient row of a tracker broadcast, exactly as
+ * `broadcast_tracker_update` in backend-rs/src/routes/tickets.rs builds it.
+ * The keys present depend on which branch produced the row, so every field is
+ * optional: a row with no `provider`/`httpStatus` means no provider was ever
+ * contacted for that recipient, which is information, not a zero.
+ */
+export interface BroadcastDelivery {
+  /** 'sent' | 'failed' | 'not_sent' | 'error', or missing if unreadable. */
+  status?: string | null
+  ticketId?: string | null
+  ticket_id?: string | null
+  conversationId?: string | null
+  conversation_id?: string | null
+  messageId?: string | null
+  message_id?: string | null
+  channel?: string | null
+  contactId?: string | null
+  provider?: string | null
+  httpStatus?: number | null
+  providerMessageId?: string | null
+  simulated?: boolean
+  detail?: string | null
+  note?: string | null
+}
+
+/**
+ * Mirror of the JSON the Rust handler returns for POST /tickets/{id}/broadcast.
+ * The handler emits both snake_case and camelCase for every scalar, so both are
+ * declared here; `messages_sent` counts only sends a provider accepted with a
+ * real 2xx, and `messages_not_sent` counts recipients nothing left the process
+ * for (no conversation, no addressable contact value, consent/business gates).
+ */
+export interface BroadcastTrackerUpdateResult {
+  tracker_id: string
+  trackerId: string
+  /** NULL when the tracker row stores no ticket_number. */
+  tracker_number: string | null
+  trackerNumber: string | null
+  impacted_tickets: number
+  impactedTickets: number
+  messages_sent: number
+  messagesSent: number
+  messages_failed: number
+  messagesFailed: number
+  messages_not_sent: number
+  messagesNotSent: number
+  deliveries: BroadcastDelivery[]
+  customer_message_requested: boolean
+  customerMessageRequested: boolean
+  resolve_all_requested: boolean
+  resolveAllRequested: boolean
+  resolved_tickets: number
+  resolvedTickets: number
+  already_resolved: number
+  alreadyResolved: number
+  resolve_failed: number
+  resolveFailed: number
+  customers_notified: boolean
+  customersNotified: boolean
+  tracker_resolved: boolean
+  trackerResolved: boolean
+  tracker_resolve_error: string | null
+  trackerResolveError: string | null
+  activity_errors: string[]
+  activityErrors: string[]
+  note: string
 }
 
 export interface AgentPolicy {
@@ -1282,19 +1393,21 @@ export interface LinkedIssue {
   id: string
   conversation_id?: string | null
   ticket_id?: string | null
-  provider: 'linear' | 'github' | 'jira'
-  external_issue_id: string
-  issue_key: string
-  issue_url: string
-  title: string
-  status: string
-  priority: string
-  assigned_to: string
-  created_by_email: string
-  sync_status: string
-  metadata_json: Record<string, any>
-  created_at: string
-  updated_at?: string
+  provider?: 'linear' | 'github' | 'jira' | null
+  external_issue_id?: string | null
+  issue_key?: string | null
+  /** NULL when the tracker returned no URL; a missing URL is not a link. */
+  issue_url?: string | null
+  title?: string | null
+  status?: string | null
+  priority?: string | null
+  assigned_to?: string | null
+  /** NULL when the create request carried no signed-in actor email. */
+  created_by_email?: string | null
+  sync_status?: string | null
+  metadata_json?: Record<string, any> | null
+  created_at?: string | null
+  updated_at?: string | null
 }
 
 export interface SlackSyncStatus {
@@ -1836,13 +1949,21 @@ export interface CopilotApprovalRequest {
 
 export interface PricingEstimate {
   region: string
-  regionName: string
   category: string
   volume: number
+  /** Always from the `whatsapp_pricing_rates` row; the endpoint 503s when none exists. */
   ratePerConversation: number
-  estimatedCostUsd: number
-  estimatedRoiUsd: number
-  freeServiceTierIncluded: string
+  ratePerMessage: number | null
+  estimatedCost: number
+  /** Null when the stored rate is not denominated in USD. */
+  estimatedCostUsd: number | null
+  currency: string
+  rateSource: string
+  rateUpdatedAt: string | null
+  /** Never computed — kept so the UI cannot invent a multiplier. */
+  estimatedRoiUsd: null
+  roiNote: string
+  warnings?: string[]
   supportedRegions: Array<{ code: string; name: string }>
 }
 
@@ -2589,9 +2710,9 @@ export const api = {
   listBroadcasts: () => request<Broadcast[]>('/broadcasts'),
   createBroadcast: (data: {
     name: string
-    template_name: string
+    template_name?: string
     template_language?: string
-    body_preview?: string
+    body_preview: string
     template_params?: Record<string, string>
     tag_name: string
     scheduled_at?: string | null
@@ -2606,9 +2727,22 @@ export const api = {
       body: JSON.stringify({ scheduled_at: scheduledAt }),
     }),
   dispatchBroadcast: (id: string) =>
-    request<Broadcast>(`/broadcasts/${id}/dispatch`, { method: 'POST' }),
+    request<DispatchOutcome>(`/broadcasts/${id}/dispatch`, { method: 'POST' }),
   processScheduledCampaigns: () =>
-    request<{ processed: number; campaigns: Broadcast[] }>('/broadcasts/process-scheduled', {
+    request<{
+      processed: number
+      due: number
+      tenantKey: string
+      campaigns: Array<{
+        id: string
+        status: string
+        sentCount?: number
+        failedCount?: number
+        skippedCount?: number
+        error?: string | null
+        httpStatus?: number
+      }>
+    }>('/broadcasts/process-scheduled', {
       method: 'POST',
     }),
   runAllSchedulers: () =>
@@ -2624,8 +2758,6 @@ export const api = {
     request<PricingEstimate>(
       `/broadcasts/pricing-calculator?region=${encodeURIComponent(region)}&category=${encodeURIComponent(category)}&volume=${volume}`
     ),
-  seedDefaultCampaigns: () =>
-    request<{ status: string; count?: number }>('/broadcasts/seed-defaults', { method: 'POST' }),
 
   // Channels & Inboxes API (Starting with WhatsApp)
   // Shared Global Business Profile
@@ -3293,14 +3425,7 @@ export const api = {
       author_name?: string
     }
   ) =>
-    request<{
-      tracker_id: string
-      tracker_number: string
-      impacted_tickets: number
-      messages_sent: number
-      resolved_tickets: number
-      tracker_resolved: boolean
-    }>(`/tickets/${trackerId}/broadcast`, {
+    request<BroadcastTrackerUpdateResult>(`/tickets/${trackerId}/broadcast`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),

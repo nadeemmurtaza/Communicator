@@ -133,6 +133,34 @@ body {
   }
 }
 
+/*
+ * Animated icons (components/icons/animated.tsx). The icon's own wrapper is a
+ * div and its svg is drawn by lucide-animated, which hardcodes stroke-width="2"
+ * there and spreads props onto the div -- so the only way to reach the stroke is
+ * this rule, and --icon-stroke is set from the component as viewBox units that
+ * land on a whole device pixel.
+ */
+.icon-animated {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-animated > svg {
+  display: block;
+  stroke-width: var(--icon-stroke, 2);
+  shape-rendering: geometricPrecision;
+}
+
+/*
+ * Opt-in for icons used at several sizes from one artwork: pins the stroke to
+ * its CSS width regardless of scaling. Not applied by default, because it also
+ * decouples the stroke from the artwork and so changes the design weight.
+ */
+.icon-animated.crisp-stroke > svg {
+  vector-effect: non-scaling-stroke;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

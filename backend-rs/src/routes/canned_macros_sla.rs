@@ -2,7 +2,7 @@ use crate::db::AppState;
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
-    response::IntoResponse,
+    response::{IntoResponse, Response},
     Json,
 };
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
@@ -24,6 +24,56 @@ fn parse_dt(s: &str) -> Option<DateTime<Utc>> {
     None
 }
 
+/// House style (see `routes/broadcasts.rs`): a write that did not land answers
+/// with `saved: false` and names the id and the statement, so a client can never
+/// render a canned response, macro or SLA policy as changed when no row was
+/// touched.
+fn refuse(status: StatusCode, message: &str, extra: serde_json::Value) -> Response {
+    let mut body = json!({ "error": message, "saved": false });
+    if let (Some(target), Some(source)) = (body.as_object_mut(), extra.as_object()) {
+        for (key, value) in source {
+            target.insert(key.clone(), value.clone());
+        }
+    }
+    (status, Json(body)).into_response()
+}
+
+/// A failed statement is reported with the driver's own message instead of being
+/// folded into "not found" or into the success shape the handler would otherwise
+/// build from the values it intended to write.
+fn db_error(context: &str, err: sqlx::Error) -> Response {
+    refuse(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        &format!("{context}: {err}"),
+        json!({ "databaseError": true }),
+    )
+}
+
+/// 0 rows on an id-scoped UPDATE means the row is not there for this caller, so
+/// it is reported as 404 naming the id rather than as a success.
+fn write_not_found(table: &str, assignment: &str, id: &str, rows: u64) -> Response {
+    refuse(
+        StatusCode::NOT_FOUND,
+        &format!(
+            "UPDATE {table} SET {assignment} affected {rows} rows: no {table} row with id '{id}' \
+             exists, so nothing was changed."
+        ),
+        json!({ "id": id, "rowsAffected": rows }),
+    )
+}
+
+/// An INSERT that reports anything but one row created nothing, even though the
+/// handler holds a fully built object to serialize.
+fn write_not_stored(statement: &str, id: &str, rows: u64) -> Response {
+    refuse(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        &format!(
+            "{statement} affected {rows} rows (expected 1): id '{id}' was not stored."
+        ),
+        json!({ "id": id, "rowsAffected": rows, "databaseError": true }),
+    )
+}
+
 // ============================================================================
 // CANNED RESPONSES
 // ============================================================================
@@ -35,63 +85,6 @@ pub struct CannedResponseRow {
     pub content: String,
     pub category: Option<String>,
     pub created_at: Option<String>,
-}
-
-async fn ensure_default_canned(pool: &sqlx::Pool<sqlx::Sqlite>) {
-    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM canned_responses")
-        .fetch_one(pool)
-        .await
-        .unwrap_or(0);
-
-    if count == 0 {
-        let now = Utc::now().to_rfc3339();
-        let defaults = [
-            (
-                "greet",
-                "Hi {{customer.first_name}}! Thanks for reaching out to Bay Works. How can I assist you today?",
-                "greetings",
-            ),
-            (
-                "pricing",
-                "Hi {{customer.first_name}}, our plans start with our Standard tier with dedicated support. Would you like a breakdown of our rates or a custom quote?",
-                "sales",
-            ),
-            (
-                "hours",
-                "Our support team is available Monday through Friday from 9:00 AM to 6:00 PM. We'll follow up on your request promptly!",
-                "support",
-            ),
-            (
-                "refund",
-                "Standard refund requests for ticket #{{ticket.id}} are processed within 3 to 5 business days back to your original payment method.",
-                "billing",
-            ),
-            (
-                "followup",
-                "Just checking in to make sure everything is working well for you! Feel free to reply here anytime if you need more help.",
-                "general",
-            ),
-            (
-                "closing",
-                "Thanks for contacting us, {{customer.first_name}}! If you need anything else, feel free to reply right here. Have a great day! -- {{agent.name}}",
-                "support",
-            ),
-        ];
-
-        for (code, content, cat) in defaults {
-            let id = Uuid::new_v4().to_string();
-            let _ = sqlx::query(
-                "INSERT INTO canned_responses (id, short_code, content, category, created_at) VALUES (?, ?, ?, ?, ?)",
-            )
-            .bind(&id)
-            .bind(code)
-            .bind(content)
-            .bind(cat)
-            .bind(&now)
-            .execute(pool)
-            .await;
-        }
-    }
 }
 
 fn serialize_canned(c: &CannedResponseRow) -> serde_json::Value {
@@ -116,7 +109,6 @@ pub async fn list_canned_responses(
     State(state): State<AppState>,
     Query(query): Query<CannedQuery>,
 ) -> impl IntoResponse {
-    ensure_default_canned(&state.db).await;
 
     let canned = sqlx::query_as::<_, CannedResponseRow>(
         "SELECT id, short_code, content, category, created_at FROM canned_responses ORDER BY short_code ASC",
@@ -234,18 +226,18 @@ pub async fn update_canned_response(
     )
     .bind(&id)
     .fetch_optional(&state.db)
-    .await
-    .unwrap_or(None);
+    .await;
 
     let mut current = match existing {
-        Some(item) => item,
-        None => {
+        Ok(Some(item)) => item,
+        Ok(None) => {
             return (
                 StatusCode::NOT_FOUND,
-                Json(json!({ "error": "Canned response not found" })),
+                Json(json!({ "error": "Canned response not found", "id": id })),
             )
                 .into_response();
         }
+        Err(err) => return db_error(&format!("the canned response '{id}' could not be read"), err),
     };
 
     if let Some(ref sc) = payload.short_code {
@@ -286,7 +278,9 @@ pub async fn update_canned_response(
         current.category = Some(cat.trim().to_lowercase());
     }
 
-    let _ = sqlx::query(
+    // The response below serializes the intended row, so the UPDATE itself has to
+    // be proven: an error or 0 rows means nothing changed.
+    let updated = sqlx::query(
         "UPDATE canned_responses SET short_code = ?, content = ?, category = ? WHERE id = ?",
     )
     .bind(&current.short_code)
@@ -295,6 +289,21 @@ pub async fn update_canned_response(
     .bind(&id)
     .execute(&state.db)
     .await;
+
+    match updated {
+        Ok(report) if report.rows_affected() == 1 => {}
+        Ok(report) => {
+            return write_not_found(
+                "canned_responses",
+                "short_code, content, category",
+                &id,
+                report.rows_affected(),
+            );
+        }
+        Err(err) => {
+            return db_error(&format!("the canned response '{id}' could not be updated"), err)
+        }
+    }
 
     (StatusCode::OK, Json(serialize_canned(&current))).into_response()
 }
@@ -335,7 +344,6 @@ pub async fn expand_canned_response(
     State(state): State<AppState>,
     Json(payload): Json<ExpandCannedPayload>,
 ) -> impl IntoResponse {
-    ensure_default_canned(&state.db).await;
     let code = payload.short_code.trim().trim_start_matches('/').to_string();
 
     let canned = sqlx::query_as::<_, CannedResponseRow>(
@@ -482,75 +490,6 @@ pub struct MacroItem {
     pub updated_at: Option<String>,
 }
 
-async fn ensure_default_macros(pool: &sqlx::Pool<sqlx::Sqlite>) {
-    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM macros")
-        .fetch_one(pool)
-        .await
-        .unwrap_or(0);
-
-    if count == 0 {
-        let now = Utc::now().to_rfc3339();
-        let defaults = [
-            (
-                "Resolve Ticket + Send CSAT + Tag 'Resolved'",
-                "Marks conversation resolved, dispatches CSAT rating survey, tags conversation as resolved, and logs an internal resolution note.",
-                json!([
-                    {"type": "resolve_conversation", "resolution_type": "human_assisted"},
-                    {"type": "send_csat_survey"},
-                    {"type": "add_tags", "tags": ["resolved", "csat-dispatched"]},
-                    {"type": "add_private_note", "note": "Conversation successfully resolved via one-click macro. CSAT survey sent."}
-                ]),
-            ),
-            (
-                "Escalate to Tier 2 + Mark Urgent + Assign Support Team",
-                "Increases priority to Urgent, assigns conversation to Technical Support, and logs escalation details.",
-                json!([
-                    {"type": "change_priority", "priority": "urgent"},
-                    {"type": "assign_team", "team_name": "Technical Support"},
-                    {"type": "add_tags", "tags": ["escalated", "tier-2-review"]},
-                    {"type": "add_private_note", "note": "Escalated to Tier 2 Engineering for priority technical investigation."}
-                ]),
-            ),
-            (
-                "Send Password Reset Link + Snooze 24h",
-                "Sends customer password reset guidance, tags ticket as pending verification, and snoozes for 24 hours.",
-                json!([
-                    {"type": "send_message", "message": "We have sent a secure password reset link to your registered email. Please check your inbox and follow the instructions."},
-                    {"type": "snooze_conversation", "duration_hours": 24},
-                    {"type": "add_tags", "tags": ["auth-reset", "pending-customer"]}
-                ]),
-            ),
-            (
-                "VIP Refund Approved + Assign Billing",
-                "Routes conversation to Sales & Billing team, sets priority High, sends confirmation, and tags as refund-approved.",
-                json!([
-                    {"type": "assign_team", "team_name": "Sales & Billing"},
-                    {"type": "change_priority", "priority": "high"},
-                    {"type": "send_message", "message": "Your refund request has been approved and is being processed by our billing team. The credit will reflect in 3-5 business days."},
-                    {"type": "add_tags", "tags": ["refund-approved", "vip-support"]},
-                    {"type": "add_private_note", "note": "Refund authorized by agent via one-click macro."}
-                ]),
-            ),
-        ];
-
-        for (name, desc, actions) in defaults {
-            let id = Uuid::new_v4().to_string();
-            let act_str = actions.to_string();
-            let _ = sqlx::query(
-                "INSERT INTO macros (id, name, description, actions, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-            )
-            .bind(&id)
-            .bind(name)
-            .bind(desc)
-            .bind(&act_str)
-            .bind(&now)
-            .bind(&now)
-            .execute(pool)
-            .await;
-        }
-    }
-}
-
 fn serialize_macro(m: &MacroItem) -> serde_json::Value {
     let acts: serde_json::Value = m
         .actions
@@ -569,7 +508,6 @@ fn serialize_macro(m: &MacroItem) -> serde_json::Value {
 }
 
 pub async fn list_macros(State(state): State<AppState>) -> impl IntoResponse {
-    ensure_default_macros(&state.db).await;
 
     let macros = sqlx::query_as::<_, MacroItem>(
         "SELECT id, name, description, actions, created_at, updated_at FROM macros ORDER BY created_at ASC",
@@ -612,7 +550,8 @@ pub async fn create_macro(
     let actions_str = payload.actions.to_string();
     let now = Utc::now().to_rfc3339();
 
-    let _ = sqlx::query(
+    // The macro object built below is only true once the INSERT lands.
+    let stored = sqlx::query(
         "INSERT INTO macros (id, name, description, actions, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
@@ -623,6 +562,12 @@ pub async fn create_macro(
     .bind(&now)
     .execute(&state.db)
     .await;
+
+    match stored {
+        Ok(report) if report.rows_affected() == 1 => {}
+        Ok(report) => return write_not_stored("INSERT INTO macros", &id, report.rows_affected()),
+        Err(err) => return db_error("the macro could not be stored", err),
+    }
 
     let m = MacroItem {
         id,
@@ -676,18 +621,18 @@ pub async fn update_macro(
     )
     .bind(&id)
     .fetch_optional(&state.db)
-    .await
-    .unwrap_or(None);
+    .await;
 
     let mut current = match m {
-        Some(item) => item,
-        None => {
+        Ok(Some(item)) => item,
+        Ok(None) => {
             return (
                 StatusCode::NOT_FOUND,
-                Json(json!({ "error": "Macro not found" })),
+                Json(json!({ "error": "Macro not found", "id": id })),
             )
                 .into_response();
         }
+        Err(err) => return db_error(&format!("the macro '{id}' could not be read"), err),
     };
 
     if let Some(ref name) = payload.name {
@@ -702,7 +647,9 @@ pub async fn update_macro(
     let now = Utc::now().to_rfc3339();
     current.updated_at = Some(now.clone());
 
-    let _ = sqlx::query("UPDATE macros SET name = ?, description = ?, actions = ?, updated_at = ? WHERE id = ?")
+    // The serialized macro returned below carries these exact values, so the
+    // UPDATE has to be proven before they can be reported as stored.
+    let updated = sqlx::query("UPDATE macros SET name = ?, description = ?, actions = ?, updated_at = ? WHERE id = ?")
         .bind(&current.name)
         .bind(&current.description)
         .bind(&current.actions)
@@ -710,6 +657,14 @@ pub async fn update_macro(
         .bind(&id)
         .execute(&state.db)
         .await;
+
+    match updated {
+        Ok(report) if report.rows_affected() == 1 => {}
+        Ok(report) => {
+            return write_not_found("macros", "name, description, actions, updated_at", &id, report.rows_affected());
+        }
+        Err(err) => return db_error(&format!("the macro '{id}' could not be updated"), err),
+    }
 
     (StatusCode::OK, Json(serialize_macro(&current))).into_response()
 }
@@ -744,11 +699,9 @@ pub struct ExecuteMacroPayload {
     pub agent_name: Option<String>,
 }
 
-pub async fn execute_macro(
-    State(state): State<AppState>,
-    Path((conversation_id, macro_id)): Path<(String, String)>,
-    Json(payload): Json<ExecuteMacroPayload>,
-) -> impl IntoResponse {
+/// Shared macro engine. Every action either performs a real, persisted change
+/// or reports exactly what it could not do -- no "executed" for a no-op.
+async fn run_macro(state: &AppState, conversation_id: String, macro_id: String, agent_name: String) -> Response {
     let macro_row = sqlx::query_as::<_, MacroItem>(
         "SELECT id, name, description, actions, created_at, updated_at FROM macros WHERE id = ?",
     )
@@ -776,10 +729,12 @@ pub async fn execute_macro(
         priority: Option<String>,
         resolution_type: Option<String>,
         custom_attributes: Option<String>,
+        team_id: Option<String>,
+        assigned_to_id: Option<String>,
     }
 
     let conv = sqlx::query_as::<_, ConvItem>(
-        "SELECT id, contact_id, state, priority, resolution_type, custom_attributes FROM conversations WHERE id = ?",
+        "SELECT id, contact_id, state, priority, resolution_type, custom_attributes, team_id, assigned_to_id FROM conversations WHERE id = ?",
     )
     .bind(&conversation_id)
     .fetch_optional(&state.db)
@@ -797,9 +752,11 @@ pub async fn execute_macro(
         }
     };
 
-    let agent_name = payload
-        .agent_name
-        .unwrap_or_else(|| "Riley Brooks".to_string());
+    let agent_name = if agent_name.trim().is_empty() {
+        "Agent".to_string()
+    } else {
+        agent_name
+    };
     let now = Utc::now().to_rfc3339();
 
     let mut attrs: serde_json::Map<String, serde_json::Value> = conversation
@@ -826,6 +783,27 @@ pub async fn execute_macro(
         .unwrap_or_default();
 
     let mut executed_actions = Vec::new();
+    let mut dispatched = 0usize;
+    let mut deferred = 0usize;
+
+    // Outbound channel resolution for send_message actions (real dispatch).
+    #[derive(sqlx::FromRow)]
+    struct SendTarget {
+        channel: Option<String>,
+        phone: Option<String>,
+        email: Option<String>,
+    }
+    let send_target = if let Some(ref contact_id) = conversation.contact_id {
+        sqlx::query_as::<_, SendTarget>(
+            "SELECT channel, value AS phone, email FROM contacts WHERE id = ? LIMIT 1",
+        )
+        .bind(contact_id)
+        .fetch_optional(&state.db)
+        .await
+        .unwrap_or(None)
+    } else {
+        None
+    };
 
     for action in &actions {
         let a_type = action.get("type").and_then(|v| v.as_str()).unwrap_or("");
@@ -838,18 +816,110 @@ pub async fn execute_macro(
                     .and_then(|v| v.as_str())
                     .unwrap_or("human_assisted");
                 conversation.resolution_type = Some(res_type.to_string());
-                executed_actions.push(json!({ "action": a_type, "status": "resolved" }));
+                executed_actions.push(json!({ "action": a_type, "status": "applied" }));
             }
             "change_priority" => {
                 if let Some(p) = action.get("priority").and_then(|v| v.as_str()) {
                     conversation.priority = Some(p.to_lowercase());
-                    executed_actions.push(json!({ "action": a_type, "priority": p.to_lowercase() }));
+                    executed_actions.push(json!({ "action": a_type, "priority": p.to_lowercase(), "status": "applied" }));
+                } else {
+                    executed_actions.push(json!({
+                        "action": a_type,
+                        "status": "failed",
+                        "error": "action is missing a 'priority' value",
+                    }));
+                    deferred += 1;
                 }
             }
             "change_status" => {
                 if let Some(st) = action.get("status").and_then(|v| v.as_str()) {
                     conversation.state = st.to_lowercase();
-                    executed_actions.push(json!({ "action": a_type, "state": st.to_lowercase() }));
+                    executed_actions.push(json!({ "action": a_type, "state": st.to_lowercase(), "status": "applied" }));
+                } else {
+                    executed_actions.push(json!({
+                        "action": a_type,
+                        "status": "failed",
+                        "error": "action is missing a 'status' value",
+                    }));
+                    deferred += 1;
+                }
+            }
+            "assign_team" => {
+                let team_id = action.get("team_id").and_then(|v| v.as_str());
+                let team_name = action.get("team_name").and_then(|v| v.as_str());
+                if let Some(tid) = team_id {
+                    conversation.team_id = Some(tid.to_string());
+                    executed_actions.push(json!({ "action": a_type, "teamId": tid, "status": "applied" }));
+                } else if let Some(tname) = team_name {
+                    let matched: Option<String> = sqlx::query_scalar(
+                        "SELECT id FROM teams WHERE LOWER(name) LIKE LOWER(?) LIMIT 1",
+                    )
+                    .bind(format!("%{tname}%"))
+                    .fetch_optional(&state.db)
+                    .await
+                    .unwrap_or(None);
+                    match matched {
+                        Some(tid) => {
+                            conversation.team_id = Some(tid.clone());
+                            executed_actions.push(json!({ "action": a_type, "teamId": tid, "status": "applied" }));
+                        }
+                        None => {
+                            executed_actions.push(json!({
+                                "action": a_type,
+                                "requestedTeam": tname,
+                                "status": "failed",
+                                "error": format!("No row in the `teams` table matches '{tname}' (the table may be absent from this database -- see WIRING NEEDED)"),
+                            }));
+                            deferred += 1;
+                        }
+                    }
+                } else {
+                    executed_actions.push(json!({
+                        "action": a_type,
+                        "status": "failed",
+                        "error": "action needs either team_id or team_name",
+                    }));
+                    deferred += 1;
+                }
+            }
+            "assign_agent" => {
+                let agent_id = action.get("agent_id").and_then(|v| v.as_str());
+                let agent_lookup = action.get("agent_name").and_then(|v| v.as_str());
+                let resolved: Option<(String, String)> = if let Some(aid) = agent_id {
+                    sqlx::query_as::<_, (String, String)>(
+                        "SELECT id, name FROM team_members WHERE id = ? LIMIT 1",
+                    )
+                    .bind(aid)
+                    .fetch_optional(&state.db)
+                    .await
+                    .unwrap_or(None)
+                } else if let Some(aname) = agent_lookup {
+                    sqlx::query_as::<_, (String, String)>(
+                        "SELECT id, name FROM team_members WHERE LOWER(name) LIKE LOWER(?) LIMIT 1",
+                    )
+                    .bind(format!("%{aname}%"))
+                    .fetch_optional(&state.db)
+                    .await
+                    .unwrap_or(None)
+                } else {
+                    None
+                };
+
+                match resolved {
+                    Some((aid, aname)) => {
+                        conversation.assigned_to_id = Some(aid.clone());
+                        executed_actions.push(json!({
+                            "action": a_type, "agentId": aid, "agentName": aname, "status": "applied",
+                        }));
+                    }
+                    None => {
+                        executed_actions.push(json!({
+                            "action": a_type,
+                            "status": "failed",
+                            "error": "No row in `team_members` matched this agent_id/agent_name (the table may be absent from this database); conversation left unassigned",
+                        }));
+                        deferred += 1;
+                    }
                 }
             }
             "add_tags" => {
@@ -864,7 +934,12 @@ pub async fn execute_macro(
                             }
                         }
                     }
-                    executed_actions.push(json!({ "action": a_type, "added": added }));
+                    executed_actions.push(json!({ "action": a_type, "added": added, "status": "applied" }));
+                } else {
+                    executed_actions.push(json!({
+                        "action": a_type, "status": "failed", "error": "action has no 'tags' array",
+                    }));
+                    deferred += 1;
                 }
             }
             "remove_tags" => {
@@ -874,31 +949,160 @@ pub async fn execute_macro(
                         .filter_map(|t| t.as_str().map(|s| s.to_lowercase()))
                         .collect();
                     current_tags.retain(|t| !to_remove.contains(t));
-                    executed_actions.push(json!({ "action": a_type, "removed": to_remove }));
+                    executed_actions.push(json!({ "action": a_type, "removed": to_remove, "status": "applied" }));
+                } else {
+                    executed_actions.push(json!({
+                        "action": a_type, "status": "failed", "error": "action has no 'tags' array",
+                    }));
+                    deferred += 1;
+                }
+            }
+            "mutate_custom_attributes" => {
+                if let Some(extra) = action.get("attributes").and_then(|v| v.as_object()) {
+                    let mut keys = Vec::new();
+                    for (k, v) in extra {
+                        attrs.insert(k.clone(), v.clone());
+                        keys.push(k.clone());
+                    }
+                    executed_actions.push(json!({ "action": a_type, "mutated": keys, "status": "applied" }));
+                } else {
+                    executed_actions.push(json!({
+                        "action": a_type, "status": "failed", "error": "action has no 'attributes' object",
+                    }));
+                    deferred += 1;
                 }
             }
             "send_message" => {
-                if let Some(msg) = action.get("message").and_then(|v| v.as_str()) {
-                    let msg_id = Uuid::new_v4().to_string();
-                    let _ = sqlx::query(
-                        "INSERT INTO messages (id, conversation_id, direction, channel, body, status, sent_at, created_at, sender) VALUES (?, ?, 'outbound', 'whatsapp', ?, 'sent', ?, ?, 'agent')",
+                let msg_text = action
+                    .get("message")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.trim())
+                    .unwrap_or("");
+                if msg_text.is_empty() {
+                    executed_actions.push(json!({
+                        "action": a_type, "status": "failed", "error": "action has no 'message' text",
+                    }));
+                    deferred += 1;
+                    continue;
+                }
+
+                let msg_id = Uuid::new_v4().to_string();
+                let Some(target) = send_target.as_ref() else {
+                    executed_actions.push(json!({
+                        "action": a_type,
+                        "status": "failed",
+                        "error": "the conversation has no contact record, so there is no address to send to; nothing was stored or dispatched",
+                    }));
+                    deferred += 1;
+                    continue;
+                };
+                let Some(channel) = target
+                    .channel
+                    .clone()
+                    .map(|c| c.trim().to_string())
+                    .filter(|c| !c.is_empty())
+                else {
+                    executed_actions.push(json!({
+                        "action": a_type,
+                        "status": "failed",
+                        "error": "the contact row has no channel value, so the message cannot be attributed to a real channel",
+                    }));
+                    deferred += 1;
+                    continue;
+                };
+                let phone = target.phone.clone().unwrap_or_default();
+                if channel.eq_ignore_ascii_case("whatsapp") && phone.trim().is_empty() {
+                    executed_actions.push(json!({
+                        "action": a_type,
+                        "status": "failed",
+                        "error": "the whatsapp contact has no address on the conversation or contact row; nothing was dispatched",
+                    }));
+                    deferred += 1;
+                    continue;
+                }
+
+                // Persist the message first, with the delivery state we can prove.
+                if let Err(err) = sqlx::query(
+                    "INSERT INTO messages (id, conversation_id, sender, sender_name, direction, channel, body, status, delivery_status, sent_at, created_at, provider) VALUES (?, ?, 'agent', ?, 'outbound', ?, ?, 'pending', 'pending', ?, ?, 'macro_executor')",
+                )
+                .bind(&msg_id)
+                .bind(&conversation_id)
+                .bind(&agent_name)
+                .bind(&channel)
+                .bind(msg_text)
+                .bind(&now)
+                .bind(&now)
+                .execute(&state.db)
+                .await
+                {
+                    executed_actions.push(json!({
+                        "action": a_type,
+                        "status": "failed",
+                        "error": format!("the message row could not be written, so nothing was dispatched: {err}"),
+                    }));
+                    deferred += 1;
+                    continue;
+                }
+
+                let outcome = if channel.eq_ignore_ascii_case("whatsapp") {
+                    dispatch_whatsapp_text(state, &phone, msg_text, &msg_id).await
+                } else {
+                    json!({
+                        "dispatched": false,
+                        "reason": format!("No outbound dispatcher is ported for channel '{channel}'; message stored locally only"),
+                    })
+                };
+
+                let dispatched_ok = outcome["dispatched"].as_bool().unwrap_or(false);
+                let mut state_errors: Vec<String> = Vec::new();
+                if dispatched_ok {
+                    dispatched += 1;
+                    if let Err(err) = sqlx::query(
+                        "UPDATE messages SET status = 'sent', delivery_status = 'sent', provider_message_id = ?, sent_at = ? WHERE id = ?",
+                    )
+                    .bind(outcome["providerMessageId"].as_str().unwrap_or(""))
+                    .bind(&now)
+                    .bind(&msg_id)
+                    .execute(&state.db)
+                    .await
+                    {
+                        state_errors.push(format!("delivered but the message row still reads 'pending': {err}"));
+                    }
+                    if let Err(err) = sqlx::query("UPDATE conversations SET last_outbound_at = ? WHERE id = ?")
+                        .bind(&now)
+                        .bind(&conversation_id)
+                        .execute(&state.db)
+                        .await
+                    {
+                        state_errors.push(format!("last_outbound_at could not be recorded: {err}"));
+                    }
+                } else {
+                    deferred += 1;
+                    if let Err(err) = sqlx::query(
+                        "UPDATE messages SET status = 'failed', delivery_status = 'failed' WHERE id = ?",
                     )
                     .bind(&msg_id)
-                    .bind(&conversation_id)
-                    .bind(msg)
-                    .bind(&now)
-                    .bind(&now)
                     .execute(&state.db)
-                    .await;
-
-                    executed_actions.push(json!({ "action": a_type, "message": msg }));
+                    .await
+                    {
+                        state_errors.push(format!("the message row could not be marked failed: {err}"));
+                    }
                 }
+
+                executed_actions.push(json!({
+                    "action": a_type,
+                    "messageId": msg_id,
+                    "message": msg_text,
+                    "status": if dispatched_ok { "dispatched" } else { "stored_not_dispatched" },
+                    "dispatch": outcome,
+                    "stateWriteErrors": state_errors,
+                }));
             }
             "add_private_note" => {
                 if let Some(note) = action.get("note").and_then(|v| v.as_str()) {
                     let msg_id = Uuid::new_v4().to_string();
-                    let _ = sqlx::query(
-                        "INSERT INTO messages (id, conversation_id, direction, channel, body, status, sent_at, created_at, is_private, sender) VALUES (?, ?, 'outbound', 'whatsapp', ?, 'sent', ?, ?, 1, ?)",
+                    let res = sqlx::query(
+                        "INSERT INTO messages (id, conversation_id, direction, channel, body, status, sent_at, created_at, is_private, sender, sender_name, provider) VALUES (?, ?, 'outbound', 'whatsapp', ?, 'internal', ?, ?, 1, ?, ?, 'macro_executor')",
                     )
                     .bind(&msg_id)
                     .bind(&conversation_id)
@@ -906,34 +1110,81 @@ pub async fn execute_macro(
                     .bind(&now)
                     .bind(&now)
                     .bind(&agent_name)
+                    .bind(&agent_name)
                     .execute(&state.db)
                     .await;
-
-                    executed_actions.push(json!({ "action": a_type, "note": note }));
+                    match res {
+                        Ok(_) => executed_actions.push(json!({
+                            "action": a_type, "messageId": msg_id, "note": note, "status": "applied",
+                        })),
+                        Err(e) => {
+                            deferred += 1;
+                            executed_actions.push(json!({
+                                "action": a_type, "status": "failed", "error": e.to_string(),
+                            }));
+                        }
+                    }
+                } else {
+                    executed_actions.push(json!({
+                        "action": a_type, "status": "failed", "error": "action has no 'note' text",
+                    }));
+                    deferred += 1;
                 }
             }
             "send_csat_survey" => {
-                attrs.insert("csat_dispatched_at".to_string(), json!(now.clone()));
-                executed_actions.push(json!({ "action": a_type, "dispatched": true }));
+                // Only report a dispatch we can prove: the CSAT link/builder is
+                // not ported in this build, so we record intent, not a send.
+                attrs.insert("csat_requested_at".to_string(), json!(now.clone()));
+                deferred += 1;
+                executed_actions.push(json!({
+                    "action": a_type,
+                    "status": "deferred",
+                    "reason": "CSAT survey dispatch requires the outbound survey builder (not ported in backend-rs); no survey was sent.",
+                }));
             }
             "snooze_conversation" => {
                 let hours = action.get("duration_hours").and_then(|v| v.as_i64()).unwrap_or(24);
                 let snooze_until = Utc::now() + Duration::hours(hours);
                 let snooze_str = snooze_until.to_rfc3339();
-                let _ = sqlx::query("UPDATE conversations SET snoozed_until = ? WHERE id = ?")
+                let res = sqlx::query("UPDATE conversations SET snoozed_until = ? WHERE id = ?")
                     .bind(&snooze_str)
                     .bind(&conversation_id)
                     .execute(&state.db)
                     .await;
-                executed_actions.push(json!({ "action": a_type, "snoozed_until": snooze_str }));
+                match res {
+                    Ok(_) => executed_actions.push(json!({
+                        "action": a_type, "snoozedUntil": snooze_str, "status": "applied",
+                    })),
+                    Err(e) => {
+                        deferred += 1;
+                        executed_actions.push(json!({
+                            "action": a_type, "status": "failed", "error": e.to_string(),
+                        }));
+                    }
+                }
             }
-            _ => {
-                executed_actions.push(json!({ "action": a_type, "status": "executed" }));
+            other => {
+                deferred += 1;
+                executed_actions.push(json!({
+                    "action": other,
+                    "status": "unsupported",
+                    "reason": format!("Macro action type '{other}' has no executor in backend-rs and was not performed."),
+                }));
             }
         }
     }
 
     attrs.insert("tags".to_string(), json!(current_tags));
+    let execution_record = json!({
+        "macro_id": m.id,
+        "macro_name": m.name,
+        "executed_at": now.clone(),
+        "executed_by": agent_name,
+        "action_count": actions.len(),
+        "dispatched_count": dispatched,
+        "deferred_count": deferred,
+        "results": executed_actions,
+    });
     attrs.insert(
         "last_macro_executed".to_string(),
         json!({
@@ -946,34 +1197,213 @@ pub async fn execute_macro(
 
     let attrs_str = serde_json::to_string(&attrs).unwrap_or_else(|_| "{}".to_string());
 
-    let _ = sqlx::query(
-        "UPDATE conversations SET state = ?, priority = ?, resolution_type = ?, custom_attributes = ?, updated_at = ? WHERE id = ?",
+    let update_res = sqlx::query(
+        "UPDATE conversations SET state = ?, priority = ?, resolution_type = ?, custom_attributes = ?, team_id = ?, assigned_to_id = ?, updated_at = ? WHERE id = ?",
     )
     .bind(&conversation.state)
     .bind(&conversation.priority)
     .bind(&conversation.resolution_type)
     .bind(&attrs_str)
+    .bind(&conversation.team_id)
+    .bind(&conversation.assigned_to_id)
     .bind(&now)
     .bind(&conversation_id)
     .execute(&state.db)
     .await;
 
+    if let Err(e) = update_res {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": format!("Macro actions ran but the conversation could not be saved: {e}") })),
+        )
+            .into_response();
+    }
+
+    // Persist a real, queryable execution record in the existing audit trail.
+    let audit_id = Uuid::new_v4().to_string();
+    let audit_details = serde_json::to_string(&execution_record).unwrap_or_else(|_| "{}".to_string());
+    let audit_res = sqlx::query(
+        "INSERT INTO audit_logs (id, entity_type, entity_id, action, actor, actor_name, severity, compliance_category, description, details, created_at) VALUES (?, 'macro', ?, 'macro_executed', ?, ?, 'info', 'audit_trail', ?, ?, ?)",
+    )
+    .bind(&audit_id)
+    .bind(&conversation_id)
+    .bind(&agent_name)
+    .bind(&agent_name)
+    .bind(format!("Macro '{}' executed on conversation {}", m.name, conversation_id))
+    .bind(&audit_details)
+    .bind(&now)
+    .execute(&state.db)
+    .await;
+
+    let all_applied = deferred == 0;
     (
         StatusCode::OK,
         Json(json!({
-            "status": "ok",
+            "status": if all_applied { "ok" } else { "partial" },
             "macroId": m.id,
             "macroName": m.name,
             "conversationId": conversation_id,
             "executedActionsCount": executed_actions.len(),
+            "dispatchedMessageCount": dispatched,
+            "deferredActionCount": deferred,
             "executedActions": executed_actions,
             "conversationState": conversation.state.to_lowercase(),
-            "conversationPriority": conversation.priority.as_deref().unwrap_or("medium"),
+            "conversationPriority": conversation.priority.as_deref(),
             "conversationTags": current_tags,
+            "executionRecordId": audit_id,
+            "executionRecordStored": audit_res.is_ok(),
             "executedAt": now,
+            "note": if all_applied {
+                "Every action performed a persisted change.".to_string()
+            } else {
+                format!("{deferred} action(s) were NOT performed for real; see the status/reason on each entry.")
+            },
         })),
     )
         .into_response()
+}
+
+/// Real Meta Cloud API text dispatch. Reports the provider's own error text.
+pub async fn dispatch_whatsapp_text(
+    state: &AppState,
+    phone: &str,
+    body: &str,
+    _local_msg_id: &str,
+) -> serde_json::Value {
+    let clean_phone = phone.replace('+', "").replace(' ', "").replace('-', "");
+    if clean_phone.is_empty() {
+        return json!({ "dispatched": false, "reason": "Conversation contact has no phone number to send to" });
+    }
+
+    let access_token = if !state.config.meta_whatsapp_access_token.is_empty() {
+        state.config.meta_whatsapp_access_token.clone()
+    } else {
+        sqlx::query_scalar::<_, String>(
+            "SELECT meta_access_token FROM integration_settings WHERE meta_access_token IS NOT NULL AND meta_access_token != '' LIMIT 1",
+        )
+        .fetch_optional(&state.db)
+        .await
+        .unwrap_or(None)
+        .unwrap_or_default()
+    };
+    let phone_number_id = if !state.config.meta_whatsapp_phone_number_id.is_empty() {
+        state.config.meta_whatsapp_phone_number_id.clone()
+    } else {
+        sqlx::query_scalar::<_, String>(
+            "SELECT meta_phone_number_id FROM integration_settings WHERE meta_phone_number_id IS NOT NULL AND meta_phone_number_id != '' LIMIT 1",
+        )
+        .fetch_optional(&state.db)
+        .await
+        .unwrap_or(None)
+        .unwrap_or_default()
+    };
+
+    let mut missing = Vec::new();
+    if access_token.is_empty() {
+        missing.push("META_WHATSAPP_ACCESS_TOKEN");
+    }
+    if phone_number_id.is_empty() {
+        missing.push("META_WHATSAPP_PHONE_NUMBER_ID");
+    }
+    if !missing.is_empty() {
+        return json!({
+            "dispatched": false,
+            "reason": format!("Outbound WhatsApp is not configured: {} missing", missing.join(", ")),
+        });
+    }
+
+    let api_version = if state.config.meta_whatsapp_api_version.is_empty() {
+        "v21.0"
+    } else {
+        &state.config.meta_whatsapp_api_version
+    };
+    let url = format!("https://graph.facebook.com/{api_version}/{phone_number_id}/messages");
+    let payload = json!({
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": clean_phone,
+        "type": "text",
+        "text": { "preview_url": false, "body": body }
+    });
+
+    match state
+        .http_client
+        .post(&url)
+        .bearer_auth(&access_token)
+        .json(&payload)
+        .send()
+        .await
+    {
+        Ok(res) => {
+            let status = res.status();
+            if status.is_success() {
+                match res.json::<serde_json::Value>().await {
+                    Ok(json) => {
+                        let provider_id = json["messages"]
+                            .as_array()
+                            .and_then(|a| a.first())
+                            .and_then(|m| m["id"].as_str())
+                            .unwrap_or("")
+                            .to_string();
+                        json!({
+                            "dispatched": true,
+                            "providerMessageId": provider_id,
+                            "httpStatus": status.as_u16(),
+                        })
+                    }
+                    Err(e) => json!({
+                        "dispatched": true,
+                        "httpStatus": status.as_u16(),
+                        "warning": format!("Provider accepted the message but the response could not be parsed: {e}"),
+                    }),
+                }
+            } else {
+                let text = res.text().await.unwrap_or_default();
+                json!({
+                    "dispatched": false,
+                    "httpStatus": status.as_u16(),
+                    "providerError": text,
+                })
+            }
+        }
+        Err(e) => json!({ "dispatched": false, "transportError": e.to_string() }),
+    }
+}
+
+pub async fn execute_macro(
+    State(state): State<AppState>,
+    Path((conversation_id, macro_id)): Path<(String, String)>,
+    Json(payload): Json<ExecuteMacroPayload>,
+) -> impl IntoResponse {
+    run_macro(
+        &state,
+        conversation_id,
+        macro_id,
+        payload.agent_name.unwrap_or_default(),
+    )
+    .await
+}
+
+#[derive(Deserialize)]
+pub struct ExecuteMacroDirectPayload {
+    #[serde(alias = "conversationId")]
+    pub conversation_id: String,
+    pub agent_name: Option<String>,
+}
+
+/// POST /macros/{macro_id}/execute -- conversation_id supplied in the body.
+pub async fn execute_macro_direct(
+    State(state): State<AppState>,
+    Path(macro_id): Path<String>,
+    Json(payload): Json<ExecuteMacroDirectPayload>,
+) -> impl IntoResponse {
+    run_macro(
+        &state,
+        payload.conversation_id,
+        macro_id,
+        payload.agent_name.unwrap_or_default(),
+    )
+    .await
 }
 
 // ============================================================================
@@ -993,69 +1423,6 @@ pub struct SlaPolicyRow {
     pub is_active: Option<bool>,
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
-}
-
-async fn ensure_default_sla_policies(pool: &sqlx::Pool<sqlx::Sqlite>) {
-    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM sla_policies")
-        .fetch_one(pool)
-        .await
-        .unwrap_or(0);
-
-    if count == 0 {
-        let now = Utc::now().to_rfc3339();
-        let defaults = [
-            (
-                "Critical VIP Escalation SLA",
-                "Strict 15-minute first response and 2-hour resolution target for urgent escalations & VIP tier accounts.",
-                15,
-                120,
-                false,
-                json!(["urgent"]).to_string(),
-                "[]".to_string(),
-                true,
-            ),
-            (
-                "High Priority SLA",
-                "30-minute first response and 6-hour resolution target for high priority support tickets.",
-                30,
-                360,
-                false,
-                json!(["high"]).to_string(),
-                "[]".to_string(),
-                true,
-            ),
-            (
-                "Standard Customer Support SLA",
-                "60-minute first response and 24-hour resolution target for general inquiries and routine support.",
-                60,
-                1440,
-                true,
-                json!(["medium", "low"]).to_string(),
-                "[]".to_string(),
-                true,
-            ),
-        ];
-
-        for (name, desc, fr, res, bh, priorities, inboxes, active) in defaults {
-            let id = Uuid::new_v4().to_string();
-            let _ = sqlx::query(
-                "INSERT INTO sla_policies (id, name, description, first_response_time_threshold, resolution_time_threshold, only_during_business_hours, priorities, inbox_ids, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            )
-            .bind(&id)
-            .bind(name)
-            .bind(desc)
-            .bind(fr)
-            .bind(res)
-            .bind(bh)
-            .bind(&priorities)
-            .bind(&inboxes)
-            .bind(active)
-            .bind(&now)
-            .bind(&now)
-            .execute(pool)
-            .await;
-        }
-    }
 }
 
 fn serialize_sla_policy(p: &SlaPolicyRow) -> serde_json::Value {
@@ -1093,7 +1460,6 @@ fn serialize_sla_policy(p: &SlaPolicyRow) -> serde_json::Value {
 }
 
 pub async fn list_sla_policies(State(state): State<AppState>) -> impl IntoResponse {
-    ensure_default_sla_policies(&state.db).await;
 
     let policies = sqlx::query_as::<_, SlaPolicyRow>(
         "SELECT id, name, description, first_response_time_threshold, resolution_time_threshold, only_during_business_hours, priorities, inbox_ids, is_active, created_at, updated_at FROM sla_policies ORDER BY first_response_time_threshold ASC",
@@ -1179,7 +1545,8 @@ pub async fn create_sla_policy(
     let inboxes_str = serde_json::to_string(&inboxes).unwrap_or_else(|_| "[]".to_string());
     let now = Utc::now().to_rfc3339();
 
-    let _ = sqlx::query(
+    // The policy object returned below is only real once the INSERT lands.
+    let stored = sqlx::query(
         "INSERT INTO sla_policies (id, name, description, first_response_time_threshold, resolution_time_threshold, only_during_business_hours, priorities, inbox_ids, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)",
     )
     .bind(&id)
@@ -1194,6 +1561,12 @@ pub async fn create_sla_policy(
     .bind(&now)
     .execute(&state.db)
     .await;
+
+    match stored {
+        Ok(report) if report.rows_affected() == 1 => {}
+        Ok(report) => return write_not_stored("INSERT INTO sla_policies", &id, report.rows_affected()),
+        Err(err) => return db_error("the SLA policy could not be stored", err),
+    }
 
     let p = SlaPolicyRow {
         id,
@@ -1244,18 +1617,18 @@ pub async fn update_sla_policy(
     )
     .bind(&id)
     .fetch_optional(&state.db)
-    .await
-    .unwrap_or(None);
+    .await;
 
     let mut current = match p {
-        Some(item) => item,
-        None => {
+        Ok(Some(item)) => item,
+        Ok(None) => {
             return (
                 StatusCode::NOT_FOUND,
-                Json(json!({ "error": "SLA policy not found" })),
+                Json(json!({ "error": "SLA policy not found", "id": id })),
             )
                 .into_response();
         }
+        Err(err) => return db_error(&format!("the SLA policy '{id}' could not be read"), err),
     };
 
     if let Some(ref name) = payload.name {
@@ -1285,7 +1658,9 @@ pub async fn update_sla_policy(
     let now = Utc::now().to_rfc3339();
     current.updated_at = Some(now.clone());
 
-    let _ = sqlx::query(
+    // The policy returned below is the row as this handler believes it now is, so
+    // the UPDATE has to be proven rather than assumed.
+    let updated = sqlx::query(
         "UPDATE sla_policies SET name = ?, description = ?, first_response_time_threshold = ?, resolution_time_threshold = ?, only_during_business_hours = ?, priorities = ?, inbox_ids = ?, is_active = ?, updated_at = ? WHERE id = ?",
     )
     .bind(&current.name)
@@ -1300,6 +1675,19 @@ pub async fn update_sla_policy(
     .bind(&id)
     .execute(&state.db)
     .await;
+
+    match updated {
+        Ok(report) if report.rows_affected() == 1 => {}
+        Ok(report) => {
+            return write_not_found(
+                "sla_policies",
+                "name, description, thresholds, priorities, inbox_ids, is_active, updated_at",
+                &id,
+                report.rows_affected(),
+            );
+        }
+        Err(err) => return db_error(&format!("the SLA policy '{id}' could not be updated"), err),
+    }
 
     (StatusCode::OK, Json(serialize_sla_policy(&current))).into_response()
 }
@@ -1510,7 +1898,7 @@ async fn evaluate_single_conversation_sla(
             || (0 <= minutes_to_res_breach && minutes_to_res_breach <= 60 && resolution_status == "active"));
 
     // 4. Update tags in custom_attributes
-    let mut attrs: serde_json::Map<String, serde_json::Value> = conv
+    let attrs: serde_json::Map<String, serde_json::Value> = conv
         .custom_attributes
         .as_deref()
         .and_then(|s| serde_json::from_str::<serde_json::Value>(s).ok())
@@ -1574,25 +1962,24 @@ pub async fn evaluate_conversation_sla(
     Path(id): Path<String>,
     Query(query): Query<EvaluateSlaQuery>,
 ) -> impl IntoResponse {
-    ensure_default_sla_policies(&state.db).await;
 
     let conv = sqlx::query_as::<_, ConversationRowForSla>(
         "SELECT id, contact_id, state, priority, inbox_id, custom_attributes, created_at, updated_at FROM conversations WHERE id = ?",
     )
     .bind(&id)
     .fetch_optional(&state.db)
-    .await
-    .unwrap_or(None);
+    .await;
 
     let conversation = match conv {
-        Some(c) => c,
-        None => {
+        Ok(Some(c)) => c,
+        Ok(None) => {
             return (
                 StatusCode::NOT_FOUND,
                 Json(json!({ "error": format!("Conversation {} not found", id) })),
             )
                 .into_response();
         }
+        Err(err) => return db_error(&format!("conversation '{id}' could not be read"), err),
     };
 
     let policies = sqlx::query_as::<_, SlaPolicyRow>(
@@ -1650,11 +2037,37 @@ pub async fn evaluate_conversation_sla(
     attrs.insert("tags".to_string(), json!(tags));
 
     let attrs_str = serde_json::to_string(&attrs).unwrap_or_else(|_| "{}".to_string());
-    let _ = sqlx::query("UPDATE conversations SET custom_attributes = ? WHERE id = ?")
+    let stored = sqlx::query("UPDATE conversations SET custom_attributes = ? WHERE id = ?")
         .bind(&attrs_str)
         .bind(&id)
         .execute(&state.db)
         .await;
+
+    match stored {
+        Ok(report) if report.rows_affected() == 1 => {}
+        Ok(report) => {
+            return write_not_found(
+                "conversations",
+                "custom_attributes (the SLA snapshot)",
+                &id,
+                report.rows_affected(),
+            );
+        }
+        Err(err) => {
+            // The computed SLA is still returned, but the answer says plainly that
+            // nothing was stored, so a client cannot show it as a recorded state.
+            return refuse(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                &format!("the SLA was evaluated but could not be stored on conversation '{id}': {err}"),
+                json!({
+                    "conversationId": id,
+                    "databaseError": true,
+                    "sla": sla_json,
+                    "tags": tags,
+                }),
+            );
+        }
+    }
 
     (
         StatusCode::OK,
@@ -1662,13 +2075,13 @@ pub async fn evaluate_conversation_sla(
             "conversationId": conversation.id,
             "sla": sla_json,
             "tags": tags,
+            "persisted": true,
         })),
     )
         .into_response()
 }
 
 pub async fn get_sla_metrics(State(state): State<AppState>) -> impl IntoResponse {
-    ensure_default_sla_policies(&state.db).await;
 
     let policies = sqlx::query_as::<_, SlaPolicyRow>(
         "SELECT id, name, description, first_response_time_threshold, resolution_time_threshold, only_during_business_hours, priorities, inbox_ids, is_active, created_at, updated_at FROM sla_policies ORDER BY first_response_time_threshold ASC",
@@ -1778,7 +2191,6 @@ pub async fn get_sla_metrics(State(state): State<AppState>) -> impl IntoResponse
 }
 
 pub async fn get_sla_breaches(State(state): State<AppState>) -> impl IntoResponse {
-    ensure_default_sla_policies(&state.db).await;
 
     let policies = sqlx::query_as::<_, SlaPolicyRow>(
         "SELECT id, name, description, first_response_time_threshold, resolution_time_threshold, only_during_business_hours, priorities, inbox_ids, is_active, created_at, updated_at FROM sla_policies ORDER BY first_response_time_threshold ASC",

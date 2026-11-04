@@ -19,7 +19,7 @@ import {
   Plus,
   X,
   Loader2,
-} from 'lucide-react'
+} from '../components/icons'
 import { api } from '../lib/api'
 import type {
   AutomationRule,

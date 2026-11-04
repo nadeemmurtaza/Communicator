@@ -1,78 +1,162 @@
-use crate::{db::AppState, models::Draft};
+//! AI reply drafts. The generation and the send are delegated to
+//! `services::reply_engine` and `services::draft_actions`; this file only turns
+//! those results into HTTP responses. Nothing here composes reply text, a
+//! confidence number, or a delivery status.
+
+use crate::db::AppState;
+use crate::routes::auth::Tenant;
+use crate::services::{draft_actions, reply_engine};
 use axum::{
     extract::{Path, Query, State},
-    response::IntoResponse,
+    http::StatusCode,
+    response::{IntoResponse, Response},
     Json,
 };
 use chrono::Utc;
 use serde::Deserialize;
-use serde_json::json;
-use uuid::Uuid;
+use serde_json::{json, Value};
+use sqlx::Row;
+
+const DRAFT_COLUMNS: &str =
+    "id, conversation_id, body, confidence, citations, status, created_at";
 
 #[derive(Deserialize)]
 pub struct DraftQuery {
     pub status: Option<String>,
 }
 
+/// `citations` is a JSON array stored as text. A value that does not parse is
+/// reported as unparseable instead of being returned as a string the UI cannot
+/// iterate, and never replaced with an empty list pretending to be accurate.
+fn citations_value(raw: Option<String>) -> (Value, Option<String>) {
+    match raw {
+        None => (
+            Value::Null,
+            Some("no citations column value is stored on this draft".to_string()),
+        ),
+        Some(text) => match serde_json::from_str::<Value>(&text) {
+            Ok(value @ Value::Array(_)) => (value, None),
+            Ok(other) => (
+                Value::Null,
+                Some(format!("drafts.citations holds {other}, which is not an array")),
+            ),
+            Err(err) => (
+                Value::Null,
+                Some(format!("drafts.citations could not be parsed as JSON: {err}")),
+            ),
+        },
+    }
+}
+
+fn read_text(
+    row: &sqlx::sqlite::SqliteRow,
+    column: &'static str,
+    unreadable: &mut Vec<&'static str>,
+) -> Value {
+    match row.try_get::<String, _>(column) {
+        Ok(value) => json!(value),
+        Err(_) => {
+            unreadable.push(column);
+            Value::Null
+        }
+    }
+}
+
+/// A column that cannot be read is emitted as `null` with its name listed in
+/// `unreadableColumns`, not as an empty string or a zero that looks like data.
+fn draft_json(row: &sqlx::sqlite::SqliteRow) -> Value {
+    let mut unreadable: Vec<&'static str> = Vec::new();
+    let id = read_text(row, "id", &mut unreadable);
+    let conversation_id = read_text(row, "conversation_id", &mut unreadable);
+    let body = read_text(row, "body", &mut unreadable);
+    let status = read_text(row, "status", &mut unreadable);
+    let created_at = read_text(row, "created_at", &mut unreadable);
+    let confidence = match row.try_get::<Option<f64>, _>("confidence") {
+        Ok(value) => json!(value),
+        Err(_) => {
+            unreadable.push("confidence");
+            Value::Null
+        }
+    };
+    let citations_raw: Option<String> = row
+        .try_get::<Option<String>, _>("citations")
+        .ok()
+        .flatten();
+    let (citations, citation_warning) = citations_value(citations_raw);
+
+    json!({
+        "id": id,
+        "draftId": id,
+        "conversationId": conversation_id,
+        "conversation_id": conversation_id,
+        "body": body,
+        "confidence": confidence,
+        "citations": citations,
+        "status": status,
+        "draftStatus": status,
+        "createdAt": created_at,
+        "created_at": created_at,
+        "citationWarning": citation_warning,
+        "unreadableColumns": unreadable,
+    })
+}
+
 pub async fn list_drafts(
     State(state): State<AppState>,
     Query(query): Query<DraftQuery>,
-) -> impl IntoResponse {
+) -> Response {
     let status_filter = query.status.unwrap_or_else(|| "pending_review".to_string());
 
-    let drafts = sqlx::query_as::<_, Draft>(
-        "SELECT id, conversation_id, body, confidence, citations, status, created_at FROM drafts WHERE status = ? ORDER BY created_at DESC",
-    )
+    let rows = match sqlx::query(&format!(
+        "SELECT {DRAFT_COLUMNS} FROM drafts WHERE status = ? ORDER BY created_at DESC"
+    ))
     .bind(&status_filter)
     .fetch_all(&state.db)
     .await
-    .unwrap_or_default();
+    {
+        Ok(rows) => rows,
+        Err(err) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "drafts": [],
+                    "error": format!("the drafts list could not be read: {err}"),
+                    "databaseError": true,
+                })),
+            )
+                .into_response();
+        }
+    };
 
-    Json(drafts)
+    let drafts: Vec<Value> = rows.iter().map(draft_json).collect();
+    (
+        StatusCode::OK,
+        Json(json!({
+            "drafts": drafts,
+            "count": drafts.len(),
+            "statusFilter": status_filter,
+        })),
+    )
+        .into_response()
 }
 
 pub async fn approve_draft(
     State(state): State<AppState>,
+    Tenant(tenant_key): Tenant,
     Path(id): Path<String>,
-) -> impl IntoResponse {
-    let now = Utc::now().to_rfc3339();
-    let draft = sqlx::query_as::<_, Draft>(
-        "SELECT id, conversation_id, body, confidence, citations, status, created_at FROM drafts WHERE id = ?",
-    )
-    .bind(&id)
-    .fetch_optional(&state.db)
-    .await
-    .unwrap_or(None);
-
-    if let Some(d) = draft {
-        // Mark draft approved
-        let _ = sqlx::query("UPDATE drafts SET status = 'approved' WHERE id = ?")
-            .bind(&id)
-            .execute(&state.db)
-            .await;
-
-        // Auto-send as outbound message
-        let msg_id = Uuid::new_v4().to_string();
-        let _ = sqlx::query(
-            "INSERT INTO messages (id, conversation_id, direction, channel, body, status, sent_at, sender_type, sender_name) VALUES (?, ?, 'outbound', 'whatsapp', ?, 'delivered', ?, 'agent', 'AI Copilot')",
-        )
-        .bind(&msg_id)
-        .bind(&d.conversation_id)
-        .bind(&d.body)
-        .bind(&now)
-        .execute(&state.db)
-        .await;
-
-        Json(json!({
-            "id": d.id,
-            "conversationId": d.conversation_id,
-            "body": d.body,
-            "confidence": d.confidence,
-            "status": "approved",
-            "createdAt": d.created_at
-        }))
-    } else {
-        Json(json!({ "error": "Draft not found" }))
+) -> Response {
+    match draft_actions::approve_and_send(&state, &id, "agent").await {
+        Ok(report) => {
+            let status = if report.sent {
+                StatusCode::OK
+            } else {
+                StatusCode::BAD_GATEWAY
+            };
+            let mut body = report.to_json();
+            body["tenantKey"] = json!(tenant_key);
+            (status, Json(body)).into_response()
+        }
+        Err(err) => (err.status(), Json(err.json())).into_response(),
     }
 }
 
@@ -83,15 +167,41 @@ pub struct RejectDraftPayload {
 
 pub async fn reject_draft(
     State(state): State<AppState>,
+    Tenant(tenant_key): Tenant,
     Path(id): Path<String>,
-    Json(_payload): Json<RejectDraftPayload>,
-) -> impl IntoResponse {
-    let _ = sqlx::query("UPDATE drafts SET status = 'rejected' WHERE id = ?")
-        .bind(&id)
-        .execute(&state.db)
-        .await;
+    payload: Option<Json<RejectDraftPayload>>,
+) -> Response {
+    // Python also accepted `?feedback=`; the body reason wins when both exist.
+    let reason = payload
+        .and_then(|Json(body)| body.reason)
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+    if reason.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "success": false,
+                "error": "a rejection needs a reason: drafts.reviewer_feedback would otherwise \
+                         record nothing about why the draft was refused",
+            })),
+        )
+            .into_response();
+    }
 
-    Json(json!({ "id": id, "status": "rejected" }))
+    match draft_actions::reject_draft(&state, &id, &reason, "agent").await {
+        Ok(report) => {
+            let mut body = report.to_json();
+            body["reason"] = json!(reason);
+            body["tenantKey"] = json!(tenant_key);
+            body["success"] = json!(!report
+                .warnings
+                .iter()
+                .any(|w| w.starts_with("the draft was NOT marked rejected")));
+            (StatusCode::OK, Json(body)).into_response()
+        }
+        Err(err) => (err.status(), Json(err.json())).into_response(),
+    }
 }
 
 #[derive(Deserialize)]
@@ -103,62 +213,175 @@ pub async fn edit_draft(
     State(state): State<AppState>,
     Path(id): Path<String>,
     Json(payload): Json<EditDraftPayload>,
-) -> impl IntoResponse {
-    let _ = sqlx::query("UPDATE drafts SET body = ?, status = 'pending_review' WHERE id = ?")
-        .bind(&payload.body)
-        .bind(&id)
-        .execute(&state.db)
-        .await;
+) -> Response {
+    if payload.body.trim().is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "success": false,
+                "error": "the edited draft body is empty; nothing was written",
+            })),
+        )
+            .into_response();
+    }
 
-    Json(json!({ "id": id, "body": payload.body, "status": "pending_review" }))
+    let current = match sqlx::query(&format!("SELECT {DRAFT_COLUMNS}, reviewer_feedback FROM drafts WHERE id = ? LIMIT 1"))
+        .bind(&id)
+        .fetch_optional(&state.db)
+        .await
+    {
+        Ok(Some(row)) => row,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({ "error": "Draft not found", "draftId": id })),
+            )
+                .into_response()
+        }
+        Err(err) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "error": format!("the draft could not be read: {err}"),
+                    "databaseError": true,
+                })),
+            )
+                .into_response()
+        }
+    };
+
+    let status = match crate::db::required_text(&current, "status") {
+        Ok(status) => status,
+        Err(_) => {
+            return (
+                StatusCode::CONFLICT,
+                Json(json!({
+                    "success": false,
+                    "error": "the draft's current status could not be read, so it cannot be \
+                             checked for whether editing is allowed",
+                    "draftId": id,
+                })),
+            )
+                .into_response();
+        }
+    };
+    // A human rewrite demotes an auto-approved draft back to review: the
+    // confidence that earned auto-send applied to the model's wording, not this.
+    if !(status.eq_ignore_ascii_case("pending_review") || status.eq_ignore_ascii_case("auto_approved"))
+    {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "success": false,
+                "error": format!("a draft in status '{status}' cannot be edited"),
+                "draftStatus": status,
+            })),
+        )
+            .into_response();
+    }
+
+    let now = Utc::now().to_rfc3339();
+    let updated = sqlx::query(
+        "UPDATE drafts SET body = ?, status = 'pending_review', updated_at = ? WHERE id = ?",
+    )
+    .bind(&payload.body)
+    .bind(&now)
+    .bind(&id)
+    .execute(&state.db)
+    .await;
+
+    let (written, detail) = match updated {
+        Ok(report) if report.rows_affected() == 1 => (true, None),
+        Ok(report) => (
+            false,
+            Some(format!(
+                "the UPDATE affected {} rows, so the edited body was not stored",
+                report.rows_affected()
+            )),
+        ),
+        Err(err) => (false, Some(format!("the database refused the UPDATE: {err}"))),
+    };
+
+    let mut body = json!({
+        "id": id,
+        "draftId": id,
+        "conversationId": current
+            .try_get::<Option<String>, _>("conversation_id")
+            .ok()
+            .flatten(),
+        "body": payload.body,
+        "confidence": current
+            .try_get::<Option<f64>, _>("confidence")
+            .ok()
+            .flatten(),
+        "citations": citations_value(
+            current
+                .try_get::<Option<String>, _>("citations")
+                .ok()
+                .flatten(),
+        )
+        .0,
+        "status": "pending_review",
+        "previousStatus": status,
+        "saved": written,
+        "updatedAt": now,
+    });
+    if let Some(reason) = detail {
+        body["error"] = json!(reason);
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(body)).into_response();
+    }
+    (StatusCode::OK, Json(body)).into_response()
 }
 
 pub async fn generate_draft(
     State(state): State<AppState>,
+    Tenant(tenant_key): Tenant,
     Path(conversation_id): Path<String>,
-) -> impl IntoResponse {
-    let id = Uuid::new_v4().to_string();
-    let now = Utc::now().to_rfc3339();
-
-    // Check last customer message in thread to generate a hyper-relevant AI response
-    let last_msg: Option<String> = sqlx::query_scalar::<_, String>(
-        "SELECT body FROM messages WHERE conversation_id = ? AND direction = 'inbound' ORDER BY sent_at DESC LIMIT 1",
-    )
-    .bind(&conversation_id)
-    .fetch_optional(&state.db)
-    .await
-    .unwrap_or(None);
-
-    let draft_text = match last_msg {
-        Some(msg) => {
-            if msg.to_lowercase().contains("service") || msg.to_lowercase().contains("pricing") {
-                "Hello! Thank you for inquiring about Newax Technologies services. We offer high-performance enterprise messaging, cross-platform communications, and automated lead intelligence solutions. Would you like to schedule a quick 15-minute introductory walkthrough?".to_string()
-            } else if msg.to_lowercase().contains("architecture") || msg.to_lowercase().contains("model") {
-                "Thank you for sharing your architecture specifications. Our team has reviewed the multi-stage pipeline and recommendations. Let's arrange a technical sync with our engineering team to review integration milestones.".to_string()
+) -> Response {
+    match reply_engine::generate_reply(&state, &conversation_id, Some(&tenant_key)).await {
+        Ok(draft) => {
+            let status = if draft.draft_written {
+                StatusCode::CREATED
             } else {
-                format!("Hi there! Thank you for contacting us regarding: \"{}\". We have received your inquiry and an agent is ready to help you directly.", msg.chars().take(80).collect::<String>())
-            }
+                StatusCode::INTERNAL_SERVER_ERROR
+            };
+            let mut body = draft.to_json();
+            body["tenantKey"] = json!(tenant_key);
+            (status, Json(body)).into_response()
         }
-        None => "Hi there! Thank you for reaching out to Newax Technologies. How can we assist you today?".to_string(),
+        Err(err) => (err.status(), Json(err.json())).into_response(),
+    }
+}
+
+/// Used by the scheduler: send everything the reply engine left auto-approved.
+pub async fn dispatch_auto_approved_drafts(
+    State(state): State<AppState>,
+    Tenant(tenant_key): Tenant,
+) -> Response {
+    let reports = match draft_actions::dispatch_auto_approved(&state, &tenant_key).await {
+        Ok(reports) => reports,
+        Err(err) => return (err.status(), Json(err.json())).into_response(),
     };
 
-    let _ = sqlx::query(
-        "INSERT INTO drafts (id, conversation_id, body, confidence, citations, status, created_at) VALUES (?, ?, ?, 0.94, '[]', 'pending_review', ?)",
-    )
-    .bind(&id)
-    .bind(&conversation_id)
-    .bind(&draft_text)
-    .bind(&now)
-    .execute(&state.db)
-    .await;
+    let results: Vec<Value> = reports
+        .into_iter()
+        .map(|report| match report {
+            Ok(ok) => ok.to_json(),
+            Err(err) => err.json(),
+        })
+        .collect();
+    let sent = results
+        .iter()
+        .filter(|item| item.get("sent").and_then(Value::as_bool) == Some(true))
+        .count();
 
-    Json(json!({
-        "id": id,
-        "conversationId": conversation_id,
-        "body": draft_text,
-        "confidence": 0.94,
-        "citations": [],
-        "status": "pending_review",
-        "createdAt": now
-    }))
+    (
+        StatusCode::OK,
+        Json(json!({
+            "attempted": results.len(),
+            "sent": sent,
+            "results": results,
+        })),
+    )
+        .into_response()
 }

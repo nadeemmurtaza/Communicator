@@ -9,7 +9,7 @@ import {
   Send,
   ShieldAlert,
   XCircle,
-} from 'lucide-react'
+} from '../components/icons'
 import { api, type CopilotApprovalRequest } from '../lib/api'
 
 export function ApprovalsQueue() {

@@ -14,7 +14,6 @@ from communicator.models.conversation import Conversation
 from communicator.services.whatsapp_automations import (
     match_advanced_rule,
     run_inactivity_nudges,
-    seed_default_whatsapp_automations,
 )
 
 router = APIRouter(prefix="/automation-rules", tags=["Automation"])
@@ -70,17 +69,6 @@ async def create_rule(payload: RuleIn, session: AsyncSession = Depends(get_db_se
     session.add(rule)
     await session.flush()
     return _serialize(rule)
-
-
-@router.post("/seed-defaults")
-async def seed_defaults(session: AsyncSession = Depends(get_db_session)):
-    """Installs all 11 battle-tested WhatsApp automations in one click."""
-    count = await seed_default_whatsapp_automations(session)
-    return {
-        "status": "ok",
-        "installedCount": count,
-        "message": f"Successfully installed {count} default WhatsApp automations.",
-    }
 
 
 @router.post("/test")

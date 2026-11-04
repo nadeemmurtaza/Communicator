@@ -1,5 +1,5 @@
 
-import { GitPullRequest, Square, Target, X } from 'lucide-react'
+import { GitPullRequest, Square, Target, X } from '../icons'
 
 interface IssueModalProps {
   activeConv: any

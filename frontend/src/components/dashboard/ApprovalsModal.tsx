@@ -1,4 +1,4 @@
-import { Bot, CheckCircle2, Clock, Handshake, Plus, X, XCircle } from 'lucide-react'
+import { Bot, CheckCircle2, Clock, Handshake, Plus, X, XCircle } from '../icons'
 import { Link } from 'react-router-dom'
 
 interface ApprovalsModalProps {

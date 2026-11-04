@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, RefreshCw } from 'lucide-react'
-import { CHANNEL_ICONS } from '../components/icons/BrandIcons'
+import { ArrowRight, RefreshCw } from '../components/icons'
+import { CHANNEL_ICONS } from '../components/icons/channels'
 import { api, type Inbox, type WhatsAppChannelData, type ChannelHealth } from '../lib/api'
 
 interface BaseChannelDef {

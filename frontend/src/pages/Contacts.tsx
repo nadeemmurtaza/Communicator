@@ -22,7 +22,7 @@ import {
   Tag as TagIcon,
   Pencil,
   Check,
-} from 'lucide-react'
+} from '../components/icons'
 import {
   api,
   type ContactRecord,

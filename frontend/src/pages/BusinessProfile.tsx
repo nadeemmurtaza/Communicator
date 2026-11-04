@@ -18,7 +18,7 @@ import {
   Smartphone,
   Share2,
   X,
-} from 'lucide-react'
+} from '../components/icons'
 import { api, type SharedBusinessProfile } from '../lib/api'
 
 export function BusinessProfile() {

@@ -43,30 +43,9 @@ async def list_teams(session: AsyncSession = Depends(get_db_session)):
     stmt = select(Team).options(selectinload(Team.members)).order_by(Team.name)
     teams = (await session.execute(stmt)).scalars().all()
 
-    # Pre-seed starter teams if empty
-    if not teams:
-        defaults = [
-            Team(
-                name="Sales & Growth",
-                description="Handles new customer inquiries and deals",
-                auto_assign=True,
-            ),
-            Team(
-                name="Customer Support",
-                description="Resolves technical questions and account issues",
-                auto_assign=True,
-            ),
-            Team(
-                name="VIP Accounts",
-                description="Priority queue for enterprise customers",
-                auto_assign=False,
-            ),
-        ]
-        session.add_all(defaults)
-        await session.flush()
-        # Fetch seeded teams with selectinload
-        teams = (await session.execute(stmt)).scalars().all()
-
+    # Starter teams ("Sales & Growth", "Customer Support", "VIP Accounts") were
+    # previously auto-inserted here when the table was empty. Removed -- an empty
+    # team list is the honest answer until a team is actually created.
     return [_serialize_team(t) for t in teams]
 
 

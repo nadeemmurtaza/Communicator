@@ -12,53 +12,12 @@ from communicator.models.conversation import Conversation, ConversationState
 from communicator.models.message import Message, MessageDirection
 from communicator.models.sla import SLAPolicy
 
-DEFAULT_SLA_POLICIES = [
-    {
-        "name": "Critical VIP Escalation SLA",
-        "description": "Strict 15-minute first response and 2-hour resolution target for urgent escalations & VIP tier accounts.",
-        "first_response_time_threshold": 15,
-        "resolution_time_threshold": 120,
-        "only_during_business_hours": False,
-        "priorities": ["urgent"],
-        "inbox_ids": [],
-    },
-    {
-        "name": "High Priority SLA",
-        "description": "30-minute first response and 6-hour resolution target for high priority support tickets.",
-        "first_response_time_threshold": 30,
-        "resolution_time_threshold": 360,
-        "only_during_business_hours": False,
-        "priorities": ["high"],
-        "inbox_ids": [],
-    },
-    {
-        "name": "Standard Customer Support SLA",
-        "description": "60-minute first response and 24-hour resolution target for general inquiries and routine support.",
-        "first_response_time_threshold": 60,
-        "resolution_time_threshold": 1440,
-        "only_during_business_hours": True,
-        "priorities": ["medium", "low"],
-        "inbox_ids": [],
-    },
-]
-
-
 async def list_policies(session: AsyncSession) -> list[SLAPolicy]:
-    """Lists all SLA policies, seeding defaults if empty."""
+    """Lists all SLA policies currently stored."""
     res = await session.execute(
         select(SLAPolicy).order_by(SLAPolicy.first_response_time_threshold.asc())
     )
-    policies = list(res.scalars().all())
-    if not policies:
-        for item in DEFAULT_SLA_POLICIES:
-            p = SLAPolicy(**item)
-            session.add(p)
-        await session.flush()
-        res = await session.execute(
-            select(SLAPolicy).order_by(SLAPolicy.first_response_time_threshold.asc())
-        )
-        policies = list(res.scalars().all())
-    return policies
+    return list(res.scalars().all())
 
 
 async def get_policy(session: AsyncSession, policy_id: uuid.UUID) -> SLAPolicy | None:

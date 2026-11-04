@@ -1,4 +1,4 @@
-import { Zap, Key, Bot, AlertCircle, AlertTriangle, CheckCircle2, RefreshCw, Send, Activity, ArrowLeft, Check, Lightbulb, Lock, X } from 'lucide-react'
+import { Zap, Key, Bot, AlertCircle, AlertTriangle, CheckCircle2, RefreshCw, Send, Activity, ArrowLeft, Check, Lightbulb, Lock, X } from '../components/icons'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -6,7 +6,7 @@ import {
   type LineChannelData,
   type SocialEvent,
 } from '../lib/api'
-import { LineIcon } from '../components/icons/BrandIcons'
+import { LineIcon } from '../components/icons'
 
 export function LineIntegration() {
   const [data, setData] = useState<LineChannelData | null>(null)

@@ -1,4 +1,4 @@
-import { Activity, AlertCircle, AlertTriangle, ArrowLeft, Camera, CheckCircle2, Flame, Webhook, X, Zap } from 'lucide-react'
+import { Activity, AlertCircle, AlertTriangle, ArrowLeft, Camera, CheckCircle2, Flame, Webhook, X, Zap } from '../components/icons'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -6,7 +6,7 @@ import {
   type InstagramChannelData,
   type SocialEvent,
 } from '../lib/api'
-import { InstagramIcon } from '../components/icons/BrandIcons'
+import { InstagramIcon } from '../components/icons'
 
 export function InstagramIntegration() {
   const [data, setData] = useState<InstagramChannelData | null>(null)

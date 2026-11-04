@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowLeft, Check, CheckCircle2, FlaskConical, Key, Lightbulb, MessageSquare, Radio, RefreshCw, Settings, ShieldCheck, X, Zap } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, Check, CheckCircle2, FlaskConical, Key, Lightbulb, MessageSquare, Radio, RefreshCw, Settings, ShieldCheck, X, Zap } from '../components/icons'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -6,7 +6,7 @@ import {
   type TikTokChannelData,
   type SocialEvent,
 } from '../lib/api'
-import { TikTokIcon } from '../components/icons/BrandIcons'
+import { TikTokIcon } from '../components/icons'
 
 export function TikTokIntegration() {
   const [data, setData] = useState<TikTokChannelData | null>(null)

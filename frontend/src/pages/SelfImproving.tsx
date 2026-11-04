@@ -14,7 +14,7 @@ import {
   BarChart2,
   ArrowRight,
   X,
-} from 'lucide-react'
+} from '../components/icons'
 import {
   api,
   type AgentInsight,

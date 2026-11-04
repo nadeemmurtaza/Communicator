@@ -43,7 +43,6 @@ class CustomPolicyUpdateRequest(BaseModel):
 @router.get("/connections", response_model=list[dict[str, Any]])
 async def list_ai_connections(db: AsyncSession = Depends(get_db_session)):
     """Lists all connected AI models with latency and assigned jobs."""
-    await AIConnectionService.seed_default_connections_and_policies(db)
     return await AIConnectionService.list_connections(db)
 
 
@@ -102,7 +101,6 @@ async def delete_ai_connection(
 @router.get("/jobs/mapping", response_model=dict[str, Any])
 async def get_job_mapping(db: AsyncSession = Depends(get_db_session)):
     """Returns which model is actively routed to each AI job."""
-    await AIConnectionService.seed_default_connections_and_policies(db)
     return await AIConnectionService.get_job_model_mapping(db)
 
 
@@ -126,7 +124,6 @@ async def get_custom_policy(
     db: AsyncSession = Depends(get_db_session),
 ):
     """Retrieves custom policies, dynamic rules, and guardrails for a specific AI job."""
-    await AIConnectionService.seed_default_connections_and_policies(db)
     policy = await AIConnectionService.get_custom_policy(db, job_type)
     if not policy:
         raise HTTPException(
@@ -161,6 +158,5 @@ async def get_effective_prompt(
     db: AsyncSession = Depends(get_db_session),
 ):
     """Builds and returns the dynamically compiled system prompt for that job."""
-    await AIConnectionService.seed_default_connections_and_policies(db)
     prompt = await AIConnectionService.get_effective_prompt(db, job_type)
     return {"job_type": job_type, "prompt": prompt}

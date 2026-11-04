@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Briefcase, Check, Plus, Tag, X } from 'lucide-react'
+import { Briefcase, Check, Plus, Tag, X } from '../components/icons'
 import { api, type Service } from '../lib/api'
 
 export function Services() {

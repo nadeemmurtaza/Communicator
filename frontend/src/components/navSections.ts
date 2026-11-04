@@ -13,7 +13,7 @@ import {
   Sparkles,
   BarChart3,
   Settings,
-} from 'lucide-react'
+} from './icons'
 
 export interface NavChild {
   to: string

@@ -76,93 +76,12 @@ def format_linked_issue(issue: LinkedIssue) -> dict[str, Any]:
     }
 
 
-async def seed_default_tracker_configs_if_empty(session: AsyncSession) -> None:
-    res = await session.execute(select(IssueTrackerConfig))
-    if res.scalars().first():
-        return
-
-    defaults = [
-        IssueTrackerConfig(
-            id=uuid.uuid4(),
-            provider=IssueTrackerProvider.LINEAR.value,
-            account_name="Engineering Core Workspace",
-            is_enabled=True,
-            test_mode=True,
-            credentials={"api_key": "lin_api_demo_secret_token_123"},
-            config={
-                "team_key": "ENG",
-                "team_name": "Product & Engineering",
-                "default_priority": "medium",
-            },
-            last_test_status="connected_simulated",
-            last_tested_at=datetime.now(UTC),
-        ),
-        IssueTrackerConfig(
-            id=uuid.uuid4(),
-            provider=IssueTrackerProvider.GITHUB.value,
-            account_name="Newax Organization",
-            is_enabled=True,
-            test_mode=True,
-            credentials={"access_token": "ghp_demo_secret_token_456"},
-            config={
-                "owner": "newax-org",
-                "repo": "product-engine",
-                "default_labels": ["customer-reported", "triage"],
-            },
-            last_test_status="connected_simulated",
-            last_tested_at=datetime.now(UTC),
-        ),
-        IssueTrackerConfig(
-            id=uuid.uuid4(),
-            provider=IssueTrackerProvider.JIRA.value,
-            account_name="Enterprise Atlassian Cloud",
-            is_enabled=True,
-            test_mode=True,
-            credentials={
-                "domain": "newax.atlassian.net",
-                "email": "jira-bot@newax.com",
-                "api_token": "jira_api_token_789",
-            },
-            config={
-                "project_key": "SUP",
-                "project_name": "Customer Support Escalations",
-                "issue_type": "Bug",
-            },
-            last_test_status="connected_simulated",
-            last_tested_at=datetime.now(UTC),
-        ),
-        IssueTrackerConfig(
-            id=uuid.uuid4(),
-            provider=IssueTrackerProvider.SLACK.value,
-            account_name="Primary Team Slack",
-            is_enabled=True,
-            test_mode=True,
-            credentials={
-                "bot_token": "xoxb-demo-slack-bot-token-999",
-                "webhook_url": "https://hooks.slack.com/services/T00/B00/XXXXmock",
-            },
-            config={
-                "channel_id": "C08SUPPORT01",
-                "channel_name": "#customer-escalations",
-                "sync_customer_replies": True,
-                "sync_internal_notes": True,
-            },
-            last_test_status="connected_simulated",
-            last_tested_at=datetime.now(UTC),
-        ),
-    ]
-    session.add_all(defaults)
-    await session.commit()
-
-
 async def list_tracker_configs(session: AsyncSession) -> list[IssueTrackerConfig]:
-    await seed_default_tracker_configs_if_empty(session)
     res = await session.execute(select(IssueTrackerConfig).order_by(IssueTrackerConfig.provider))
     return list(res.scalars().all())
 
 
 async def get_tracker_config(session: AsyncSession, provider: str) -> IssueTrackerConfig | None:
-    await seed_default_tracker_configs_if_empty(session)
     res = await session.execute(
         select(IssueTrackerConfig).where(IssueTrackerConfig.provider == provider)
     )

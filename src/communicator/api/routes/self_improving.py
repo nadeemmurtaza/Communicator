@@ -22,7 +22,6 @@ async def list_insights(
     db: AsyncSession = Depends(get_db_session),
 ):
     """Lists AI insights, human rep winning patterns, and emerging trends."""
-    await SelfImprovingService.seed_default_insights_and_retraining(db)
     return await SelfImprovingService.list_insights(db, category=category, status=status)
 
 
@@ -37,7 +36,6 @@ async def apply_insight_retraining(
     Applies the human rep exemplar or trend suggestion to our Agent's training knowledge,
     bumps model version, and logs performance lift.
     """
-    await SelfImprovingService.seed_default_insights_and_retraining(db)
     result = await SelfImprovingService.apply_insight_retraining(
         db, insight_id=insight_id, author_name=body.author_name
     )
@@ -52,7 +50,6 @@ async def dismiss_insight(
     db: AsyncSession = Depends(get_db_session),
 ):
     """Dismisses an insight suggestion."""
-    await SelfImprovingService.seed_default_insights_and_retraining(db)
     success = await SelfImprovingService.dismiss_insight(db, insight_id)
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Insight not found")
@@ -62,19 +59,16 @@ async def dismiss_insight(
 @router.get("/retraining-history", response_model=list[dict[str, Any]])
 async def list_retraining_history(db: AsyncSession = Depends(get_db_session)):
     """Returns chronological timeline of agent retraining iterations and performance lifts."""
-    await SelfImprovingService.seed_default_insights_and_retraining(db)
     return await SelfImprovingService.list_retraining_history(db)
 
 
 @router.post("/scan", response_model=dict[str, Any])
 async def trigger_auto_learning_scan(db: AsyncSession = Depends(get_db_session)):
     """Scans high-CSAT live customer interactions to surface new winning human rep patterns."""
-    await SelfImprovingService.seed_default_insights_and_retraining(db)
     return await SelfImprovingService.trigger_auto_learning_scan(db)
 
 
 @router.get("/stats", response_model=dict[str, Any])
 async def get_self_improving_stats(db: AsyncSession = Depends(get_db_session)):
     """Summary metrics of continuous improvement, resolution lifts, and learning stats."""
-    await SelfImprovingService.seed_default_insights_and_retraining(db)
     return await SelfImprovingService.get_self_improving_stats(db)

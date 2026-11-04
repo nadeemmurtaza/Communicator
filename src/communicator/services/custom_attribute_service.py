@@ -19,129 +19,10 @@ logger = logging.getLogger(__name__)
 ALLOWED_TYPES = {"text", "number", "currency", "boolean", "list", "date", "link"}
 ALLOWED_MODELS = {"contact_attribute", "conversation_attribute"}
 
-DEFAULT_ATTRIBUTES = [
-    # Contact Attributes
-    {
-        "name": "account_tier",
-        "display_name": "Account Tier",
-        "description": "Customer commercial subscription tier",
-        "attribute_model": "contact_attribute",
-        "attribute_type": "list",
-        "options": ["Free", "Starter", "Growth", "Enterprise"],
-        "default_value": "Starter",
-        "is_required": False,
-    },
-    {
-        "name": "company_size",
-        "display_name": "Company Size",
-        "description": "Number of employees at lead's institution",
-        "attribute_model": "contact_attribute",
-        "attribute_type": "list",
-        "options": ["1-10", "11-50", "51-200", "201-1000", "1000+"],
-        "default_value": "11-50",
-        "is_required": False,
-    },
-    {
-        "name": "annual_revenue",
-        "display_name": "Annual Revenue (ARR)",
-        "description": "Contract value or expected recurring revenue",
-        "attribute_model": "contact_attribute",
-        "attribute_type": "currency",
-        "default_value": "0",
-        "is_required": False,
-    },
-    {
-        "name": "is_vip",
-        "display_name": "VIP Customer",
-        "description": "High-priority enterprise account flag",
-        "attribute_model": "contact_attribute",
-        "attribute_type": "boolean",
-        "default_value": "false",
-        "is_required": False,
-    },
-    {
-        "name": "renewal_date",
-        "display_name": "Contract Renewal Date",
-        "description": "Upcoming subscription expiration or renewal date",
-        "attribute_model": "contact_attribute",
-        "attribute_type": "date",
-        "is_required": False,
-    },
-    # Conversation Attributes
-    {
-        "name": "issue_category",
-        "display_name": "Issue Category",
-        "description": "Triage topic classification for this thread",
-        "attribute_model": "conversation_attribute",
-        "attribute_type": "list",
-        "options": [
-            "Billing",
-            "Technical Support",
-            "Feature Request",
-            "Account Access",
-            "Sales Inquiry",
-            "General Inquiry",
-        ],
-        "default_value": "General Inquiry",
-        "is_required": False,
-    },
-    {
-        "name": "escalation_level",
-        "display_name": "Escalation Level",
-        "description": "Support tier handling this conversation",
-        "attribute_model": "conversation_attribute",
-        "attribute_type": "list",
-        "options": ["Tier 1", "Tier 2", "Engineering", "Executive Escrow"],
-        "default_value": "Tier 1",
-        "is_required": False,
-    },
-    {
-        "name": "billing_dispute_amount",
-        "display_name": "Dispute Amount (USD)",
-        "description": "Customer requested refund or dispute total",
-        "attribute_model": "conversation_attribute",
-        "attribute_type": "currency",
-        "is_required": False,
-    },
-    {
-        "name": "jira_key",
-        "display_name": "Linked Issue Key",
-        "description": "External issue tracker ticket reference (e.g. ENG-1234)",
-        "attribute_model": "conversation_attribute",
-        "attribute_type": "text",
-        "is_required": False,
-    },
-]
-
 
 def _normalize_name(name: str) -> str:
     cleaned = re.sub(r"[^a-zA-Z0-9_]", "_", name.strip().lower())
     return re.sub(r"_+", "_", cleaned).strip("_")
-
-
-async def initialize_default_attributes(session: AsyncSession) -> None:
-    """
-    Auto-seeds default enterprise CRM custom attribute definitions if the table is empty.
-    """
-    existing_count = (
-        await session.scalar(select(CustomAttributeDefinition.id).limit(1))
-    ) is not None
-    if existing_count:
-        return
-
-    for item in DEFAULT_ATTRIBUTES:
-        attr = CustomAttributeDefinition(
-            name=item["name"],
-            display_name=item["display_name"],
-            description=item.get("description", ""),
-            attribute_model=item["attribute_model"],
-            attribute_type=item["attribute_type"],
-            options=item.get("options", []),
-            default_value=item.get("default_value"),
-            is_required=item.get("is_required", False),
-        )
-        session.add(attr)
-    await session.commit()
 
 
 async def list_attribute_definitions(
@@ -151,7 +32,6 @@ async def list_attribute_definitions(
     """
     Lists custom attribute definitions, optionally filtered by attribute_model.
     """
-    await initialize_default_attributes(session)
     stmt = select(CustomAttributeDefinition)
     if attribute_model:
         stmt = stmt.where(CustomAttributeDefinition.attribute_model == attribute_model)
@@ -167,7 +47,6 @@ async def get_attribute_definition(
     """
     Finds a custom attribute definition by UUID or slug name.
     """
-    await initialize_default_attributes(session)
     try:
         val_uuid = uuid.UUID(id_or_name)
         attr = await session.get(CustomAttributeDefinition, val_uuid)

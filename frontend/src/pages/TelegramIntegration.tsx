@@ -1,4 +1,4 @@
-import { AlertCircle, AlertTriangle, CheckCircle2, Zap, Key, Bot, Activity, ArrowLeft, Check, Lightbulb, RefreshCw, Rocket, X } from 'lucide-react'
+import { AlertCircle, AlertTriangle, CheckCircle2, Zap, Key, Bot, Activity, ArrowLeft, Check, Lightbulb, RefreshCw, Rocket, X } from '../components/icons'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -6,7 +6,7 @@ import {
   type TelegramChannelData,
   type SocialEvent,
 } from '../lib/api'
-import { TelegramIcon } from '../components/icons/BrandIcons'
+import { TelegramIcon } from '../components/icons'
 
 export function TelegramIntegration() {
   const [data, setData] = useState<TelegramChannelData | null>(null)

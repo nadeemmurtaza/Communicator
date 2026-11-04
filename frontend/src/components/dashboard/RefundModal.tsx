@@ -1,4 +1,4 @@
-import { AlertTriangle, X, Zap } from 'lucide-react'
+import { AlertTriangle, X, Zap } from '../icons'
 
 interface RefundModalProps {
   activeConv: any

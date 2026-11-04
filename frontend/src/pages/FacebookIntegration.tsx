@@ -1,4 +1,4 @@
-import { Zap, Key, MessageSquare, Bot, Activity, AlertTriangle, CheckCircle2, AlertCircle, Send, ArrowLeft, Check, X } from 'lucide-react'
+import { Zap, Key, MessageSquare, Bot, Activity, AlertTriangle, CheckCircle2, AlertCircle, Send, ArrowLeft, Check, X } from '../components/icons'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -6,7 +6,7 @@ import {
   type FacebookChannelData,
   type SocialEvent,
 } from '../lib/api'
-import { FacebookIcon } from '../components/icons/BrandIcons'
+import { FacebookIcon } from '../components/icons'
 
 export function FacebookIntegration() {
   const [data, setData] = useState<FacebookChannelData | null>(null)

@@ -10,7 +10,7 @@ import {
   X,
   Check,
   Sparkles,
-} from 'lucide-react'
+} from '../components/icons'
 import { api } from '../lib/api'
 import type { CannedResponse } from '../lib/api'
 

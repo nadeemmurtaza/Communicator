@@ -15,7 +15,6 @@ from communicator.models.segment import ContactSegment
 from communicator.services.segment_service import (
     count_segment_contacts,
     get_segment_contacts,
-    seed_default_segments,
 )
 
 router = APIRouter(prefix="/segments", tags=["Contact Segments"])
@@ -51,7 +50,6 @@ async def list_segments(
     session: AsyncSession = Depends(get_db_session), tenant_key: str = Depends(get_tenant_key)
 ):
     """Lists all saved contact segments with real-time member counts, scoped to the caller's tenant."""
-    await seed_default_segments(session, tenant_key=tenant_key)
     stmt = (
         select(ContactSegment)
         .where(ContactSegment.tenant_key == tenant_key)

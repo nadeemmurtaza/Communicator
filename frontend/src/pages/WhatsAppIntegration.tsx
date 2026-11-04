@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, type WhatsAppChannelData, type WhatsAppTemplate } from '../lib/api'
-import { WhatsAppIcon } from '../components/icons/BrandIcons'
+import { WhatsAppIcon } from '../components/icons'
 import {
   Key,
   Zap,
@@ -20,7 +20,7 @@ import {
   Copy,
   RefreshCw,
   X,
-} from 'lucide-react'
+} from '../components/icons'
 
 export function WhatsAppIntegration() {
   const [data, setData] = useState<WhatsAppChannelData | null>(null)

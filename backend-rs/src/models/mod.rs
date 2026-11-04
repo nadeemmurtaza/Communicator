@@ -62,17 +62,27 @@ pub struct Contact {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BusinessProfile {
+    /// True only when Graph API answered 200 for the phone-number node.
+    pub is_connected: bool,
+    /// Meta's own error text when the call failed, so the UI can show the real
+    /// reason instead of an invented status.
+    pub error: Option<String>,
     pub display_phone_number: String,
     pub verified_name: String,
     pub quality_rating: String,
     pub messaging_limit_tier: String,
     pub official_business_account: bool,
     pub is_verified: bool,
-    pub zero_spam_flags: bool,
+    /// None when Meta did not report a quality rating -- distinct from "has
+    /// spam flags", which an unknown rating must not be allowed to imply.
+    pub zero_spam_flags: Option<bool>,
+    pub account_mode: String,
     pub about: Option<String>,
     pub address: Option<String>,
     pub description: Option<String>,
     pub email: Option<String>,
+    pub profile_picture_url: Option<String>,
+    pub vertical: Option<String>,
     pub websites: Vec<String>,
 }
 
@@ -96,27 +106,6 @@ pub struct Draft {
     pub citations: Option<String>, // json array string
     pub status: String,
     pub created_at: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
-#[serde(rename_all = "camelCase")]
-pub struct Broadcast {
-    pub id: String,
-    pub name: String,
-    pub template_name: Option<String>,
-    pub template_language: Option<String>,
-    pub body_preview: Option<String>,
-    pub tag_name: Option<String>,
-    pub status: String,
-    pub scheduled_at: Option<String>,
-    pub created_at: String,
-    pub audience_count: Option<i32>,
-    pub total_recipients: Option<i32>,
-    pub sent_count: Option<i32>,
-    pub delivered_count: Option<i32>,
-    pub read_count: Option<i32>,
-    pub failed_count: Option<i32>,
-    pub skipped_count: Option<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]

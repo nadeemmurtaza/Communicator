@@ -38,7 +38,7 @@ import {
   Users,
   X,
   XCircle,
-} from 'lucide-react'
+} from '../components/icons'
 import { api, type ContactProfileData } from '../lib/api'
 import { stateBadgeClass, stateLabel, timeAgo } from '../lib/format'
 

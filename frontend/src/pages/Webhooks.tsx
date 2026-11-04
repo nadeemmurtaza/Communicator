@@ -8,7 +8,7 @@ import {
   X,
   Plus,
   KeyRound,
-} from 'lucide-react'
+} from '../components/icons'
 import { useEffect, useState } from 'react'
 import {
   api,

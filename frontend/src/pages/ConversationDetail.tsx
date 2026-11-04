@@ -13,7 +13,7 @@ import {
   Users,
   User,
   Zap,
-} from 'lucide-react'
+} from '../components/icons'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {

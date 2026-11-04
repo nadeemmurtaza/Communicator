@@ -16,7 +16,7 @@ import httpx
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from communicator.models.webhook import WebhookDeliveryLog, WebhookEndpoint, WebhookEvent
+from communicator.models.webhook import WebhookDeliveryLog, WebhookEndpoint
 
 logger = logging.getLogger(__name__)
 
@@ -78,59 +78,7 @@ def format_delivery_log(log: WebhookDeliveryLog) -> dict[str, Any]:
     }
 
 
-async def seed_default_webhooks_if_empty(session: AsyncSession) -> None:
-    """Seeds default sample webhook subscriptions if none exist."""
-    result = await session.execute(select(WebhookEndpoint))
-    if result.scalars().first():
-        return
-
-    defaults = [
-        WebhookEndpoint(
-            id=uuid.uuid4(),
-            name="Enterprise CRM & Data Warehouse Sync",
-            url="https://api.internal.bayworks.co/webhooks/crm-sync",
-            secret="whsec_prod_991823746152889201928374",
-            events=[
-                WebhookEvent.CONVERSATION_CREATED.value,
-                WebhookEvent.CONVERSATION_STATUS_CHANGED.value,
-                WebhookEvent.TICKET_CREATED.value,
-                WebhookEvent.CSAT_SUBMITTED.value,
-            ],
-            headers={"X-Service-Name": "BayWorks-Communicator", "X-Environment": "production"},
-            is_active=True,
-            retry_count=3,
-            timeout_seconds=10,
-            total_delivered=142,
-            total_failed=1,
-            last_status_code=200,
-            last_delivered_at=datetime.now(UTC),
-        ),
-        WebhookEndpoint(
-            id=uuid.uuid4(),
-            name="Incident & Outage Alerts Slack Connector",
-            url="https://hooks.slack.com/services/T000/B000/XXXXXmock",
-            secret="whsec_ops_771826451029384756192837",
-            events=[
-                WebhookEvent.TICKET_CREATED.value,
-                WebhookEvent.TICKET_RESOLVED.value,
-            ],
-            headers={"Content-Type": "application/json"},
-            is_active=True,
-            retry_count=2,
-            timeout_seconds=5,
-            total_delivered=88,
-            total_failed=0,
-            last_status_code=200,
-            last_delivered_at=datetime.now(UTC),
-        ),
-    ]
-
-    session.add_all(defaults)
-    await session.commit()
-
-
 async def list_endpoints(session: AsyncSession) -> list[WebhookEndpoint]:
-    await seed_default_webhooks_if_empty(session)
     stmt = select(WebhookEndpoint).order_by(desc(WebhookEndpoint.created_at))
     res = await session.execute(stmt)
     return list(res.scalars().all())
@@ -316,7 +264,6 @@ async def dispatch_event(
     Core event publisher.
     Enqueues standard webhook payloads and sends to all active endpoints subscribed to `event`.
     """
-    await seed_default_webhooks_if_empty(session)
     stmt = select(WebhookEndpoint).where(WebhookEndpoint.is_active == True)
     res = await session.execute(stmt)
     endpoints = list(res.scalars().all())

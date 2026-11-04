@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Building2, Loader2, Plus } from 'lucide-react'
+import { ArrowRight, Building2, Loader2, Plus } from '../components/icons'
 import { api, type OrganizationItem } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 

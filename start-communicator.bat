@@ -1,10 +1,14 @@
 @echo off
+setlocal
 cd /d "%~dp0"
-if exist "backend-rs\target\release\backend-rs.exe" (
-    echo Starting native Rust backend...
-    set PORT=8000
-    backend-rs\target\release\backend-rs.exe
-) else (
-    call .\.venv\Scripts\activate.bat
-    python -m uvicorn communicator.api.app:app --host 0.0.0.0 --port 8000
+if not exist "backend-rs\target
+elease\backend-rs.exe" (
+    echo Rust backend is not built. Run: cargo build --release --manifest-path backend-rs\Cargo.toml
+    exit /b 1
 )
+
+echo Starting native Rust backend...
+set "PORT=8000"
+"backend-rs\target
+elease\backend-rs.exe"
+exit /b %ERRORLEVEL%

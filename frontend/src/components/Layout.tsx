@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Breadcrumbs } from './Breadcrumbs'
 import { NAV_SECTIONS, findActiveSection } from './navSections'
-import { CHANNEL_ICONS } from './icons/BrandIcons'
+import { CHANNEL_ICONS } from './icons/channels'
 
 export function Layout() {
   const { pathname } = useLocation()

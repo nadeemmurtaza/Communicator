@@ -16,16 +16,138 @@ import {
   Building2,
   User,
   Ticket as TicketIcon,
-} from 'lucide-react'
+  Check,
+  XCircle,
+} from '../components/icons'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import {
   api,
   type Ticket,
   type TicketStats,
   type LinkedIssue,
+  type BroadcastDelivery,
+  type BroadcastTrackerUpdateResult,
 } from '../lib/api'
 
+/** Routing choices offered when creating a ticket. Anything already stored on a
+ * ticket is added to this list (see departmentOptions) so no real value becomes
+ * unreachable, but the backend validates departments against nothing. */
+const DEPARTMENT_CHOICES = ['support', 'finance', 'logistics', 'engineering', 'warehouse', 'legal']
+
+/** The values the detail selects offer. A stored value outside these lists is
+ * shown as its own option rather than being displayed as a blank selector. */
+const STATUS_CHOICES = ['open', 'in_progress', 'waiting_on_back_office', 'waiting_on_customer', 'resolved', 'closed']
+const PRIORITY_CHOICES = ['low', 'medium', 'high', 'urgent']
+
+/** A value the API returned, or an explicit statement that it returned none. */
+function textOrMissing(value: string | null | undefined, missing: string): string {
+  return value && value.trim() ? value : missing
+}
+
+/** A count from the API, or an explicit statement that none came back -- never a
+ * 0 that hides an absence. */
+function countLabel(count: number | null | undefined): string {
+  return typeof count === 'number' ? String(count) : 'not reported'
+}
+
+function dateOrMissing(iso: string | null | undefined, opts: Intl.DateTimeFormatOptions): string {
+  if (!iso || !iso.trim()) return 'not recorded'
+  const parsed = new Date(iso)
+  return Number.isNaN(parsed.getTime()) ? `unreadable ("${iso}")` : parsed.toLocaleDateString(undefined, opts)
+}
+
+function dateTimeOrMissing(iso: string | null | undefined): string {
+  if (!iso || !iso.trim()) return 'not recorded'
+  const parsed = new Date(iso)
+  return Number.isNaN(parsed.getTime()) ? `unreadable ("${iso}")` : parsed.toLocaleString()
+}
+
+function timeOrMissing(iso: string | null | undefined): string {
+  if (!iso || !iso.trim()) return 'no timestamp stored'
+  const parsed = new Date(iso)
+  return Number.isNaN(parsed.getTime())
+    ? `unreadable ("${iso}")`
+    : parsed.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+/**
+ * One recipient's row from a broadcast, labelled with what the backend actually
+ * reported: 'sent' means a provider answered 2xx, 'failed' means the provider
+ * refused, 'not_sent' means nothing left the server, 'error' means the send
+ * could not be attempted or completed.
+ */
+function DeliveryRow({ delivery }: { delivery: BroadcastDelivery }) {
+  const ticketRef = delivery.ticketId ?? delivery.ticket_id ?? null
+  const convRef = delivery.conversationId ?? delivery.conversation_id ?? null
+  const msgRef = delivery.messageId ?? delivery.message_id ?? null
+  const status = delivery.status ?? null
+
+  const tone =
+    status === 'sent'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+      : status === 'failed' || status === 'error'
+      ? 'border-rose-200 bg-rose-50 text-rose-900'
+      : 'border-amber-200 bg-amber-50 text-amber-900'
+
+  const statusLabel =
+    status === 'sent'
+      ? 'accepted by provider'
+      : status === 'failed'
+      ? 'refused by provider'
+      : status === 'not_sent'
+      ? 'not sent'
+      : status === 'error'
+      ? 'send error'
+      : status ?? 'no status reported'
+
+  return (
+    <li className={`rounded-lg border px-2.5 py-1.5 text-[11px] ${tone}`}>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        {status === 'sent' ? (
+          <Check className="h-3 w-3 shrink-0" />
+        ) : status === 'not_sent' ? (
+          <AlertTriangle className="h-3 w-3 shrink-0" />
+        ) : (
+          <XCircle className="h-3 w-3 shrink-0" />
+        )}
+        <span className="font-semibold uppercase tracking-wide">{statusLabel}</span>
+        <span className="font-mono">{textOrMissing(ticketRef, 'no ticket id reported')}</span>
+        <span>conv: {textOrMissing(convRef, 'none linked')}</span>
+        <span>channel: {textOrMissing(delivery.channel, 'not reported')}</span>
+        <span>provider: {textOrMissing(delivery.provider, 'never contacted')}</span>
+        <span>
+          HTTP:{' '}
+          {typeof delivery.httpStatus === 'number'
+            ? delivery.httpStatus
+            : 'no provider response'}
+        </span>
+        <span>
+          msg: {textOrMissing(msgRef, 'no message row written')} /{' '}
+          {textOrMissing(delivery.providerMessageId, 'no provider id')}
+        </span>
+        {typeof delivery.simulated === 'boolean' && (
+          <span>{delivery.simulated ? 'simulated (did not leave the server)' : 'real send'}</span>
+        )}
+      </div>
+      {(delivery.detail || delivery.note) && (
+        <p className="mt-1 whitespace-pre-wrap">
+          {textOrMissing(delivery.detail, '')}
+          {delivery.detail && delivery.note ? ' — ' : ''}
+          {textOrMissing(delivery.note, '')}
+        </p>
+      )}
+    </li>
+  )
+}
+
 export function Tickets() {
+  const { session } = useAuth()
+  // The only identity this page may attribute work to: the signed-in session's
+  // email. Empty means unknown, and writes then omit author_name so the backend
+  // stores NULL rather than inventing a person.
+  const actorName = session?.email?.trim() || ''
+
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [stats, setStats] = useState<TicketStats | null>(null)
   const [trackers, setTrackers] = useState<Ticket[]>([])
@@ -43,6 +165,7 @@ export function Tickets() {
 
   // External Linked Issues
   const [linkedIssues, setLinkedIssues] = useState<LinkedIssue[]>([])
+  const [linkedIssuesError, setLinkedIssuesError] = useState<string | null>(null)
   const [loadingLinkedIssues, setLoadingLinkedIssues] = useState(false)
   const [showCreateLinkedIssue, setShowCreateLinkedIssue] = useState(false)
   const [newLinkedProvider, setNewLinkedProvider] = useState<'linear' | 'github' | 'jira'>('linear')
@@ -61,10 +184,13 @@ export function Tickets() {
   const [broadcastResolveAll, setBroadcastResolveAll] = useState(true)
   const [broadcastSendCustomer, setBroadcastSendCustomer] = useState(true)
   const [submittingBroadcast, setSubmittingBroadcast] = useState(false)
+  // What the broadcast really did, reported per recipient instead of an alert.
+  const [broadcastOutcome, setBroadcastOutcome] = useState<BroadcastTrackerUpdateResult | null>(null)
+  const [broadcastFailure, setBroadcastFailure] = useState<string | null>(null)
 
   // New Note
   const [newNoteMessage, setNewNoteMessage] = useState('')
-  const [newNoteAuthor, setNewNoteAuthor] = useState('Agent')
+  const [newNoteAuthor, setNewNoteAuthor] = useState('')
   const [submittingNote, setSubmittingNote] = useState(false)
 
   // Link to Tracker
@@ -105,12 +231,16 @@ export function Tickets() {
 
   const loadLinkedIssues = async (ticketId: string) => {
     setLoadingLinkedIssues(true)
+    setLinkedIssuesError(null)
     try {
       const issues = await api.listLinkedIssues(undefined, ticketId)
       setLinkedIssues(issues)
     } catch (err) {
+      // A failed read is not an empty list: keep the reason visible to the operator.
+      const message = err instanceof Error ? err.message : 'Failed to load linked issues'
       console.error('Failed to load linked issues', err)
       setLinkedIssues([])
+      setLinkedIssuesError(message)
     } finally {
       setLoadingLinkedIssues(false)
     }
@@ -129,7 +259,7 @@ export function Tickets() {
 
   const handleUpdateStatus = async (ticketId: string, newStatus: string) => {
     try {
-      const updated = await api.updateTicket(ticketId, { status: newStatus, author_name: 'Agent' })
+      const updated = await api.updateTicket(ticketId, { status: newStatus, author_name: actorName || undefined })
       setSelectedTicket(updated)
       loadData()
     } catch (err) {
@@ -139,7 +269,7 @@ export function Tickets() {
 
   const handleUpdatePriority = async (ticketId: string, newPriority: string) => {
     try {
-      const updated = await api.updateTicket(ticketId, { priority: newPriority, author_name: 'Agent' })
+      const updated = await api.updateTicket(ticketId, { priority: newPriority, author_name: actorName || undefined })
       setSelectedTicket(updated)
       loadData()
     } catch (err) {
@@ -155,7 +285,9 @@ export function Tickets() {
       await api.addTicketActivity(selectedTicket.id, {
         message: newNoteMessage.trim(),
         activity_type: selectedTicket.ticket_type === 'back_office' ? 'back_office_note' : 'comment',
-        author_name: newNoteAuthor || 'Agent',
+        // Typed override first, then the signed-in email; blank means no author
+        // is sent and the backend stores NULL instead of inventing one.
+        author_name: newNoteAuthor.trim() || actorName || undefined,
       })
       setNewNoteMessage('')
       const refreshed = await api.getTicket(selectedTicket.id)
@@ -172,7 +304,7 @@ export function Tickets() {
     if (!selectedTicket || !linkTrackerId) return
     setLinkingTracker(true)
     try {
-      const updated = await api.linkTicketToTracker(selectedTicket.id, linkTrackerId, 'Agent')
+      const updated = await api.linkTicketToTracker(selectedTicket.id, linkTrackerId, actorName || undefined)
       setSelectedTicket(updated)
       setLinkTrackerId('')
       loadData()
@@ -183,27 +315,41 @@ export function Tickets() {
     }
   }
 
+  const openBroadcastModal = (tracker: Ticket) => {
+    setBroadcastTargetTracker(tracker)
+    setBroadcastFailure(null)
+    setShowBroadcastModal(true)
+  }
+
+  const closeBroadcastModal = () => {
+    setShowBroadcastModal(false)
+    setBroadcastFailure(null)
+  }
+
   const handleExecuteBroadcast = async () => {
     if (!broadcastTargetTracker || !broadcastMessage.trim()) return
     setSubmittingBroadcast(true)
+    setBroadcastFailure(null)
     try {
       const res = await api.broadcastTrackerUpdate(broadcastTargetTracker.id, {
         broadcast_message: broadcastMessage.trim(),
         resolve_all_children: broadcastResolveAll,
         send_customer_message: broadcastSendCustomer,
-        author_name: 'Incident Response Manager',
+        author_name: actorName || undefined,
       })
-      alert(
-        `Broadcast Dispatched Successfully!\nImpacted Tickets: ${res.impacted_tickets}\nCustomer Messages Sent: ${res.messages_sent}\nAuto-Resolved: ${res.resolved_tickets}`
-      )
-      setShowBroadcastModal(false)
+      setBroadcastOutcome(res)
+      closeBroadcastModal()
       setBroadcastMessage('')
       if (selectedTicket?.id === broadcastTargetTracker.id) {
         openTicketDetail(broadcastTargetTracker.id)
       }
       loadData()
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to broadcast update')
+      // The dispatch itself failed: keep the modal open and show the API's own
+      // reason rather than claiming anything was sent.
+      setBroadcastOutcome(null)
+      setBroadcastFailure(err instanceof Error ? err.message : 'Broadcast request failed')
+      loadData()
     } finally {
       setSubmittingBroadcast(false)
     }
@@ -221,7 +367,7 @@ export function Tickets() {
         department: newDept,
         priority: newPriority,
         tracker_id: newTrackerId || null,
-        author_name: 'Agent',
+        author_name: actorName || undefined,
       })
       setShowCreateModal(false)
       setNewTitle('')
@@ -245,10 +391,12 @@ export function Tickets() {
         provider: newLinkedProvider,
         title: newLinkedTitle.trim(),
         description: newLinkedDescription.trim() || undefined,
-        priority: newLinkedPriority,
+        priority: newLinkedPriority.trim() || undefined,
         ticket_id: selectedTicket.id,
         conversation_id: selectedTicket.conversation_id || undefined,
-        actor_email: 'agent@newax.com',
+        // Signed-in email or nothing at all; the backend stores NULL rather than
+        // a default account address.
+        actor_email: actorName || undefined,
       })
       setShowCreateLinkedIssue(false)
       setNewLinkedTitle('')
@@ -321,6 +469,28 @@ export function Tickets() {
     return true
   })
 
+  // Tab counts derived from the ticket rows actually loaded, so a stats read that
+  // never returned can't be shown as "0 tracker tickets".
+  const trackerCount = tickets.filter((t) => t.ticket_type === 'tracker').length
+  const openTrackerCount = tickets.filter(
+    (t) => t.ticket_type === 'tracker' && t.status !== 'resolved' && t.status !== 'closed',
+  ).length
+  const customerIssueCount = tickets.filter((t) => t.ticket_type === 'customer_issue').length
+  const backOfficeCount = tickets.filter((t) => t.ticket_type === 'back_office').length
+  const resolvedCount = tickets.filter((t) => t.status === 'resolved' || t.status === 'closed').length
+  const tabCount = (n: number) => (loading || error ? 'count unavailable' : String(n))
+
+  // Departments the data really contains -- no invented filter vocabulary.
+  const departmentsInData = Array.from(
+    new Set(tickets.map((t) => t.department).filter((d) => !!d && !!d.trim())),
+  ).sort()
+  // Routing choices for the create form: the fixed vocabulary plus every value
+  // already stored, so a ticket filed under an unusual department stays reachable.
+  const departmentOptions = Array.from(new Set([...DEPARTMENT_CHOICES, ...departmentsInData])).sort()
+  const departmentBreakdown = stats
+    ? Object.entries(stats.department_breakdown ?? {}).map(([dept, count]) => `${dept} (${count})`)
+    : []
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -337,6 +507,12 @@ export function Tickets() {
           <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
             One ticketing system for customer issues, back-office collaboration, and tracker tickets that resolve widespread problems across conversations.
           </p>
+          <p className="mt-1 text-xs text-[var(--color-ink-faint)]">
+            Writes from this page are attributed to:{' '}
+            <span className="font-medium text-[var(--color-ink)]">
+              {actorName || 'no signed-in email available — author fields are left empty and stored as none'}
+            </span>
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -350,7 +526,7 @@ export function Tickets() {
       </div>
 
       {/* KPI Stats Cards */}
-      {stats && (
+      {stats ? (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
             <div className="flex items-center justify-between">
@@ -363,7 +539,11 @@ export function Tickets() {
               <span className="text-2xl font-bold text-[var(--color-ink)]">{stats.open_tickets}</span>
               <span className="text-xs text-[var(--color-ink-faint)]">of {stats.total_tickets} total</span>
             </div>
-            <div className="mt-2 text-xs text-[var(--color-ink-muted)]">Across Support & Back-Office</div>
+            <div className="mt-2 text-xs text-[var(--color-ink-muted)]">
+              {typeof stats.urgent_tickets === 'number'
+                ? `${stats.urgent_tickets} urgent not yet resolved`
+                : 'urgent count not returned'}
+            </div>
           </div>
 
           <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-4 shadow-sm">
@@ -371,16 +551,16 @@ export function Tickets() {
               <div className="text-xs font-medium text-rose-700 uppercase tracking-wider">
                 Tracker Incidents
               </div>
-              <Radio className="h-4 w-4 text-rose-600 animate-pulse" />
+              <Radio className="h-4 w-4 text-rose-600" />
             </div>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-2xl font-bold text-rose-900">{stats.tracker_tickets}</span>
               <span className="rounded-full bg-rose-200 px-2 py-0.5 text-xs font-semibold text-rose-800">
-                Widespread
+                {loading || error ? 'open count unavailable' : `${openTrackerCount} open now`}
               </span>
             </div>
             <div className="mt-2 text-xs text-rose-600">
-              {stats.impacted_customers_count} customers linked
+              {stats.impacted_customers_count} distinct contacts stored on tickets
             </div>
           </div>
 
@@ -393,10 +573,10 @@ export function Tickets() {
             </div>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-2xl font-bold text-violet-900">{stats.back_office_tickets}</span>
-              <span className="text-xs text-violet-600">tasks active</span>
+              <span className="text-xs text-violet-600">tasks, all statuses</span>
             </div>
             <div className="mt-2 text-xs text-violet-600">
-              Finance, Logistics, Engineering, Legal
+              {departmentBreakdown.length > 0 ? departmentBreakdown.join(', ') : 'no departments returned by stats'}
             </div>
           </div>
 
@@ -412,8 +592,135 @@ export function Tickets() {
               <span className="text-xs text-emerald-600">reported</span>
             </div>
             <div className="mt-2 text-xs text-emerald-600">
-              {stats.resolved_tickets} resolved to date
+              {stats.resolved_tickets} resolved across all ticket types
             </div>
+            <div className="mt-1 text-xs text-emerald-700">
+              {typeof stats.avg_resolution_time_hours === 'number'
+                ? `${stats.avg_resolution_time_hours}h average time to resolve`
+                : 'no ticket with a resolution timestamp yet — no average available'}
+            </div>
+          </div>
+        </div>
+      ) : (
+        !loading && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+            Ticket totals are not shown because the stats read did not return
+            {error ? ` (${error})` : ' — they are not reported as zero.'}
+          </div>
+        )
+      )}
+
+      {/* Broadcast outcome: what the provider actually accepted, refused, or never sent */}
+      {broadcastOutcome && (
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm space-y-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="flex items-center gap-2 text-sm font-bold text-[var(--color-ink)]">
+                <Radio className="h-4 w-4 text-rose-600" />
+                Broadcast outcome for{' '}
+                <span className="font-mono">
+                  {textOrMissing(broadcastOutcome.tracker_number, 'tracker with no ticket number stored')}
+                </span>
+              </h2>
+              <p className="mt-1 text-xs text-[var(--color-ink-muted)]">{broadcastOutcome.note}</p>
+            </div>
+            <button
+              onClick={() => setBroadcastOutcome(null)}
+              aria-label="Dismiss broadcast outcome"
+              className="rounded-lg p-1 text-[var(--color-ink-faint)] hover:bg-slate-100 hover:text-[var(--color-ink-muted)]"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-4">
+            <div>
+              <dt className="text-[var(--color-ink-faint)] uppercase tracking-wide">Linked tickets run over</dt>
+              <dd className="font-semibold text-[var(--color-ink)]">{broadcastOutcome.impacted_tickets}</dd>
+            </div>
+            <div>
+              <dt className="text-[var(--color-ink-faint)] uppercase tracking-wide">Accepted by provider</dt>
+              <dd className="font-semibold text-emerald-800">{broadcastOutcome.messages_sent}</dd>
+            </div>
+            <div>
+              <dt className="text-[var(--color-ink-faint)] uppercase tracking-wide">Refused by provider</dt>
+              <dd className="font-semibold text-rose-800">{broadcastOutcome.messages_failed}</dd>
+            </div>
+            <div>
+              <dt className="text-[var(--color-ink-faint)] uppercase tracking-wide">Never left the server</dt>
+              <dd className="font-semibold text-amber-800">{broadcastOutcome.messages_not_sent}</dd>
+            </div>
+          </dl>
+
+          <div className="space-y-1 text-xs text-[var(--color-ink)]">
+            <p>
+              {!broadcastOutcome.customer_message_requested ? (
+                <>No customer message was requested, so no customer was contacted.</>
+              ) : broadcastOutcome.messages_sent === 0 ? (
+                <>
+                  No customer message was accepted by a provider.{' '}
+                  {broadcastOutcome.deliveries.length > 0
+                    ? 'Each recipient has a reason listed below.'
+                    : 'No per-recipient delivery row came back.'}
+                </>
+              ) : (
+                <>
+                  {broadcastOutcome.messages_sent} customer message(s) accepted by a provider,{' '}
+                  {broadcastOutcome.messages_failed} refused, {broadcastOutcome.messages_not_sent} not sent. Only
+                  accepted sends reached a customer.
+                </>
+              )}
+            </p>
+            <p>
+              {broadcastOutcome.resolve_all_requested ? (
+                <>
+                  {broadcastOutcome.resolved_tickets} linked ticket(s) resolved by this request,{' '}
+                  {broadcastOutcome.already_resolved} already resolved, {broadcastOutcome.resolve_failed} not
+                  resolved.
+                </>
+              ) : (
+                <>Auto-resolve was not requested, so no linked ticket was closed.</>
+              )}
+            </p>
+            <p>
+              {broadcastOutcome.tracker_resolved
+                ? `Tracker marked resolved; customer-notified flag ${
+                    broadcastOutcome.customers_notified ? 'recorded as sent' : 'recorded as not sent'
+                  }.`
+                : `Tracker was NOT marked resolved${
+                    broadcastOutcome.tracker_resolve_error ? `: ${broadcastOutcome.tracker_resolve_error}` : '.'
+                  }`}
+            </p>
+          </div>
+
+          {broadcastOutcome.activity_errors.length > 0 && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900">
+              <span className="font-semibold">Audit rows that were not written:</span>
+              <ul className="mt-1 list-disc space-y-0.5 pl-4">
+                {broadcastOutcome.activity_errors.map((err, i) => (
+                  <li key={`activity-error-${i}`}>{err}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div>
+            <h3 className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">
+              Per-recipient deliveries ({broadcastOutcome.deliveries.length})
+            </h3>
+            {broadcastOutcome.deliveries.length === 0 ? (
+              <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
+                {broadcastOutcome.customer_message_requested
+                  ? 'The request reported no delivery rows, so no send can be confirmed for any linked ticket.'
+                  : 'No send was attempted because customer messaging was not requested.'}
+              </p>
+            ) : (
+              <ul className="mt-1.5 max-h-48 space-y-1 overflow-y-auto">
+                {broadcastOutcome.deliveries.map((delivery, i) => (
+                  <DeliveryRow key={`${delivery.ticketId ?? delivery.ticket_id ?? 'delivery'}-${i}`} delivery={delivery} />
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       )}
@@ -432,7 +739,7 @@ export function Tickets() {
                 : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
             }`}
           >
-            All Tickets ({tickets.length})
+            All Tickets ({tabCount(tickets.length)})
           </button>
           <button
             onClick={() => {
@@ -445,8 +752,8 @@ export function Tickets() {
                 : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
             }`}
           >
-            <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse"></span>
-            Tracker Tickets ({stats?.tracker_tickets ?? 0})
+            <span className={`h-2 w-2 rounded-full bg-rose-500 ${!loading && !error && openTrackerCount > 0 ? 'animate-pulse' : ''}`}></span>
+            Tracker Tickets ({tabCount(trackerCount)})
           </button>
           <button
             onClick={() => {
@@ -459,7 +766,7 @@ export function Tickets() {
                 : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
             }`}
           >
-            Customer Issues ({stats?.customer_issues ?? 0})
+            Customer Issues ({tabCount(customerIssueCount)})
           </button>
           <button
             onClick={() => {
@@ -472,7 +779,7 @@ export function Tickets() {
                 : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
             }`}
           >
-            Back-Office Collaboration ({stats?.back_office_tickets ?? 0})
+            Back-Office Collaboration ({tabCount(backOfficeCount)})
           </button>
           <button
             onClick={() => {
@@ -485,24 +792,23 @@ export function Tickets() {
                 : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
             }`}
           >
-            Resolved ({stats?.resolved_tickets ?? 0})
+            Resolved ({tabCount(resolvedCount)})
           </button>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Department Dropdown */}
+          {/* Department Dropdown -- only the departments present in the loaded data */}
           <select
             value={selectedDept}
             onChange={(e) => setSelectedDept(e.target.value)}
             className="rounded-lg border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-ink)] shadow-sm focus:border-indigo-500 focus:outline-none"
           >
-            <option value="all">All Departments</option>
-            <option value="support">Support</option>
-            <option value="finance">Finance</option>
-            <option value="logistics">Logistics</option>
-            <option value="engineering">Engineering</option>
-            <option value="warehouse">Warehouse</option>
-            <option value="legal">Legal</option>
+            <option value="all">All Departments ({tabCount(tickets.length)})</option>
+            {departmentsInData.map((dept) => (
+              <option key={dept} value={dept}>
+                {dept}
+              </option>
+            ))}
           </select>
 
           {/* Priority Dropdown */}
@@ -539,7 +845,11 @@ export function Tickets() {
         <div className="rounded-lg bg-rose-50 p-4 text-sm text-rose-700">{error}</div>
       ) : filteredTickets.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-300 p-12 text-center">
-          <p className="text-sm text-[var(--color-ink-muted)]">No tickets found matching current filters.</p>
+          <p className="text-sm text-[var(--color-ink-muted)]">
+            {tickets.length === 0
+              ? 'The ticket list came back with no rows -- there are no tickets stored yet.'
+              : `No ticket matches the current filters (${filteredTickets.length} of ${tickets.length} loaded tickets shown).`}
+          </p>
           <button
             onClick={() => setShowCreateModal(true)}
             className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-accent)] hover:text-indigo-800"
@@ -565,7 +875,7 @@ export function Tickets() {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-xs font-bold text-[var(--color-ink)]">
-                    {t.ticket_number}
+                    {textOrMissing(t.ticket_number, 'no ticket number stored')}
                   </span>
 
                   {/* Type Badge */}
@@ -577,15 +887,19 @@ export function Tickets() {
                     <span className="rounded-md bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-800">
                       Back-Office
                     </span>
-                  ) : (
+                  ) : t.ticket_type === 'customer_issue' ? (
                     <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
                       Customer Issue
+                    </span>
+                  ) : (
+                    <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-[var(--color-ink-muted)]">
+                      type not stored
                     </span>
                   )}
 
                   {/* Department Badge */}
                   <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-[var(--color-ink-muted)] uppercase">
-                    {t.department}
+                    {textOrMissing(t.department, 'no department')}
                   </span>
 
                   {/* Priority Badge */}
@@ -595,10 +909,12 @@ export function Tickets() {
                         ? 'bg-red-100 text-red-800 font-bold'
                         : t.priority === 'high'
                         ? 'bg-amber-100 text-amber-800'
-                        : 'bg-slate-100 text-[var(--color-ink)]'
+                        : t.priority
+                        ? 'bg-slate-100 text-[var(--color-ink)]'
+                        : 'bg-slate-100 text-[var(--color-ink-faint)] italic'
                     }`}
                   >
-                    {t.priority?.toUpperCase()}
+                    {t.priority ? t.priority.toUpperCase() : 'priority not stored'}
                   </span>
                 </div>
 
@@ -612,26 +928,27 @@ export function Tickets() {
                         ? 'bg-blue-100 text-blue-800'
                         : t.status === 'waiting_on_back_office'
                         ? 'bg-purple-100 text-purple-800'
-                        : 'bg-amber-100 text-amber-800'
+                        : t.status
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-slate-100 text-[var(--color-ink-faint)]'
                     }`}
                   >
-                    {t.status?.replace(/_/g, ' ')}
+                    {t.status ? t.status.replace(/_/g, ' ') : 'status not stored'}
                   </span>
                   <span className="text-xs text-[var(--color-ink-faint)]">
-                    {t.created_at ? new Date(t.created_at).toLocaleDateString([], {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    }) : ''}
+                    {dateOrMissing(t.created_at, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
               </div>
 
               {/* Title & Description */}
               <div className="mt-2">
-                <h3 className="text-base font-semibold text-[var(--color-ink)]">{t.title}</h3>
-                <p className="mt-1 line-clamp-2 text-xs text-[var(--color-ink-muted)]">{t.description}</p>
+                <h3 className="text-base font-semibold text-[var(--color-ink)]">
+                  {textOrMissing(t.title, 'No title stored')}
+                </h3>
+                <p className="mt-1 line-clamp-2 text-xs text-[var(--color-ink-muted)]">
+                  {textOrMissing(t.description, 'No description stored')}
+                </p>
               </div>
 
               {/* Tracker / Linked Metadata Footer */}
@@ -639,14 +956,15 @@ export function Tickets() {
                 {t.ticket_type === 'tracker' && (
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-rose-700">
-                      {t.child_count ?? 0} linked issues
+                      {typeof t.child_count === 'number'
+                        ? `${t.child_count} linked issues`
+                        : 'linked-issue count not returned'}
                     </span>
                     <span className="text-slate-300">•</span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
-                        setBroadcastTargetTracker(t)
-                        setShowBroadcastModal(true)
+                        openBroadcastModal(t)
                       }}
                       className="inline-flex items-center gap-1 rounded bg-rose-600 px-2 py-0.5 text-xs font-semibold text-white hover:bg-rose-700 transition-colors"
                     >
@@ -659,7 +977,9 @@ export function Tickets() {
                 {t.tracker_id && (
                   <div className="flex items-center gap-1 text-rose-700">
                     <span className="font-medium">Linked to Tracker:</span>
-                    <span className="font-mono font-semibold">{t.tracker_number}</span>
+                    <span className="font-mono font-semibold">
+                      {textOrMissing(t.tracker_number, 'no tracker number stored')}
+                    </span>
                     {t.tracker_title && <span className="truncate max-w-[200px]">({t.tracker_title})</span>}
                   </div>
                 )}
@@ -704,7 +1024,7 @@ export function Tickets() {
             <div className="flex items-center justify-between border-b border-[var(--color-border)] px-6 py-4 bg-[var(--color-page)]">
               <div className="flex items-center gap-2">
                 <span className="font-mono text-sm font-bold text-[var(--color-ink)]">
-                  {selectedTicket.ticket_number}
+                  {textOrMissing(selectedTicket.ticket_number, 'no ticket number stored')}
                 </span>
                 <span
                   className={`rounded px-2 py-0.5 text-xs font-semibold ${
@@ -712,13 +1032,17 @@ export function Tickets() {
                       ? 'bg-rose-100 text-rose-800'
                       : selectedTicket.ticket_type === 'back_office'
                       ? 'bg-indigo-100 text-indigo-800'
-                      : 'bg-emerald-100 text-emerald-800'
+                      : selectedTicket.ticket_type === 'customer_issue'
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-slate-100 text-[var(--color-ink-muted)]'
                   }`}
                 >
-                  {selectedTicket.ticket_type?.replace(/_/g, ' ').toUpperCase()}
+                  {selectedTicket.ticket_type
+                    ? selectedTicket.ticket_type.replace(/_/g, ' ').toUpperCase()
+                    : 'TYPE NOT STORED'}
                 </span>
                 <span className="rounded bg-slate-200 px-2 py-0.5 text-xs font-semibold text-[var(--color-ink)] uppercase">
-                  {selectedTicket.department}
+                  {textOrMissing(selectedTicket.department, 'no department stored')}
                 </span>
               </div>
               <button
@@ -734,19 +1058,26 @@ export function Tickets() {
               {/* Title & Status/Priority Controls */}
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-[var(--color-ink)]">{selectedTicket.title}</h2>
+                  <h2 className="text-xl font-bold text-[var(--color-ink)]">
+                    {textOrMissing(selectedTicket.title, 'No title stored')}
+                  </h2>
                   <p className="mt-1 text-xs text-[var(--color-ink-faint)]">
-                    Created on {selectedTicket.created_at ? new Date(selectedTicket.created_at).toLocaleString() : ''}
+                    Created on {dateTimeOrMissing(selectedTicket.created_at)}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="flex items-center gap-1.5">
                     <label className="text-xs font-semibold text-[var(--color-ink-muted)]">Status:</label>
                     <select
-                      value={selectedTicket.status}
+                      value={selectedTicket.status ?? ''}
                       onChange={(e) => handleUpdateStatus(selectedTicket.id, e.target.value)}
                       className="rounded-lg border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1 text-xs font-medium text-slate-800 shadow-sm focus:border-indigo-500 focus:outline-none"
                     >
+                      {!STATUS_CHOICES.includes(selectedTicket.status) && (
+                        <option value={selectedTicket.status}>
+                          {selectedTicket.status ? `${selectedTicket.status} (as stored)` : 'no status stored'}
+                        </option>
+                      )}
                       <option value="open">Open</option>
                       <option value="in_progress">In Progress</option>
                       <option value="waiting_on_back_office">Waiting on Back-Office</option>
@@ -759,10 +1090,15 @@ export function Tickets() {
                   <div className="flex items-center gap-1.5">
                     <label className="text-xs font-semibold text-[var(--color-ink-muted)]">Priority:</label>
                     <select
-                      value={selectedTicket.priority}
+                      value={selectedTicket.priority ?? ''}
                       onChange={(e) => handleUpdatePriority(selectedTicket.id, e.target.value)}
                       className="rounded-lg border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1 text-xs font-medium text-slate-800 shadow-sm focus:border-indigo-500 focus:outline-none"
                     >
+                      {!PRIORITY_CHOICES.includes(selectedTicket.priority) && (
+                        <option value={selectedTicket.priority}>
+                          {selectedTicket.priority ? `${selectedTicket.priority} (as stored)` : 'no priority stored'}
+                        </option>
+                      )}
                       <option value="low">Low</option>
                       <option value="medium">Medium</option>
                       <option value="high">High</option>
@@ -775,16 +1111,21 @@ export function Tickets() {
               {/* Description */}
               <div className="rounded-xl bg-[var(--color-page)] p-4 text-xs text-[var(--color-ink)] leading-relaxed border border-[var(--color-border)]">
                 <span className="font-semibold block mb-1 text-[var(--color-ink)]">Description:</span>
-                {selectedTicket.description}
+                {textOrMissing(selectedTicket.description, 'No description stored on this ticket.')}
               </div>
 
               {/* Resolution Summary Banner if Resolved */}
-              {selectedTicket.resolution_summary && (
+              {selectedTicket.resolution_summary ? (
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-800">
                   <span className="font-semibold block mb-1">Resolution Summary:</span>
                   {selectedTicket.resolution_summary}
+                  {selectedTicket.resolved_at ? ` — resolved ${dateTimeOrMissing(selectedTicket.resolved_at)}` : ' — no resolution timestamp stored'}
                 </div>
-              )}
+              ) : selectedTicket.status === 'resolved' || selectedTicket.status === 'closed' ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">
+                  This ticket is marked {selectedTicket.status} but no resolution summary is stored.
+                </div>
+              ) : null}
 
               {/* Tracker Widespread Management Banner */}
               {selectedTicket.ticket_type === 'tracker' && (
@@ -794,18 +1135,19 @@ export function Tickets() {
                       <h4 className="text-sm font-bold text-rose-900 flex items-center gap-2">
                         <span>Widespread Incident Tracker</span>
                         <span className="rounded-full bg-rose-200 px-2 py-0.5 text-xs font-semibold text-rose-800">
-                          {selectedTicket.child_tickets?.length ?? 0} Linked Issues
+                          {selectedTicket.child_tickets
+                            ? `${selectedTicket.child_tickets.length} Linked Issues`
+                            : `${countLabel(selectedTicket.child_count)} linked issues from the list count`}
                         </span>
                       </h4>
                       <p className="text-xs text-rose-700 mt-0.5">
-                        Broadcast real-time updates and resolutions to all linked customer conversations in one click.
+                        A broadcast asks each linked conversation's provider to deliver the message and can close the
+                        linked tickets. Provider refusals and tickets with no conversation or no address are reported
+                        per recipient instead of counted as sent.
                       </p>
                     </div>
                     <button
-                      onClick={() => {
-                        setBroadcastTargetTracker(selectedTicket)
-                        setShowBroadcastModal(true)
-                      }}
+                      onClick={() => openBroadcastModal(selectedTicket)}
                       className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-rose-700 transition-colors"
                     >
                       <Radio className="h-3.5 w-3.5" />
@@ -814,7 +1156,7 @@ export function Tickets() {
                   </div>
 
                   {/* List of child tickets */}
-                  {selectedTicket.child_tickets && selectedTicket.child_tickets.length > 0 && (
+                  {selectedTicket.child_tickets && selectedTicket.child_tickets.length > 0 ? (
                     <div className="space-y-1.5 mt-2">
                       <span className="text-xs font-semibold text-rose-900">Linked Customer Issues:</span>
                       <div className="max-h-40 overflow-y-auto space-y-1">
@@ -825,18 +1167,20 @@ export function Tickets() {
                           >
                             <div className="flex items-center gap-2">
                               <span className="font-mono font-bold text-[var(--color-ink)]">
-                                {child.ticket_number}
+                                {textOrMissing(child.ticket_number, 'no number stored')}
                               </span>
-                              <span className="text-slate-800">{child.title}</span>
+                              <span className="text-slate-800">
+                                {textOrMissing(child.title, 'no title stored')}
+                              </span>
                               {child.contact_name && (
                                 <span className="text-[var(--color-ink-muted)]">({child.contact_name})</span>
                               )}
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-[var(--color-ink-muted)]">
-                                {child.status}
+                                {textOrMissing(child.status, 'status not stored')}
                               </span>
-                              {child.conversation_id && (
+                              {child.conversation_id ? (
                                 <Link
                                   to={`/conversations/${child.conversation_id}`}
                                   className="inline-flex items-center gap-0.5 text-[var(--color-accent)] hover:underline text-[11px]"
@@ -844,12 +1188,20 @@ export function Tickets() {
                                   <span>Chat</span>
                                   <ArrowRight className="h-2.5 w-2.5" />
                                 </Link>
+                              ) : (
+                                <span className="text-[11px] text-amber-700">no conversation — cannot be messaged</span>
                               )}
                             </div>
                           </div>
                         ))}
                       </div>
                     </div>
+                  ) : (
+                    <p className="mt-2 rounded-lg border border-dashed border-rose-300 bg-[var(--color-surface)] p-2 text-xs text-rose-800">
+                      {selectedTicket.child_tickets
+                        ? 'No customer ticket is linked to this tracker, so a broadcast has no recipient to message and no ticket to resolve.'
+                        : 'The linked tickets were not returned by the detail read, so this broadcast may reach fewer tickets than the tracker reports.'}
+                    </p>
                   )}
                 </div>
               )}
@@ -864,7 +1216,10 @@ export function Tickets() {
                     <div className="flex items-center justify-between text-xs bg-rose-50 p-2.5 rounded-lg border border-rose-200 text-rose-800">
                       <div>
                         <span className="font-semibold">Linked to: </span>
-                        <span className="font-mono">{selectedTicket.tracker_number}</span> - {selectedTicket.tracker_title}
+                        <span className="font-mono">
+                          {textOrMissing(selectedTicket.tracker_number, 'no tracker number stored')}
+                        </span>{' '}
+                        - {textOrMissing(selectedTicket.tracker_title, 'no tracker title stored')}
                       </div>
                       <button
                         onClick={() => openTicketDetail(selectedTicket.tracker_id!)}
@@ -874,27 +1229,38 @@ export function Tickets() {
                       </button>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2">
-                      <select
-                        value={linkTrackerId}
-                        onChange={(e) => setLinkTrackerId(e.target.value)}
-                        className="flex-1 rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
-                      >
-                        <option value="">Select an active tracker incident to link...</option>
-                        {trackers.map((tr) => (
-                          <option key={tr.id} value={tr.id}>
-                            {tr.ticket_number}: {tr.title} ({tr.department})
+                    <>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={linkTrackerId}
+                          onChange={(e) => setLinkTrackerId(e.target.value)}
+                          className="flex-1 rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
+                        >
+                          <option value="">
+                            {trackers.length > 0
+                              ? 'Select an active tracker incident to link...'
+                              : 'No tracker ticket is available to link'}
                           </option>
-                        ))}
-                      </select>
-                      <button
-                        onClick={handleLinkTracker}
-                        disabled={!linkTrackerId || linkingTracker}
-                        className="rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50 transition-colors"
-                      >
-                        {linkingTracker ? 'Linking...' : 'Link to Tracker'}
-                      </button>
-                    </div>
+                          {trackers.map((tr) => (
+                            <option key={tr.id} value={tr.id}>
+                              {tr.ticket_number}: {tr.title} ({tr.department})
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={handleLinkTracker}
+                          disabled={!linkTrackerId || linkingTracker}
+                          className="rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50 transition-colors"
+                        >
+                          {linkingTracker ? 'Linking...' : 'Link to Tracker'}
+                        </button>
+                      </div>
+                      {trackers.length === 0 && (
+                        <p className="mt-1.5 text-[11px] text-[var(--color-ink-faint)]">
+                          The tracker read returned no tracker tickets, so there is nothing to link this ticket to yet.
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -908,15 +1274,15 @@ export function Tickets() {
                       External Issue Trackers (Linear / GitHub / Jira)
                     </h4>
                     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-[var(--color-ink-muted)]">
-                      {linkedIssues.length} linked
+                      {linkedIssuesError ? 'read failed' : `${linkedIssues.length} linked`}
                     </span>
                   </div>
                   <button
                     type="button"
                     onClick={() => {
-                      setNewLinkedTitle(selectedTicket.title)
-                      setNewLinkedDescription(selectedTicket.description)
-                      setNewLinkedPriority(selectedTicket.priority)
+                      setNewLinkedTitle(selectedTicket.title || '')
+                      setNewLinkedDescription(selectedTicket.description || '')
+                      setNewLinkedPriority(selectedTicket.priority || '')
                       setShowCreateLinkedIssue(!showCreateLinkedIssue)
                     }}
                     className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-xs font-medium text-[var(--color-ink)] hover:bg-slate-50 transition-colors"
@@ -932,6 +1298,12 @@ export function Tickets() {
                     <div className="text-xs font-semibold text-indigo-950">
                       Create & Link Issue to External Tracker
                     </div>
+                    <p className="text-[11px] text-[var(--color-ink-muted)]">
+                      Recorded as created by:{' '}
+                      <span className="font-medium text-[var(--color-ink)]">
+                        {actorName || 'no signed-in email in this session — the issue row will store no creator'}
+                      </span>
+                    </p>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="text-[11px] font-medium text-[var(--color-ink-muted)] block mb-1">
@@ -956,6 +1328,7 @@ export function Tickets() {
                           onChange={(e) => setNewLinkedPriority(e.target.value)}
                           className="w-full rounded-md border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
                         >
+                          <option value="">Not specified on the ticket</option>
                           <option value="low">Low</option>
                           <option value="medium">Medium</option>
                           <option value="high">High</option>
@@ -1012,7 +1385,9 @@ export function Tickets() {
                   <div className="py-2 text-center text-xs text-[var(--color-ink-muted)]">Loading linked issues...</div>
                 ) : linkedIssues.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-slate-200 py-3 text-center text-xs text-[var(--color-ink-faint)]">
-                    No external issues linked yet. Link to Linear, GitHub, or Jira to coordinate with engineering.
+                    {linkedIssuesError
+                      ? 'The linked-issue read failed, so this list is unknown rather than empty.'
+                      : 'No external issues are linked to this ticket.'}
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -1028,28 +1403,57 @@ export function Tickets() {
                                 ? 'bg-purple-100 text-purple-800'
                                 : issue.provider === 'github'
                                 ? 'bg-slate-200 text-slate-800'
-                                : 'bg-blue-100 text-blue-800'
+                                : issue.provider === 'jira'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-slate-100 text-[var(--color-ink-faint)]'
                             }`}
                           >
-                            {issue.provider}
+                            {textOrMissing(issue.provider, 'provider not stored')}
                           </span>
-                          <a
-                            href={issue.issue_url || '#'}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="font-mono font-semibold text-[var(--color-accent)] hover:underline inline-flex items-center gap-1"
-                          >
-                            {issue.issue_key}
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
+                          {issue.issue_url ? (
+                            <a
+                              href={issue.issue_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-mono font-semibold text-[var(--color-accent)] hover:underline inline-flex items-center gap-1"
+                            >
+                              {textOrMissing(issue.issue_key, 'no issue key')}
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          ) : (
+                            <span
+                              className="font-mono font-semibold text-[var(--color-ink-muted)] inline-flex items-center gap-1"
+                              title="The linked row stores no URL, so there is nothing to open"
+                            >
+                              {textOrMissing(issue.issue_key, 'no issue key')} (no url stored)
+                            </span>
+                          )}
                           <span className="font-medium text-[var(--color-ink)] truncate max-w-[240px]">
-                            {issue.title}
+                            {textOrMissing(issue.title, 'no title stored')}
                           </span>
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-medium text-emerald-800">
-                            {issue.status}
+                          <span
+                            className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                              issue.status
+                                ? /open|new|todo|in_progress|progress|in progress/i.test(issue.status)
+                                  ? 'bg-amber-50 border-amber-200 text-amber-800'
+                                  : /closed|done|complete|resolved|merged/i.test(issue.status)
+                                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                                  : 'bg-slate-50 border-slate-200 text-slate-700'
+                                : 'bg-slate-50 border-dashed border-slate-300 text-[var(--color-ink-faint)]'
+                            }`}
+                          >
+                            {textOrMissing(issue.status, 'status not returned')}
+                          </span>
+                          <span
+                            className="text-[10px] text-[var(--color-ink-faint)]"
+                            title="Creator is the signed-in email the create request carried; NULL when it carried none"
+                          >
+                            {textOrMissing(issue.created_by_email, 'no creator recorded')}
+                            {' · '}
+                            {issue.sync_status ? `sync: ${issue.sync_status}` : 'sync status not reported'}
                           </span>
                           <button
                             type="button"
@@ -1074,13 +1478,23 @@ export function Tickets() {
                     ))}
                   </div>
                 )}
+
+                {linkedIssuesError && (
+                  <div role="alert" className="rounded-lg bg-rose-50 p-3 text-xs text-rose-700">
+                    External issues could not be read: {linkedIssuesError}
+                  </div>
+                )}
               </div>
 
               {/* Back-Office Collaboration Feed */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">
-                    Collaboration & Internal Audit Trail ({selectedTicket.activities?.length ?? 0})
+                    Collaboration & Internal Audit Trail (
+                    {selectedTicket.activities
+                      ? selectedTicket.activities.length
+                      : 'not returned by the detail read'}
+                    )
                   </h4>
                   <span className="text-xs text-[var(--color-ink-faint)]">Teammate & Back-Office Notes</span>
                 </div>
@@ -1119,37 +1533,50 @@ export function Tickets() {
                             ) : (
                               <MessageSquare className="h-3 w-3 text-slate-500" />
                             )}
-                            <span className="font-semibold text-slate-800">{act.author_name}</span>
+                            <span
+                              className={`font-semibold ${
+                                act.author_name ? 'text-slate-800' : 'text-[var(--color-ink-faint)] italic'
+                              }`}
+                            >
+                              {textOrMissing(act.author_name, 'no stored author')}
+                            </span>
+                            <span className="text-[var(--color-ink-faint)]">
+                              {textOrMissing(act.activity_type, 'type not stored')}
+                            </span>
                           </div>
-                          <span>
-                            {act.created_at ? new Date(act.created_at).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            }) : ''}
-                          </span>
+                          <span>{timeOrMissing(act.created_at)}</span>
                         </div>
-                        <p className="whitespace-pre-wrap">{act.message}</p>
+                        <p className="whitespace-pre-wrap">
+                          {textOrMissing(act.message, 'No message stored on this activity row.')}
+                        </p>
                       </div>
                     ))
                   ) : (
                     <div className="py-4 text-center text-xs text-[var(--color-ink-faint)]">
-                      No internal collaboration notes yet.
+                      {selectedTicket.activities
+                        ? 'This ticket has no activity rows yet -- nothing has been recorded against it.'
+                        : 'The detail read returned no activity list, so the audit trail is unknown rather than empty.'}
                     </div>
                   )}
                 </div>
 
                 {/* Post New Note Composer */}
                 <form onSubmit={handleAddNote} className="space-y-2 pt-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <input
                       type="text"
                       value={newNoteAuthor}
                       onChange={(e) => setNewNoteAuthor(e.target.value)}
-                      placeholder="Your name or role (e.g. Finance Lead)"
-                      className="w-48 rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
+                      placeholder="Optional override; blank records the signed-in email"
+                      className="w-64 rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
                     />
                     <span className="text-xs text-[var(--color-ink-faint)]">
-                      Adding to {selectedTicket.department?.toUpperCase()} collaboration thread
+                      Adding to{' '}
+                      {selectedTicket.department ? selectedTicket.department.toUpperCase() : 'the unassigned'}
+                      {' '}collaboration thread as:{' '}
+                      <span className="font-medium text-[var(--color-ink)]">
+                        {newNoteAuthor.trim() || actorName || 'no author (stored as none)'}
+                      </span>
                     </span>
                   </div>
                   <div className="flex gap-2">
@@ -1185,13 +1612,28 @@ export function Tickets() {
                 Widespread Broadcast & Resolution
               </h3>
               <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
-                Dispatches an incident update to all customer conversations linked to{' '}
+                Runs over every ticket linked to{' '}
                 <span className="font-mono font-semibold text-[var(--color-ink)]">
-                  {broadcastTargetTracker.ticket_number}
+                  {textOrMissing(broadcastTargetTracker.ticket_number, 'this tracker (no number stored)')}
                 </span>{' '}
-                ({broadcastTargetTracker.title}).
+                ({textOrMissing(broadcastTargetTracker.title, 'no title stored')}). Each customer message is handed to
+                that conversation's provider: only a provider 2xx counts as sent, refusals and recipients with no
+                conversation or no addressable contact are reported after dispatch, per recipient.
+              </p>
+              <p className="mt-1 text-xs text-[var(--color-ink-faint)]">
+                Recorded as authored by:{' '}
+                <span className="font-medium text-[var(--color-ink)]">
+                  {actorName || 'no signed-in email in this session — the activity rows will store no author'}
+                </span>
               </p>
             </div>
+
+            {typeof broadcastTargetTracker.child_count === 'number' && broadcastTargetTracker.child_count === 0 && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900">
+                This tracker reports 0 linked tickets right now, so a broadcast would message nobody and resolve
+                nothing. Link the impacted customer tickets first.
+              </div>
+            )}
 
             <div className="space-y-2">
               <label className="text-xs font-semibold text-[var(--color-ink)]">
@@ -1215,7 +1657,9 @@ export function Tickets() {
                   className="rounded text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
                 />
                 <span className="font-medium">
-                  Auto-resolve all {broadcastTargetTracker.child_count ?? 0} linked customer tickets
+                  {typeof broadcastTargetTracker.child_count === 'number'
+                    ? `Auto-resolve all ${broadcastTargetTracker.child_count} linked customer tickets`
+                    : 'Auto-resolve every linked customer ticket (this tracker returned no linked count)'}
                 </span>
               </label>
               <label className="flex items-center gap-2 text-xs text-[var(--color-ink)] cursor-pointer">
@@ -1226,14 +1670,21 @@ export function Tickets() {
                   className="rounded text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
                 />
                 <span className="font-medium">
-                  Send message directly to impacted customers in their conversation thread
+                  Ask each linked conversation's provider to deliver this message to the customer
                 </span>
               </label>
             </div>
 
+            {broadcastFailure && (
+              <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
+                <span className="font-semibold block">The broadcast did not complete:</span>
+                {broadcastFailure}
+              </div>
+            )}
+
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
-                onClick={() => setShowBroadcastModal(false)}
+                onClick={closeBroadcastModal}
                 className="rounded-lg px-3 py-1.5 text-xs font-semibold text-[var(--color-ink-muted)] hover:bg-slate-100 transition-colors"
               >
                 Cancel
@@ -1266,6 +1717,12 @@ export function Tickets() {
             </div>
 
             <form onSubmit={handleCreateTicket} className="space-y-4">
+              <p className="text-xs text-[var(--color-ink-faint)]">
+                The creation activity row will be authored by:{' '}
+                <span className="font-medium text-[var(--color-ink)]">
+                  {actorName || 'no signed-in email in this session — stored with no author'}
+                </span>
+              </p>
               {/* Type Selection */}
               <div>
                 <label className="text-xs font-semibold text-[var(--color-ink)] block mb-1">
@@ -1346,12 +1803,11 @@ export function Tickets() {
                     onChange={(e) => setNewDept(e.target.value)}
                     className="w-full rounded-lg border border-slate-300 bg-[var(--color-surface)] p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
                   >
-                    <option value="support">Support</option>
-                    <option value="finance">Finance</option>
-                    <option value="logistics">Logistics</option>
-                    <option value="engineering">Engineering</option>
-                    <option value="warehouse">Warehouse</option>
-                    <option value="legal">Legal</option>
+                    {departmentOptions.map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept.charAt(0).toUpperCase() + dept.slice(1)}
+                      </option>
+                    ))}
                   </select>
                 </div>
 

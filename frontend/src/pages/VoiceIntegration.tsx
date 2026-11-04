@@ -1,8 +1,8 @@
-import { AlertTriangle, PhoneCall, Zap, RefreshCw, Save, CheckCircle2, Mic, MicOff, Pause, PhoneOff, Lock, Sliders, Phone, Globe, Check, Lightbulb, Delete, FileText, X } from 'lucide-react'
+import { AlertTriangle, PhoneCall, Zap, RefreshCw, Save, CheckCircle2, Mic, MicOff, Pause, PhoneOff, Lock, Sliders, Phone, Globe, Check, Lightbulb, Delete, FileText, X } from '../components/icons'
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../lib/api'
-import { VoiceIcon } from '../components/icons/BrandIcons'
+import { VoiceIcon } from '../components/icons'
 import type {
   VoiceChannelData,
   VoiceUpdatePayload,

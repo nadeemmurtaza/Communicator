@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CheckCircle2, RefreshCw, Star } from 'lucide-react'
+import { CheckCircle2, RefreshCw, Star } from '../components/icons'
 import { api } from '../lib/api'
 import type {
   AgentReportItem,

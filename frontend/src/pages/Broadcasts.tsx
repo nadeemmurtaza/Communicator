@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, Check, CheckCheck, ChevronDown, DollarSign, History, Lightbulb, Megaphone, Plus, Tag, X } from 'lucide-react'
+import { AlertTriangle, Check, CheckCheck, ChevronDown, DollarSign, History, Lightbulb, Megaphone, Plus, Tag, X } from '../components/icons'
 import { Link } from 'react-router-dom'
 import {
   api,
@@ -7,7 +7,22 @@ import {
   type Broadcast,
   type CampaignAnalytics,
   type PricingEstimate,
+  type WhatsAppTemplate,
 } from '../lib/api'
+
+/** Formats with the currency the rate row actually stores — never a assumed "$". */
+function formatMoney(value: number, currency: string, digits: number): string {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    }).format(value)
+  } catch {
+    return `${value.toFixed(digits)} ${currency || 'unknown currency'}`
+  }
+}
 
 export function Broadcasts() {
   const [campaigns, setCampaigns] = useState<Broadcast[] | null>(null)
@@ -16,14 +31,21 @@ export function Broadcasts() {
 
   // Creation Wizard Modal
   const [showWizard, setShowWizard] = useState(false)
-  const [name, setName] = useState('Spring sale early access')
-  const [selectedTags, setSelectedTags] = useState<string[]>(['vip-customers'])
+  const [name, setName] = useState('')
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState('')
   const [audiencePreview, setAudiencePreview] = useState<AudiencePreview | null>(null)
-  const [templateName, setTemplateName] = useState('spring_sale_offer')
-  const [customerNameSample, setCustomerNameSample] = useState('Maya')
-  const [discountParam, setDiscountParam] = useState('20%')
-  const [scheduleTime, setScheduleTime] = useState('2026-03-12T10:00')
+  const [audienceError, setAudienceError] = useState<string | null>(null)
+  // Tags are read from the contact table — never suggested from a list baked into this page.
+  const [availableTags, setAvailableTags] = useState<string[]>([])
+  const [availableTagsError, setAvailableTagsError] = useState<string | null>(null)
+  // Templates come from Meta, never from a list written into this page.
+  const [templates, setTemplates] = useState<WhatsAppTemplate[]>([])
+  const [templatesError, setTemplatesError] = useState<string | null>(null)
+  const [templateKey, setTemplateKey] = useState('')
+  const [messageText, setMessageText] = useState('')
+  const [paramsText, setParamsText] = useState('')
+  const [scheduleTime, setScheduleTime] = useState('')
   const [sendImmediately, setSendImmediately] = useState(false)
   const [creating, setCreating] = useState(false)
 
@@ -34,10 +56,13 @@ export function Broadcasts() {
 
   // Pricing Calculator Modal
   const [showPricingCalculator, setShowPricingCalculator] = useState(false)
-  const [calcRegion, setCalcRegion] = useState('US')
+  const [calcRegion, setCalcRegion] = useState('')
   const [calcCategory, setCalcCategory] = useState('marketing')
   const [calcVolume, setCalcVolume] = useState(1000)
   const [pricingEstimate, setPricingEstimate] = useState<PricingEstimate | null>(null)
+  const [pricingError, setPricingError] = useState<string | null>(null)
+  // Markets that actually have a row in `whatsapp_pricing_rates`.
+  const [pricingRegions, setPricingRegions] = useState<Array<{ code: string; name: string }>>([])
 
   // Dispatching state
   const [dispatchingId, setDispatchingId] = useState<string | null>(null)
@@ -53,45 +78,122 @@ export function Broadcasts() {
 
   // Auto-fetch audience preview when tags change in wizard
   useEffect(() => {
-    if (!showWizard || selectedTags.length === 0) return
+    if (!showWizard) return
+    if (selectedTags.length === 0) {
+      setAudiencePreview(null)
+      return
+    }
     api
       .getAudiencePreview(selectedTags.join(','))
-      .then(setAudiencePreview)
-      .catch(() => {})
+      .then((preview) => {
+        setAudiencePreview(preview)
+        setAudienceError(null)
+      })
+      .catch((e) => {
+        setAudiencePreview(null)
+        setAudienceError((e as Error).message)
+      })
   }, [showWizard, selectedTags])
+
+  useEffect(() => {
+    if (!showWizard || templates.length > 0) return
+    api
+      .listWhatsAppTemplates()
+      .then((rows) => {
+        setTemplates(rows)
+        setTemplatesError(null)
+      })
+      .catch((e) => {
+        setTemplates([])
+        setTemplatesError((e as Error).message)
+      })
+  }, [showWizard, templates.length])
+
+  useEffect(() => {
+    if (!showWizard || availableTags.length > 0) return
+    api
+      .listContactTags()
+      .then((rows) => {
+        setAvailableTags(rows.map((r) => r.name).filter(Boolean).sort())
+        setAvailableTagsError(null)
+      })
+      .catch((e) => {
+        setAvailableTags([])
+        setAvailableTagsError((e as Error).message)
+      })
+  }, [showWizard, availableTags.length])
 
   // Recalculate WhatsApp pricing estimate
   useEffect(() => {
-    if (!showPricingCalculator) return
+    if (!showPricingCalculator || !calcRegion) return
     api
       .getWhatsAppPricing(calcRegion, calcCategory, calcVolume)
-      .then(setPricingEstimate)
-      .catch(() => {})
+      .then((estimate) => {
+        setPricingEstimate(estimate)
+        setPricingRegions(estimate.supportedRegions ?? [])
+        setPricingError(null)
+      })
+      .catch((e) => {
+        setPricingEstimate(null)
+        setPricingError((e as Error).message)
+      })
   }, [showPricingCalculator, calcRegion, calcCategory, calcVolume])
+
+  const selectedTemplate = templates.find((t) => `${t.name}:${t.language}` === templateKey) ?? null
+
+  function parseTemplateParams(): Record<string, string> | undefined {
+    const entries: Record<string, string> = {}
+    for (const line of paramsText.split(/\r?\n/)) {
+      const trimmed = line.trim()
+      if (!trimmed) continue
+      const split = trimmed.indexOf('=')
+      if (split < 1) continue
+      entries[trimmed.slice(0, split).trim()] = trimmed.slice(split + 1).trim()
+    }
+    return Object.keys(entries).length > 0 ? entries : undefined
+  }
 
   async function handleCreateCampaign(e: React.FormEvent) {
     e.preventDefault()
     setCreating(true)
     setError(null)
 
-    const previewText = `Hi ${customerNameSample}, our spring sale starts Friday. As a VIP customer you get early access and ${discountParam} off until Sunday.`
+    if (!messageText.trim()) {
+      setError('Write the message. The backend refuses to send a campaign with no body text.')
+      setCreating(false)
+      return
+    }
+    if (selectedTags.length === 0) {
+      setError('Add at least one audience tag. Campaigns are never sent to every contact.')
+      setCreating(false)
+      return
+    }
 
     try {
       const created = await api.createBroadcast({
         name,
-        template_name: templateName,
-        template_language: 'en_US',
-        body_preview: previewText,
-        template_params: {
-          customer_name: customerNameSample,
-          discount: discountParam,
-        },
+        template_name: selectedTemplate?.name,
+        template_language: selectedTemplate?.language,
+        body_preview: messageText,
+        template_params: parseTemplateParams(),
         tag_name: selectedTags.join(','),
         scheduled_at: sendImmediately ? null : new Date(scheduleTime).toISOString(),
       })
       if (sendImmediately && created?.id) {
-        await api.dispatchBroadcast(created.id)
-        setSuccess(`Campaign "${name}" created and dispatched live!`)
+        const outcome = await api.dispatchBroadcast(created.id)
+        const sent = outcome.sentCount ?? 0
+        const failed = outcome.failedCount ?? 0
+        const skipped = outcome.skippedCount ?? 0
+        if (sent > 0) {
+          setSuccess(
+            `Campaign "${name}" dispatched: ${sent} sent, ${failed} failed, ${skipped} not sent.`,
+          )
+        } else {
+          setError(
+            `Campaign "${name}" was created but nothing was delivered (${failed} failed, ${skipped} not sent). ` +
+              'Open Analytics for the per-recipient reason.',
+          )
+        }
       } else {
         setSuccess(`Campaign "${name}" scheduled successfully!`)
       }
@@ -121,8 +223,20 @@ export function Broadcasts() {
     setDispatchingId(id)
     setError(null)
     try {
-      await api.dispatchBroadcast(id)
-      setSuccess('Campaign dispatched successfully!')
+      const outcome = await api.dispatchBroadcast(id)
+      const sent = outcome.sentCount ?? 0
+      const failed = outcome.failedCount ?? 0
+      const skipped = outcome.skippedCount ?? 0
+      if (sent > 0) {
+        setSuccess(
+          `Campaign dispatched: ${sent} sent, ${failed} refused by the provider, ${skipped} not sent.`,
+        )
+      } else {
+        setError(
+          `Nothing was delivered (${failed} refused, ${skipped} not sent). Open Analytics for the \
+per-recipient reason.`,
+        )
+      }
       loadCampaigns()
       if (selectedCampaignId === id) {
         openAnalytics(id)
@@ -134,26 +248,17 @@ export function Broadcasts() {
     }
   }
 
-  async function handleSeedDefaults() {
-    setError(null)
-    try {
-      const res = await api.seedDefaultCampaigns()
-      if (res.status === 'seeded') {
-        setSuccess('Pre-built Chatwoot WhatsApp example campaigns installed!')
-      } else {
-        setSuccess('Example campaigns already active.')
-      }
-      loadCampaigns()
-    } catch (e) {
-      setError((e as Error).message)
-    }
-  }
-
   async function handleProcessScheduled() {
     try {
       setError(null)
       const res = await api.processScheduledCampaigns()
-      setSuccess(`Checked scheduled campaigns: ${res.processed} dispatched.`)
+      const blocked = (res.campaigns ?? []).filter((c: any) => c.status === 'not_dispatched')
+      setSuccess(
+        `${res.processed} campaign(s) dispatched${blocked.length ? `, ${blocked.length} refused by the dispatcher` : ''}.`,
+      )
+      if (blocked.length) {
+        setError(blocked.map((c: any) => c.error).filter(Boolean).join(' | '))
+      }
       loadCampaigns()
     } catch (e) {
       setError((e as Error).message)
@@ -179,8 +284,8 @@ export function Broadcasts() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold text-[var(--color-ink)]">WhatsApp campaigns</h1>
-            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
-              Meta Cloud API
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-[var(--color-ink-muted)]">
+              Sends via the WhatsApp Cloud API channel
             </span>
           </div>
           <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
@@ -195,13 +300,6 @@ export function Broadcasts() {
             className="rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-xs"
           >
             <span className="flex items-center gap-1.5"><DollarSign className="h-3.5 w-3.5 text-emerald-600" /> Pricing Calculator</span>
-          </button>
-
-          <button
-            onClick={handleSeedDefaults}
-            className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 shadow-xs"
-          >
-            Load Example Data
           </button>
 
           <button
@@ -261,12 +359,6 @@ export function Broadcasts() {
             </p>
             <div className="mt-4 flex justify-center gap-2">
               <button
-                onClick={handleSeedDefaults}
-                className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)]"
-              >
-                Load Chatwoot Demo Campaigns
-              </button>
-              <button
                 onClick={() => setShowWizard(true)}
                 className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)]"
               >
@@ -304,10 +396,21 @@ export function Broadcasts() {
                         Draft
                       </span>
                     )}
+                    {c.status === 'failed' && (
+                      <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-[11px] font-semibold text-rose-800">
+                        No message accepted
+                      </span>
+                    )}
                   </div>
 
-                  <p className="mt-1 text-xs text-[var(--color-ink-muted)] flex items-center gap-2">
-                    <span>WhatsApp Support</span>
+                  <p className="mt-1 text-xs text-[var(--color-ink-muted)] flex flex-wrap items-center gap-2">
+                    <span>
+                      {c.templateName
+                        ? `Template ${c.templateName}${
+                            c.templateLanguage ? ` (${c.templateLanguage})` : ''
+                          }`
+                        : 'Free-form message (no Meta template)'}
+                    </span>
                     <span>·</span>
                     <span>
                       {c.scheduledAt
@@ -323,7 +426,9 @@ export function Broadcasts() {
                           })}
                     </span>
                     <span>·</span>
-                    <span className="font-medium text-[var(--color-ink-muted)]">Tags: {c.tagName}</span>
+                    <span className="font-medium text-[var(--color-ink-muted)]">
+                      Tags: {c.tagName || 'none recorded'}
+                    </span>
                   </p>
 
                   {/* Real Delivery Stats Bar with Delivery Rates */}
@@ -361,8 +466,19 @@ export function Broadcasts() {
                               </span>
                             </>
                           )}
-                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800">
-                            {deliveryRate}% Delivery Rate
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                              delivered > 0
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-slate-100 text-[var(--color-ink-muted)]'
+                            }`}
+                            title={
+                              delivered > 0
+                                ? 'Delivery receipts recorded by the Meta status webhook'
+                                : 'No delivery receipt has arrived from the Meta status webhook yet'
+                            }
+                          >
+                            {deliveryRate}% Delivered
                           </span>
                           {delivered > 0 && (
                             <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-bold text-indigo-800">
@@ -464,13 +580,52 @@ export function Broadcasts() {
                     <h3 className="text-sm font-bold text-[var(--color-ink)]">Audience: Choose who gets it</h3>
                   </div>
                   <span className="text-xs font-semibold text-[var(--color-ink-muted)]">
-                    Daily limit: 1,000 customers
+                    {audiencePreview?.dailyLimit !== undefined && audiencePreview?.dailyLimit !== null
+                      ? `Daily cap from Meta: ${audiencePreview.dailyLimit.toLocaleString()} conversations`
+                      : 'Daily cap: not reported by Meta'}
                   </span>
                 </div>
                 <p className="text-xs text-[var(--color-ink-muted)]">
-                  Pick one or more labels, such as VIP customers or newsletter subscribers. You see
-                  how many people will get the message before you send it, and nobody gets it twice.
+                  Pick one or more labels that already exist on your contacts. You see how many
+                  people will get the message before you send it, and nobody gets it twice.
                 </p>
+
+                {availableTagsError ? (
+                  <p className="flex items-start gap-1.5 text-xs font-semibold text-rose-600">
+                    <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                    <span>{availableTagsError}</span>
+                  </p>
+                ) : null}
+
+                {availableTags.length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-ink-faint)]">
+                      Tags in your contacts
+                    </span>
+                    {availableTags
+                      .filter((t) => !selectedTags.includes(t))
+                      .map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setSelectedTags([...selectedTags, t])}
+                          className="rounded border border-slate-300 bg-[var(--color-surface)] px-2 py-0.5 text-xs text-[var(--color-ink)] hover:border-blue-400 hover:bg-blue-50"
+                        >
+                          + {t}
+                        </button>
+                      ))}
+                    {availableTags.filter((t) => !selectedTags.includes(t)).length === 0 ? (
+                      <span className="text-xs text-[var(--color-ink-faint)]">
+                        all {availableTags.length} tag(s) are already in this audience
+                      </span>
+                    ) : null}
+                  </div>
+                ) : availableTagsError ? null : (
+                  <p className="text-xs text-[var(--color-ink-faint)]">
+                    No tags exist on your contacts yet, so there is no audience to pick. Type one
+                    below only if you have already labelled contacts with it.
+                  </p>
+                )}
 
                 {/* Tags Picker */}
                 <div className="flex flex-wrap items-center gap-2">
@@ -516,14 +671,57 @@ export function Broadcasts() {
                 </div>
 
                 {/* Audience Count Live Badge */}
-                <div className="mt-2 flex items-center justify-between rounded-lg bg-[var(--color-surface)] p-3 border border-[var(--color-border)] text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                    <span className="font-bold text-[var(--color-ink)]">
-                      {audiencePreview ? `${audiencePreview.totalSelected} contacts selected` : 'Calculating audience...'}
+                <div className="mt-2 rounded-lg bg-[var(--color-surface)] p-3 border border-[var(--color-border)] text-xs space-y-2">
+                  {audienceError && selectedTags.length > 0 ? (
+                    <p className="flex items-start gap-1.5 font-semibold text-rose-600">
+                      <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                      <span>{audienceError}</span>
+                    </p>
+                  ) : audiencePreview ? (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-2 font-bold text-[var(--color-ink)]">
+                          <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                          <span>{audiencePreview.totalSelected} contacts matched these tags</span>
+                        </span>
+                        <span className="text-[var(--color-ink-muted)]">
+                          Deduplicated across all tags
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[var(--color-ink-muted)]">
+                        <span>Consent recorded as opt-in: {audiencePreview.optedInCount}</span>
+                        <span>Opted out: {audiencePreview.optedOutCount}</span>
+                        <span>No consent record: {audiencePreview.unknownConsentCount}</span>
+                        <span>
+                          Daily cap:{' '}
+                          {audiencePreview.dailyLimit === null
+                            ? `not reported${
+                                audiencePreview.dailyLimitSource
+                                  ? ` (${audiencePreview.dailyLimitSource})`
+                                  : ' by Meta'
+                              }`
+                            : `${audiencePreview.dailyLimit} conversations`
+                          }
+                        </span>
+                      </div>
+                      {audiencePreview.warnings && audiencePreview.warnings.length > 0 ? (
+                        <ul className="space-y-1 border-t border-[var(--color-border)] pt-2">
+                          {audiencePreview.warnings.map((w) => (
+                            <li key={w} className="flex items-start gap-1.5 text-amber-700">
+                              <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                              <span>{w}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </>
+                  ) : selectedTags.length === 0 ? (
+                    <span className="text-[var(--color-ink-muted)]">
+                      Add a tag to see who is actually in this audience.
                     </span>
-                  </div>
-                  <span className="text-[var(--color-ink-muted)]">Deduplicated across all tags</span>
+                  ) : (
+                    <span className="text-[var(--color-ink-muted)]">Calculating audience...</span>
+                  )}
                 </div>
               </div>
 
@@ -534,73 +732,117 @@ export function Broadcasts() {
                     2
                   </span>
                   <h3 className="text-sm font-bold text-[var(--color-ink)]">
-                    Message: Write it once, make it personal
+                    Message: what each customer will receive
                   </h3>
                 </div>
                 <p className="text-xs text-[var(--color-ink-muted)]">
-                  Start from a message WhatsApp has already approved for your business. Each
-                  customer's name and other details are filled in for you, and you see the message the
-                  way they will.
+                  The list below is read live from your Meta WhatsApp Business account. A template
+                  that has not been approved by Meta will not appear here, and sending one is
+                  refused by the provider rather than quietly falling back to a made-up message.
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-3">
                     <div>
                       <label className="block text-xs font-medium text-[var(--color-ink-muted)] mb-1">
-                        Approved Template
+                        Template from Meta
                       </label>
                       <select
-                        value={templateName}
-                        onChange={(e) => setTemplateName(e.target.value)}
+                        value={templateKey}
+                        onChange={(e) => setTemplateKey(e.target.value)}
                         className="w-full rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs font-medium"
                       >
-                        <option value="spring_sale_offer">Spring sale offer (Approved)</option>
-                        <option value="store_launch_announcement">New store opening (Approved)</option>
-                        <option value="loyalty_rewards_update">Loyalty points reminder (Approved)</option>
+                        <option value="">
+                          {templatesError
+                            ? 'No templates available (see the error below)'
+                            : templates.length === 0
+                              ? 'No templates synced yet'
+                              : 'None — send as a free-form message'}
+                        </option>
+                        {templates.map((t) => (
+                          <option key={`${t.name}:${t.language}`} value={`${t.name}:${t.language}`}>
+                            {t.name} · {t.language} · {t.status}
+                          </option>
+                        ))}
                       </select>
+                      {templatesError ? (
+                        <p className="mt-1 flex items-start gap-1.5 text-[11px] font-semibold text-rose-600">
+                          <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                          <span>{templatesError}</span>
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-[11px] text-[var(--color-ink-faint)]">
+                          {templates.length} template(s) returned by the Meta sync. Only
+                          APPROVED templates are sendable on WhatsApp.
+                        </p>
+                      )}
+                    </div>
+
+                    {selectedTemplate?.bodyText ? (
+                      <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
+                        <span className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-ink-muted)]">
+                          Approved body text
+                        </span>
+                        <p className="mt-1 whitespace-pre-wrap text-xs text-[var(--color-ink)]">
+                          {selectedTemplate.bodyText}
+                        </p>
+                      </div>
+                    ) : null}
+
+                    <div>
+                      <label className="block text-xs font-medium text-[var(--color-ink-muted)] mb-1">
+                        Message body
+                      </label>
+                      <textarea
+                        rows={5}
+                        value={messageText}
+                        onChange={(e) => setMessageText(e.target.value)}
+                        placeholder={'Hi {{name}}, …'}
+                        className="w-full rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-2 text-xs font-medium"
+                      />
+                      <p className="mt-1 text-[11px] text-[var(--color-ink-faint)]">
+                        Stored as the campaign body and sent as-is. {'{{name}}'}, {'{{first_name}}'},
+                        {'{{last_name}}'} and {'{{phone}}'} are filled from each contact; an
+                        unresolved placeholder skips that recipient instead of sending the raw token.
+                      </p>
                     </div>
 
                     <div>
                       <label className="block text-xs font-medium text-[var(--color-ink-muted)] mb-1">
-                        Variable {'{{1}}'}: Customer Name
+                        Template variables (one per line, name=value)
                       </label>
-                      <input
-                        value={customerNameSample}
-                        onChange={(e) => setCustomerNameSample(e.target.value)}
-                        placeholder="Maya"
-                        className="w-full rounded-md border border-slate-300 px-3 py-1 text-xs"
+                      <textarea
+                        rows={3}
+                        value={paramsText}
+                        onChange={(e) => setParamsText(e.target.value)}
+                        placeholder={'discount=20%'}
+                        className="w-full rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-2 font-mono text-xs"
                       />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-[var(--color-ink-muted)] mb-1">
-                        Variable {'{{2}}'}: Discount Percentage
-                      </label>
-                      <input
-                        value={discountParam}
-                        onChange={(e) => setDiscountParam(e.target.value)}
-                        placeholder="20%"
-                        className="w-full rounded-md border border-slate-300 px-3 py-1 text-xs"
-                      />
+                      <p className="mt-1 text-[11px] text-[var(--color-ink-faint)]">
+                        Sent to Meta as the template payload in the order the approved body expects
+                        them. Leave empty if the template has no variables.
+                      </p>
                     </div>
                   </div>
 
                   {/* WhatsApp Mobile Balloon Preview */}
                   <div className="rounded-lg bg-[#efeae2] p-4 flex flex-col justify-end border border-[#d1d7db]">
                     <span className="text-[10px] font-bold text-[var(--color-ink-muted)] uppercase tracking-wider mb-2">
-                      WhatsApp Live Customer Preview
+                      Preview of the message body
                     </span>
-                    <div className="rounded-lg bg-[var(--color-surface)] p-3 shadow-xs max-w-[90%] text-xs text-[var(--color-ink)] relative">
-                      <p className="leading-relaxed">
-                        Hi <strong>{customerNameSample}</strong>, our spring sale starts Friday. As a
-                        VIP customer you get early access and <strong>{discountParam}</strong> off
-                        until Sunday.
-                      </p>
-                      <div className="mt-2 flex items-center justify-end gap-1 text-[10px] text-[var(--color-ink-faint)]">
-                        <span>10:00 AM</span>
-                        <CheckCheck className="h-3.5 w-3.5 text-blue-500" />
+                    {messageText.trim() ? (
+                      <div className="rounded-lg bg-[var(--color-surface)] p-3 shadow-xs max-w-[90%] text-xs text-[var(--color-ink)] relative">
+                        <p className="whitespace-pre-wrap leading-relaxed">{messageText}</p>
+                        <div className="mt-2 flex items-center justify-end gap-1 text-[10px] text-[var(--color-ink-faint)]">
+                          <span>not sent yet</span>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <p className="text-xs text-[var(--color-ink-muted)]">
+                        Nothing to show yet. Delivery ticks and timestamps appear in Analytics once
+                        Meta posts status webhooks back for real recipients.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -836,10 +1078,12 @@ export function Broadcasts() {
                           >
                             <div className="flex items-center gap-3">
                               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 font-bold text-[var(--color-ink-muted)]">
-                                {r.contactName?.charAt(0) || 'C'}
+                                {r.contactName?.charAt(0) || '·'}
                               </span>
                               <div>
-                                <span className="font-semibold text-[var(--color-ink)]">{r.contactName}</span>
+                                <span className="font-semibold text-[var(--color-ink)]">
+                                  {r.contactName || 'No name stored on this contact'}
+                                </span>
                                 <span className="ml-2 text-[var(--color-ink-faint)]">{r.contactPhone}</span>
                                 {r.error && (
                                   <p className="text-[11px] text-rose-600 font-medium mt-0.5">
@@ -850,37 +1094,37 @@ export function Broadcasts() {
                             </div>
 
                             <div className="flex items-center gap-3">
-                              {r.status === 'read' && (
+                              {r.readAt ? (
                                 <span className="rounded bg-indigo-100 px-2 py-0.5 font-semibold text-indigo-800">
                                   <span className="flex items-center gap-1">Read <CheckCheck className="h-3 w-3 text-indigo-700" /></span>
                                 </span>
-                              )}
-                              {r.status === 'delivered' && (
+                              ) : null}
+                              {r.deliveredAt && !r.readAt ? (
                                 <span className="rounded bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-800">
                                   <span className="flex items-center gap-1">Delivered <CheckCheck className="h-3 w-3 text-emerald-700" /></span>
                                 </span>
-                              )}
-                              {r.status === 'sent' && (
+                              ) : null}
+                              {r.status === 'sent' && !r.deliveredAt ? (
                                 <span className="rounded bg-blue-100 px-2 py-0.5 font-semibold text-blue-800">
                                   <span className="flex items-center gap-1">Sent <Check className="h-3 w-3 text-blue-700" /></span>
                                 </span>
-                              )}
-                              {r.status === 'failed' && (
+                              ) : null}
+                              {r.status === 'failed' ? (
                                 <span className="rounded bg-rose-100 px-2 py-0.5 font-semibold text-rose-800">
                                   Failed
                                 </span>
-                              )}
-                              {r.status === 'skipped' && (
+                              ) : null}
+                              {r.status === 'not_sent' ? (
                                 <span className="rounded bg-slate-100 px-2 py-0.5 font-semibold text-[var(--color-ink-muted)]">
-                                  Skipped
+                                  Not sent
                                 </span>
-                              )}
+                              ) : null}
 
                               <Link
-                                to={`/`}
+                                to={`/contacts/${r.contactId}`}
                                 className="rounded border border-[var(--color-border)] px-2.5 py-1 text-[11px] font-semibold text-[var(--color-ink)] hover:bg-slate-100"
                               >
-                                Follow up in chat ↗
+                                Open contact ↗
                               </Link>
                             </div>
                           </div>
@@ -915,25 +1159,43 @@ export function Broadcasts() {
             </div>
 
             <div className="p-6 space-y-4">
+              <p className="text-[11px] text-[var(--color-ink-muted)]">
+                Rates come from the <code>whatsapp_pricing_rates</code> table, which you fill from
+                your own Meta WhatsApp Business Platform invoice. Nothing here is estimated when a
+                rate row is missing — the calculator says so instead of inventing a number.
+              </p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-[var(--color-ink-muted)] mb-1">
                     Country / Market
                   </label>
-                  <select
-                    value={calcRegion}
-                    onChange={(e) => setCalcRegion(e.target.value)}
-                    className="w-full rounded-md border border-slate-300 p-2 text-xs font-medium"
-                  >
-                    <option value="US">United States (US)</option>
-                    <option value="UK">United Kingdom (UK)</option>
-                    <option value="EU">European Union (EU)</option>
-                    <option value="IN">India (IN)</option>
-                    <option value="BR">Brazil (BR)</option>
-                    <option value="MX">Mexico (MX)</option>
-                    <option value="UAE">United Arab Emirates (UAE)</option>
-                    <option value="ROW">Rest of World</option>
-                  </select>
+                  {pricingRegions.length > 0 ? (
+                    <select
+                      value={calcRegion}
+                      onChange={(e) => setCalcRegion(e.target.value)}
+                      className="w-full rounded-md border border-slate-300 p-2 text-xs font-medium"
+                    >
+                      <option value="">Select a configured market</option>
+                      {pricingRegions.map((r) => (
+                        <option key={r.code} value={r.code}>
+                          {r.name} ({r.code})
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      value={calcRegion}
+                      onChange={(e) => setCalcRegion(e.target.value.toUpperCase())}
+                      placeholder="e.g. DE"
+                      className="w-full rounded-md border border-slate-300 p-2 text-xs font-medium"
+                    />
+                  )}
+                  {pricingRegions.length === 0 ? (
+                    <p className="mt-1 text-[11px] text-[var(--color-ink-faint)]">
+                      No market has a stored rate yet, so this is a free-text code. Type one and the
+                      response lists exactly which rows exist.
+                    </p>
+                  ) : null}
                 </div>
 
                 <div>
@@ -971,29 +1233,58 @@ export function Broadcasts() {
                 />
               </div>
 
-              {pricingEstimate && (
+              {!calcRegion ? (
+                <p className="rounded-xl border border-[var(--color-border)] bg-[var(--color-page)]/60 p-3 text-xs text-[var(--color-ink-muted)]">
+                  Choose a market to price. Rates are only shown for the rows that exist in
+                  <code>whatsapp_pricing_rates</code>.
+                </p>
+              ) : pricingError ? (
+                <div className="rounded-xl border border-rose-200 bg-rose-50/70 p-4 space-y-1">
+                  <p className="flex items-start gap-1.5 text-xs font-bold text-rose-700">
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <span>{pricingError}</span>
+                  </p>
+                  <p className="text-[11px] text-rose-600">
+                    No figure is shown. When a rate row is missing the calculator reports that
+                    instead of substituting an industry average.
+                  </p>
+                </div>
+              ) : pricingEstimate ? (
                 <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-[var(--color-ink-muted)]">Rate per conversation:</span>
                     <span className="font-bold text-[var(--color-ink)]">
-                      ${pricingEstimate.ratePerConversation.toFixed(4)} USD
+                      {formatMoney(pricingEstimate.ratePerConversation, pricingEstimate.currency, 4)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-bold text-slate-800">Total Estimated Meta Cost:</span>
+                    <span className="font-bold text-slate-800">
+                      Total for {pricingEstimate.volume.toLocaleString()} conversations:
+                    </span>
                     <span className="text-lg font-extrabold text-blue-700">
-                      ${pricingEstimate.estimatedCostUsd.toLocaleString()} USD
+                      {formatMoney(pricingEstimate.estimatedCost, pricingEstimate.currency, 2)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-emerald-700 pt-1 border-t border-blue-200/60 font-semibold">
-                    <span>Projected ROI (8.5x Industry Average):</span>
-                    <span>~${pricingEstimate.estimatedRoiUsd.toLocaleString()} USD</span>
-                  </div>
-                  <p className="text-[11px] text-[var(--color-ink-muted)] pt-1">
-                    <span className="flex items-center gap-1.5"><Lightbulb className="h-4 w-4 text-amber-500 shrink-0" /> {pricingEstimate.freeServiceTierIncluded}</span>
+                  <p className="text-[11px] text-[var(--color-ink-muted)]">
+                    Rate row source: {pricingEstimate.rateSource || 'not recorded on the row'}
+                    {pricingEstimate.rateUpdatedAt
+                      ? ` · last updated ${pricingEstimate.rateUpdatedAt}`
+                      : ''}
+                  </p>
+                  {(pricingEstimate.warnings ?? []).map((w) => (
+                    <p key={w} className="flex items-start gap-1.5 text-[11px] text-amber-700">
+                      <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                      <span>{w}</span>
+                    </p>
+                  ))}
+                  <p className="text-[11px] text-[var(--color-ink-muted)] pt-1 border-t border-blue-200/60">
+                    <span className="flex items-start gap-1.5">
+                      <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+                      {pricingEstimate.roiNote}
+                    </span>
                   </p>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

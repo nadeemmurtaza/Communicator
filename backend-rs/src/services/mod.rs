@@ -1,3 +1,17 @@
+pub mod alerts;
+pub mod business_hours;
+pub mod channels;
+pub mod claude_client;
+pub mod compliance;
+pub mod crypto_mesh;
+pub mod draft_actions;
+pub mod inbound;
+pub mod integration_settings;
+pub mod macro_executor;
+pub mod messaging;
 pub mod meta_sync;
 pub mod nid_client;
+pub mod reply_engine;
+pub mod signatures;
 pub mod vault_loader;
+pub mod widget_support;

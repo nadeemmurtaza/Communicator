@@ -8,7 +8,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   X,
-} from 'lucide-react'
+} from '../components/icons'
 import { useEffect, useState } from 'react'
 import {
   api,

@@ -60,7 +60,7 @@ def _serialize_policy(p: SLAPolicy) -> dict[str, Any]:
 async def list_sla_policies(
     session: AsyncSession = Depends(get_db_session),
 ) -> list[dict[str, Any]]:
-    """Lists all configured SLA policies, auto-seeding defaults if none exist."""
+    """Lists all SLA policies configured in the database (may be empty)."""
     policies = await sla_service.list_policies(session)
     return [_serialize_policy(p) for p in policies]
 

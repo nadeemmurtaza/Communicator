@@ -12,33 +12,6 @@ from communicator.models.conversation import Conversation, ConversationState
 from communicator.models.team import Team
 from communicator.models.team_member import TeamMember
 
-DEFAULT_TEAM_MEMBERS = [
-    {
-        "name": "Riley Brooks",
-        "email": "riley.brooks@bayworks.com",
-        "availability_status": "online",
-        "max_concurrent_conversations": 5,
-    },
-    {
-        "name": "Jamie Cole",
-        "email": "jamie.cole@bayworks.com",
-        "availability_status": "online",
-        "max_concurrent_conversations": 5,
-    },
-    {
-        "name": "Alex Rivera",
-        "email": "alex.rivera@bayworks.com",
-        "availability_status": "busy",
-        "max_concurrent_conversations": 3,
-    },
-    {
-        "name": "Morgan Vance",
-        "email": "morgan.vance@bayworks.com",
-        "availability_status": "offline",
-        "max_concurrent_conversations": 5,
-    },
-]
-
 CLOSED_STATES = (ConversationState.CLOSED_WON, ConversationState.CLOSED_LOST)
 
 
@@ -46,13 +19,6 @@ async def list_agents(session: AsyncSession) -> list[dict[str, Any]]:
     """Lists all agents with real-time active load and capacity calculation."""
     res = await session.execute(select(TeamMember).order_by(TeamMember.name.asc()))
     agents = list(res.scalars().all())
-
-    if not agents:
-        for item in DEFAULT_TEAM_MEMBERS:
-            session.add(TeamMember(**item))
-        await session.flush()
-        res = await session.execute(select(TeamMember).order_by(TeamMember.name.asc()))
-        agents = list(res.scalars().all())
 
     results: list[dict[str, Any]] = []
     for agent in agents:
@@ -161,12 +127,6 @@ async def auto_assign_conversation(
             all_agents_res = await session.execute(select(TeamMember))
             candidates = list(all_agents_res.scalars().all())
     else:
-        all_agents_res = await session.execute(select(TeamMember))
-        candidates = list(all_agents_res.scalars().all())
-
-    # Ensure system has agents seeded
-    if not candidates:
-        await list_agents(session)
         all_agents_res = await session.execute(select(TeamMember))
         candidates = list(all_agents_res.scalars().all())
 

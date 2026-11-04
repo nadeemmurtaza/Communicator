@@ -77,7 +77,6 @@ async def list_tickets(
     db: AsyncSession = Depends(get_db_session),
 ):
     """Lists tickets across Customer Issues, Back-Office Collaboration, and Tracker Incidents."""
-    await TicketService.seed_demo_tickets_if_empty(db)
     return await TicketService.list_tickets(
         db,
         ticket_type=ticket_type,
@@ -94,14 +93,12 @@ async def list_tickets(
 @router.get("/stats", response_model=dict[str, Any])
 async def get_ticket_stats(db: AsyncSession = Depends(get_db_session)):
     """Summary metrics of active tickets, back-office collaboration load, and tracker impact."""
-    await TicketService.seed_demo_tickets_if_empty(db)
     return await TicketService.get_stats_summary(db)
 
 
 @router.get("/trackers", response_model=list[dict[str, Any]])
 async def list_trackers(db: AsyncSession = Depends(get_db_session)):
     """Lists active and open tracker tickets for linking dropdowns."""
-    await TicketService.seed_demo_tickets_if_empty(db)
     return await TicketService.list_tickets(db, ticket_type=TicketType.TRACKER.value)
 
 

@@ -59,52 +59,12 @@ def render_canned_variables(template: str, variables: dict[str, str]) -> str:
     return rendered
 
 
-async def _ensure_default_canned(session: AsyncSession) -> None:
-    stmt = select(CannedResponse).limit(1)
-    if (await session.execute(stmt)).scalar_one_or_none() is None:
-        defaults = [
-            CannedResponse(
-                short_code="greet",
-                content="Hi {{customer.first_name}}! Thanks for reaching out to Bay Works. How can I assist you today?",
-                category="greetings",
-            ),
-            CannedResponse(
-                short_code="pricing",
-                content="Hi {{customer.first_name}}, our plans start with our Standard tier with dedicated support. Would you like a breakdown of our rates or a custom quote?",
-                category="sales",
-            ),
-            CannedResponse(
-                short_code="hours",
-                content="Our support team is available Monday through Friday from 9:00 AM to 6:00 PM. We'll follow up on your request promptly!",
-                category="support",
-            ),
-            CannedResponse(
-                short_code="refund",
-                content="Standard refund requests for ticket #{{ticket.id}} are processed within 3 to 5 business days back to your original payment method.",
-                category="billing",
-            ),
-            CannedResponse(
-                short_code="followup",
-                content="Just checking in to make sure everything is working well for you! Feel free to reply here anytime if you need more help.",
-                category="general",
-            ),
-            CannedResponse(
-                short_code="closing",
-                content="Thanks for contacting us, {{customer.first_name}}! If you need anything else, feel free to reply right here. Have a great day! -- {{agent.name}}",
-                category="support",
-            ),
-        ]
-        session.add_all(defaults)
-        await session.flush()
-
-
 @router.get("")
 async def list_canned_responses(
     q: str | None = Query(default=None),
     category: str | None = Query(default=None),
     session: AsyncSession = Depends(get_db_session),
 ):
-    await _ensure_default_canned(session)
     stmt = select(CannedResponse).order_by(CannedResponse.short_code)
     results = list((await session.execute(stmt)).scalars().all())
 
@@ -190,7 +150,6 @@ async def expand_canned_response(
     """
     Renders dynamic placeholders in a canned response for a specific conversation.
     """
-    await _ensure_default_canned(session)
     code = payload.short_code.strip().lstrip("/")
     stmt = select(CannedResponse).where(CannedResponse.short_code == code)
     canned = (await session.execute(stmt)).scalar_one_or_none()
