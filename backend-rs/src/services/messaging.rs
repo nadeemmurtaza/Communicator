@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 //! The only path allowed to put an outbound message on the wire.
 //!
 //! Port of `services/messaging.py`. The Python original wrote

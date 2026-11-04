@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 //! Support layer for the customer-facing live-chat widget runtime.
 //!
 //! Everything here reads and writes real rows: the widget's boot config comes

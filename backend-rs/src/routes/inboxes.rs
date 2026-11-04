@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::{
     db::{AppState, DbPool},
     models::ChannelHealth,
@@ -951,32 +953,54 @@ fn merged_creds(primary: &Map<String, Value>, secondary: Option<&Map<String, Val
 }
 
 /// Builds the health row the dashboard renders. `isConnected` is only true
-/// when the inbox is enabled *and* every required credential really resolved;
-/// it is never a claim about the provider answering.
-fn summarize(channel: &'static str, exists: bool, active: bool, missing: &[String]) -> ChannelHealth {
+/// when the inbox is enabled *and* every required credential really resolved.
+/// When `real_connection` is `Some(true)`, the provider actually answered a
+/// live API probe; when `Some(false)`, the probe failed and `connection_error`
+/// explains why.
+fn summarize(
+    channel: &'static str,
+    exists: bool,
+    active: bool,
+    missing: &[String],
+    real_connection: Option<bool>,
+    connection_error: Option<String>,
+    provider_info: Option<serde_json::Value>,
+) -> ChannelHealth {
     let configured = exists && active && missing.is_empty();
-    // A website inbox has no provider to hold a connection open with, and this
-    // build has no widget push transport at all, so complete credentials only
-    // prove the widget can post messages in. `CONNECTED` would overstate that.
     let inbound_only = channel == "live-chat" || channel == "website";
-    let status = match (exists, active, configured) {
-        (false, _, _) => "NO_INBOX",
-        (true, false, _) => "DISABLED",
-        (true, true, true) if inbound_only => "CONFIGURED_INBOUND_ONLY",
-        (true, true, true) => "CONNECTED",
-        (true, true, false) => "NOT_CONFIGURED",
+    let is_connected = configured && real_connection.unwrap_or(false);
+    let status = match (exists, active, configured, real_connection) {
+        (false, _, _, _) => "NO_INBOX",
+        (true, false, _, _) => "DISABLED",
+        (true, true, true, Some(true)) if !inbound_only => "CONNECTED",
+        (true, true, true, Some(false)) => "PROBE_FAILED",
+        (true, true, true, None) => "CONFIGURED_NOT_VERIFIED",
+        (true, true, true, Some(true)) => "CONFIGURED_INBOUND_ONLY",
+        (true, true, false, _) => "NOT_CONFIGURED",
     };
-    let status_label = match (exists, active, configured) {
-        (false, _, _) => "No inbox registered for this channel",
-        (true, false, _) => "Inbox disabled",
-        (true, true, true) if inbound_only => "Widget token complete - inbound only; no outbound widget transport in this build",
-        (true, true, true) => "Credentials complete - not verified against the provider",
-        (true, true, false) => "Not configured",
+    let status_label = match (exists, active, configured, real_connection) {
+        (false, _, _, _) => "No inbox registered for this channel",
+        (true, false, _, _) => "Inbox disabled",
+        (true, true, true, Some(true)) if !inbound_only => {
+            "Verified by a live API probe to the provider"
+        }
+        (true, true, true, Some(false)) => {
+            "Credentials present but the provider rejected the live probe"
+        }
+        (true, true, true, None) => {
+            "Credentials complete - not verified against the provider"
+        }
+        (true, true, true, Some(true)) => {
+            "Widget token complete - inbound only; no outbound widget transport in this build"
+        }
+        (true, true, false, _) => "Not configured",
     };
     let warning = if configured && inbound_only {
         Some("No outbound transport for live-chat: a stored agent reply reaches the visitor only when the widget polls GET /widget/conversations/<id>/messages/since, so nothing sent on this channel is confirmed delivered.".to_string())
-    } else if configured {
+    } else if is_connected {
         None
+    } else if real_connection == Some(false) {
+        connection_error.clone()
     } else if !exists {
         Some(format!("No {channel} row exists in `inboxes`."))
     } else if !active {
@@ -985,12 +1009,24 @@ fn summarize(channel: &'static str, exists: bool, active: bool, missing: &[Strin
         Some(missing_text(channel, &missing.iter().map(|s| s.as_str()).collect::<Vec<_>>()))
     };
 
+    let last_verified_at = real_connection.and_then(|ok| {
+        if ok {
+            Some(chrono::Utc::now().to_rfc3339())
+        } else {
+            None
+        }
+    });
+
     ChannelHealth {
         channel: channel.to_string(),
-        is_connected: configured,
+        is_connected,
         status: status.to_string(),
         status_label: status_label.to_string(),
         warning,
+        real_connection,
+        connection_error,
+        last_verified_at,
+        provider_info,
     }
 }
 
@@ -1611,17 +1647,171 @@ pub async fn get_channels_health(State(state): State<AppState>) -> Result<impl I
     )
     .await?;
 
+    // --- Live API probes for real connection status ---
+
+    // 1. WhatsApp: probe Meta Graph API
+    let (wa_real, wa_err, wa_info) = if wa_missing.is_empty() {
+        let (token, phone_id) = crate::services::meta_sync::resolve_meta_credentials(&state).await;
+        let t = usable(Some(token.as_str()));
+        let p = usable(Some(phone_id.as_str()));
+        match (t, p) {
+            (Some(tok), Some(pid)) => {
+                match fetch_wa_phone_node(&state, &tok, &pid).await {
+                    Ok(node) => (Some(true), None, Some(node)),
+                    Err(e) => (Some(false), Some(e), None),
+                }
+            }
+            _ => (None, None, None),
+        }
+    } else {
+        (None, None, None)
+    };
+
+    // 2. SMS (Twilio): probe Twilio Account API
+    let (sms_real, sms_err, sms_info) = if sms_missing.is_empty() {
+        let sid = resolve_one(&state, &sms_creds, &["accountSid", "account_sid"], None, config_val(state.config.twilio_account_sid.clone())).await.ok().flatten();
+        let tok = resolve_one(&state, &sms_creds, &["authToken", "auth_token"], None, config_val(state.config.twilio_auth_token.clone())).await.ok().flatten();
+        match (sid, tok) {
+            (Some(s), Some(t)) if s.starts_with("AC") => {
+                let url = format!("https://api.twilio.com/2010-04-01/Accounts/{s}.json");
+                match http_get_json_basic(&state, &url, &s, &t).await {
+                    Ok(acc) => (Some(true), None, Some(acc)),
+                    Err(e) => (Some(false), Some(e), None),
+                }
+            }
+            _ => (None, None, None),
+        }
+    } else {
+        (None, None, None)
+    };
+
+    // 3. Voice (Twilio): same probe as SMS
+    let (voice_real, voice_err, voice_info) = if voice_missing.is_empty() {
+        let sid = resolve_one(&state, &voice_creds, &["accountSid", "account_sid"], None, config_val(state.config.twilio_account_sid.clone())).await.ok().flatten();
+        let tok = resolve_one(&state, &voice_creds, &["authToken", "auth_token"], None, config_val(state.config.twilio_auth_token.clone())).await.ok().flatten();
+        match (sid, tok) {
+            (Some(s), Some(t)) if s.starts_with("AC") => {
+                let url = format!("https://api.twilio.com/2010-04-01/Accounts/{s}.json");
+                match http_get_json_basic(&state, &url, &s, &t).await {
+                    Ok(acc) => (Some(true), None, Some(acc)),
+                    Err(e) => (Some(false), Some(e), None),
+                }
+            }
+            _ => (None, None, None),
+        }
+    } else {
+        (None, None, None)
+    };
+
+    // 4. Telegram: probe getMe API
+    let (tg_real, tg_err, tg_info) = if tg_missing.is_empty() {
+        let bot_token = resolve_one(&state, &tg_creds, &["botToken", "bot_token", "accessToken"], None, None).await.ok().flatten();
+        match bot_token {
+            Some(tok) if !tok.is_empty() => {
+                let url = format!("https://api.telegram.org/bot{tok}/getMe");
+                match http_get_json(&state, &url, None).await {
+                    Ok(me) => (Some(true), None, Some(me)),
+                    Err(e) => (Some(false), Some(e), None),
+                }
+            }
+            _ => (None, None, None),
+        }
+    } else {
+        (None, None, None)
+    };
+
+    // 5. Facebook (Messenger): probe Graph API page
+    let (fb_real, fb_err, fb_info) = if fb_missing.is_empty() {
+        let page_token = resolve_one(&state, &fb_creds, &["pageAccessToken", "page_access_token", "accessToken"], None, None).await.ok().flatten();
+        let page_id = resolve_one(&state, &fb_creds, &["pageId", "page_id"], None, None).await.ok().flatten();
+        match (page_token, page_id) {
+            (Some(tok), Some(pid)) => {
+                let version = if state.config.meta_whatsapp_api_version.is_empty() { "v21.0" } else { &state.config.meta_whatsapp_api_version };
+                let url = format!("https://graph.facebook.com/{version}/{pid}?fields=name,picture");
+                match http_get_json(&state, &url, Some(&tok)).await {
+                    Ok(page) => (Some(true), None, Some(page)),
+                    Err(e) => (Some(false), Some(e), None),
+                }
+            }
+            _ => (None, None, None),
+        }
+    } else {
+        (None, None, None)
+    };
+
+    // 6. Instagram: probe Graph API
+    let (ig_real, ig_err, ig_info) = if ig_missing.is_empty() {
+        let ig_id = resolve_one(&state, &ig_creds, &["igId", "ig_id", "instagramUserId", "userId"], None, None).await.ok().flatten();
+        let tok = resolve_one(&state, &ig_creds, &["accessToken", "access_token"], None, None).await.ok().flatten();
+        match (ig_id, tok) {
+            (Some(id), Some(t)) => {
+                let version = if state.config.meta_whatsapp_api_version.is_empty() { "v21.0" } else { &state.config.meta_whatsapp_api_version };
+                let url = format!("https://graph.instagram.com/{version}/{id}?fields=id,username");
+                match http_get_json(&state, &url, Some(&t)).await {
+                    Ok(info) => (Some(true), None, Some(info)),
+                    Err(e) => (Some(false), Some(e), None),
+                }
+            }
+            _ => (None, None, None),
+        }
+    } else {
+        (None, None, None)
+    };
+
+    // 7. LINE: probe profile API
+    let (line_real, line_err, line_info) = if line_missing.is_empty() {
+        let channel_tok = resolve_one(&state, &line_creds, &["channelAccessToken", "channel_access_token"], None, None).await.ok().flatten();
+        match channel_tok {
+            Some(tok) if !tok.is_empty() => {
+                let url = "https://api.line.me/v2/bot/profile";
+                let mut req = state.http_client.get(url);
+                req = req.header("Authorization", format!("Bearer {tok}"));
+                match req.send().await {
+                    Ok(resp) if resp.status().is_success() => {
+                        match resp.json::<serde_json::Value>().await {
+                            Ok(profile) => (Some(true), None, Some(profile)),
+                            Err(e) => (Some(false), Some(format!("LINE profile parse error: {e}")), None),
+                        }
+                    }
+                    Ok(resp) => (Some(false), Some(format!("LINE API returned HTTP {}", resp.status())), None),
+                    Err(e) => (Some(false), Some(format!("Could not reach LINE API: {e}")), None),
+                }
+            }
+            _ => (None, None, None),
+        }
+    } else {
+        (None, None, None)
+    };
+
+    // 8. TikTok: probe user info API
+    let (tt_real, tt_err, tt_info) = if tt_missing.is_empty() {
+        let tok = resolve_one(&state, &tt_creds, &["accessToken", "access_token"], None, tiktok_access_token(&state)).await.ok().flatten();
+        match tok {
+            Some(t) if !t.is_empty() => {
+                let url = "https://open.tiktokapis.com/v2/user/info/";
+                match http_get_json(&state, url, Some(&t)).await {
+                    Ok(info) => (Some(true), None, Some(info)),
+                    Err(e) => (Some(false), Some(e), None),
+                }
+            }
+            _ => (None, None, None),
+        }
+    } else {
+        (None, None, None)
+    };
+
+    // Live-chat and email have no outbound provider to probe
     let health = vec![
-        summarize("whatsapp", wa_inbox.is_some(), active_of(wa_inbox), &wa_missing),
-        summarize("live-chat", lc_inbox.is_some(), active_of(lc_inbox), &lc_missing),
-        summarize("sms", sms_inbox.is_some(), active_of(sms_inbox), &sms_missing),
-        summarize("email", em_inbox.is_some(), active_of(em_inbox), &em_missing),
-        summarize("facebook", fb_inbox.is_some(), active_of(fb_inbox), &fb_missing),
-        summarize("instagram", ig_inbox.is_some(), active_of(ig_inbox), &ig_missing),
-        summarize("telegram", tg_inbox.is_some(), active_of(tg_inbox), &tg_missing),
-        summarize("line", line_inbox.is_some(), active_of(line_inbox), &line_missing),
-        summarize("voice", voice_inbox.is_some(), active_of(voice_inbox), &voice_missing),
-        summarize("tiktok", tt_inbox.is_some(), active_of(tt_inbox), &tt_missing),
+        summarize("whatsapp", wa_inbox.is_some(), active_of(wa_inbox), &wa_missing, wa_real, wa_err, wa_info),
+        summarize("live-chat", lc_inbox.is_some(), active_of(lc_inbox), &lc_missing, None, None, None),
+        summarize("sms", sms_inbox.is_some(), active_of(sms_inbox), &sms_missing, sms_real, sms_err, sms_info),
+        summarize("email", em_inbox.is_some(), active_of(em_inbox), &em_missing, None, None, None),
+        summarize("facebook", fb_inbox.is_some(), active_of(fb_inbox), &fb_missing, fb_real, fb_err, fb_info),
+        summarize("instagram", ig_inbox.is_some(), active_of(ig_inbox), &ig_missing, ig_real, ig_err, ig_info),
+        summarize("telegram", tg_inbox.is_some(), active_of(tg_inbox), &tg_missing, tg_real, tg_err, tg_info),
+        summarize("line", line_inbox.is_some(), active_of(line_inbox), &line_missing, line_real, line_err, line_info),
+        summarize("voice", voice_inbox.is_some(), active_of(voice_inbox), &voice_missing, voice_real, voice_err, voice_info),
+        summarize("tiktok", tt_inbox.is_some(), active_of(tt_inbox), &tt_missing, tt_real, tt_err, tt_info),
     ];
 
     Ok(Json(health))

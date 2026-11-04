@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::db::DbPool;
 use regex::Regex;
 use sqlx::Row;

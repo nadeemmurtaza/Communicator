@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 //! Port of `services/draft_actions.py`.
 //!
 //! Python's `approve_and_send` marked a draft SENT whatever the provider said,

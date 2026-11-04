@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::config::Config;
 use serde_json::Value;
 use tracing::{debug, info, warn};

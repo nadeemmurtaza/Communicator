@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::db::AppState;
 use crate::models::BusinessProfile;
 use serde_json::Value;

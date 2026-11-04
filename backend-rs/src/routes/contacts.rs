@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::db::{AppState, DbPool};
 use crate::routes::auth::Tenant;
 use crate::services::inbound;

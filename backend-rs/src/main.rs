@@ -17,7 +17,7 @@ use config::Config;
 use db::{init_db, AppState};
 use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 use tower_http::{
-    cors::{Any, CorsLayer},
+    cors::{Any, CorsLayer, AllowOrigin},
     services::ServeDir,
 };
 use tracing::{info, warn};
@@ -55,11 +55,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         nid: Arc::new(services::nid_client::NidClient::from_config(&config)),
     };
 
-    // CORS configuration
-    let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any);
+    // CORS configuration: restrict origins based on environment.
+    // In development, allow common local origins. In production, require
+    // PUBLIC_URL to be set and restrict to that origin.
+    let cors = if config.app_env == "development" || config.public_url.is_empty() {
+        CorsLayer::new()
+            .allow_origin([
+                "http://localhost:5173".parse::<HeaderValue>().unwrap_or_else(|_| HeaderValue::from_static("http://localhost:5173")),
+                "http://localhost:3000".parse::<HeaderValue>().unwrap_or_else(|_| HeaderValue::from_static("http://localhost:3000")),
+                "http://localhost:8000".parse::<HeaderValue>().unwrap_or_else(|_| HeaderValue::from_static("http://localhost:8000")),
+            ])
+            .allow_methods(Any)
+            .allow_headers(Any)
+    } else {
+        let origin: HeaderValue = config.public_url.parse().unwrap_or_else(|_| {
+            warn!("PUBLIC_URL={:?} is not a valid origin; falling back to permissive CORS", config.public_url);
+            HeaderValue::from_static("*")
+        });
+        CorsLayer::new()
+            .allow_origin(AllowOrigin::exact(origin))
+            .allow_methods(Any)
+            .allow_headers(Any)
+    };
 
     // Complete API Routes
     let api_routes = Router::new()

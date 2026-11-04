@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::{
     db::AppState,
     models::{Conversation, Message, SlaPolicy, TeamMember},

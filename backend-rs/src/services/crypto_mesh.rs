@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 //! NeuraCore zero-trust transit codec.
 //!
 //! Wire format is the `@newax/crypto-mesh` envelope: AES-256-GCM payload,

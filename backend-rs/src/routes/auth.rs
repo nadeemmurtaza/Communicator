@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::db::AppState;
 use crate::services::nid_client::{NidError, SessionClaims};
 use axum::extract::{FromRequestParts, Query, State};

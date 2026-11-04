@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 //! The Anthropic Messages client.
 //!
 //! Port of `ai/claude_client.py`. The Python version had three problems this

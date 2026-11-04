@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 //! Port of `services/alerts.py`.
 //!
 //! Python posted to a Slack-compatible webhook and discarded every failure. The

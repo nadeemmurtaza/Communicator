@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 //! Outbound channel adapters: one per provider the product connects to.
 //!
 //! Port of `src/communicator/channels/*.py`. The Python adapters were written

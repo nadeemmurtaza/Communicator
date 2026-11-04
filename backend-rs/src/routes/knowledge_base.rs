@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::db::AppState;
 use crate::routes::auth::Tenant;
 use axum::extract::multipart::{Field, Multipart};

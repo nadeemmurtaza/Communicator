@@ -15,3 +15,8 @@ rtk.exe
 skills-lock.json
 target/
 /backend-rs/target/
+
+.qoder/
+backend-rs/*.log
+backend-rs/check_*.txt
+backend-rs/scripts/

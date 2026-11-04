@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 //! Business / working hours, computed from the row the operator actually saved.
 //!
 //! Port of `services/business_hours.py`. The Python version was three lines:

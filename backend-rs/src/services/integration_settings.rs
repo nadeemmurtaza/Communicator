@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 //! Typed access to the `integration_settings` table -- the Connections page's
 //! backing store.
 //!

@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 //! Port of `services/reply_engine.py`.
 //!
 //! The Rust route that used to sit behind `/drafts/generate` invented the reply

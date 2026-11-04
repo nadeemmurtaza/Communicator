@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 //! Macro execution: run a saved multi-action macro against a conversation.
 //!
 //! Port of `services/macro_executor.py`. The Python executor handled
