@@ -43,7 +43,7 @@ export function Dashboard() {
   const [error, setError] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [busyDraftId, setBusyDraftId] = useState<string | null>(null)
-  const [firstLoadDone, setFirstLoadDone] = useState(false)
+  const isInitialLoadRef = useRef(true)
   const [, startTransition] = useTransition()
   const draftsIcon = useRef<AnimatedIconHandle>(null)
   const leadsIcon = useRef<AnimatedIconHandle>(null)
@@ -76,17 +76,21 @@ export function Dashboard() {
         if (settingsRes.status === 'fulfilled') setSettings(settingsRes.value)
         if (inboxesRes.status === 'fulfilled') setInboxes(inboxesRes.value)
 
-        // Mark first load as complete so the error banner can show if needed.
-        setFirstLoadDone(true)
-
-        // If at least one API call succeeded, never show an error.
-        if (!anyFulfilled) {
+        // Only show error if all calls failed AND this is not the initial load.
+        // During initial load, failures are silent — empty states are shown.
+        if (!anyFulfilled && !isInitialLoadRef.current) {
           setError('Unable to connect to Communicator API backend')
         }
       })
+      // Mark initial load as complete after the promise settles.
+      isInitialLoadRef.current = false
     } catch (err: unknown) {
-      setFirstLoadDone(true)
-      setError(err instanceof Error ? err.message : 'Failed to load dashboard data')
+      // During initial load, swallow errors silently.
+      // Only show errors for manual refresh failures.
+      if (!isInitialLoadRef.current) {
+        setError(err instanceof Error ? err.message : 'Failed to load dashboard data')
+      }
+      isInitialLoadRef.current = false
     } finally {
       setIsRefreshing(false)
     }
@@ -170,7 +174,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      {firstLoadDone && error && (
+      {error && !isInitialLoadRef.current && (
         <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
           <span>{error}</span>
