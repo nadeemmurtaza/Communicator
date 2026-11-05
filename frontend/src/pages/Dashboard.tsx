@@ -43,6 +43,7 @@ export function Dashboard() {
   const [error, setError] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [busyDraftId, setBusyDraftId] = useState<string | null>(null)
+  const [firstLoadDone, setFirstLoadDone] = useState(false)
   const [, startTransition] = useTransition()
   const draftsIcon = useRef<AnimatedIconHandle>(null)
   const leadsIcon = useRef<AnimatedIconHandle>(null)
@@ -75,19 +76,16 @@ export function Dashboard() {
         if (settingsRes.status === 'fulfilled') setSettings(settingsRes.value)
         if (inboxesRes.status === 'fulfilled') setInboxes(inboxesRes.value)
 
-        // If at least one API call succeeded, clear any transient error.
-        // This prevents the error banner from flashing on initial load when
-        // some endpoints are slow but others succeed.
-        if (anyFulfilled) {
-          setError(null)
+        // Mark first load as complete so the error banner can show if needed.
+        setFirstLoadDone(true)
+
+        // If at least one API call succeeded, never show an error.
+        if (!anyFulfilled) {
+          setError('Unable to connect to Communicator API backend')
         }
       })
-
-      // Only show error if ALL critical calls failed
-      if (draftsRes.status === 'rejected' && convsRes.status === 'rejected' && !anyFulfilled) {
-        setError('Unable to connect to Communicator API backend')
-      }
     } catch (err: unknown) {
+      setFirstLoadDone(true)
       setError(err instanceof Error ? err.message : 'Failed to load dashboard data')
     } finally {
       setIsRefreshing(false)
@@ -172,7 +170,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      {error && (
+      {firstLoadDone && error && (
         <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
           <span>{error}</span>
