@@ -61,15 +61,30 @@ export function Dashboard() {
         api.listInboxes(),
       ])
 
+      const anyFulfilled =
+        draftsRes.status === 'fulfilled' ||
+        convsRes.status === 'fulfilled' ||
+        slaRes.status === 'fulfilled' ||
+        settingsRes.status === 'fulfilled' ||
+        inboxesRes.status === 'fulfilled'
+
       startTransition(() => {
         if (draftsRes.status === 'fulfilled') setDrafts(draftsRes.value)
         if (convsRes.status === 'fulfilled') setConversations(convsRes.value)
         if (slaRes.status === 'fulfilled') setSlaMetrics(slaRes.value)
         if (settingsRes.status === 'fulfilled') setSettings(settingsRes.value)
         if (inboxesRes.status === 'fulfilled') setInboxes(inboxesRes.value)
+
+        // If at least one API call succeeded, clear any transient error.
+        // This prevents the error banner from flashing on initial load when
+        // some endpoints are slow but others succeed.
+        if (anyFulfilled) {
+          setError(null)
+        }
       })
 
-      if (draftsRes.status === 'rejected' && convsRes.status === 'rejected') {
+      // Only show error if ALL critical calls failed
+      if (draftsRes.status === 'rejected' && convsRes.status === 'rejected' && !anyFulfilled) {
         setError('Unable to connect to Communicator API backend')
       }
     } catch (err: unknown) {
