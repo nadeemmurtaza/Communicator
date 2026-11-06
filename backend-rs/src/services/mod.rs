@@ -15,3 +15,8 @@ pub mod reply_engine;
 pub mod signatures;
 pub mod vault_loader;
 pub mod widget_support;
+pub mod whatsapp;
+pub mod whatsapp_automations;
+pub mod whatsapp_template_sync;
+pub mod whatsapp_flows;
+pub mod whatsapp_campaigns;

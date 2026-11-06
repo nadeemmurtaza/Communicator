@@ -17,7 +17,7 @@ use config::Config;
 use db::{init_db, AppState};
 use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 use tower_http::{
-    cors::{Any, CorsLayer, AllowOrigin},
+    cors::{Any, CorsLayer},
     services::ServeDir,
 };
 use tracing::{info, warn};
@@ -58,22 +58,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // CORS configuration: restrict origins based on environment.
     // In development, allow common local origins. In production, require
     // PUBLIC_URL to be set and restrict to that origin.
+    // Always allow the Cloudflare tunnel domain (communicator.newax.co).
+    let tunnel_origin = "https://communicator.newax.co"
+        .parse::<HeaderValue>()
+        .unwrap_or_else(|_| HeaderValue::from_static("https://communicator.newax.co"));
+
     let cors = if config.app_env == "development" || config.public_url.is_empty() {
         CorsLayer::new()
             .allow_origin([
                 "http://localhost:5173".parse::<HeaderValue>().unwrap_or_else(|_| HeaderValue::from_static("http://localhost:5173")),
                 "http://localhost:3000".parse::<HeaderValue>().unwrap_or_else(|_| HeaderValue::from_static("http://localhost:3000")),
                 "http://localhost:8000".parse::<HeaderValue>().unwrap_or_else(|_| HeaderValue::from_static("http://localhost:8000")),
+                tunnel_origin,
             ])
             .allow_methods(Any)
             .allow_headers(Any)
     } else {
-        let origin: HeaderValue = config.public_url.parse().unwrap_or_else(|_| {
-            warn!("PUBLIC_URL={:?} is not a valid origin; falling back to permissive CORS", config.public_url);
-            HeaderValue::from_static("*")
+        let public_origin: HeaderValue = config.public_url.parse().unwrap_or_else(|_| {
+            warn!("PUBLIC_URL={:?} is not a valid origin; falling back to tunnel origin", config.public_url);
+            tunnel_origin.clone()
         });
         CorsLayer::new()
-            .allow_origin(AllowOrigin::exact(origin))
+            .allow_origin([public_origin, tunnel_origin])
             .allow_methods(Any)
             .allow_headers(Any)
     };
@@ -388,6 +394,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/settings/whatsapp/verify", post(routes::integrations_parity::verify_whatsapp_settings))
         .route("/settings/whatsapp/templates", get(routes::integrations_parity::list_whatsapp_templates).post(routes::integrations_parity::create_whatsapp_template))
         .route("/settings/whatsapp/templates/{name}", axum::routing::delete(routes::integrations_parity::delete_whatsapp_template))
+
+        // Organization Profile & BYOK
+        .route("/organization/profile", get(routes::organization::get_profile).put(routes::organization::update_profile))
+        .route("/organization/settings", get(routes::organization::get_settings).put(routes::organization::update_settings))
+        .route("/organization/stats", get(routes::organization::get_stats))
+        .route("/organization/channels/{channel}/verify", post(routes::organization::verify_channel))
+
+        // Brands, Organizations, BYOK, AI Config, Knowledge Base (Brand-level)
+        .merge(routes::brands::router())
+
+        // Client Profiles - Unified Customer IDs, Self-Learning, Transactions, RAG
+        .merge(routes::client_profiles::router())
 
         // Discovery funnel
         .route("/discovery/templates", get(routes::discovery::list_discovery_templates))

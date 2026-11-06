@@ -526,7 +526,34 @@ pub struct Customer {
     pub tenant_key: String,
     pub lead_id: Option<String>,
     pub display_name: String,
+    pub customer_id: Option<String>,
+    pub brand_id: Option<String>,
+    pub first_name: String,
+    pub last_name: String,
+    pub email: String,
+    pub phone: String,
+    pub company: String,
+    pub designation: String,
+    pub role: String,
+    pub industry: String,
+    pub avatar_url: String,
+    pub timezone: String,
+    pub language: String,
+    pub customer_type: String,
+    pub customer_segment: String,
+    pub customer_tier: String,
+    pub lifetime_value: f64,
+    pub total_orders: i64,
+    pub total_spent: f64,
+    pub last_order_date: Option<String>,
+    pub first_contact_date: Option<String>,
+    pub engagement_score: f64,
+    pub sentiment_score: f64,
+    pub notes: String,
+    pub tags: String,
+    pub metadata: String,
     pub created_at: String,
+    pub updated_at: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
@@ -1233,4 +1260,927 @@ pub struct TicketActivity {
     pub actor_name: String,
     pub content: String,
     pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Brand hierarchy models
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct Organization {
+    pub id: String,
+    pub tenant_key: String,
+    pub name: String,
+    pub description: String,
+    pub industry: String,
+    pub website: String,
+    pub email: String,
+    pub phone: String,
+    pub address: String,
+    pub timezone: String,
+    pub settings: String,
+    pub external_id: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct Brand {
+    pub id: String,
+    pub organization_id: String,
+    pub name: String,
+    pub slug: String,
+    pub description: String,
+    pub logo_url: String,
+    pub tagline: String,
+    pub color_scheme: String,
+    pub bio: String,
+    pub website: String,
+    pub email: String,
+    pub phone: String,
+    pub address: String,
+    pub social_links: String,
+    pub products: String,
+    pub services: String,
+    pub prices: String,
+    pub policies: String,
+    pub rules: String,
+    pub tone_guidelines: String,
+    pub keywords: String,
+    pub external_id: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct BrandCredentials {
+    pub id: String,
+    pub brand_id: String,
+    pub channel_type: String,
+    pub credentials: String,
+    pub is_active: bool,
+    pub last_verified_at: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct BrandAIConfig {
+    pub id: String,
+    pub brand_id: String,
+    pub ai_provider: String,
+    pub api_key: String,
+    pub model_id: String,
+    pub base_url: String,
+    pub temperature: f64,
+    pub max_tokens: i64,
+    pub system_prompt: String,
+    pub rag_enabled: bool,
+    pub embedding_provider: String,
+    pub embedding_api_key: String,
+    pub embedding_model: String,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct BrandKnowledgeEntry {
+    pub id: String,
+    pub brand_id: String,
+    pub title: String,
+    pub content: String,
+    pub source_type: String,
+    pub topic: String,
+    pub tags: String,
+    pub embedding_vector: Option<Vec<u8>>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Enhanced profile models - Data Source Tracking
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct BrandProfileSource {
+    pub id: String,
+    pub brand_id: String,
+    pub field_name: String,
+    pub source_platform: String,
+    pub source_user_id: String,
+    pub source_user_name: String,
+    pub source_record_id: String,
+    pub source_url: String,
+    pub synced_at: Option<String>,
+    pub last_verified_at: Option<String>,
+    pub is_verified: bool,
+    pub confidence_score: f64,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct OrgProfileSource {
+    pub id: String,
+    pub organization_id: String,
+    pub field_name: String,
+    pub source_platform: String,
+    pub source_user_id: String,
+    pub source_user_name: String,
+    pub source_record_id: String,
+    pub source_url: String,
+    pub synced_at: Option<String>,
+    pub last_verified_at: Option<String>,
+    pub is_verified: bool,
+    pub confidence_score: f64,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Enhanced profile models - Live Sync Status
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct BrandSyncStatus {
+    pub id: String,
+    pub brand_id: String,
+    pub platform: String,
+    pub is_connected: bool,
+    pub last_synced_at: Option<String>,
+    pub next_sync_at: Option<String>,
+    pub sync_interval_seconds: i64,
+    pub last_error: String,
+    pub connection_status: String,
+    pub platform_data: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct OrgSyncStatus {
+    pub id: String,
+    pub organization_id: String,
+    pub platform: String,
+    pub is_connected: bool,
+    pub last_synced_at: Option<String>,
+    pub next_sync_at: Option<String>,
+    pub sync_interval_seconds: i64,
+    pub last_error: String,
+    pub connection_status: String,
+    pub platform_data: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Enhanced profile models - Conflict Detection
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ProfileConflict {
+    pub id: String,
+    pub entity_type: String,
+    pub entity_id: String,
+    pub field_name: String,
+    pub conflict_type: String,
+    pub source_a_platform: String,
+    pub source_a_value: String,
+    pub source_a_last_updated: Option<String>,
+    pub source_b_platform: String,
+    pub source_b_value: String,
+    pub source_b_last_updated: Option<String>,
+    pub resolution_status: String,
+    pub resolved_value: String,
+    pub resolved_by: String,
+    pub resolved_at: Option<String>,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Enhanced profile models - Custom Sections
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ProfileCustomSection {
+    pub id: String,
+    pub entity_type: String,
+    pub entity_id: String,
+    pub section_name: String,
+    pub section_type: String,
+    pub display_order: i64,
+    pub is_active: bool,
+    pub created_by: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ProfileCustomSectionData {
+    pub id: String,
+    pub section_id: String,
+    pub row_key: String,
+    pub field_key: String,
+    pub field_value: String,
+    pub field_type: String,
+    pub display_order: i64,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Enhanced profile models - Pricing, Packages, Promotions
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct BrandPackage {
+    pub id: String,
+    pub brand_id: String,
+    pub name: String,
+    pub description: String,
+    pub price: f64,
+    pub currency: String,
+    pub duration_type: String,
+    pub duration_value: i64,
+    pub features: String,
+    pub is_active: bool,
+    pub display_order: i64,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct BrandPromotion {
+    pub id: String,
+    pub brand_id: String,
+    pub name: String,
+    pub description: String,
+    pub discount_type: String,
+    pub discount_value: f64,
+    pub start_date: String,
+    pub end_date: String,
+    pub applicable_packages: String,
+    pub is_active: bool,
+    pub usage_limit: i64,
+    pub usage_count: i64,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct BrandVoucherSettings {
+    pub id: String,
+    pub brand_id: String,
+    pub auto_generate: bool,
+    pub voucher_prefix: String,
+    pub voucher_length: i64,
+    pub discount_type: String,
+    pub discount_value: f64,
+    pub validity_days: i64,
+    pub trigger_event: String,
+    pub max_uses_per_customer: i64,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Enhanced profile models - Message Triggers
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct MessageTrigger {
+    pub id: String,
+    pub brand_id: String,
+    pub name: String,
+    pub description: String,
+    pub trigger_type: String,
+    pub trigger_event: String,
+    pub trigger_schedule: String,
+    pub trigger_conditions: String,
+    pub preferred_channel: String,
+    pub message_template: String,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct MessageTriggerLog {
+    pub id: String,
+    pub trigger_id: String,
+    pub contact_id: String,
+    pub executed_at: String,
+    pub channel_used: String,
+    pub message_sent: String,
+    pub status: String,
+    pub error_message: String,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Enhanced profile models - Platform Data Cache
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct PlatformDataCache {
+    pub id: String,
+    pub entity_type: String,
+    pub entity_id: String,
+    pub platform: String,
+    pub data_key: String,
+    pub data_value: String,
+    pub synced_at: String,
+    pub expires_at: Option<String>,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Enhanced profile models - RAG Section Mapping
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct RagSectionMapping {
+    pub id: String,
+    pub section_id: String,
+    pub is_indexed: bool,
+    pub embedding_status: String,
+    pub last_indexed_at: Option<String>,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Client Profile models - Unified Customer ID
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomerChannelId {
+    pub id: String,
+    pub customer_id: String,
+    pub channel_type: String,
+    pub channel_identifier: String,
+    pub channel_profile_name: String,
+    pub is_primary: bool,
+    pub verified_at: Option<String>,
+    pub last_seen_at: Option<String>,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Client Profile models - Data Sources
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientProfileSource {
+    pub id: String,
+    pub customer_id: String,
+    pub field_name: String,
+    pub source_type: String,
+    pub source_user_id: String,
+    pub source_user_name: String,
+    pub source_record_id: String,
+    pub source_url: String,
+    pub synced_at: Option<String>,
+    pub confidence_score: f64,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Client Profile models - Self-Learning Engine
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientLearningInsight {
+    pub id: String,
+    pub customer_id: String,
+    pub insight_type: String,
+    pub category: String,
+    pub insight: String,
+    pub confidence: f64,
+    pub evidence_count: i64,
+    pub source_conversation_id: Option<String>,
+    pub source_message_id: Option<String>,
+    pub extracted_at: String,
+    pub is_verified: bool,
+    pub verified_by: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientLearningPattern {
+    pub id: String,
+    pub customer_id: String,
+    pub pattern_type: String,
+    pub pattern_data: String,
+    pub confidence: f64,
+    pub sample_size: i64,
+    pub last_updated: String,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Client Profile models - Preferences
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientPreference {
+    pub id: String,
+    pub customer_id: String,
+    pub preference_type: String,
+    pub preference_value: String,
+    pub confidence: f64,
+    pub source: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Client Profile models - Transactions
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientOrder {
+    pub id: String,
+    pub customer_id: String,
+    pub order_number: String,
+    pub order_date: String,
+    pub status: String,
+    pub total_amount: f64,
+    pub currency: String,
+    pub items: String,
+    pub payment_status: String,
+    pub payment_method: String,
+    pub channel: String,
+    pub metadata: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientInvoice {
+    pub id: String,
+    pub customer_id: String,
+    pub invoice_number: String,
+    pub order_id: Option<String>,
+    pub invoice_date: String,
+    pub due_date: Option<String>,
+    pub total_amount: f64,
+    pub paid_amount: f64,
+    pub remaining_amount: f64,
+    pub currency: String,
+    pub status: String,
+    pub payment_method: String,
+    pub metadata: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Client Profile models - Payment Details
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientPaymentDetail {
+    pub id: String,
+    pub customer_id: String,
+    pub detail_type: String,
+    pub account_holder: String,
+    pub account_number: String,
+    pub bank_name: String,
+    pub routing_number: String,
+    pub card_last_four: String,
+    pub is_default: bool,
+    pub is_verified: bool,
+    pub metadata: String,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Client Profile models - Contact Points
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientContactPoint {
+    pub id: String,
+    pub customer_id: String,
+    pub contact_type: String,
+    pub contact_value: String,
+    pub is_primary: bool,
+    pub is_verified: bool,
+    pub last_used_at: Option<String>,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Client Profile models - Order Stage
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientOrderStage {
+    pub id: String,
+    pub customer_id: String,
+    pub stage_name: String,
+    pub stage_value: i64,
+    pub probability: f64,
+    pub expected_close_date: Option<String>,
+    pub current_order_id: Option<String>,
+    pub notes: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Client Profile models - Task Checklists
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientTaskChecklist {
+    pub id: String,
+    pub customer_id: String,
+    pub checklist_name: String,
+    pub checklist_type: String,
+    pub is_active: bool,
+    pub created_by: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientTaskItem {
+    pub id: String,
+    pub checklist_id: String,
+    pub task_name: String,
+    pub task_description: String,
+    pub is_completed: bool,
+    pub completed_at: Option<String>,
+    pub completed_by: String,
+    pub due_date: Option<String>,
+    pub priority: String,
+    pub display_order: i64,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Client Profile models - Interaction History
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientInteractionHistory {
+    pub id: String,
+    pub customer_id: String,
+    pub interaction_type: String,
+    pub channel: String,
+    pub direction: String,
+    pub summary: String,
+    pub sentiment: String,
+    pub duration_seconds: i64,
+    pub interaction_date: String,
+    pub metadata: String,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Client Profile models - Custom Sections
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientCustomSection {
+    pub id: String,
+    pub customer_id: String,
+    pub section_name: String,
+    pub section_type: String,
+    pub section_source: String,
+    pub display_order: i64,
+    pub is_active: bool,
+    pub created_by: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientCustomSectionData {
+    pub id: String,
+    pub section_id: String,
+    pub row_key: String,
+    pub field_key: String,
+    pub field_value: String,
+    pub field_type: String,
+    pub display_order: i64,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Client Profile models - RAG Mapping
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientRagMapping {
+    pub id: String,
+    pub customer_id: String,
+    pub section_type: String,
+    pub section_id: String,
+    pub is_indexed: bool,
+    pub embedding_status: String,
+    pub last_indexed_at: Option<String>,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// WhatsApp Channel models
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct WhatsAppTemplate {
+    pub id: String,
+    pub brand_id: String,
+    pub name: String,
+    pub category: Option<String>,
+    pub language: Option<String>,
+    pub status: String,
+    pub body: String,
+    pub components: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+    pub last_synced_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct WhatsAppCustomerProfile {
+    pub id: String,
+    pub brand_id: String,
+    pub wa_id: String,
+    pub profile_name: Option<String>,
+    pub profile_picture_url: Option<String>,
+    pub about: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+    pub last_fetched_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct WhatsAppSessionWindow {
+    pub id: String,
+    pub brand_id: String,
+    pub contact_id: String,
+    pub started_at: String,
+    pub expires_at: String,
+    pub is_active: bool,
+    pub message_count: i64,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct WhatsAppAutomationState {
+    pub id: String,
+    pub brand_id: String,
+    pub conversation_id: String,
+    pub greeting_sent: bool,
+    pub csat_sent: bool,
+    pub last_menu: Option<String>,
+    pub current_flow: Option<String>,
+    pub metadata: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct WhatsAppTemplateLog {
+    pub id: String,
+    pub brand_id: String,
+    pub template_name: String,
+    pub template_id: Option<String>,
+    pub contact_id: Option<String>,
+    pub conversation_id: Option<String>,
+    pub message_id: Option<String>,
+    pub status: Option<String>,
+    pub error: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct WhatsAppAutomationRule {
+    pub id: String,
+    pub brand_id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub trigger_type: String,
+    pub trigger_value: Option<String>,
+    pub action_type: String,
+    pub action_config: Option<String>,
+    pub is_active: bool,
+    pub priority: i64,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct WhatsAppBusinessProfileCache {
+    pub id: String,
+    pub brand_id: String,
+    pub verified_name: Option<String>,
+    pub about: Option<String>,
+    pub address: Option<String>,
+    pub description: Option<String>,
+    pub email: Option<String>,
+    pub websites: Option<String>,
+    pub vertical: Option<String>,
+    pub profile_picture_url: Option<String>,
+    pub messaging_limit_tier: Option<String>,
+    pub quality_rating: Option<String>,
+    pub account_mode: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+    pub last_synced_at: Option<String>,
+}
+
+// ---------------------------------------------------------------------------
+// WhatsApp Campaigns, Flows, and Industries models
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct Industry {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub icon: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct TemplateGroup {
+    pub id: String,
+    pub brand_id: String,
+    pub industry_id: Option<String>,
+    pub name: String,
+    pub description: Option<String>,
+    pub sort_order: i64,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct WhatsAppTemplateFlow {
+    pub id: String,
+    pub brand_id: String,
+    pub group_id: Option<String>,
+    pub industry_id: Option<String>,
+    pub name: String,
+    pub r#type: String,
+    pub category: Option<String>,
+    pub body: String,
+    pub header: Option<String>,
+    pub footer: Option<String>,
+    pub buttons: Option<String>,
+    pub sections: Option<String>,
+    pub language: String,
+    pub status: String,
+    pub is_active: bool,
+    pub metadata: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct WhatsAppFlowStep {
+    pub id: String,
+    pub flow_id: String,
+    pub step_number: i64,
+    pub condition: Option<String>,
+    pub action_type: String,
+    pub action_config: Option<String>,
+    pub next_step_id: Option<String>,
+    pub delay_seconds: i64,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct Campaign {
+    pub id: String,
+    pub brand_id: String,
+    pub name: String,
+    pub r#type: String,
+    pub template_flow_id: Option<String>,
+    pub status: String,
+    pub scheduled_at: Option<String>,
+    pub started_at: Option<String>,
+    pub completed_at: Option<String>,
+    pub total_contacts: i64,
+    pub sent_count: i64,
+    pub delivered_count: i64,
+    pub read_count: i64,
+    pub failed_count: i64,
+    pub retry_count: i64,
+    pub progress: Option<String>,
+    pub metadata: Option<String>,
+    pub created_by: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct CampaignContact {
+    pub id: String,
+    pub campaign_id: String,
+    pub contact_id: String,
+    pub status: String,
+    pub message_id: Option<String>,
+    pub error: Option<String>,
+    pub sent_at: Option<String>,
+    pub delivered_at: Option<String>,
+    pub read_at: Option<String>,
+    pub replied_at: Option<String>,
+    pub retry_count: i64,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct MessageLimit {
+    pub id: String,
+    pub brand_id: String,
+    pub period_start: String,
+    pub period_end: String,
+    pub utility_count: i64,
+    pub marketing_count: i64,
+    pub authentication_count: i64,
+    pub customer_service_count: i64,
+    pub total_limit: i64,
+    pub remaining: i64,
+    pub quality_rating: Option<String>,
+    pub messaging_tier: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct CampaignRetryQueue {
+    pub id: String,
+    pub campaign_id: String,
+    pub contact_id: String,
+    pub template_flow_id: Option<String>,
+    pub retry_count: i64,
+    pub max_retries: i64,
+    pub next_retry_at: String,
+    pub error: Option<String>,
+    pub status: String,
+    pub created_at: String,
+    pub updated_at: String,
 }

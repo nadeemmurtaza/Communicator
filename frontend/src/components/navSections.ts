@@ -3,6 +3,16 @@
  * (icon rail), their secondary items (labeled sidebar), and the labels
  * Breadcrumbs reads to build the trail. Adding a page is adding one row
  * here, not touching layout markup.
+ *
+ * Navigation structure (7 top-level sections):
+ *  1. Dashboard    — overview and quick actions
+ *  2. Workspace    — organization + brand hierarchy management
+ *  3. Inbox        — conversations, drafts, tickets, SLA, approvals
+ *  4. Audience     — contacts, clients, broadcasts, sequences, automation
+ *  5. Channels     — all channel integrations
+ *  6. Intelligence — knowledge base, services, AI, simulations
+ *  7. Reports      — analytics and reports
+ *  8. Settings     — team, connections, webhooks, audit, macros
  */
 import type { ComponentType, SVGProps } from 'react'
 import {
@@ -13,6 +23,7 @@ import {
   Sparkles,
   BarChart3,
   Settings,
+  Building2,
 } from './icons'
 
 export interface NavChild {
@@ -34,13 +45,28 @@ export interface NavSection {
 export const NAV_SECTIONS: NavSection[] = [
   { id: 'dashboard', label: 'Dashboard', to: '/', end: true, icon: LayoutDashboard },
   {
+    id: 'workspace',
+    label: 'Workspace',
+    to: '/workspace/organization',
+    icon: Building2,
+    children: [
+      { to: '/workspace/organization', label: 'Organization Profile' },
+      { to: '/workspace/organization/keys', label: 'Organization Keys' },
+      { to: '/workspace/brands', label: 'Brands' },
+      { to: '/workspace/brand/profile', label: 'Brand Profile' },
+      { to: '/workspace/brand/keys', label: 'Brand Keys (BYOK)' },
+      { to: '/workspace/brand/ai-config', label: 'Brand AI Config' },
+      { to: '/workspace/brand/knowledge', label: 'Brand Knowledge Base' },
+    ],
+  },
+  {
     id: 'inbox',
     label: 'Inbox',
     to: '/conversations',
     icon: Inbox,
     children: [
       { to: '/conversations', label: 'Conversations' },
-      { to: '/drafts', label: 'Draft review' },
+      { to: '/drafts', label: 'Draft Review' },
       { to: '/tickets', label: 'Tickets' },
       { to: '/sla', label: 'SLA Monitoring' },
       { to: '/approvals', label: 'Approvals Queue' },
@@ -53,6 +79,7 @@ export const NAV_SECTIONS: NavSection[] = [
     icon: Users,
     children: [
       { to: '/contacts', label: 'Contacts' },
+      { to: '/clients', label: 'Client Profiles' },
       { to: '/broadcasts', label: 'Broadcasts' },
       { to: '/sequences', label: 'Sequences' },
       { to: '/automation', label: 'Automation' },
@@ -64,7 +91,7 @@ export const NAV_SECTIONS: NavSection[] = [
     to: '/channels',
     icon: Radio,
     children: [
-      { to: '/channels', label: 'All channels', end: true },
+      { to: '/channels', label: 'All Channels', end: true },
       { to: '/channels/whatsapp', label: 'WhatsApp', channel: 'whatsapp' },
       { to: '/channels/instagram', label: 'Instagram', channel: 'instagram' },
       { to: '/channels/facebook', label: 'Facebook', channel: 'facebook' },
@@ -83,28 +110,37 @@ export const NAV_SECTIONS: NavSection[] = [
     to: '/knowledge-base',
     icon: Sparkles,
     children: [
-      { to: '/knowledge-base', label: 'Knowledge base' },
-      { to: '/services', label: 'Service catalog' },
+      { to: '/knowledge-base', label: 'Knowledge Base' },
+      { to: '/services', label: 'Service Catalog' },
+      { to: '/ai-agent', label: 'AI Agent' },
       { to: '/simulations', label: 'AI Simulations' },
       { to: '/self-improving', label: 'Self-Improving AI' },
     ],
   },
-  { id: 'reports', label: 'Reports', to: '/reports', icon: BarChart3 },
   {
-    id: 'admin',
-    label: 'Admin',
-    to: '/team',
+    id: 'reports',
+    label: 'Reports',
+    to: '/reports',
+    icon: BarChart3,
+    children: [
+      { to: '/reports', label: 'Overview' },
+      { to: '/reports/analytics', label: 'Analytics' },
+    ],
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    to: '/settings/team',
     icon: Settings,
     children: [
-      { to: '/business-profile', label: 'Business Profile' },
-      { to: '/team', label: 'Team' },
-      { to: '/connections', label: 'Connections' },
-      { to: '/webhooks', label: 'Webhooks' },
-      { to: '/audit-logs', label: 'Audit logs' },
-      { to: '/custom-attributes', label: 'CRM schema' },
-      { to: '/routing-capacity', label: 'Routing & Capacity' },
-      { to: '/macros', label: 'Macros' },
-      { to: '/canned-responses', label: 'Canned Responses' },
+      { to: '/settings/team', label: 'Team' },
+      { to: '/settings/connections', label: 'Connections' },
+      { to: '/settings/webhooks', label: 'Webhooks' },
+      { to: '/settings/audit-logs', label: 'Audit Logs' },
+      { to: '/settings/custom-attributes', label: 'CRM Schema' },
+      { to: '/settings/routing-capacity', label: 'Routing & Capacity' },
+      { to: '/settings/macros', label: 'Macros' },
+      { to: '/settings/canned-responses', label: 'Canned Responses' },
     ],
   },
 ]

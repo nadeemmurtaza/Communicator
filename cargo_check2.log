@@ -1,0 +1,17 @@
+﻿cargo :     Checking backend-rs v0.1.0 (C:\Users\nommi\Downloads\scraper\communicator\backend-rs)
+At line:1 char:74
++ ... \Downloads\scraper\communicator\backend-rs"; cargo check 2>&1 | Out-F ...
++                                                  ~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Checking ba...tor\backend-rs):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+warning: unused import: `sqlx::Row`
+  --> src\routes\organization.rs:19:5
+   |
+19 | use sqlx::Row;
+   |     ^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `backend-rs` (bin "backend-rs") generated 1 warning
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 34s

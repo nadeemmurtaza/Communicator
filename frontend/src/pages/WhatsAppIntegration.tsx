@@ -22,7 +22,19 @@ import {
   X,
 } from '../components/icons'
 
+function getBrandId(): string | null {
+  try {
+    const brand = localStorage.getItem('communicator.brand')
+    if (brand) {
+      const { id } = JSON.parse(brand)
+      return id || null
+    }
+  } catch { /* ignore */ }
+  return null
+}
+
 export function WhatsAppIntegration() {
+  const brandId = getBrandId()
   const [data, setData] = useState<WhatsAppChannelData | null>(null)
   const [templates, setTemplates] = useState<WhatsAppTemplate[]>([])
   const [events, setEvents] = useState<any[]>([])
@@ -37,27 +49,11 @@ export function WhatsAppIntegration() {
   const [success, setSuccess] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  // Form state
-  const [name, setName] = useState('')
-  const [phoneNumberId, setPhoneNumberId] = useState('')
-  const [wabaId, setWabaId] = useState('')
-  const [accessToken, setAccessToken] = useState('')
-  const [appSecret, setAppSecret] = useState('')
-  const [verifyToken, setVerifyToken] = useState('')
-  const [catalogId, setCatalogId] = useState('')
-
-
-  // Automations state
-  const [greetingEnabled, setGreetingEnabled] = useState(true)
-  const [greetingMessage, setGreetingMessage] = useState('')
-  const [outOfOfficeEnabled, setOutOfOfficeEnabled] = useState(false)
-  const [outOfOfficeMessage, setOutOfOfficeMessage] = useState('')
-  const [csatEnabled, setCsatEnabled] = useState(true)
-  const [autoReadReceipts, setAutoReadReceipts] = useState(true)
-  const [workingHoursEnabled, setWorkingHoursEnabled] = useState(false)
-  const [workingHoursStart, setWorkingHoursStart] = useState(9)
-  const [workingHoursEnd, setWorkingHoursEnd] = useState(18)
-  const [timezone, setTimezone] = useState('UTC')
+  // Brand-aware state
+  const [whatsappHealth, setWhatsAppHealth] = useState<any>(null)
+  const [whatsappRules, setWhatsAppRules] = useState<any[]>([])
+  const [healthLoading, setHealthLoading] = useState(false)
+  const [rulesLoading, setRulesLoading] = useState(false)
 
   // Test send state
   const [testPhone, setTestPhone] = useState('')
@@ -67,6 +63,10 @@ export function WhatsAppIntegration() {
 
   useEffect(() => {
     loadAll()
+    if (brandId) {
+      loadWhatsAppHealth()
+      loadWhatsAppRules()
+    }
   }, [])
 
   async function loadAll() {
@@ -74,7 +74,7 @@ export function WhatsAppIntegration() {
       setLoading(true)
       const [channelData, tplList, evList] = await Promise.all([
         api.getWhatsAppChannel(),
-        api.listWhatsAppTemplates(),
+        brandId ? api.listWhatsAppTemplates(brandId) : Promise.resolve([]),
         api.listWhatsAppEvents(),
       ])
 
@@ -105,6 +105,107 @@ export function WhatsAppIntegration() {
       setLoading(false)
     }
   }
+
+  // Brand-aware loading functions
+  async function loadWhatsAppHealth() {
+    if (!brandId) return
+    try {
+      setHealthLoading(true)
+      const health = await api.getWhatsAppHealth(brandId)
+      setWhatsAppHealth(health)
+    } catch { /* ignore */ } finally {
+      setHealthLoading(false)
+    }
+  }
+
+  async function loadWhatsAppRules() {
+    if (!brandId) return
+    try {
+      setRulesLoading(true)
+      const rules = await api.listWhatsAppRules(brandId)
+      setWhatsAppRules(rules)
+    } catch { /* ignore */ } finally {
+      setRulesLoading(false)
+    }
+  }
+
+  async function handleSyncTemplates() {
+    if (!brandId) return
+    try {
+      setSyncingTemplates(true)
+      const result = await api.syncWhatsAppTemplates(brandId)
+      setSuccess(`Synced ${result.templatesSynced} templates`)
+      setTemplates(await api.listWhatsAppTemplates(brandId))
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setSyncingTemplates(false)
+    }
+  }
+
+  async function handleSyncProfile() {
+    if (!brandId) return
+    try {
+      setSyncingTemplates(true)
+      const result = await api.syncWhatsAppProfile(brandId)
+      setSuccess(`Profile synced: ${result.verifiedName || 'N/A'}`)
+      loadWhatsAppHealth()
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setSyncingTemplates(false)
+    }
+  }
+
+  async function handleSendTest() {
+    if (!brandId || !testPhone) return
+    try {
+      setTestingSend(true)
+      const result = await api.sendWhatsAppTest(brandId, { to: testPhone, body: testBody })
+      setTestResult(result)
+      setSuccess('Test message sent successfully')
+      setTimeout(() => { setTestResult(null); setSuccess(null) }, 3000)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setTestingSend(false)
+    }
+  }
+
+  async function handleDeleteRule(ruleId: string) {
+    if (!brandId) return
+    try {
+      await api.deleteWhatsAppRule(brandId, ruleId)
+      loadWhatsAppRules()
+      setSuccess('Rule deleted')
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  // Form state
+  const [name, setName] = useState('')
+  const [phoneNumberId, setPhoneNumberId] = useState('')
+  const [wabaId, setWabaId] = useState('')
+  const [accessToken, setAccessToken] = useState('')
+  const [appSecret, setAppSecret] = useState('')
+  const [verifyToken, setVerifyToken] = useState('')
+  const [catalogId, setCatalogId] = useState('')
+
+  // Automations state
+  const [greetingEnabled, setGreetingEnabled] = useState(true)
+  const [greetingMessage, setGreetingMessage] = useState('')
+  const [outOfOfficeEnabled, setOutOfOfficeEnabled] = useState(false)
+  const [outOfOfficeMessage, setOutOfOfficeMessage] = useState('')
+  const [csatEnabled, setCsatEnabled] = useState(true)
+  const [autoReadReceipts, setAutoReadReceipts] = useState(true)
+  const [workingHoursEnabled, setWorkingHoursEnabled] = useState(false)
+  const [workingHoursStart, setWorkingHoursStart] = useState(9)
+  const [workingHoursEnd, setWorkingHoursEnd] = useState(18)
+  const [timezone, setTimezone] = useState('UTC')
 
   async function handleRegisterPhone() {
     try {
@@ -172,41 +273,6 @@ export function WhatsAppIntegration() {
       setError((e as Error).message)
     } finally {
       setVerifying(false)
-    }
-  }
-
-  async function handleSyncTemplates() {
-    try {
-      setSyncingTemplates(true)
-      const res = await api.syncWhatsAppTemplates()
-      setSuccess(res.message)
-      const tpls = await api.listWhatsAppTemplates()
-      setTemplates(tpls)
-      setTimeout(() => setSuccess(null), 3000)
-    } catch (e) {
-      setError((e as Error).message)
-    } finally {
-      setSyncingTemplates(false)
-    }
-  }
-
-  async function handleSendTest() {
-    if (!testPhone.trim()) {
-      setError('Please provide a test recipient phone number')
-      return
-    }
-    try {
-      setTestingSend(true)
-      setError(null)
-      const res = await api.sendWhatsAppTestMessage(testPhone, testBody)
-      setTestResult(res)
-      setSuccess(`Test WhatsApp message dispatched (${res.provider})!`)
-      const evList = await api.listWhatsAppEvents()
-      setEvents(evList)
-    } catch (e) {
-      setError((e as Error).message)
-    } finally {
-      setTestingSend(false)
     }
   }
 
@@ -329,6 +395,88 @@ export function WhatsAppIntegration() {
           <ExternalLink className="h-3 w-3" />
         </Link>
       </div>
+
+      {/* Brand-Aware Health Status */}
+      {brandId && whatsappHealth && (
+        <div className={`rounded-xl border p-4 ${whatsappHealth.isConnected ? 'border-emerald-200 bg-emerald-50/50' : 'border-red-200 bg-red-50/50'}`}>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <WhatsAppIcon className={`h-5 w-5 ${whatsappHealth.isConnected ? 'text-emerald-600' : 'text-red-600'}`} />
+              <h3 className="font-semibold text-sm">
+                Brand: {whatsappHealth.brandName || 'Unknown'}
+              </h3>
+              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${whatsappHealth.isConnected ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
+                {whatsappHealth.isConnected ? 'Connected' : 'Disconnected'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={handleSyncProfile} disabled={syncingTemplates} className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-semibold hover:bg-slate-50 disabled:opacity-50 flex items-center gap-1">
+                <RefreshCw className={`h-3 w-3 ${syncingTemplates ? 'animate-spin' : ''}`} />
+                Sync Profile
+              </button>
+              <button onClick={loadWhatsAppHealth} disabled={healthLoading} className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-semibold hover:bg-slate-50 disabled:opacity-50 flex items-center gap-1">
+                <RefreshCw className={`h-3 w-3 ${healthLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+            <div>
+              <span className="text-slate-500">Verified Name</span>
+              <p className="font-semibold text-slate-900">{whatsappHealth.verifiedName || 'N/A'}</p>
+            </div>
+            <div>
+              <span className="text-slate-500">Quality Rating</span>
+              <p className="font-semibold text-emerald-700">{whatsappHealth.qualityRating || 'N/A'}</p>
+            </div>
+            <div>
+              <span className="text-slate-500">Messaging Tier</span>
+              <p className="font-semibold text-slate-900">{whatsappHealth.messagingLimitTier || 'N/A'}</p>
+            </div>
+            <div>
+              <span className="text-slate-500">Status</span>
+              <p className={`font-semibold ${whatsappHealth.connectionError ? 'text-red-600' : 'text-emerald-600'}`}>
+                {whatsappHealth.connectionError || 'All good'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Automation Rules */}
+      {brandId && whatsappRules.length > 0 && (
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Bot className="h-4 w-4 text-purple-600" />
+              <h3 className="font-semibold text-sm">Automation Rules ({whatsappRules.length})</h3>
+            </div>
+            <button onClick={loadWhatsAppRules} disabled={rulesLoading} className="rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-semibold hover:bg-slate-50 disabled:opacity-50 flex items-center gap-1">
+              <RefreshCw className={`h-3 w-3 ${rulesLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          </div>
+          <div className="space-y-2">
+            {whatsappRules.map((rule: any) => (
+              <div key={rule.id} className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 p-3 text-xs">
+                <div>
+                  <span className="font-semibold text-slate-900">{rule.name}</span>
+                  <span className="ml-2 text-slate-500">Trigger: {rule.triggerType} → {rule.triggerValue || 'any'}</span>
+                  <span className="ml-2 text-purple-600">Action: {rule.actionType}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${rule.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
+                    {rule.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                  <button onClick={() => handleDeleteRule(rule.id)} className="text-red-500 hover:text-red-700">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Notifications */}
       {error && (

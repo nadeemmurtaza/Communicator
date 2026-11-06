@@ -12,9 +12,17 @@ interface Organization {
   name: string
 }
 
+interface Brand {
+  id: string
+  organizationId: string
+  name: string
+  slug: string
+}
+
 interface AuthContextValue {
   session: Session | null
   organization: Organization | null
+  brand: Brand | null
   loading: boolean
   loginWithNid: () => Promise<void>
   completeNidCallback: (
@@ -23,6 +31,7 @@ interface AuthContextValue {
     options?: { skipStateCheck?: boolean }
   ) => Promise<void>
   selectOrganization: (org: Organization) => void
+  selectBrand: (brand: Brand) => void
   logout: () => void
 }
 
@@ -30,6 +39,7 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 
 const SESSION_KEY = 'communicator.session'
 const ORG_KEY = 'communicator.organization'
+const BRAND_KEY = 'communicator.brand'
 // Tab-scoped, not persisted to localStorage: proves *this browser*
 // initiated the OAuth attempt whose state comes back on the callback, so a
 // state value from a link an attacker completed for their own account
@@ -39,14 +49,17 @@ const PENDING_STATE_KEY = 'communicator.nid_pending_state'
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [organization, setOrganization] = useState<Organization | null>(null)
+  const [brand, setBrand] = useState<Brand | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     try {
       const s = localStorage.getItem(SESSION_KEY)
       const o = localStorage.getItem(ORG_KEY)
+      const b = localStorage.getItem(BRAND_KEY)
       if (s) setSession(JSON.parse(s))
       if (o) setOrganization(JSON.parse(o))
+      if (b) setBrand(JSON.parse(b))
     } catch {
       // ignore corrupted storage
     }
@@ -91,16 +104,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOrganization(org)
   }
 
+  function selectBrand(brand: Brand) {
+    localStorage.setItem(BRAND_KEY, JSON.stringify(brand))
+    setBrand(brand)
+  }
+
   function logout() {
     localStorage.removeItem(SESSION_KEY)
     localStorage.removeItem(ORG_KEY)
+    localStorage.removeItem(BRAND_KEY)
     setSession(null)
     setOrganization(null)
+    setBrand(null)
   }
 
   return (
     <AuthContext.Provider
-      value={{ session, organization, loading, loginWithNid, completeNidCallback, selectOrganization, logout }}
+      value={{ session, organization, brand, loading, loginWithNid, completeNidCallback, selectOrganization, selectBrand, logout }}
     >
       {children}
     </AuthContext.Provider>

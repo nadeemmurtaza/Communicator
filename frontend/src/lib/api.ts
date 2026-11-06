@@ -20,6 +20,11 @@ function authHeaders(): Record<string, string> {
       const { tenantKey } = JSON.parse(org)
       if (tenantKey) headers['X-Tenant-Key'] = tenantKey
     }
+    const brand = localStorage.getItem('communicator.brand')
+    if (brand) {
+      const { id: brandId } = JSON.parse(brand)
+      if (brandId) headers['X-Brand-ID'] = brandId
+    }
   } catch {
     // corrupted storage -- fall back to unauthenticated/default-tenant request
   }
@@ -58,6 +63,17 @@ export interface OrganizationItem {
   tenantKey: string
   name: string
   createdAt: string
+}
+
+export interface BrandItem {
+  id: string
+  organizationId: string
+  name: string
+  slug: string
+  description?: string
+  logoUrl?: string
+  tagline?: string
+  createdAt?: string
 }
 
 export interface Draft {
@@ -2475,6 +2491,19 @@ export const api = {
   deleteTemplate: (name: string) =>
     request(`/settings/whatsapp/templates/${encodeURIComponent(name)}`, { method: 'DELETE' }),
 
+  // Organization Profile & BYOK
+  getOrganizationProfile: () => request<any>('/organization/profile'),
+  updateOrganizationProfile: (data: any) =>
+    request<any>('/organization/profile', { method: 'PUT', body: JSON.stringify(data) }),
+  getOrganizationSettings: () => request<any>('/organization/settings'),
+  updateOrganizationSettings: (data: any) =>
+    request<any>('/organization/settings', { method: 'PUT', body: JSON.stringify(data) }),
+  getOrganizationStats: () => request<any>('/organization/stats'),
+  verifyChannelConnection: (channel: string) =>
+    request<{ connected: boolean; error?: string }>(`/organization/channels/${channel}/verify`, {
+      method: 'POST',
+    }),
+
   // Centralized Knowledge Hub & Content Optimization
   getKnowledgeHubOverview: (params?: { q?: string; topic?: string; touchpoint?: string }) => {
     const sp = new URLSearchParams()
@@ -2782,11 +2811,6 @@ export const api = {
     }),
   verifyWhatsAppConnection: () =>
     request<{ status: string; health: any }>('/inboxes/channels/whatsapp/verify', {
-      method: 'POST',
-    }),
-  listWhatsAppTemplates: () => request<WhatsAppTemplate[]>('/inboxes/channels/whatsapp/templates'),
-  syncWhatsAppTemplates: () =>
-    request<{ status: string; message: string }>('/inboxes/channels/whatsapp/sync-templates', {
       method: 'POST',
     }),
   sendWhatsAppTestMessage: (recipient_phone: string, message?: string) =>
@@ -4071,4 +4095,87 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ name }),
     }),
+  // Brand hierarchy
+  listBrands: (organizationId?: string) =>
+    request<{ brands: BrandItem[] }>(organizationId ? `/brands?organizationId=${organizationId}` : '/brands').then(
+      (r) => r.brands
+    ),
+  getBrand: (id: string) => request<BrandItem>(`/brands/${id}`),
+  createBrand: (data: {
+    organizationId: string
+    name: string
+    slug?: string
+    description?: string
+    logoUrl?: string
+    tagline?: string
+  }) => request<BrandItem>('/brands', { method: 'POST', body: JSON.stringify(data) }),
+  updateBrand: (id: string, data: Record<string, any>) =>
+    request<BrandItem>(`/brands/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteBrand: (id: string) => request<{ deleted: boolean }>(`/brands/${id}`, { method: 'DELETE' }),
+  getBrandProfile: (id: string) =>
+    request<{ brand: any; organization: any; aiConfig: any; knowledgeCount: number }>(`/brands/${id}/profile`),
+  // Brand credentials (BYOK)
+  listBrandCredentials: (brandId: string) =>
+    request<{ credentials: Array<{ id: string; channelType: string; isActive: boolean }> }>(
+      `/brands/${brandId}/credentials`
+    ).then((r) => r.credentials),
+  upsertBrandCredentials: (brandId: string, channel: string, creds: Record<string, string>) =>
+    request<{ id: string; channelType: string }>(`/brands/${brandId}/credentials/${channel}`, {
+      method: 'PUT',
+      body: JSON.stringify(creds),
+    }),
+  deleteBrandCredentials: (brandId: string, channel: string) =>
+    request<{ deleted: boolean }>(`/brands/${brandId}/credentials/${channel}`, { method: 'DELETE' }),
+  verifyBrandCredentials: (brandId: string, channel: string) =>
+    request<{ connected: boolean; error?: string }>(`/brands/${brandId}/credentials/${channel}/verify`, {
+      method: 'POST',
+    }),
+  // Brand AI config
+  getBrandAIConfig: (brandId: string) => request<any>(`/brands/${brandId}/ai-config`),
+  updateBrandAIConfig: (brandId: string, data: Record<string, any>) =>
+    request<any>(`/brands/${brandId}/ai-config`, { method: 'PUT', body: JSON.stringify(data) }),
+  // Brand knowledge base
+  listBrandKnowledge: (brandId: string, q?: string, topic?: string) => {
+    const params = new URLSearchParams()
+    if (q) params.set('q', q)
+    if (topic) params.set('topic', topic)
+    const qs = params.toString()
+    return request<{ entries: any[] }>(`/brands/${brandId}/knowledge${qs ? '?' + qs : ''}`).then((r) => r.entries)
+  },
+  createBrandKnowledge: (brandId: string, data: { title: string; content: string; topic?: string; tags?: string }) =>
+    request<any>(`/brands/${brandId}/knowledge`, { method: 'POST', body: JSON.stringify(data) }),
+  updateBrandKnowledge: (brandId: string, entryId: string, data: Record<string, any>) =>
+    request<any>(`/brands/${brandId}/knowledge/${entryId}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteBrandKnowledge: (brandId: string, entryId: string) =>
+    request<{ deleted: boolean }>(`/brands/${brandId}/knowledge/${entryId}`, { method: 'DELETE' }),
+  // WhatsApp Channel
+  getWhatsAppHealth: (brandId: string) => request<any>(`/brands/${brandId}/whatsapp/health`),
+  listWhatsAppTemplates: (brandId?: string) =>
+    brandId ? request<any[]>(`/brands/${brandId}/whatsapp/templates`) : request<any[]>('/inboxes/channels/whatsapp/templates'),
+  syncWhatsAppTemplates: (brandId: string) =>
+    request<{ templatesSynced: number; profileSynced: boolean; syncedAt: string }>(
+      `/brands/${brandId}/whatsapp/sync-templates`, { method: 'POST' }
+    ),
+  syncWhatsAppProfile: (brandId: string) =>
+    request<{ synced: boolean; verifiedName?: string; messagingLimitTier?: string; qualityRating?: string; syncedAt: string }>(
+      `/brands/${brandId}/whatsapp/sync-profile`, { method: 'POST' }
+    ),
+  listWhatsAppCustomers: (brandId: string) => request<any[]>(`/brands/${brandId}/whatsapp/customers`),
+  sendWhatsAppTest: (brandId: string, data: { to: string; messageType?: string; body?: string; templateName?: string; language?: string }) =>
+    request<{ success: boolean; messageId: string; messageType: string }>(
+      `/brands/${brandId}/whatsapp/send-test`, { method: 'POST', body: JSON.stringify(data) }
+    ),
+  listWhatsAppRules: (brandId: string) => request<any[]>(`/brands/${brandId}/whatsapp/automation-rules`),
+  createWhatsAppRule: (brandId: string, data: { name: string; triggerType: string; triggerValue?: string; actionType: string; actionConfig?: string; priority?: number }) =>
+    request<{ id: string; createdAt: string }>(
+      `/brands/${brandId}/whatsapp/automation-rules`, { method: 'POST', body: JSON.stringify(data) }
+    ),
+  updateWhatsAppRule: (brandId: string, ruleId: string, data: { name: string; triggerType: string; triggerValue?: string; actionType: string; actionConfig?: string; priority?: number }) =>
+    request<{ id: string; updatedAt: string }>(
+      `/brands/${brandId}/whatsapp/automation-rules/${ruleId}`, { method: 'PUT', body: JSON.stringify(data) }
+    ),
+  deleteWhatsAppRule: (brandId: string, ruleId: string) =>
+    request<{ deleted: boolean }>(`/brands/${brandId}/whatsapp/automation-rules/${ruleId}`, { method: 'DELETE' }),
+  runWhatsAppNudges: (brandId: string) =>
+    request<{ nudgesSent: number; runAt: string }>(`/brands/${brandId}/whatsapp/nudges`, { method: 'POST' }),
 }

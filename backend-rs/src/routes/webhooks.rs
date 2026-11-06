@@ -4,6 +4,8 @@ use crate::services::signatures::{
     secrets_match, validate_line_signature, validate_meta_signature, validate_tiktok_signature,
     validate_twilio_signature,
 };
+use crate::services::whatsapp::WhatsAppService;
+use crate::services::whatsapp_automations::WhatsAppAutomationEngine;
 use axum::body::Bytes;
 use axum::extract::{OriginalUri, Query, State};
 use axum::http::{HeaderMap, StatusCode};
@@ -572,6 +574,198 @@ async fn verify_channel_info(state: &AppState, profile: &Value) -> Result<String
     Ok(format!("{} stored channel value(s) match what Meta reported", expected.len()))
 }
 
+// ---------------------------------------------------------------------------
+// WhatsApp brand resolution and automation helpers
+// ---------------------------------------------------------------------------
+
+/// Resolve brand_id from a WhatsApp sender phone number.
+/// Looks up the inbox for this channel, then gets the brand_id.
+async fn resolve_whatsapp_brand(pool: &sqlx::SqlitePool, from_num: &str) -> Option<String> {
+    // Try to find the conversation for this sender, which may have a brand_id
+    let conv = sqlx::query(r#"
+        SELECT c.brand_id FROM conversations c
+        JOIN contacts ct ON ct.id = c.contact_id
+        WHERE ct.channel = 'whatsapp' AND ct.value = ?
+        AND c.brand_id IS NOT NULL AND c.brand_id != ''
+        ORDER BY c.updated_at DESC LIMIT 1
+    "#)
+    .bind(from_num)
+    .fetch_optional(pool)
+    .await;
+
+    if let Ok(Some(row)) = conv {
+        if let Ok(Some(brand_id)) = row.try_get::<Option<String>, _>("brand_id") {
+            if !brand_id.is_empty() {
+                return Some(brand_id);
+            }
+        }
+    }
+
+    // Fallback: find the first active WhatsApp inbox with a brand_id
+    let inbox = sqlx::query(r#"
+        SELECT brand_id FROM inboxes
+        WHERE channel_type = 'whatsapp' AND is_active = 1
+        AND brand_id IS NOT NULL AND brand_id != ''
+        LIMIT 1
+    "#)
+    .fetch_optional(pool)
+    .await;
+
+    if let Ok(Some(row)) = inbox {
+        if let Ok(Some(brand_id)) = row.try_get::<Option<String>, _>("brand_id") {
+            if !brand_id.is_empty() {
+                return Some(brand_id);
+            }
+        }
+    }
+
+    None
+}
+
+/// Sync customer profile data from Meta contacts array to whatsapp_customer_profiles
+async fn sync_whatsapp_customer_profile(
+    pool: &sqlx::SqlitePool,
+    brand_id: &str,
+    wa_id: &str,
+    profile_name: &str,
+    profile_picture_url: &str,
+    about: &str,
+) {
+    let now = chrono::Utc::now().to_rfc3339();
+    let id = uuid::Uuid::new_v4().simple().to_string();
+
+    let _ = sqlx::query(
+        "INSERT OR REPLACE INTO whatsapp_customer_profiles \
+         (id, wa_id, brand_id, profile_name, profile_picture_url, about, last_fetched_at, created_at, updated_at) \
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    )
+    .bind(&id)
+    .bind(wa_id)
+    .bind(brand_id)
+    .bind(profile_name)
+    .bind(profile_picture_url)
+    .bind(about)
+    .bind(&now)
+    .bind(&now)
+    .bind(&now)
+    .execute(pool)
+    .await;
+}
+
+/// Process WhatsApp automation for an inbound message
+async fn process_whatsapp_automation(
+    state: &AppState,
+    brand_id: &str,
+    contact_wa_id: &str,
+    conversation_id: &str,
+    message_text: &str,
+    msg_value: &serde_json::Value,
+) {
+    let cfg = state.config.as_ref().clone();
+    let engine = WhatsAppAutomationEngine::new(state.db.clone(), cfg.clone());
+    let wa_service = WhatsAppService::new(state.db.clone(), cfg);
+
+    // 1. Update session window (24h tracking)
+    let _ = wa_service.update_session_window(brand_id, contact_wa_id).await;
+
+    // 2. Parse interactive message details
+    let interactive_type = msg_value.get("type").and_then(|v| v.as_str()).unwrap_or("");
+    let button_id = extract_meta_payload_id(msg_value);
+
+    // 3. Handle agent commands (#bot, #resolve, #csat, #tag) — highest priority
+    let agent_reply = engine.handle_agent_commands(brand_id, conversation_id, contact_wa_id, message_text).await;
+    if let Some(reply) = agent_reply {
+        tracing::info!("Agent command reply: {reply}");
+        // Send the reply back to the customer
+        let _ = wa_service.send_text(brand_id, contact_wa_id, &reply, false).await;
+    }
+
+    // 4. Handle CSAT response (only for interactive/button replies)
+    if interactive_type == "interactive" {
+        let csat_reply = engine.handle_csat_response(brand_id, conversation_id, contact_wa_id, message_text).await;
+        if let Some(reply) = csat_reply {
+            tracing::info!("CSAT reply: {reply}");
+            let _ = wa_service.send_text(brand_id, contact_wa_id, &reply, false).await;
+        }
+    }
+
+    // 5. Handle navigation menu (button clicks, list selections)
+    if interactive_type == "interactive" {
+        if let Some(ref bid) = button_id {
+            let menu_reply = engine.handle_navigation_menu(brand_id, contact_wa_id, bid).await;
+            if menu_reply.is_some() {
+                tracing::info!("Navigation menu handled for payload: {bid}");
+            }
+        }
+    }
+
+    // 6. Match automation rules (keyword/regex/intent)
+    match engine.match_advanced_rule(brand_id, message_text).await {
+        Ok(Some((rule_id, action_type, _action_config))) => {
+            tracing::info!("Automation rule matched: {rule_id}, action: {action_type}");
+        }
+        Ok(None) => {}
+        Err(e) => {
+            tracing::warn!("Automation rule matching failed: {e}");
+        }
+    }
+
+    // 7. Send welcome greeting if first touch
+    let should_greet = engine.should_send_welcome_greeting(brand_id, conversation_id).await.unwrap_or(false);
+    if should_greet {
+        match engine.send_welcome_greeting(brand_id, conversation_id, contact_wa_id).await {
+            Ok(_) => tracing::info!("Welcome greeting sent to {contact_wa_id}"),
+            Err(e) => tracing::warn!("Welcome greeting failed: {e}"),
+        }
+    }
+
+    // 8. Mark as read if auto_read_receipts is enabled for the brand
+    let msg_id = msg_value.get("id").and_then(|v| v.as_str()).unwrap_or("");
+    if !msg_id.is_empty() {
+        let auto_read: bool = sqlx::query_scalar(
+            "SELECT COALESCE((SELECT json_extract(credentials, '$.auto_read_receipts') FROM brand_credentials WHERE brand_id = ? AND channel_type = 'whatsapp' AND is_active = 1 LIMIT 1), '0') = '1'"
+        )
+        .bind(brand_id)
+        .fetch_optional(&state.db)
+        .await
+        .unwrap_or(Some(false))
+        .unwrap_or(false);
+
+        if auto_read {
+            let _ = wa_service.mark_as_read(brand_id, msg_id).await;
+        }
+    }
+
+    // 9. Brand-specific AI auto-reply via reply engine
+    // Only call if no automation already responded and auto-reply is enabled
+    let auto_reply_enabled: bool = sqlx::query_scalar(
+        "SELECT COALESCE((SELECT json_extract(credentials, '$.auto_reply_enabled') FROM brand_credentials WHERE brand_id = ? AND channel_type = 'whatsapp' AND is_active = 1 LIMIT 1), '0') = '1'"
+    )
+    .bind(brand_id)
+    .fetch_optional(&state.db)
+    .await
+    .unwrap_or(Some(false))
+    .unwrap_or(false);
+
+    if auto_reply_enabled {
+        // Check if this is a session message (within 24h window)
+        let session_active = wa_service.check_session_active(brand_id, contact_wa_id).await.unwrap_or(false);
+        if session_active {
+            match crate::services::reply_engine::generate_reply(state, conversation_id, None).await {
+                Ok(draft) => {
+                    if !draft.body.is_empty() {
+                        tracing::info!("AI auto-reply generated for conversation {conversation_id}");
+                        let _ = wa_service.send_text(brand_id, contact_wa_id, &draft.body, false).await;
+                    }
+                }
+                Err(_e) => {
+                    tracing::debug!("Reply engine skipped for conversation {conversation_id}");
+                }
+            }
+        }
+    }
+}
+
 pub async fn meta_whatsapp_inbound(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -640,15 +834,28 @@ pub async fn meta_whatsapp_inbound(
             let value = change.get("value").cloned().unwrap_or(Value::Null);
 
             let mut contacts_map = serde_json::Map::new();
+            // Collect full contact data for profile sync
+            let mut contact_profiles: Vec<(String, String, String, String)> = Vec::new();
             for ct in value.get("contacts").and_then(|v| v.as_array()).into_iter().flatten() {
                 let wa_id = ct.get("wa_id").and_then(|v| v.as_str()).unwrap_or("");
                 let profile_name = ct
                     .pointer("/profile/name")
                     .and_then(|v| v.as_str())
                     .unwrap_or("");
+                let profile_picture = ct
+                    .pointer("/profile/picture")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                let about = ct
+                    .pointer("/profile/about")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
                 if !wa_id.is_empty() && !profile_name.is_empty() {
                     contacts_map.insert(wa_id.to_string(), json!(profile_name));
                     contacts_map.insert(normalize_meta_sender(wa_id), json!(profile_name));
+                }
+                if !wa_id.is_empty() {
+                    contact_profiles.push((wa_id.to_string(), profile_name.to_string(), profile_picture.to_string(), about.to_string()));
                 }
             }
 
@@ -681,18 +888,88 @@ pub async fn meta_whatsapp_inbound(
                     .or_else(|| contacts_map.get(&normalize_meta_sender(from_num)))
                     .and_then(|v| v.as_str())
                     .unwrap_or("");
+                let normalized_from = normalize_meta_sender(from_num);
 
                 let inbound = InboundMessage {
                     channel: "whatsapp",
-                    from_value: &normalize_meta_sender(from_num),
+                    from_value: &normalized_from,
                     body: &text,
                     provider: "meta",
                     provider_message_id: msg_id,
                     sender_name,
                 };
                 match inbound::process_inbound_message(&state.db, &inbound).await {
-                    Ok((_, true)) => duplicates += 1,
-                    Ok((_, false)) => ingested += 1,
+                    Ok((message_id, true)) => {
+                        duplicates += 1;
+                        // Even duplicates need session window updates and automation
+                        let conversation_id = sqlx::query_scalar::<_, String>(
+                            "SELECT conversation_id FROM messages WHERE id = ? LIMIT 1"
+                        )
+                        .bind(&message_id)
+                        .fetch_optional(&state.db)
+                        .await
+                        .ok()
+                        .flatten()
+                        .unwrap_or_default();
+
+                        // Sync customer profile from Meta
+                        for (wa_id, name, pic, about) in &contact_profiles {
+                            if wa_id == from_num || normalize_meta_sender(wa_id) == normalized_from {
+                                let _ = sync_whatsapp_customer_profile(
+                                    &state.db, "", wa_id, name, pic, about
+                                ).await;
+                            }
+                        }
+
+                        // Resolve brand and run automation
+                        if let Some(brand_id) = resolve_whatsapp_brand(&state.db, &normalized_from).await {
+                            if !conversation_id.is_empty() {
+                                let _ = process_whatsapp_automation(
+                                    &state, &brand_id, &normalized_from, &conversation_id, &text, msg
+                                ).await;
+                            }
+                        }
+                    }
+                    Ok((message_id, false)) => {
+                        ingested += 1;
+                        // Get conversation_id for automation
+                        let conversation_id = sqlx::query_scalar::<_, String>(
+                            "SELECT conversation_id FROM messages WHERE id = ? LIMIT 1"
+                        )
+                        .bind(&message_id)
+                        .fetch_optional(&state.db)
+                        .await
+                        .ok()
+                        .flatten()
+                        .unwrap_or_default();
+
+                        // Sync customer profile from Meta
+                        for (wa_id, name, pic, about) in &contact_profiles {
+                            if wa_id == from_num || normalize_meta_sender(wa_id) == normalized_from {
+                                let _ = sync_whatsapp_customer_profile(
+                                    &state.db, "", wa_id, name, pic, about
+                                ).await;
+                            }
+                        }
+
+                        // Resolve brand and run automation
+                        if let Some(brand_id) = resolve_whatsapp_brand(&state.db, &normalized_from).await {
+                            // Update conversation with brand_id
+                            if !conversation_id.is_empty() {
+                                let _ = sqlx::query(
+                                    "UPDATE conversations SET brand_id = ? WHERE id = ?"
+                                )
+                                .bind(&brand_id)
+                                .bind(&conversation_id)
+                                .execute(&state.db)
+                                .await;
+
+                                let _ = process_whatsapp_automation(
+                                    &state, &brand_id, &normalized_from, &conversation_id, &text, msg
+                                ).await;
+                            }
+                        }
+                    }
                     Err(inbound::InboundError::UnknownContact(_)) => unknown_contacts += 1,
                     Err(other) => errors.push(format!("{other:?}")),
                 }

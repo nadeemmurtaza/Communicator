@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useTransition, type RefObject } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Sparkles,
@@ -43,14 +43,14 @@ export function Dashboard() {
   const [error, setError] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [busyDraftId, setBusyDraftId] = useState<string | null>(null)
-  const isInitialLoadRef = useRef(true)
-  const [, startTransition] = useTransition()
+  const [firstLoadComplete, setFirstLoadComplete] = useState(false)
   const draftsIcon = useRef<AnimatedIconHandle>(null)
   const leadsIcon = useRef<AnimatedIconHandle>(null)
   const conversationsIcon = useRef<AnimatedIconHandle>(null)
   const slaIcon = useRef<AnimatedIconHandle>(null)
 
   const loadData = async () => {
+    const isFirstLoad = !firstLoadComplete
     setIsRefreshing(true)
     setError(null)
     try {
@@ -69,28 +69,24 @@ export function Dashboard() {
         settingsRes.status === 'fulfilled' ||
         inboxesRes.status === 'fulfilled'
 
-      startTransition(() => {
-        if (draftsRes.status === 'fulfilled') setDrafts(draftsRes.value)
-        if (convsRes.status === 'fulfilled') setConversations(convsRes.value)
-        if (slaRes.status === 'fulfilled') setSlaMetrics(slaRes.value)
-        if (settingsRes.status === 'fulfilled') setSettings(settingsRes.value)
-        if (inboxesRes.status === 'fulfilled') setInboxes(inboxesRes.value)
+      if (draftsRes.status === 'fulfilled') setDrafts(draftsRes.value)
+      if (convsRes.status === 'fulfilled') setConversations(convsRes.value)
+      if (slaRes.status === 'fulfilled') setSlaMetrics(slaRes.value)
+      if (settingsRes.status === 'fulfilled') setSettings(settingsRes.value)
+      if (inboxesRes.status === 'fulfilled') setInboxes(inboxesRes.value)
 
-        // Only show error if all calls failed AND this is not the initial load.
-        // During initial load, failures are silent — empty states are shown.
-        if (!anyFulfilled && !isInitialLoadRef.current) {
-          setError('Unable to connect to Communicator API backend')
-        }
-      })
-      // Mark initial load as complete after the promise settles.
-      isInitialLoadRef.current = false
+      setFirstLoadComplete(true)
+
+      // Never show error during the first load — only on manual refresh
+      if (!isFirstLoad && !anyFulfilled) {
+        setError('Unable to connect to Communicator API backend')
+      }
     } catch (err: unknown) {
-      // During initial load, swallow errors silently.
-      // Only show errors for manual refresh failures.
-      if (!isInitialLoadRef.current) {
+      setFirstLoadComplete(true)
+      // Never show error during the first load — only on manual refresh
+      if (!isFirstLoad) {
         setError(err instanceof Error ? err.message : 'Failed to load dashboard data')
       }
-      isInitialLoadRef.current = false
     } finally {
       setIsRefreshing(false)
     }
@@ -174,7 +170,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      {error && !isInitialLoadRef.current && (
+      {error && firstLoadComplete && (
         <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
           <span>{error}</span>

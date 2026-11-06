@@ -1,0 +1,315 @@
+﻿cargo :     Checking backend-rs v0.1.0 (C:\Users\nommi\Downloads\scraper\communicator\backend-rs)
+At line:1 char:74
++ ... \Downloads\scraper\communicator\backend-rs"; cargo check 2>&1 | Out-F ...
++                                                  ~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Checking ba...tor\backend-rs):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+error[E0599]: no method named `try_get` found for enum `std::option::Option<T>` in the current scope
+   --> src\routes\brands.rs:856:21
+    |
+856 |             "id": r.try_get::<String, _>("id").unwrap_or_default(),
+    |                     ^^^^^^^ method not found in `std::option::Option<SqliteRow>`
+    |
+note: the method `try_get` exists on the type `SqliteRow`
+   --> C:\Users\nommi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlx-core-0.8.6\src\row.rs:111:5
+    |
+111 | /     fn try_get<'r, T, I>(&'r self, index: I) -> Result<T, Error>
+112 | |     where
+113 | |         I: ColumnIndex<Self>,
+114 | |         T: Decode<'r, Self::Database> + Type<Self::Database>,
+    | |_____________________________________________________________^
+help: consider using `Option::expect` to unwrap the `SqliteRow` value, panicking if the value is an `Option::None`
+    |
+856 |             "id": r.expect("REASON").try_get::<String, _>("id").unwrap_or_default(),
+    |                    +++++++++++++++++
+
+error[E0599]: no method named `try_get` found for enum `std::option::Option<T>` in the current scope
+   --> src\routes\brands.rs:857:23
+    |
+857 |             "name": r.try_get::<String, _>("name").unwrap_or_default(),
+    |                       ^^^^^^^ method not found in `std::option::Option<SqliteRow>`
+    |
+note: the method `try_get` exists on the type `SqliteRow`
+   --> C:\Users\nommi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlx-core-0.8.6\src\row.rs:111:5
+    |
+111 | /     fn try_get<'r, T, I>(&'r self, index: I) -> Result<T, Error>
+112 | |     where
+113 | |         I: ColumnIndex<Self>,
+114 | |         T: Decode<'r, Self::Database> + Type<Self::Database>,
+    | |_____________________________________________________________^
+help: consider using `Option::expect` to unwrap the `SqliteRow` value, panicking if the value is an `Option::None`
+    |
+857 |             "name": r.expect("REASON").try_get::<String, _>("name").unwrap_or_default(),
+    |                      +++++++++++++++++
+
+error[E0599]: no method named `try_get` found for enum `std::option::Option<T>` in the current scope
+   --> src\routes\brands.rs:858:30
+    |
+858 |             "description": r.try_get::<String, _>("description").unwrap_or_default(),
+    |                              ^^^^^^^ method not found in `std::option::Option<SqliteRow>`
+    |
+note: the method `try_get` exists on the type `SqliteRow`
+   --> C:\Users\nommi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlx-core-0.8.6\src\row.rs:111:5
+    |
+111 | /     fn try_get<'r, T, I>(&'r self, index: I) -> Result<T, Error>
+112 | |     where
+113 | |         I: ColumnIndex<Self>,
+114 | |         T: Decode<'r, Self::Database> + Type<Self::Database>,
+    | |_____________________________________________________________^
+help: consider using `Option::expect` to unwrap the `SqliteRow` value, panicking if the value is an `Option::None`
+    |
+858 |             "description": r.expect("REASON").try_get::<String, _>("description").unwrap_or_default(),
+    |                             +++++++++++++++++
+
+error[E0599]: no method named `try_get` found for enum `std::option::Option<T>` in the current scope
+   --> src\routes\brands.rs:859:27
+    |
+859 |             "industry": r.try_get::<String, _>("industry").unwrap_or_default(),
+    |                           ^^^^^^^ method not found in `std::option::Option<SqliteRow>`
+    |
+note: the method `try_get` exists on the type `SqliteRow`
+   --> C:\Users\nommi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlx-core-0.8.6\src\row.rs:111:5
+    |
+111 | /     fn try_get<'r, T, I>(&'r self, index: I) -> Result<T, Error>
+112 | |     where
+113 | |         I: ColumnIndex<Self>,
+114 | |         T: Decode<'r, Self::Database> + Type<Self::Database>,
+    | |_____________________________________________________________^
+help: consider using `Option::expect` to unwrap the `SqliteRow` value, panicking if the value is an `Option::None`
+    |
+859 |             "industry": r.expect("REASON").try_get::<String, _>("industry").unwrap_or_default(),
+    |                          +++++++++++++++++
+
+error[E0599]: no method named `try_get` found for enum `std::option::Option<T>` in the current scope
+   --> src\routes\brands.rs:860:26
+    |
+860 |             "website": r.try_get::<String, _>("website").unwrap_or_default(),
+    |                          ^^^^^^^ method not found in `std::option::Option<SqliteRow>`
+    |
+note: the method `try_get` exists on the type `SqliteRow`
+   --> C:\Users\nommi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlx-core-0.8.6\src\row.rs:111:5
+    |
+111 | /     fn try_get<'r, T, I>(&'r self, index: I) -> Result<T, Error>
+112 | |     where
+113 | |         I: ColumnIndex<Self>,
+114 | |         T: Decode<'r, Self::Database> + Type<Self::Database>,
+    | |_____________________________________________________________^
+help: consider using `Option::expect` to unwrap the `SqliteRow` value, panicking if the value is an `Option::None`
+    |
+860 |             "website": r.expect("REASON").try_get::<String, _>("website").unwrap_or_default(),
+    |                         +++++++++++++++++
+
+error[E0599]: no method named `try_get` found for enum `std::option::Option<T>` in the current scope
+   --> src\routes\brands.rs:861:24
+    |
+861 |             "email": r.try_get::<String, _>("email").unwrap_or_default(),
+    |                        ^^^^^^^ method not found in `std::option::Option<SqliteRow>`
+    |
+note: the method `try_get` exists on the type `SqliteRow`
+   --> C:\Users\nommi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlx-core-0.8.6\src\row.rs:111:5
+    |
+111 | /     fn try_get<'r, T, I>(&'r self, index: I) -> Result<T, Error>
+112 | |     where
+113 | |         I: ColumnIndex<Self>,
+114 | |         T: Decode<'r, Self::Database> + Type<Self::Database>,
+    | |_____________________________________________________________^
+help: consider using `Option::expect` to unwrap the `SqliteRow` value, panicking if the value is an `Option::None`
+    |
+861 |             "email": r.expect("REASON").try_get::<String, _>("email").unwrap_or_default(),
+    |                       +++++++++++++++++
+
+error[E0599]: no method named `try_get` found for enum `std::option::Option<T>` in the current scope
+   --> src\routes\brands.rs:862:24
+    |
+862 |             "phone": r.try_get::<String, _>("phone").unwrap_or_default(),
+    |                        ^^^^^^^ method not found in `std::option::Option<SqliteRow>`
+    |
+note: the method `try_get` exists on the type `SqliteRow`
+   --> C:\Users\nommi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlx-core-0.8.6\src\row.rs:111:5
+    |
+111 | /     fn try_get<'r, T, I>(&'r self, index: I) -> Result<T, Error>
+112 | |     where
+113 | |         I: ColumnIndex<Self>,
+114 | |         T: Decode<'r, Self::Database> + Type<Self::Database>,
+    | |_____________________________________________________________^
+help: consider using `Option::expect` to unwrap the `SqliteRow` value, panicking if the value is an `Option::None`
+    |
+862 |             "phone": r.expect("REASON").try_get::<String, _>("phone").unwrap_or_default(),
+    |                       +++++++++++++++++
+
+error[E0599]: no method named `try_get` found for enum `std::option::Option<T>` in the current scope
+   --> src\routes\brands.rs:875:29
+    |
+875 |             "aiProvider": r.try_get::<String, _>("ai_provider").unwrap_or_default(),
+    |                             ^^^^^^^ method not found in `std::option::Option<SqliteRow>`
+    |
+note: the method `try_get` exists on the type `SqliteRow`
+   --> C:\Users\nommi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlx-core-0.8.6\src\row.rs:111:5
+    |
+111 | /     fn try_get<'r, T, I>(&'r self, index: I) -> Result<T, Error>
+112 | |     where
+113 | |         I: ColumnIndex<Self>,
+114 | |         T: Decode<'r, Self::Database> + Type<Self::Database>,
+    | |_____________________________________________________________^
+help: consider using `Option::expect` to unwrap the `SqliteRow` value, panicking if the value is an `Option::None`
+    |
+875 |             "aiProvider": r.expect("REASON").try_get::<String, _>("ai_provider").unwrap_or_default(),
+    |                            +++++++++++++++++
+
+error[E0599]: no method named `try_get` found for enum `std::option::Option<T>` in the current scope
+   --> src\routes\brands.rs:876:26
+    |
+876 |             "modelId": r.try_get::<String, _>("model_id").unwrap_or_default(),
+    |                          ^^^^^^^ method not found in `std::option::Option<SqliteRow>`
+    |
+note: the method `try_get` exists on the type `SqliteRow`
+   --> C:\Users\nommi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlx-core-0.8.6\src\row.rs:111:5
+    |
+111 | /     fn try_get<'r, T, I>(&'r self, index: I) -> Result<T, Error>
+112 | |     where
+113 | |         I: ColumnIndex<Self>,
+114 | |         T: Decode<'r, Self::Database> + Type<Self::Database>,
+    | |_____________________________________________________________^
+help: consider using `Option::expect` to unwrap the `SqliteRow` value, panicking if the value is an `Option::None`
+    |
+876 |             "modelId": r.expect("REASON").try_get::<String, _>("model_id").unwrap_or_default(),
+    |                         +++++++++++++++++
+
+error[E0599]: no method named `try_get` found for enum `std::option::Option<T>` in the current scope
+   --> src\routes\brands.rs:877:30
+    |
+877 |             "temperature": r.try_get::<f64, _>("temperature").unwrap_or(0.7),
+    |                              ^^^^^^^ method not found in `std::option::Option<SqliteRow>`
+    |
+note: the method `try_get` exists on the type `SqliteRow`
+   --> C:\Users\nommi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlx-core-0.8.6\src\row.rs:111:5
+    |
+111 | /     fn try_get<'r, T, I>(&'r self, index: I) -> Result<T, Error>
+112 | |     where
+113 | |         I: ColumnIndex<Self>,
+114 | |         T: Decode<'r, Self::Database> + Type<Self::Database>,
+    | |_____________________________________________________________^
+help: consider using `Option::expect` to unwrap the `SqliteRow` value, panicking if the value is an `Option::None`
+    |
+877 |             "temperature": r.expect("REASON").try_get::<f64, _>("temperature").unwrap_or(0.7),
+    |                             +++++++++++++++++
+
+error[E0599]: no method named `try_get` found for enum `std::option::Option<T>` in the current scope
+   --> src\routes\brands.rs:878:28
+    |
+878 |             "maxTokens": r.try_get::<i64, _>("max_tokens").unwrap_or(4096),
+    |                            ^^^^^^^ method not found in `std::option::Option<SqliteRow>`
+    |
+note: the method `try_get` exists on the type `SqliteRow`
+   --> C:\Users\nommi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlx-core-0.8.6\src\row.rs:111:5
+    |
+111 | /     fn try_get<'r, T, I>(&'r self, index: I) -> Result<T, Error>
+112 | |     where
+113 | |         I: ColumnIndex<Self>,
+114 | |         T: Decode<'r, Self::Database> + Type<Self::Database>,
+    | |_____________________________________________________________^
+help: consider using `Option::expect` to unwrap the `SqliteRow` value, panicking if the value is an `Option::None`
+    |
+878 |             "maxTokens": r.expect("REASON").try_get::<i64, _>("max_tokens").unwrap_or(4096),
+    |                           +++++++++++++++++
+
+error[E0599]: no method named `try_get` found for enum `std::option::Option<T>` in the current scope
+   --> src\routes\brands.rs:879:31
+    |
+879 |             "systemPrompt": r.try_get::<String, _>("system_prompt").unwrap_or_default(),
+    |                               ^^^^^^^ method not found in `std::option::Option<SqliteRow>`
+    |
+note: the method `try_get` exists on the type `SqliteRow`
+   --> C:\Users\nommi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlx-core-0.8.6\src\row.rs:111:5
+    |
+111 | /     fn try_get<'r, T, I>(&'r self, index: I) -> Result<T, Error>
+112 | |     where
+113 | |         I: ColumnIndex<Self>,
+114 | |         T: Decode<'r, Self::Database> + Type<Self::Database>,
+    | |_____________________________________________________________^
+help: consider using `Option::expect` to unwrap the `SqliteRow` value, panicking if the value is an `Option::None`
+    |
+879 |             "systemPrompt": r.expect("REASON").try_get::<String, _>("system_prompt").unwrap_or_default(),
+    |                              +++++++++++++++++
+
+error[E0599]: no method named `try_get` found for enum `std::option::Option<T>` in the current scope
+   --> src\routes\brands.rs:880:29
+    |
+880 |             "ragEnabled": r.try_get::<bool, _>("rag_enabled").unwrap_or(false),
+    |                             ^^^^^^^ method not found in `std::option::Option<SqliteRow>`
+    |
+note: the method `try_get` exists on the type `SqliteRow`
+   --> C:\Users\nommi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlx-core-0.8.6\src\row.rs:111:5
+    |
+111 | /     fn try_get<'r, T, I>(&'r self, index: I) -> Result<T, Error>
+112 | |     where
+113 | |         I: ColumnIndex<Self>,
+114 | |         T: Decode<'r, Self::Database> + Type<Self::Database>,
+    | |_____________________________________________________________^
+help: consider using `Option::expect` to unwrap the `SqliteRow` value, panicking if the value is an `Option::None`
+    |
+880 |             "ragEnabled": r.expect("REASON").try_get::<bool, _>("rag_enabled").unwrap_or(false),
+    |                            +++++++++++++++++
+
+error[E0308]: mismatched types
+    --> src\routes\brands.rs:998:50
+     |
+ 998 |     let credentials_json = serde_json::to_string(body).unwrap_or_else(|_| "{}".to_string());
+     |                            --------------------- ^^^^ expected `&_`, found `HashMap<String, String>`
+     |                            |
+     |                            arguments to this function are incorrect
+     |
+     = note: expected reference `&_`
+                   found struct `HashMap<std::string::String, std::string::String>`
+note: function defined here
+    --> C:\Users\nommi\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_json-1.0.154\src\ser.rs:2245:8
+     |
+2245 | pub fn to_string<T>(value: &T) -> Result<String>
+     |        ^^^^^^^^^
+help: consider borrowing here
+     |
+ 998 |     let credentials_json = serde_json::to_string(&body).unwrap_or_else(|_| "{}".to_string());
+     |                                                  +
+
+error[E0308]: mismatched types
+    --> src\routes\brands.rs:1163:66
+     |
+1163 |     let creds_str: String = row.try_get("credentials").unwrap_or("{}");
+     |                                                        --------- ^^^^ expected `String`, found `&str`
+     |                                                        |
+     |                                                        arguments to this method are incorrect
+     |
+help: the return type of this call is `&'static str` due to the type of the argument passed
+    --> src\routes\brands.rs:1163:29
+     |
+1163 |     let creds_str: String = row.try_get("credentials").unwrap_or("{}");
+     |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^----^
+     |                                                                  |
+     |                                                                  this argument influences the return type of 
+`unwrap_or`
+note: method defined here
+    --> /rustc/58cf8f9c35b355199727627d07ae34a4e2846d67/library\core\src\result.rs:1589:17
+help: try using a conversion method
+     |
+1163 |     let creds_str: String = row.try_get("credentials").unwrap_or("{}".to_string());
+     |                                                                      ++++++++++++
+
+warning: unused variable: `q`
+    --> src\routes\brands.rs:1593:17
+     |
+1593 |     if let Some(ref q) = params.q {
+     |                 ^^^^^ help: if this is intentional, prefix it with an underscore: `_q`
+     |
+     = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `topic`
+    --> src\routes\brands.rs:1596:17
+     |
+1596 |     if let Some(ref topic) = params.topic {
+     |                 ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_topic`
+
+Some errors have detailed explanations: E0308, E0599.
+For more information about an error, try `rustc --explain E0308`.
+warning: `backend-rs` (bin "backend-rs") generated 2 warnings
+error: could not compile `backend-rs` (bin "backend-rs") due to 15 previous errors; 2 warnings emitted
