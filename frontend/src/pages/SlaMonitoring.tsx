@@ -196,7 +196,7 @@ export function SlaMonitoring() {
             type="button"
             onClick={loadData}
             disabled={refreshing}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] border border-[var(--color-border)] text-xs font-semibold hover:bg-black/5 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] border border-[var(--color-border)] text-xs font-semibold hover:bg-[var(--color-accent-muted)] transition-colors disabled:opacity-50"
             title="Refresh metrics"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
@@ -208,7 +208,7 @@ export function SlaMonitoring() {
               setShowEvalModal(true)
               setEvalResult(null)
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] border border-[var(--color-border)] text-xs font-semibold hover:bg-black/5 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] border border-[var(--color-border)] text-xs font-semibold hover:bg-[var(--color-accent-muted)] transition-colors"
           >
             <Search className="w-3.5 h-3.5 text-[var(--color-accent)]" />
             Evaluate Conversation
@@ -260,7 +260,7 @@ export function SlaMonitoring() {
             return (
               <div
                 key={policy.id}
-                className="p-3.5 rounded-[var(--radius-sm)] border border-[var(--color-border)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm hover:bg-black/5 transition-colors"
+                className="p-3.5 rounded-[var(--radius-sm)] border border-[var(--color-border)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm hover:bg-[var(--color-accent-muted)] transition-colors"
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
@@ -299,7 +299,7 @@ export function SlaMonitoring() {
                     <button
                       type="button"
                       onClick={() => startEdit(policy)}
-                      className="p-1 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] rounded hover:bg-black/5"
+                      className="p-1 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] rounded hover:bg-[var(--color-accent-muted)]"
                       title="Edit Policy"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
@@ -340,7 +340,7 @@ export function SlaMonitoring() {
             {breaches.map((b) => (
               <div
                 key={b.conversationId}
-                className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-black/5 transition-colors"
+                className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[var(--color-accent-muted)] transition-colors"
               >
                 <div className="space-y-1">
                   <p className="font-semibold text-[var(--color-ink)]">{b.contactName || 'Anonymous Visitor'}</p>
@@ -477,7 +477,7 @@ export function SlaMonitoring() {
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="px-3 py-1.5 text-xs rounded border border-[var(--color-border)] hover:bg-black/5"
+                className="px-3 py-1.5 text-xs rounded border border-[var(--color-border)] hover:bg-[var(--color-accent-muted)]"
               >
                 Cancel
               </button>
@@ -593,7 +593,7 @@ export function SlaMonitoring() {
               <button
                 type="button"
                 onClick={() => setEditingPolicy(null)}
-                className="px-3 py-1.5 text-xs rounded border border-[var(--color-border)] hover:bg-black/5"
+                className="px-3 py-1.5 text-xs rounded border border-[var(--color-border)] hover:bg-[var(--color-accent-muted)]"
               >
                 Cancel
               </button>
@@ -713,7 +713,7 @@ export function SlaMonitoring() {
               <button
                 type="button"
                 onClick={() => setShowEvalModal(false)}
-                className="px-3 py-1.5 text-xs rounded border border-[var(--color-border)] hover:bg-black/5"
+                className="px-3 py-1.5 text-xs rounded border border-[var(--color-border)] hover:bg-[var(--color-accent-muted)]"
               >
                 Close
               </button>

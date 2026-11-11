@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 //! Macro execution: run a saved multi-action macro against a conversation.
 //!
@@ -163,7 +163,7 @@ async fn load_macro(state: &AppState, macro_id: &str) -> Result<(String, Vec<Val
     }
 }
 
-fn text(row: &sqlx::sqlite::SqliteRow, column: &str) -> String {
+fn text(row: &sqlx::postgres::PgRow, column: &str) -> String {
     row.try_get::<String, _>(column)
         .or_else(|_| row.try_get::<Option<String>, _>(column).map(|v| v.unwrap_or_default()))
         .unwrap_or_default()
@@ -553,7 +553,7 @@ fn string_list(action: &Value, key: &str) -> Vec<String> {
         .unwrap_or_default()
 }
 
-fn opt_text(row: &sqlx::sqlite::SqliteRow, column: &str) -> Option<String> {
+fn opt_text(row: &sqlx::postgres::PgRow, column: &str) -> Option<String> {
     row.try_get::<Option<String>, _>(column)
         .ok()
         .flatten()
@@ -579,7 +579,7 @@ fn opt_text(row: &sqlx::sqlite::SqliteRow, column: &str) -> Option<String> {
 ///   outside the tenant's window is reported as deferred rather than dialled.
 async fn send_thread_message(
     state: &AppState,
-    conversation: &sqlx::sqlite::SqliteRow,
+    conversation: &sqlx::postgres::PgRow,
     conversation_id: &str,
     body: &str,
     attribution: &str,

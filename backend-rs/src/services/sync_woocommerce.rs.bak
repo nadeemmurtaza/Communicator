@@ -1,0 +1,1039 @@
+#![allow(dead_code)]
+
+//! WooCommerce sync adapter: full bidirectional sync for products, orders, and inventory.
+//!
+//! Implements the SyncAdapter trait with real WooCommerce REST API v3 calls.
+//! Uses external_product_mapping and external_order_mapping tables for ID tracking.
+
+use serde::{Deserialize, Serialize};
+use sqlx::SqlitePool;
+use uuid::Uuid;
+
+use crate::models::SyncConnection;
+use crate::services::sync_adapter::{SyncAdapter, SyncResult};
+
+pub struct WooCommerceSyncAdapter {
+    pool: SqlitePool,
+    http_client: reqwest::Client,
+    connection: SyncConnection,
+}
+
+impl WooCommerceSyncAdapter {
+    pub fn new(pool: SqlitePool, http_client: reqwest::Client, connection: SyncConnection) -> Self {
+        Self { pool, http_client, connection }
+    }
+
+    fn api_base(&self) -> Option<String> {
+        let creds: serde_json::Value =
+            serde_json::from_str(self.connection.credentials.as_ref()?).ok()?;
+        let store_url = creds.get("store_url").and_then(|v| v.as_str())?;
+        // Ensure URL doesn't have trailing slash
+        let url = store_url.trim_end_matches('/');
+        Some(format!("{}/wp-json/wc/v3", url))
+    }
+
+    fn consumer_key(&self) -> Option<String> {
+        let creds: serde_json::Value =
+            serde_json::from_str(self.connection.credentials.as_ref()?).ok()?;
+        creds.get("consumer_key").and_then(|v| v.as_str()).map(|s| s.to_string())
+    }
+
+    fn consumer_secret(&self) -> Option<String> {
+        let creds: serde_json::Value =
+            serde_json::from_str(self.connection.credentials.as_ref()?).ok()?;
+        creds.get("consumer_secret").and_then(|v| v.as_str()).map(|s| s.to_string())
+    }
+
+    // -----------------------------------------------------------------------
+    // HTTP helpers with WooCommerce auth
+    // -----------------------------------------------------------------------
+
+    async fn get_json(&self, url: &str) -> Result<serde_json::Value, String> {
+        let key = self.consumer_key().ok_or("No WooCommerce consumer key")?;
+        let secret = self.consumer_secret().ok_or("No WooCommerce consumer secret")?;
+
+        let resp = self
+            .http_client
+            .get(url)
+            .basic_auth(&key, Some(&secret))
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            return Err(format!("WooCommerce API error {}: {}", status, body));
+        }
+
+        resp.json::<serde_json::Value>().await.map_err(|e| e.to_string())
+    }
+
+    async fn post_json(
+        &self,
+        url: &str,
+        body: &serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
+        let key = self.consumer_key().ok_or("No WooCommerce consumer key")?;
+        let secret = self.consumer_secret().ok_or("No WooCommerce consumer secret")?;
+
+        let resp = self
+            .http_client
+            .post(url)
+            .header("Content-Type", "application/json")
+            .basic_auth(&key, Some(&secret))
+            .json(body)
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            return Err(format!("WooCommerce API error {}: {}", status, body));
+        }
+
+        resp.json::<serde_json::Value>().await.map_err(|e| e.to_string())
+    }
+
+    async fn put_json(
+        &self,
+        url: &str,
+        body: &serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
+        let key = self.consumer_key().ok_or("No WooCommerce consumer key")?;
+        let secret = self.consumer_secret().ok_or("No WooCommerce consumer secret")?;
+
+        let resp = self
+            .http_client
+            .put(url)
+            .header("Content-Type", "application/json")
+            .basic_auth(&key, Some(&secret))
+            .json(body)
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            return Err(format!("WooCommerce API error {}: {}", status, body));
+        }
+
+        resp.json::<serde_json::Value>().await.map_err(|e| e.to_string())
+    }
+
+    // -----------------------------------------------------------------------
+    // Paginated fetch helpers
+    // -----------------------------------------------------------------------
+
+    async fn fetch_all_products(&self) -> Result<Vec<serde_json::Value>, String> {
+        let base = self.api_base().ok_or("WooCommerce store URL not configured")?;
+        let mut all_products = Vec::new();
+        let mut page = 1;
+        let per_page = 100; // WooCommerce max
+
+        loop {
+            let url = format!("{}/products?per_page={}&page={}", base, per_page, page);
+            let data = self.get_json(&url).await?;
+
+            // WooCommerce returns array directly
+            let products = data.as_array().cloned().unwrap_or_default();
+            if products.is_empty() {
+                break;
+            }
+
+            all_products.extend(products);
+            page += 1;
+
+            // WooCommerce headers tell us total pages, but we can also stop when empty
+            if all_products.len() >= 10000 {
+                break;
+            }
+        }
+
+        Ok(all_products)
+    }
+
+    async fn fetch_all_orders(&self) -> Result<Vec<serde_json::Value>, String> {
+        let base = self.api_base().ok_or("WooCommerce store URL not configured")?;
+        let mut all_orders = Vec::new();
+        let mut page = 1;
+        let per_page = 100;
+
+        loop {
+            let url = format!("{}/orders?per_page={}&page={}&status=any", base, per_page, page);
+            let data = self.get_json(&url).await?;
+
+            let orders = data.as_array().cloned().unwrap_or_default();
+            if orders.is_empty() {
+                break;
+            }
+
+            all_orders.extend(orders);
+            page += 1;
+
+            if all_orders.len() >= 10000 {
+                break;
+            }
+        }
+
+        Ok(all_orders)
+    }
+
+    // -----------------------------------------------------------------------
+    // Mapping helpers
+    // -----------------------------------------------------------------------
+
+    async fn get_product_mapping(
+        &self,
+        product_id: &str,
+    ) -> Option<(String, String)> {
+        let row = sqlx::query(
+            "SELECT id, external_id FROM external_product_mapping \
+             WHERE product_id = ? AND platform = 'woocommerce' AND connection_id = ?",
+        )
+        .bind(product_id)
+        .bind(&self.connection.id)
+        .fetch_optional(&self.pool)
+        .await
+        .ok()?;
+
+        row.map(|r| (r.get("id"), r.get("external_id")))
+    }
+
+    async fn get_product_by_external_id(&self, external_id: &str) -> Option<String> {
+        let row = sqlx::query(
+            "SELECT product_id FROM external_product_mapping \
+             WHERE external_id = ? AND platform = 'woocommerce' AND connection_id = ?",
+        )
+        .bind(external_id)
+        .bind(&self.connection.id)
+        .fetch_optional(&self.pool)
+        .await
+        .ok()?;
+
+        row.map(|r| r.get("product_id"))
+    }
+
+    async fn get_product_by_sku(&self, sku: &str) -> Option<String> {
+        let row = sqlx::query(
+            "SELECT id FROM products WHERE sku = ? AND brand_id = ? AND is_active = 1",
+        )
+        .bind(sku)
+        .bind(&self.connection.brand_id)
+        .fetch_optional(&self.pool)
+        .await
+        .ok()?;
+
+        row.map(|r| r.get("id"))
+    }
+
+    async fn upsert_product_mapping(
+        &self,
+        product_id: &str,
+        external_id: &str,
+        external_sku: Option<&str>,
+    ) -> Result<(), String> {
+        let now = chrono::Utc::now().to_rfc3339();
+        let mapping_id = Uuid::new_v4().to_string();
+
+        match sqlx::query(
+            "INSERT INTO external_product_mapping (id, product_id, platform, connection_id, \
+             external_id, external_sku, last_synced_at, created_at, updated_at) \
+             VALUES (?, ?, 'woocommerce', ?, ?, ?, ?, ?, ?)",
+        )
+        .bind(&mapping_id)
+        .bind(product_id)
+        .bind(&self.connection.id)
+        .bind(external_id)
+        .bind(external_sku)
+        .bind(&now)
+        .bind(&now)
+        .bind(&now)
+        .execute(&self.pool)
+        .await
+        {
+            Ok(_) => Ok(()),
+            Err(_) => {
+                sqlx::query(
+                    "UPDATE external_product_mapping \
+                     SET external_id = ?, external_sku = ?, last_synced_at = ?, updated_at = ? \
+                     WHERE product_id = ? AND platform = 'woocommerce' AND connection_id = ?",
+                )
+                .bind(external_id)
+                .bind(external_sku)
+                .bind(&now)
+                .bind(&now)
+                .bind(product_id)
+                .bind(&self.connection.id)
+                .execute(&self.pool)
+                .await
+                .map_err(|e| format!("Failed to update product mapping: {}", e))?;
+                Ok(())
+            }
+        }
+    }
+
+    async fn get_order_mapping(&self, order_id: &str) -> Option<String> {
+        let row = sqlx::query(
+            "SELECT external_id FROM external_order_mapping \
+             WHERE order_id = ? AND platform = 'woocommerce' AND connection_id = ?",
+        )
+        .bind(order_id)
+        .bind(&self.connection.id)
+        .fetch_optional(&self.pool)
+        .await
+        .ok()?;
+
+        row.map(|r| r.get("external_id"))
+    }
+
+    async fn get_order_by_external_id(&self, external_id: &str) -> Option<String> {
+        let row = sqlx::query(
+            "SELECT order_id FROM external_order_mapping \
+             WHERE external_id = ? AND platform = 'woocommerce' AND connection_id = ?",
+        )
+        .bind(external_id)
+        .bind(&self.connection.id)
+        .fetch_optional(&self.pool)
+        .await
+        .ok()?;
+
+        row.map(|r| r.get("order_id"))
+    }
+
+    async fn upsert_order_mapping(
+        &self,
+        order_id: &str,
+        external_id: &str,
+        external_order_number: Option<&str>,
+    ) -> Result<(), String> {
+        let now = chrono::Utc::now().to_rfc3339();
+
+        match sqlx::query(
+            "INSERT INTO external_order_mapping (id, order_id, platform, connection_id, \
+             external_id, external_order_number, last_synced_at, created_at, updated_at) \
+             VALUES (?, ?, 'woocommerce', ?, ?, ?, ?, ?, ?)",
+        )
+        .bind(Uuid::new_v4().to_string())
+        .bind(order_id)
+        .bind(&self.connection.id)
+        .bind(external_id)
+        .bind(external_order_number)
+        .bind(&now)
+        .bind(&now)
+        .bind(&now)
+        .execute(&self.pool)
+        .await
+        {
+            Ok(_) => Ok(()),
+            Err(_) => {
+                sqlx::query(
+                    "UPDATE external_order_mapping \
+                     SET external_id = ?, external_order_number = ?, last_synced_at = ?, updated_at = ? \
+                     WHERE order_id = ? AND platform = 'woocommerce' AND connection_id = ?",
+                )
+                .bind(external_id)
+                .bind(external_order_number)
+                .bind(&now)
+                .bind(&now)
+                .bind(order_id)
+                .bind(&self.connection.id)
+                .execute(&self.pool)
+                .await
+                .map_err(|e| format!("Failed to update order mapping: {}", e))?;
+                Ok(())
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Status mapping
+    // -----------------------------------------------------------------------
+
+    fn wc_status_to_our_status(&self, status: &str) -> &'static str {
+        match status {
+            "pending" => "pending",
+            "processing" => "processing",
+            "completed" => "delivered",
+            "cancelled" => "cancelled",
+            "refunded" => "cancelled",
+            "failed" => "cancelled",
+            _ => "pending",
+        }
+    }
+
+    fn wc_payment_to_our_payment(&self, status: &str) -> &'static str {
+        match status {
+            "paid" | "processing" | "completed" => "paid",
+            "refunded" => "refunded",
+            "pending" => "pending",
+            "failed" => "pending",
+            _ => "pending",
+        }
+    }
+
+    fn our_status_to_wc_status(&self, status: &str) -> &'static str {
+        match status {
+            "cancelled" => "cancelled",
+            "delivered" => "completed",
+            "shipped" => "processing",
+            "processing" => "processing",
+            "confirmed" => "processing",
+            _ => "pending",
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Product sync
+    // -----------------------------------------------------------------------
+
+    async fn sync_products_outbound_impl(&self) -> Result<SyncResult, String> {
+        let base = self.api_base().ok_or("WooCommerce store URL not configured")?;
+
+        let products = sqlx::query(
+            "SELECT id, name, description, sku, price, compare_at_price, currency, \
+             inventory_count, variants, images, category_id \
+             FROM products WHERE brand_id = ? AND is_active = 1",
+        )
+        .bind(&self.connection.brand_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let mut synced = 0;
+        let mut errors = Vec::new();
+
+        for row in products {
+            let product_id: String = row.get("id");
+            let name: String = row.get("name");
+            let description: Option<String> = row.get("description");
+            let sku: Option<String> = row.get("sku");
+            let price: f64 = row.get("price");
+            let compare_at_price: Option<f64> = row.get("compare_at_price");
+            let inventory_count: i32 = row.get("inventory_count");
+            let images_json: Option<String> = row.get("images");
+
+            let mapping = self.get_product_mapping(&product_id).await;
+
+            // Build WooCommerce product payload
+            let images: Vec<serde_json::Value> = images_json
+                .and_then(|s| serde_json::from_str(&s).ok())
+                .unwrap_or_default();
+
+            let image_srcs: Vec<String> = images
+                .iter()
+                .filter_map(|img| img.get("src").and_then(|s| s.as_str()).map(|s| s.to_string()))
+                .collect();
+
+            let stock_quantity = inventory_count;
+            let regular_price = price.to_string();
+            let sale_price = compare_at_price.map(|p| p.to_string());
+
+            let product_payload = serde_json::json!({
+                "name": name,
+                "description": description.unwrap_or_default(),
+                "type": "simple",
+                "regular_price": regular_price,
+                "sale_price": sale_price,
+                "sku": sku.unwrap_or_default(),
+                "manage_stock": true,
+                "stock_quantity": stock_quantity,
+                "stock_status": if stock_quantity > 0 { "instock" } else { "outofstock" },
+                "images": image_srcs.iter().map(|src| serde_json::json!({"src": src})).collect::<Vec<_>>(),
+            });
+
+            if let Some((_mapping_id, external_id)) = mapping {
+                // Update existing
+                let url = format!("{}/products/{}", base, external_id);
+                match self.put_json(&url, &product_payload).await {
+                    Ok(_) => {
+                        synced += 1;
+                        self.upsert_product_mapping(&product_id, &external_id, sku.as_deref()).await.ok();
+                    }
+                    Err(e) => errors.push(format!("Product {}: {}", product_id, e)),
+                }
+            } else {
+                // Create new
+                match self.post_json(&format!("{}/products", base), &product_payload).await {
+                    Ok(resp) => {
+                        let wc_id = resp.get("id").and_then(|v| v.as_i64()).map(|v| v.to_string());
+                        if let Some(id) = wc_id {
+                            synced += 1;
+                            self.upsert_product_mapping(&product_id, &id, sku.as_deref()).await.ok();
+                        } else {
+                            errors.push(format!("Product {}: no ID returned", product_id));
+                        }
+                    }
+                    Err(e) => errors.push(format!("Product {}: {}", product_id, e)),
+                }
+            }
+        }
+
+        Ok(SyncResult {
+            success: errors.is_empty(),
+            direction: "outbound".to_string(),
+            entity_type: "products".to_string(),
+            synced_count: synced,
+            errors,
+        })
+    }
+
+    async fn sync_products_inbound_impl(&self) -> Result<SyncResult, String> {
+        let wc_products = self.fetch_all_products().await?;
+        let mut synced = 0;
+        let mut errors = Vec::new();
+
+        for wp in wc_products {
+            let wc_id = wp.get("id").and_then(|v| v.as_i64()).map(|v| v.to_string());
+            let name = wp.get("name").and_then(|v| v.as_str());
+            let sku = wp.get("sku").and_then(|v| v.as_str());
+
+            let (wc_id_s, name_s) = match (wc_id, name) {
+                Some(id) => (id, name.unwrap_or("").to_string()),
+                None => continue,
+            };
+
+            if name_s.is_empty() {
+                continue;
+            }
+
+            // Skip if already mapped
+            if self.get_product_by_external_id(&wc_id_s).await.is_some() {
+                continue;
+            }
+
+            // Try to find by SKU
+            let local_product_id = sku.and_then(|s| self.get_product_by_sku(s).await);
+
+            let product_id = if let Some(pid) = local_product_id {
+                pid
+            } else {
+                let new_id = Uuid::new_v4().to_string();
+
+                let description = wp.get("description").and_then(|v| v.as_str()).unwrap_or("");
+                let regular_price = wp.get("regular_price")
+                    .and_then(|v| v.as_str())
+                    .and_then(|s| s.parse::<f64>().ok())
+                    .unwrap_or(0.0);
+
+                let sale_price = wp.get("sale_price")
+                    .and_then(|v| v.as_str())
+                    .and_then(|s| s.parse::<f64>().ok());
+
+                let stock_quantity = wp.get("stock_quantity").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+
+                // Extract images
+                let images: Vec<serde_json::Value> = wp.get("images")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| {
+                        arr.iter().filter_map(|img| {
+                            img.get("src").and_then(|s| s.as_str()).map(|src| {
+                                serde_json::json!({"src": src})
+                            })
+                        }).collect()
+                    })
+                    .unwrap_or_default();
+
+                let images_json = serde_json::to_string(&images).ok();
+                let sku_str = sku.map(|s| s.to_string());
+                let now = chrono::Utc::now().to_rfc3339();
+
+                match sqlx::query(
+                    "INSERT INTO products (id, brand_id, name, description, sku, price, \
+                     compare_at_price, currency, images, variants, inventory_count, \
+                     track_inventory, is_active, created_at, updated_at) \
+                     VALUES (?, ?, ?, ?, ?, ?, ?, 'USD', ?, ?, ?, 1, 1, ?, ?)",
+                )
+                .bind(&new_id)
+                .bind(&self.connection.brand_id)
+                .bind(&name_s)
+                .bind(description)
+                .bind(&sku_str)
+                .bind(regular_price)
+                .bind(sale_price)
+                .bind(images_json)
+                .bind(None::<String>)
+                .bind(stock_quantity)
+                .bind(&now)
+                .bind(&now)
+                .execute(&self.pool)
+                .await
+                {
+                    Ok(_) => {
+                        let _ = sqlx::query(
+                            "INSERT INTO product_channel_visibility (id, product_id, channel_type, is_visible) \
+                             VALUES (?, ?, 'website', 1)",
+                        )
+                        .bind(Uuid::new_v4().to_string())
+                        .bind(&new_id)
+                        .execute(&self.pool)
+                        .await;
+
+                        new_id
+                    }
+                    Err(e) => {
+                        errors.push(format!("Failed to create product from WooCommerce: {}", e));
+                        continue;
+                    }
+                }
+            };
+
+            self.upsert_product_mapping(&product_id, &wc_id_s, sku).await.ok();
+            synced += 1;
+        }
+
+        Ok(SyncResult {
+            success: errors.is_empty(),
+            direction: "inbound".to_string(),
+            entity_type: "products".to_string(),
+            synced_count: synced,
+            errors,
+        })
+    }
+
+    // -----------------------------------------------------------------------
+    // Order sync
+    // -----------------------------------------------------------------------
+
+    async fn sync_orders_outbound_impl(&self) -> Result<SyncResult, String> {
+        let base = self.api_base().ok_or("WooCommerce store URL not configured")?;
+
+        let orders = sqlx::query(
+            "SELECT o.id, o.customer_id, o.order_number, o.channel_type, o.status, \
+             o.total_amount, o.subtotal, o.tax, o.shipping, o.currency, \
+             o.shipping_address, o.payment_status, o.payment_method, o.source, o.created_at \
+             FROM commerce_orders o \
+             LEFT JOIN external_order_mapping eom ON o.id = eom.order_id \
+             AND eom.platform = 'woocommerce' AND eom.connection_id = ? \
+             WHERE o.brand_id = ? AND eom.id IS NULL AND o.status != 'draft'",
+        )
+        .bind(&self.connection.id)
+        .bind(&self.connection.brand_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let mut synced = 0;
+        let mut errors = Vec::new();
+
+        for row in orders {
+            let order_id: String = row.get("id");
+            let customer_id: Option<String> = row.get("customer_id");
+            let shipping_address_json: Option<String> = row.get("shipping_address");
+            let payment_status: String = row.get("payment_status");
+
+            let shipping_address: serde_json::Value = shipping_address_json
+                .and_then(|s| serde_json::from_str(&s).ok())
+                .unwrap_or_default();
+
+            let email = customer_id
+                .as_ref()
+                .and_then(|cid| {
+                    sqlx::query("SELECT email FROM customers WHERE id = ?")
+                        .bind(cid)
+                        .fetch_optional(&self.pool)
+                        .ok()
+                })
+                .flatten()
+                .and_then(|r| r.get::<Option<String>, _>("email").ok())
+                .unwrap_or_default();
+
+            let first_name = shipping_address.get("first_name").and_then(|v| v.as_str()).unwrap_or("");
+            let last_name = shipping_address.get("last_name").and_then(|v| v.as_str()).unwrap_or("");
+            let address1 = shipping_address.get("address1").and_then(|v| v.as_str()).unwrap_or("");
+            let address2 = shipping_address.get("address2").and_then(|v| v.as_str()).unwrap_or("");
+            let city = shipping_address.get("city").and_then(|v| v.as_str()).unwrap_or("");
+            let province = shipping_address.get("province").and_then(|v| v.as_str()).unwrap_or("");
+            let country = shipping_address.get("country").and_then(|v| v.as_str()).unwrap_or("");
+            let zip = shipping_address.get("zip").and_then(|v| v.as_str()).unwrap_or("");
+            let phone = shipping_address.get("phone").and_then(|v| v.as_str()).unwrap_or("");
+
+            let items = sqlx::query(
+                "SELECT product_name, sku, quantity, unit_price FROM commerce_order_items WHERE order_id = ?",
+            )
+            .bind(&order_id)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+            let line_items: Vec<serde_json::Value> = items
+                .iter()
+                .map(|item| {
+                    let name: String = item.get("product_name");
+                    let quantity: i32 = item.get("quantity");
+                    let unit_price: f64 = item.get("unit_price");
+                    serde_json::json!({
+                        "name": name,
+                        "quantity": quantity,
+                        "price": unit_price,
+                    })
+                })
+                .collect();
+
+            let wc_status = self.our_status_to_wc_status(row.get::<String, _>("status").as_str());
+
+            let order_payload = serde_json::json!({
+                "status": wc_status,
+                "billing": {
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "email": email,
+                    "address_1": address1,
+                    "address_2": address2,
+                    "city": city,
+                    "state": province,
+                    "country": country,
+                    "postcode": zip,
+                    "phone": phone,
+                },
+                "shipping": {
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "address_1": address1,
+                    "address_2": address2,
+                    "city": city,
+                    "state": province,
+                    "country": country,
+                    "postcode": zip,
+                },
+                "line_items": line_items,
+                "meta_data": [
+                    {
+                        "key": "_imported_from",
+                        "value": format!("{} ({})", self.connection.brand_id, row.get::<String, _>("order_number")),
+                    }
+                ],
+            });
+
+            match self.post_json(&format!("{}/orders", base), &order_payload).await {
+                Ok(resp) => {
+                    let wc_id = resp.get("id").and_then(|v| v.as_i64()).map(|v| v.to_string());
+                    let order_number = resp.get("order_key").and_then(|v| v.as_str()).map(|s| s.to_string());
+                    if let Some(id) = wc_id {
+                        synced += 1;
+                        self.upsert_order_mapping(&order_id, &id, order_number.as_deref()).await.ok();
+                    }
+                }
+                Err(e) => errors.push(format!("Order {}: {}", order_id, e)),
+            }
+        }
+
+        Ok(SyncResult {
+            success: errors.is_empty(),
+            direction: "outbound".to_string(),
+            entity_type: "orders".to_string(),
+            synced_count: synced,
+            errors,
+        })
+    }
+
+    async fn sync_orders_inbound_impl(&self) -> Result<SyncResult, String> {
+        let wc_orders = self.fetch_all_orders().await?;
+        let mut synced = 0;
+        let mut errors = Vec::new();
+
+        for wo in wc_orders {
+            let wc_id = wo.get("id").and_then(|v| v.as_i64()).map(|v| v.to_string());
+            let order_key = wo.get("order_key").and_then(|v| v.as_str()).map(|s| s.to_string());
+
+            let wc_id_s = match wc_id {
+                Some(id) => id,
+                None => continue,
+            };
+
+            // Skip if already mapped
+            if self.get_order_by_external_id(&wc_id_s).await.is_some() {
+                continue;
+            }
+
+            // Skip if imported from our system
+            let meta_data = wo.get("meta_data").and_then(|v| v.as_array()).unwrap_or(&vec![]);
+            let is_imported = meta_data.iter().any(|m| {
+                m.get("key").and_then(|k| k.as_str()) == Some("_imported_from")
+            });
+            if is_imported {
+                continue;
+            }
+
+            let date_created = wo.get("date_created").and_then(|v| v.as_str()).unwrap_or("");
+            let total = wo.get("total").and_then(|v| v.as_str()).and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0);
+            let subtotal = wo.get("subtotal").and_then(|v| v.as_str()).and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0);
+            let tax = wo.get("total_tax").and_then(|v| v.as_str()).and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0);
+            let shipping = wo.get("shipping_total").and_then(|v| v.as_str()).and_then(|s| s.parse::<f64>().ok()).unwrap_or(0.0);
+            let currency = wo.get("currency").and_then(|v| v.as_str()).unwrap_or("USD");
+
+            let wc_status = wo.get("status").and_then(|v| v.as_str()).unwrap_or("pending");
+            let status = self.wc_status_to_our_status(wc_status);
+            let payment_status = self.wc_payment_to_our_payment(wc_status);
+
+            // Extract customer
+            let billing = wo.get("billing").unwrap_or(&serde_json::json!({}));
+            let customer_email = billing.get("email").and_then(|v| v.as_str()).unwrap_or("");
+            let customer_first = billing.get("first_name").and_then(|v| v.as_str()).unwrap_or("");
+            let customer_last = billing.get("last_name").and_then(|v| v.as_str()).unwrap_or("");
+
+            let customer_id = if !customer_email.is_empty() {
+                let existing = sqlx::query(
+                    "SELECT id FROM customers WHERE email = ? AND brand_id = ?",
+                )
+                .bind(customer_email)
+                .bind(&self.connection.brand_id)
+                .fetch_optional(&self.pool)
+                .await
+                .ok();
+
+                if let Some(row) = existing {
+                    Some(row.get("id"))
+                } else {
+                    let new_customer_id = Uuid::new_v4().to_string();
+                    let now = chrono::Utc::now().to_rfc3339();
+                    let phone = billing.get("phone").and_then(|v| v.as_str()).unwrap_or("");
+
+                    let _ = sqlx::query(
+                        "INSERT INTO customers (id, brand_id, first_name, last_name, email, phone, \
+                         total_orders, total_spent, created_at, updated_at) \
+                         VALUES (?, ?, ?, ?, ?, ?, 0, 0.0, ?, ?)",
+                    )
+                    .bind(&new_customer_id)
+                    .bind(&self.connection.brand_id)
+                    .bind(customer_first)
+                    .bind(customer_last)
+                    .bind(customer_email)
+                    .bind(phone)
+                    .bind(&now)
+                    .bind(&now)
+                    .execute(&self.pool)
+                    .await;
+
+                    Some(new_customer_id)
+                }
+            } else {
+                None
+            };
+
+            let cust_id = customer_id.unwrap_or_else(|| Uuid::new_v4().to_string());
+
+            // Shipping address
+            let shipping = wo.get("shipping").unwrap_or(&serde_json::json!({}));
+            let shipping_address = serde_json::json!({
+                "first_name": shipping.get("first_name").and_then(|v| v.as_str()).unwrap_or(""),
+                "last_name": shipping.get("last_name").and_then(|v| v.as_str()).unwrap_or(""),
+                "address1": shipping.get("address_1").and_then(|v| v.as_str()).unwrap_or(""),
+                "address2": shipping.get("address_2").and_then(|v| v.as_str()).unwrap_or(""),
+                "city": shipping.get("city").and_then(|v| v.as_str()).unwrap_or(""),
+                "province": shipping.get("state").and_then(|v| v.as_str()).unwrap_or(""),
+                "country": shipping.get("country").and_then(|v| v.as_str()).unwrap_or(""),
+                "zip": shipping.get("postcode").and_then(|v| v.as_str()).unwrap_or(""),
+                "phone": billing.get("phone").and_then(|v| v.as_str()).unwrap_or(""),
+            });
+
+            // Line items
+            let line_items = wo.get("line_items").and_then(|v| v.as_array()).unwrap_or(&vec![]);
+
+            let order_id = Uuid::new_v4().to_string();
+            let order_num = format!("WC-{}", order_key.unwrap_or_default());
+            let now = chrono::Utc::now().to_rfc3339();
+            let created_at = if !date_created.is_empty() {
+                date_created.to_string()
+            } else {
+                now.clone()
+            };
+
+            let items_snapshot: Vec<serde_json::Value> = line_items
+                .iter()
+                .map(|item| {
+                    serde_json::json!({
+                        "product_name": item.get("name").and_then(|v| v.as_str()).unwrap_or(""),
+                        "sku": item.get("sku").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                        "quantity": item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(0) as i32,
+                        "unit_price": item.get("price").and_then(|v| v.as_f64()).unwrap_or(0.0),
+                    })
+                })
+                .collect();
+
+            let items_snapshot_json = serde_json::to_string(&items_snapshot).ok().unwrap_or("[]".to_string());
+
+            match sqlx::query(
+                "INSERT INTO commerce_orders (id, brand_id, customer_id, order_number, channel_type, \
+                 status, total_amount, subtotal, tax, shipping, currency, items_snapshot, \
+                 shipping_address, payment_status, payment_method, metadata, source, \
+                 external_order_id, created_at, updated_at) \
+                 VALUES (?, ?, ?, ?, 'website', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'woocommerce', ?, ?, ?)",
+            )
+            .bind(&order_id)
+            .bind(&self.connection.brand_id)
+            .bind(&cust_id)
+            .bind(&order_num)
+            .bind(status)
+            .bind(total)
+            .bind(subtotal)
+            .bind(tax)
+            .bind(shipping)
+            .bind(currency)
+            .bind(&items_snapshot_json)
+            .bind(shipping_address.to_string())
+            .bind(payment_status)
+            .bind("woocommerce_payments")
+            .bind(serde_json::json!({"woocommerce_order_key": order_key}).to_string())
+            .bind(&wc_id_s)
+            .bind(&created_at)
+            .bind(&now)
+            .execute(&self.pool)
+            .await
+            {
+                Ok(_) => {
+                    for item in line_items {
+                        let item_id = Uuid::new_v4().to_string();
+                        let product_name = item.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                        let quantity = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+                        let unit_price = item.get("price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                        let total_price = unit_price * quantity as f64;
+                        let sku = item.get("sku").and_then(|v| v.as_str()).map(|s| s.to_string());
+                        let product_id = item.get("product_id").and_then(|v| v.as_i64()).map(|v| v.to_string());
+
+                        let _ = sqlx::query(
+                            "INSERT INTO commerce_order_items (id, order_id, product_id, variant_id, \
+                             product_name, sku, quantity, unit_price, total_price) \
+                             VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?)",
+                        )
+                        .bind(&item_id)
+                        .bind(&order_id)
+                        .bind(product_id)
+                        .bind(product_name)
+                        .bind(sku)
+                        .bind(quantity)
+                        .bind(unit_price)
+                        .bind(total_price)
+                        .execute(&self.pool)
+                        .await;
+                    }
+
+                    let payment_id = Uuid::new_v4().to_string();
+                    let _ = sqlx::query(
+                        "INSERT INTO commerce_payments (id, order_id, amount, currency, method, status, created_at) \
+                         VALUES (?, ?, ?, ?, 'woocommerce_payments', ?, ?)",
+                    )
+                    .bind(&payment_id)
+                    .bind(&order_id)
+                    .bind(total)
+                    .bind(currency)
+                    .bind(payment_status)
+                    .bind(&created_at)
+                    .execute(&self.pool)
+                    .await;
+
+                    self.upsert_order_mapping(&order_id, &wc_id_s, order_key.as_deref()).await.ok();
+                    synced += 1;
+                }
+                Err(e) => errors.push(format!("WooCommerce order {}: {}", wc_id_s, e)),
+            }
+        }
+
+        Ok(SyncResult {
+            success: errors.is_empty(),
+            direction: "inbound".to_string(),
+            entity_type: "orders".to_string(),
+            synced_count: synced,
+            errors,
+        })
+    }
+
+    // -----------------------------------------------------------------------
+    // Inventory sync
+    // -----------------------------------------------------------------------
+
+    async fn sync_inventory_outbound_impl(&self) -> Result<SyncResult, String> {
+        let base = self.api_base().ok_or("WooCommerce store URL not configured")?;
+
+        let mappings = sqlx::query(
+            "SELECT epm.product_id, epm.external_id, p.inventory_count \
+             FROM external_product_mapping epm \
+             JOIN products p ON epm.product_id = p.id \
+             WHERE epm.platform = 'woocommerce' AND epm.connection_id = ?",
+        )
+        .bind(&self.connection.id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let mut synced = 0;
+        let mut errors = Vec::new();
+
+        for row in mappings {
+            let product_id: String = row.get("product_id");
+            let external_id: String = row.get("external_id");
+            let inventory_count: i32 = row.get("inventory_count");
+
+            let inventory_payload = serde_json::json!({
+                "manage_stock": true,
+                "stock_quantity": inventory_count,
+                "stock_status": if inventory_count > 0 { "instock" } else { "outofstock" },
+            });
+
+            let url = format!("{}/products/{}", base, external_id);
+            match self.put_json(&url, &inventory_payload).await {
+                Ok(_) => synced += 1,
+                Err(e) => errors.push(format!("Product {}: {}", product_id, e)),
+            }
+        }
+
+        Ok(SyncResult {
+            success: errors.is_empty(),
+            direction: "outbound".to_string(),
+            entity_type: "inventory".to_string(),
+            synced_count: synced,
+            errors,
+        })
+    }
+
+    // -----------------------------------------------------------------------
+    // Platform data info
+    // -----------------------------------------------------------------------
+
+    pub async fn get_platform_info(&self) -> Result<serde_json::Value, String> {
+        let products = self.fetch_all_products().await?;
+        let orders = self.fetch_all_orders().await?;
+
+        Ok(serde_json::json!({
+            "platform": "woocommerce",
+            "product_count": products.len(),
+            "order_count": orders.len(),
+            "store": self.api_base().map(|b| b.replace("/wp-json/wc/v3", "")).unwrap_or_default(),
+        }))
+    }
+}
+
+#[async_trait::async_trait]
+impl SyncAdapter for WooCommerceSyncAdapter {
+    fn platform_name(&self) -> &str {
+        "woocommerce"
+    }
+
+    async fn test_connection(&self) -> Result<(), String> {
+        let base = self.api_base().ok_or("WooCommerce store URL not configured")?;
+        let _ = self.get_json(&format!("{}/products?per_page=1", base)).await?;
+        Ok(())
+    }
+
+    async fn sync_products_outbound(&self) -> Result<SyncResult, String> {
+        self.sync_products_outbound_impl().await
+    }
+
+    async fn sync_products_inbound(&self) -> Result<SyncResult, String> {
+        self.sync_products_inbound_impl().await
+    }
+
+    async fn sync_orders_outbound(&self) -> Result<SyncResult, String> {
+        self.sync_orders_outbound_impl().await
+    }
+
+    async fn sync_orders_inbound(&self) -> Result<SyncResult, String> {
+        self.sync_orders_inbound_impl().await
+    }
+
+    async fn sync_inventory_outbound(&self) -> Result<SyncResult, String> {
+        self.sync_inventory_outbound_impl().await
+    }
+}

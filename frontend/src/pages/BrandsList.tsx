@@ -86,7 +86,7 @@ export function BrandsList() {
   if (showCreateModal) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-        <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <div className="w-full max-w-md rounded-[var(--radius-lg)] bg-white p-6 shadow-xl">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">Create New Brand</h2>
             <button onClick={() => setShowCreateModal(false)}>
@@ -95,7 +95,7 @@ export function BrandsList() {
           </div>
 
           {error && (
-            <div className="flex items-center gap-2 mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <div className="flex items-center gap-2 mb-4 rounded-[var(--radius-md)] border border-red-200 bg-red-50 p-3 text-sm text-red-700">
               <AlertTriangle className="w-4 h-4 shrink-0" />
               <span className="flex-1">{error}</span>
               <button onClick={() => setError(null)}><X className="w-4 h-4" /></button>
@@ -107,7 +107,7 @@ export function BrandsList() {
               <label className="text-sm font-medium">Brand Name *</label>
               <input
                 type="text"
-                className="w-full mt-1 px-3 py-2 border rounded-lg text-sm"
+                className="w-full mt-1 px-3 py-2 border rounded-[var(--radius-md)] text-sm"
                 placeholder="My Brand"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
@@ -118,7 +118,7 @@ export function BrandsList() {
               <label className="text-sm font-medium">Slug</label>
               <input
                 type="text"
-                className="w-full mt-1 px-3 py-2 border rounded-lg text-sm"
+                className="w-full mt-1 px-3 py-2 border rounded-[var(--radius-md)] text-sm"
                 placeholder="my-brand"
                 value={newSlug}
                 onChange={(e) => setNewSlug(e.target.value)}
@@ -128,7 +128,7 @@ export function BrandsList() {
             <div>
               <label className="text-sm font-medium">Description</label>
               <textarea
-                className="w-full mt-1 px-3 py-2 border rounded-lg text-sm"
+                className="w-full mt-1 px-3 py-2 border rounded-[var(--radius-md)] text-sm"
                 rows={3}
                 placeholder="Brief description of this brand..."
                 value={newDescription}
@@ -138,14 +138,14 @@ export function BrandsList() {
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="px-4 py-2 text-sm border rounded-lg hover:bg-muted"
+                className="px-4 py-2 text-sm border rounded-[var(--radius-md)] hover:bg-muted"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCreate}
                 disabled={creating || !newName.trim()}
-                className="flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-lg text-sm hover:opacity-90 disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-[var(--radius-md)] text-sm hover:opacity-90 disabled:opacity-50"
               >
                 {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                 Create Brand
@@ -169,7 +169,7 @@ export function BrandsList() {
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-lg text-sm hover:opacity-90"
+          className="flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-[var(--radius-md)] text-sm hover:opacity-90"
         >
           <Plus className="w-4 h-4" />
           New Brand
@@ -178,7 +178,7 @@ export function BrandsList() {
 
       {/* Error */}
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           <span className="flex-1">{error}</span>
           <button onClick={() => setError(null)}><X className="w-4 h-4" /></button>
@@ -191,7 +191,7 @@ export function BrandsList() {
         <input
           type="text"
           placeholder="Search brands..."
-          className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm"
+          className="w-full pl-10 pr-4 py-2 border rounded-[var(--radius-md)] text-sm"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -215,7 +215,7 @@ export function BrandsList() {
           </p>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-lg text-sm hover:opacity-90"
+            className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-[var(--radius-md)] text-sm hover:opacity-90"
           >
             <Plus className="w-4 h-4" />
             Create Brand
@@ -231,7 +231,7 @@ export function BrandsList() {
             return (
               <div
                 key={b.id}
-                className={`group relative rounded-xl border p-5 transition-all cursor-pointer hover:shadow-md ${
+                className={`group relative rounded-[var(--radius-lg)] border p-5 transition-all cursor-pointer hover:shadow-md ${
                   isSelected
                     ? 'border-foreground bg-muted/50'
                     : 'border-border hover:border-foreground/30'
@@ -244,7 +244,7 @@ export function BrandsList() {
                   </div>
                 )}
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-[var(--radius-md)] bg-muted flex items-center justify-center shrink-0">
                     <Palette className="w-5 h-5" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -259,7 +259,7 @@ export function BrandsList() {
                   <Building2 className="w-3 h-3" />
                   <span>Click to select & manage</span>
                 </div>
-                <div className="absolute inset-0 rounded-xl ring-2 ring-foreground/0 group-hover:ring-foreground/10 transition-all pointer-events-none" />
+                <div className="absolute inset-0 rounded-[var(--radius-lg)] ring-2 ring-foreground/0 group-hover:ring-foreground/10 transition-all pointer-events-none" />
               </div>
             )
           })}
@@ -268,33 +268,33 @@ export function BrandsList() {
 
       {/* Quick Actions */}
       {!loading && brands.length > 0 && (
-        <div className="rounded-xl border p-4">
+        <div className="rounded-[var(--radius-lg)] border p-4">
           <h3 className="text-sm font-medium mb-3">Quick Actions</h3>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => navigate('/workspace/brand/profile')}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm border rounded-lg hover:bg-muted"
+              className="flex items-center gap-2 px-3 py-1.5 text-sm border rounded-[var(--radius-md)] hover:bg-muted"
             >
               <Palette className="w-4 h-4" />
               Brand Profile
             </button>
             <button
               onClick={() => navigate('/workspace/brand/keys')}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm border rounded-lg hover:bg-muted"
+              className="flex items-center gap-2 px-3 py-1.5 text-sm border rounded-[var(--radius-md)] hover:bg-muted"
             >
               <ExternalLink className="w-4 h-4" />
               Channel Keys
             </button>
             <button
               onClick={() => navigate('/workspace/brand/ai-config')}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm border rounded-lg hover:bg-muted"
+              className="flex items-center gap-2 px-3 py-1.5 text-sm border rounded-[var(--radius-md)] hover:bg-muted"
             >
               <Building2 className="w-4 h-4" />
               AI Config
             </button>
             <button
               onClick={() => navigate('/workspace/brand/knowledge')}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm border rounded-lg hover:bg-muted"
+              className="flex items-center gap-2 px-3 py-1.5 text-sm border rounded-[var(--radius-md)] hover:bg-muted"
             >
               <Search className="w-4 h-4" />
               Knowledge Base

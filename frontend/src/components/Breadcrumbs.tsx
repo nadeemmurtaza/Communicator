@@ -13,16 +13,16 @@ export function Breadcrumbs() {
   if (trail.length <= 1) return null
 
   return (
-    <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-[var(--color-ink-muted)] mb-4">
+    <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-xs text-[var(--color-ink-faint)] mb-5">
       {trail.map((item, i) => (
-        <span key={`${item.label}-${i}`} className="flex items-center gap-1.5">
-          {i > 0 && <span className="text-[var(--color-ink-faint)]">/</span>}
+        <span key={`${item.label}-${i}`} className="flex items-center gap-1">
+          {i > 0 && <span className="text-[var(--color-border)]">›</span>}
           {item.to && i < trail.length - 1 ? (
             <Link to={item.to} className="hover:text-[var(--color-ink)] transition-colors">
               {item.label}
             </Link>
           ) : (
-            <span className={i === trail.length - 1 ? 'text-[var(--color-ink)] font-medium' : ''}>{item.label}</span>
+            <span className={i === trail.length - 1 ? 'text-[var(--color-ink)] font-semibold' : ''}>{item.label}</span>
           )}
         </span>
       ))}

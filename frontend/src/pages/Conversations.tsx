@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { MessageCircle, Phone, Mail, MessageSquare, RefreshCw } from '../components/icons'
+import { MessageCircle, Phone, Mail, MessageSquare, RefreshCw, Plus } from '../components/icons'
 import { api, type Conversation } from '../lib/api'
 import { stateBadgeClass, stateLabel, timeAgo } from '../lib/format'
+import { WhatsAppStartConversation } from '../components/whatsapp/WhatsAppStartConversation'
 
 const STATES = [
   'all',
@@ -44,8 +45,8 @@ function renderChannelBadge(channel?: string) {
     )
   }
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-700 capitalize">
-      <MessageSquare className="h-3 w-3 text-slate-500" />
+    <span className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-accent-muted)] px-2 py-0.5 text-xs font-medium text-[var(--color-ink)] capitalize">
+      <MessageSquare className="h-3 w-3 text-[var(--color-ink-faint)]" />
       {channel || 'Chat'}
     </span>
   )
@@ -56,6 +57,7 @@ export function Conversations() {
   const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [filter, setFilter] = useState('all')
+  const [showStartWhatsApp, setShowStartWhatsApp] = useState(false)
 
   useEffect(() => {
     loadConversations()
@@ -97,18 +99,27 @@ export function Conversations() {
           <h1 className="text-xl font-semibold text-[var(--color-ink)]">Conversations</h1>
           <p className="mt-1 text-sm text-[var(--color-ink-muted)]">Every lead thread, across every channel.</p>
         </div>
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="self-start sm:self-auto rounded-md border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 text-emerald-600 ${refreshing ? 'animate-spin' : ''}`} />
-          {refreshing ? 'Refreshing...' : 'Refresh & Sync'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowStartWhatsApp(true)}
+            className="self-start sm:self-auto rounded-[var(--radius-sm)] bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 shadow-none flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Start WhatsApp
+          </button>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="self-start sm:self-auto rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3.5 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-accent-muted)] disabled:opacity-50 shadow-none flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 text-emerald-600 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing...' : 'Refresh & Sync'}
+          </button>
+        </div>
       </div>
 
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-[var(--radius-sm)] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       )}
@@ -120,8 +131,8 @@ export function Conversations() {
             onClick={() => setFilter(s)}
             className={`rounded-full px-3 py-1 text-xs font-medium cursor-pointer transition-colors ${
               filter === s
-                ? 'bg-[var(--color-accent)] text-white shadow-xs'
-                : 'bg-slate-100 text-[var(--color-ink-muted)] hover:bg-slate-200'
+                ? 'bg-[var(--color-accent)] text-white shadow-none'
+                : 'bg-[var(--color-accent-muted)] text-[var(--color-ink-muted)] hover:bg-[var(--color-border)]'
             }`}
           >
             {s === 'all' ? 'All' : stateLabel(s)}
@@ -132,11 +143,11 @@ export function Conversations() {
       {conversations === null ? (
         <p className="text-sm text-[var(--color-ink-muted)]">Loading conversations...</p>
       ) : filtered.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-[var(--color-surface)] px-4 py-10 text-center text-sm text-[var(--color-ink-muted)]">
+        <div className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-10 text-center text-sm text-[var(--color-ink-muted)]">
           No conversations in this state.
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xs">
+        <div className="overflow-x-auto rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-none">
           <table className="w-full text-sm">
             <thead className="border-b border-[var(--color-border)] bg-[var(--color-page)] text-left text-xs font-medium uppercase tracking-wide text-[var(--color-ink-muted)]">
               <tr>
@@ -150,13 +161,13 @@ export function Conversations() {
             <tbody className="divide-y divide-slate-100">
               {filtered.map((c) => (
                 <tr key={c.id} className="hover:bg-[var(--color-page)] transition-colors">
-                  <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-800">
+                  <td className="px-4 py-3 font-mono text-xs font-semibold text-[var(--color-ink)]">
                     {c.contactPhone || c.phone || '—'}
                   </td>
                   <td className="px-4 py-3">
                     <Link
                       to={`/conversations/${c.id}`}
-                      className="font-semibold text-slate-900 hover:text-emerald-700 hover:underline"
+                      className="font-semibold text-[var(--color-ink)] hover:text-[var(--color-accent)] hover:underline"
                     >
                       {c.contactName || c.customerName || c.leadName || c.contactPhone || 'Customer'}
                     </Link>
@@ -176,6 +187,13 @@ export function Conversations() {
           </table>
         </div>
       )}
+
+      {/* WhatsApp Start Conversation Modal */}
+      <WhatsAppStartConversation
+        open={showStartWhatsApp}
+        onClose={() => setShowStartWhatsApp(false)}
+        onSuccess={loadConversations}
+      />
     </div>
   )
 }

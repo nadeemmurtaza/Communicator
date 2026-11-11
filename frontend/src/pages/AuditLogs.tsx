@@ -126,7 +126,7 @@ export function AuditLogs() {
           <a
             href="/api/v1/audit-logs/export?format=csv"
             download="audit-trail-soc2.csv"
-            className="rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] shadow-sm hover:bg-[var(--color-page)] flex items-center gap-1.5"
+            className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] shadow-sm hover:bg-[var(--color-page)] flex items-center gap-1.5"
           >
             <Download className="h-3.5 w-3.5" />
             <span>Export CSV</span>
@@ -135,14 +135,14 @@ export function AuditLogs() {
             href="/api/v1/audit-logs/export?format=json"
             target="_blank"
             rel="noreferrer"
-            className="rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] shadow-sm hover:bg-[var(--color-page)] flex items-center gap-1.5"
+            className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] shadow-sm hover:bg-[var(--color-page)] flex items-center gap-1.5"
           >
             <Package className="h-3.5 w-3.5" />
             <span>Export JSON</span>
           </a>
           <button
             onClick={() => loadAuditData()}
-            className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-blue-700 flex items-center gap-1.5"
+            className="rounded-[var(--radius-md)] bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-blue-700 flex items-center gap-1.5"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             <span>Refresh</span>
@@ -152,7 +152,7 @@ export function AuditLogs() {
 
       {/* Metrics Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 shadow-sm">
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 shadow-sm">
           <div className="text-[11px] font-medium text-[var(--color-ink-muted)] uppercase tracking-wider">
             Total Audited Events
           </div>
@@ -165,7 +165,7 @@ export function AuditLogs() {
           <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">Immutable compliance ledger</p>
         </div>
 
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 shadow-sm">
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 shadow-sm">
           <div className="text-[11px] font-medium text-[var(--color-ink-muted)] uppercase tracking-wider">
             Security & Alerts
           </div>
@@ -192,7 +192,7 @@ export function AuditLogs() {
           <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">Warnings & critical anomalies</p>
         </div>
 
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 shadow-sm">
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 shadow-sm">
           <div className="text-[11px] font-medium text-[var(--color-ink-muted)] uppercase tracking-wider">
             Compliance Standard
           </div>
@@ -203,7 +203,7 @@ export function AuditLogs() {
           <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">Audit-ready export envelope</p>
         </div>
 
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 shadow-sm">
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 shadow-sm">
           <div className="text-[11px] font-medium text-[var(--color-ink-muted)] uppercase tracking-wider">
             Top Actor
           </div>
@@ -222,14 +222,14 @@ export function AuditLogs() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs text-red-800 flex items-center justify-between">
+        <div className="rounded-[var(--radius-md)] border border-red-200 bg-red-50 p-3.5 text-xs text-red-800 flex items-center justify-between">
           <span className="flex items-center gap-1.5"><AlertTriangle className="h-4 w-4 text-rose-500 shrink-0" /> {error}</span>
           <button onClick={() => setError(null)} className="text-red-600 hover:text-red-900"><X className="h-4 w-4" /></button>
         </div>
       )}
 
       {/* Filter and Search Bar */}
-      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
+      <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
         <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row items-center gap-3">
           <div className="relative flex-1 w-full">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-[var(--color-ink-faint)] text-xs">
@@ -240,7 +240,7 @@ export function AuditLogs() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by action, actor, IP address, description..."
-              className="w-full rounded-lg border border-slate-300 pl-8 pr-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+              className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] pl-8 pr-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
             />
           </div>
 
@@ -251,7 +251,7 @@ export function AuditLogs() {
                 setSelectedSeverity(e.target.value)
                 setPage(1)
               }}
-              className="rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-2 text-xs text-[var(--color-ink)] focus:border-blue-500 focus:outline-none"
+              className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs text-[var(--color-ink)] focus:border-blue-500 focus:outline-none"
             >
               <option value="">All Severities</option>
               <option value="info">Info</option>
@@ -266,7 +266,7 @@ export function AuditLogs() {
                 setSelectedCategory(e.target.value)
                 setPage(1)
               }}
-              className="rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-2 text-xs text-[var(--color-ink)] focus:border-blue-500 focus:outline-none"
+              className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs text-[var(--color-ink)] focus:border-blue-500 focus:outline-none"
             >
               <option value="">All Categories</option>
               <option value="access_control">Access Control</option>
@@ -279,7 +279,7 @@ export function AuditLogs() {
 
             <button
               type="submit"
-              className="rounded-lg bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] shrink-0"
+              className="rounded-[var(--radius-md)] bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] shrink-0"
             >
               Filter
             </button>
@@ -288,7 +288,7 @@ export function AuditLogs() {
       </div>
 
       {/* Audit Log Table */}
-      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm overflow-hidden">
+      <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-xs text-[var(--color-ink-muted)]">
             <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-blue-600 border-r-transparent"></div>
@@ -297,7 +297,7 @@ export function AuditLogs() {
         ) : logs.length === 0 ? (
           <div className="p-12 text-center text-xs text-[var(--color-ink-muted)]">
             <ShieldCheck className="h-10 w-10 text-emerald-600 mx-auto" />
-            <div className="font-semibold text-slate-800 mt-2">No Audit Log Entries Found</div>
+            <div className="font-semibold text-[var(--color-ink)] mt-2">No Audit Log Entries Found</div>
             <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">
               Try broadening your search term or clearing active severity and category filters.
             </p>
@@ -325,7 +325,7 @@ export function AuditLogs() {
                       : sev === 'warning'
                       ? 'bg-amber-50 text-amber-700 border-amber-200'
                       : sev === 'notice'
-                      ? 'bg-slate-100 text-[var(--color-ink)] border-[var(--color-border)]'
+                      ? 'bg-[var(--color-accent-muted)] text-[var(--color-ink)] border-[var(--color-border)]'
                       : 'bg-blue-50 text-blue-700 border-blue-200'
 
                   return (
@@ -342,7 +342,7 @@ export function AuditLogs() {
                       {/* Actor */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
-                          <div className="h-6 w-6 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-[10px] shrink-0 uppercase">
+                          <div className="h-6 w-6 rounded-full bg-[var(--color-ink)] text-white flex items-center justify-center font-bold text-[10px] shrink-0 uppercase">
                             {item.actor.charAt(0) || 'U'}
                           </div>
                           <div>
@@ -359,7 +359,7 @@ export function AuditLogs() {
                       {/* Action */}
                       <td className="py-3 px-4">
                         <div>
-                          <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] text-slate-800 font-medium">
+                          <code className="rounded bg-[var(--color-accent-muted)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--color-ink)] font-medium">
                             {item.action}
                           </code>
                           <div className="text-[10px] text-[var(--color-ink-muted)] mt-0.5 truncate max-w-[260px]">
@@ -398,7 +398,7 @@ export function AuditLogs() {
                             e.stopPropagation()
                             setInspectedLog(item)
                           }}
-                          className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[11px] font-medium text-[var(--color-ink-muted)] hover:bg-[var(--color-page)]"
+                          className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[11px] font-medium text-[var(--color-ink-muted)] hover:bg-[var(--color-page)]"
                         >
                           <span>Inspect</span> <ExternalLink className="h-3 w-3 inline" />
                         </button>
@@ -421,7 +421,7 @@ export function AuditLogs() {
             <button
               onClick={() => setPage(Math.max(1, page - 1))}
               disabled={page <= 1}
-              className="rounded-md border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-40"
+              className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-40"
             >
               <span className="flex items-center gap-1"><ChevronLeft className="h-3.5 w-3.5" /> Previous</span>
             </button>
@@ -431,7 +431,7 @@ export function AuditLogs() {
             <button
               onClick={() => setPage(Math.min(totalPages, page + 1))}
               disabled={page >= totalPages}
-              className="rounded-md border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-40"
+              className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-40"
             >
               <span className="flex items-center gap-1">Next <ChevronRight className="h-3.5 w-3.5" /></span>
             </button>
@@ -455,7 +455,7 @@ export function AuditLogs() {
               </div>
               <button
                 onClick={() => setInspectedLog(null)}
-                className="h-7 w-7 rounded-full bg-slate-200 text-[var(--color-ink-muted)] hover:bg-slate-300 flex items-center justify-center text-xs font-bold"
+                className="h-7 w-7 rounded-full bg-[var(--color-border)] text-[var(--color-ink-muted)] hover:bg-[var(--color-border)] flex items-center justify-center text-xs font-bold"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -463,41 +463,41 @@ export function AuditLogs() {
 
             <div className="p-5 space-y-4 overflow-y-auto">
               <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="rounded-lg bg-[var(--color-page)] p-3 border border-[var(--color-border)]">
+                <div className="rounded-[var(--radius-md)] bg-[var(--color-page)] p-3 border border-[var(--color-border)]">
                   <div className="text-[10px] text-[var(--color-ink-faint)] uppercase font-semibold">Action & Category</div>
-                  <div className="font-mono font-bold text-slate-800 mt-0.5">{inspectedLog.action}</div>
+                  <div className="font-mono font-bold text-[var(--color-ink)] mt-0.5">{inspectedLog.action}</div>
                   <div className="text-[11px] text-[var(--color-ink-muted)] capitalize">{inspectedLog.compliance_category}</div>
                 </div>
 
-                <div className="rounded-lg bg-[var(--color-page)] p-3 border border-[var(--color-border)]">
+                <div className="rounded-[var(--radius-md)] bg-[var(--color-page)] p-3 border border-[var(--color-border)]">
                   <div className="text-[10px] text-[var(--color-ink-faint)] uppercase font-semibold">Actor</div>
-                  <div className="font-bold text-slate-800 mt-0.5">{inspectedLog.actor}</div>
+                  <div className="font-bold text-[var(--color-ink)] mt-0.5">{inspectedLog.actor}</div>
                   <div className="text-[11px] text-[var(--color-ink-muted)]">{inspectedLog.actor_email || 'System Account'}</div>
                 </div>
 
-                <div className="rounded-lg bg-[var(--color-page)] p-3 border border-[var(--color-border)]">
+                <div className="rounded-[var(--radius-md)] bg-[var(--color-page)] p-3 border border-[var(--color-border)]">
                   <div className="text-[10px] text-[var(--color-ink-faint)] uppercase font-semibold">Target Entity</div>
-                  <div className="font-bold text-slate-800 capitalize mt-0.5">{inspectedLog.entity_type}</div>
+                  <div className="font-bold text-[var(--color-ink)] capitalize mt-0.5">{inspectedLog.entity_type}</div>
                   <div className="font-mono text-[10px] text-[var(--color-ink-muted)] truncate">{inspectedLog.entity_id}</div>
                 </div>
 
-                <div className="rounded-lg bg-[var(--color-page)] p-3 border border-[var(--color-border)]">
+                <div className="rounded-[var(--radius-md)] bg-[var(--color-page)] p-3 border border-[var(--color-border)]">
                   <div className="text-[10px] text-[var(--color-ink-faint)] uppercase font-semibold">Network & Time</div>
-                  <div className="font-mono text-slate-800 mt-0.5">{inspectedLog.ip_address || '127.0.0.1'}</div>
+                  <div className="font-mono text-[var(--color-ink)] mt-0.5">{inspectedLog.ip_address || '127.0.0.1'}</div>
                   <div className="text-[10px] text-[var(--color-ink-muted)]">{formatTimestamp(inspectedLog.created_at)}</div>
                 </div>
               </div>
 
               <div>
-                <div className="text-xs font-semibold text-slate-800 mb-1">Event Narrative Description</div>
-                <div className="rounded-lg bg-[var(--color-page)] p-3 text-xs text-[var(--color-ink)] border border-[var(--color-border)]">
+                <div className="text-xs font-semibold text-[var(--color-ink)] mb-1">Event Narrative Description</div>
+                <div className="rounded-[var(--radius-md)] bg-[var(--color-page)] p-3 text-xs text-[var(--color-ink)] border border-[var(--color-border)]">
                   {inspectedLog.description}
                 </div>
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-semibold text-slate-800">Audit Metadata & State Snapshot (JSON)</span>
+                  <span className="text-xs font-semibold text-[var(--color-ink)]">Audit Metadata & State Snapshot (JSON)</span>
                   <button
                     onClick={() => copyJsonDetails(inspectedLog.details)}
                     className="text-[11px] font-semibold text-blue-600 hover:text-blue-800"
@@ -511,7 +511,7 @@ export function AuditLogs() {
                     )}
                   </button>
                 </div>
-                <pre className="rounded-lg bg-slate-950 p-3.5 text-[11px] font-mono text-emerald-400 overflow-x-auto border border-slate-800 max-h-56 leading-relaxed">
+                <pre className="rounded-[var(--radius-md)] bg-[var(--color-ink)] p-3.5 text-[11px] font-mono text-emerald-400 overflow-x-auto border border-[var(--color-ink)] max-h-56 leading-relaxed">
                   {JSON.stringify(inspectedLog.details, null, 2)}
                 </pre>
               </div>
@@ -520,7 +520,7 @@ export function AuditLogs() {
             <div className="p-3.5 bg-[var(--color-page)] border-t border-[var(--color-border)] flex justify-end">
               <button
                 onClick={() => setInspectedLog(null)}
-                className="rounded-lg bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)]"
+                className="rounded-[var(--radius-md)] bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)]"
               >
                 Close
               </button>

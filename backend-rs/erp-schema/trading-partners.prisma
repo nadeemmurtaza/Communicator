@@ -1,0 +1,175 @@
+// The trading-partner network (18-trading-partner-network.md, WO-18) — lets
+// a supplier, distributor or wholesaler that also runs this software (or
+// exposes any HTTP+JSON API) exchange documents with this deployment
+// without either side re-typing them. A `Supplier` with no linked
+// `TradingPartner` behaves exactly as it always has: nothing here is
+// required for purchasing to keep working.
+
+enum TradingPartnerKind {
+  /// We buy from them — their invoice becomes our SupplierBill (WO-18.2).
+  SUPPLIER
+  /// They buy from us — not wired to anything yet; reserved so `kind`
+  /// doesn't need a breaking change when the sell-side direction is built.
+  CUSTOMER
+  BOTH
+}
+
+enum TradingPartnerStatus {
+  /// Registered, no working inbound key yet — cannot authenticate.
+  PENDING
+  ACTIVE
+  /// Manually disabled; `verifyInboundKey` (WO-18.2) refuses a SUSPENDED
+  /// partner's key even if it still hashes correctly.
+  SUSPENDED
+}
+
+/// The business on the other end of a document exchange. Two independent
+/// credentials, because the two directions are independent capabilities:
+/// `outboundApiKeyEncrypted` is what WE present calling THEM
+/// (`outboundBaseUrl`, WO-18.3); `inboundApiKeyHash` is what THEY must
+/// present calling US (WO-18.2). Either, both, or neither may be set — a
+/// partner who only ever pushes to us never needs an outbound key, and vice
+/// versa.
+model TradingPartner {
+  id   String             @id @default(cuid())
+  name String
+  kind TradingPartnerKind
+
+  outboundBaseUrl         String?
+  /// AES-256-GCM via @newax/shared's secret-crypto.ts — never stored plain,
+  /// same as an email account's SMTP password.
+  outboundApiKeyEncrypted String?
+
+  /// SHA-256 of the raw key (core/security/api-token.ts) — the raw key
+  /// itself is shown to the operator exactly once, at issue/rotate time,
+  /// and never persisted. Unique so a presented key resolves its partner in
+  /// one indexed lookup rather than a hash comparison per row.
+  inboundApiKeyHash String? @unique
+
+  /// The role they confirmed at acceptance — SUPPLIER, MANUFACTURER,
+  /// DISTRIBUTOR or RETAILER (parties.prisma's own `PartyRoleName`, reused
+  /// rather than duplicated). Recorded verbatim for display/audit; `kind`
+  /// is derived from it at accept time and stays the field push-routing
+  /// (WO-18.3) reads, so nothing downstream needs to know this exists.
+  acceptedRole PartyRoleName?
+
+  /// First-connection handshake — "send a request, they accept to start the
+  /// relation." A partner created with no credentials at all gets one of
+  /// these. Same shape as `inboundApiKeyHash`: a single-use secret shown to
+  /// the operator once, never persisted raw, and cleared the moment
+  /// `acceptConnection()` succeeds so a stale link cannot be replayed.
+  inviteTokenHash String?   @unique
+  invitedAt       DateTime?
+  acceptedAt      DateTime?
+  /// Where the invite link is emailed, if we have one on file. Optional —
+  /// an invite with no address still works, the operator just shares the
+  /// link by hand.
+  contactEmail    String?
+
+  /// WO-213.1 (213-partner-fact-exchange.md). When `inboundApiKeyHash` stops
+  /// working. Null means it never expires: a key issued before this column
+  /// existed, or issued while the `partners.key_ttl_days` setting was 0.
+  /// Enforced in `verifyInboundKey()`, never left to a caller.
+  inboundKeyExpiresAt       DateTime?
+  /// WO-213.1. The staff user who last issued the inbound key. A bare scalar
+  /// (no `@relation` to core's `User`), read by the toxic-pair guard so that
+  /// whoever minted a partner's key cannot also clear that partner's review
+  /// queue (WO-213.5). Null for a key issued before this column existed.
+  inboundKeyRotatedByUserId String?
+
+  status    TradingPartnerStatus @default(PENDING)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  suppliers Supplier[]
+  facts     PartnerFactInbox[]
+
+  @@index([status])
+}
+
+enum PartnerFactStatus {
+  /// Stored and acknowledged; nothing has acted on it yet.
+  RECEIVED
+  /// The subscribing module applied it (for `sale.dispatched`: a purchase
+  /// order now exists).
+  APPLIED
+  /// Stored, but something needs a person: an unknown barcode, a price far
+  /// from the supplier's last. Never dropped, never guessed — it waits in a
+  /// named queue (WO-213.5).
+  NEEDS_REVIEW
+  /// A person decided this fact must not be applied.
+  REJECTED
+}
+
+/// One fact a connected partner sent us (WO-213.1, 213-partner-fact-exchange.md
+/// and ADR-087). "Store first, apply second": the inbound endpoint writes this
+/// row and answers 202, so acknowledging means "stored", never "applied", and
+/// a slow or absent `purchasing` module cannot make a partner's delivery fail.
+///
+/// `(tradingPartnerId, factId)` is unique, which makes the second copy of the
+/// same fact a no-op by constraint: the sender retries for up to 72 hours, so
+/// the same factId WILL arrive twice. `factId` is a UUID the SENDING node
+/// generated, so two nodes never collide offline.
+///
+/// `type` is a string, not an enum, on purpose: adding a fact type must never
+/// need a migration. The accepted values live in `partner-fact.dto.ts`.
+model PartnerFactInbox {
+  id                     String            @id @default(cuid())
+  tradingPartnerId       String
+  /// Generated by the sender (UUID v4). Half of the idempotency key.
+  factId                 String
+  /// "sale.dispatched" | "receipt.confirmed" — see `type`'s note above.
+  type                   String
+  /// The fact's own shape version. The applier for version n is kept forever
+  /// so an old fact replays exactly as it was decided.
+  schemaVersion          Int
+  /// The sender's own document number, when the fact carries one (a
+  /// `sale.dispatched` fact's invoice number). Display and reconciliation
+  /// only — the buyer never reuses it as one of its own numbers.
+  documentRef            String?
+  /// When it happened at the sender — not when we received it.
+  occurredAt             DateTime
+  /// sha256 of the canonical (key-sorted) payload. Lets a repeat of the same
+  /// factId with a DIFFERENT payload be refused rather than silently replayed.
+  payloadHash            String
+  /// The validated fact. Set to null, row kept, after 400 days (the
+  /// retention cron, sequenced with WO-213.4): metadata stays for audit.
+  payload                Json?
+  status                 PartnerFactStatus @default(RECEIVED)
+  /// Why it is NEEDS_REVIEW or REJECTED, in words an operator can act on.
+  statusReason           String?
+  /// Set when status is APPLIED and the fact produced a purchase order. A
+  /// bare scalar, no `@relation`: purchasing is decoupled from this module
+  /// (ADR-012). Null means "not applied".
+  appliedPurchaseOrderId String?
+  receivedAt             DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+
+  /// Restrict, not Cascade: a received fact is an audit record, and deleting
+  /// a partner must never silently delete what it sent. Suspend it instead.
+  partner TradingPartner @relation(fields: [tradingPartnerId], references: [id], onDelete: Restrict)
+  // A partial index on `receivedAt WHERE status IN ('RECEIVED','NEEDS_REVIEW')`
+  // serves the queue screen; Prisma cannot express one, so it lives in the
+  // migration only (20260930100000_wo213_1_partner_fact_inbox).
+
+  @@unique([tradingPartnerId, factId])
+  @@index([tradingPartnerId, receivedAt])
+}
+
+/// A marketing push to the retail end of the chain (WO-18.3's third "forth"
+/// document, alongside the product-alerts push) — never targeted, never a
+/// coupon engine: one broadcast row, fanned out to every ACTIVE
+/// CUSTOMER/BOTH partner the same way a new product is. `discountLabel` is
+/// display text a partner's own system shows; nothing here is redeemed or
+/// enforced by this deployment.
+model Offer {
+  id            String    @id @default(cuid())
+  title         String
+  description   String
+  discountLabel String?
+  validFrom     DateTime  @default(now())
+  validUntil    DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([createdAt])
+}

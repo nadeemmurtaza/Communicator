@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 //! Support layer for the customer-facing live-chat widget runtime.
 //!
@@ -7,7 +7,7 @@
 //! structure from `credentials.preChatConfig`, visitor identity from `contacts`
 //! (+ `leads` and a `consent_records` row), sessions from `widget_sessions`,
 //! agent heartbeats from `agent_presence`, and cursors/read receipts from
-//! `messages.rowid`.
+//! `messages.created_at`.
 //!
 //! Nothing in this module invents a reply: `request_auto_reply` hands the
 //! thread to the ported AI engine (`services::reply_engine`), and the outbound
@@ -23,7 +23,7 @@ use crate::services::reply_engine;
 use hmac::{Hmac, Mac};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
-use sqlx::sqlite::SqliteRow;
+use sqlx::postgres::PgRow;
 use sqlx::Row;
 use std::sync::OnceLock;
 use tracing::warn;
@@ -204,8 +204,8 @@ impl From<InboundError> for WidgetError {
     }
 }
 
-/// SQLite names missing schema objects in its error text (`no such table: x`,
-/// `no such column: y`). Surfacing that verbatim is honest: the widget says the
+/// PostgreSQL names missing schema objects in its error text (`relation "x" does not exist`,
+/// `column y does not exist`). Surfacing that verbatim is honest: the widget says the
 /// storage is not initialised instead of pretending the row was never sent.
 pub fn schema_gap(err: &sqlx::Error) -> Option<String> {
     if let sqlx::Error::Database(db) = err {
@@ -381,22 +381,21 @@ const INBOX_SELECT: &str = "SELECT id, name, channel_type, is_active, avatar_url
      FROM inboxes WHERE channel_type IN ('website', 'live-chat', 'live_chat') \
      ORDER BY is_active DESC, updated_at DESC";
 
-fn text(row: &SqliteRow, column: &str) -> String {
+fn text(row: &PgRow, column: &str) -> String {
     row.try_get::<String, _>(column).unwrap_or_default()
 }
 
-fn opt_text(row: &SqliteRow, column: &str) -> Option<String> {
+fn opt_text(row: &PgRow, column: &str) -> Option<String> {
     row.try_get::<Option<String>, _>(column)
         .ok()
         .flatten()
-        .filter(|value| !value.is_empty())
 }
 
-fn flag(row: &SqliteRow, column: &str) -> bool {
+fn flag(row: &PgRow, column: &str) -> bool {
     row.try_get::<bool, _>(column).unwrap_or(false)
 }
 
-fn row_to_inbox(row: &SqliteRow) -> WebsiteInbox {
+fn row_to_inbox(row: &PgRow) -> WebsiteInbox {
     let credentials = opt_text(row, "credentials")
         .and_then(|raw| serde_json::from_str::<Value>(&raw).ok())
         .filter(|value| value.is_object())
@@ -1278,7 +1277,7 @@ pub async fn record_visitor_message(
     .await?;
 
     let row = need(
-        sqlx::query("SELECT rowid, sent_at FROM messages WHERE id = ?")
+        sqlx::query("SELECT id, sent_at, created_at FROM messages WHERE id = ?")
             .bind(&message_id)
             .fetch_optional(pool)
             .await,
@@ -1286,13 +1285,14 @@ pub async fn record_visitor_message(
     )?;
     match row {
         Some(row) => {
-            let cursor: i64 = row.try_get("rowid").unwrap_or(0);
+            // Use created_at as cursor for PostgreSQL-compatible pagination
+            let cursor: String = row.try_get("created_at").unwrap_or_default();
             let sent_at = opt_text(&row, "sent_at").unwrap_or_default();
             Ok((message_id, cursor, sent_at))
         }
         None => {
             warn!("widget message {message_id} was written but cannot be read back");
-            Ok((message_id, 0, String::new()))
+            Ok((message_id, String::new(), String::new()))
         }
     }
 }
@@ -1674,10 +1674,10 @@ pub async fn request_auto_reply(
 // Cursors, history, transcripts and read receipts
 // ---------------------------------------------------------------------------
 
-pub async fn max_message_cursor(pool: &DbPool, conversation_id: &str) -> WidgetResult<i64> {
+pub async fn max_message_cursor(pool: &DbPool, conversation_id: &str) -> WidgetResult<String> {
     let row = need(
         sqlx::query(
-            "SELECT COALESCE(MAX(rowid), 0) AS cursor FROM messages WHERE conversation_id = ?",
+            "SELECT COALESCE(MAX(created_at), '') AS cursor FROM messages WHERE conversation_id = ?",
         )
         .bind(conversation_id)
         .fetch_optional(pool)
@@ -1685,31 +1685,31 @@ pub async fn max_message_cursor(pool: &DbPool, conversation_id: &str) -> WidgetR
         "reading the conversation cursor",
     )?;
     Ok(row
-        .and_then(|row| row.try_get::<i64, _>("cursor").ok())
-        .unwrap_or(0))
+        .and_then(|row| row.try_get::<String, _>("cursor").ok())
+        .unwrap_or_default())
 }
 
-/// Cursors are `"<messages.rowid>:<sent_at>"`; a bare rowid is accepted too so a
+/// Cursors are `"<messages.created_at>:<sent_at>"`; a bare timestamp is accepted too so a
 /// client can replay a cursor it stored earlier.
-pub fn cursor_rowid(cursor: Option<&str>) -> i64 {
+pub fn cursor_rowid(cursor: Option<&str>) -> String {
     cursor
         .unwrap_or("")
         .split(':')
         .next()
-        .and_then(|head| head.trim().parse::<i64>().ok())
-        .unwrap_or(0)
+        .map(|head| head.trim().to_string())
+        .unwrap_or_default()
 }
 
-fn message_json(row: &SqliteRow) -> Value {
+fn message_json(row: &PgRow) -> Value {
     let direction = opt_text(row, "direction").unwrap_or_default();
-    let rowid: i64 = row.try_get("rowid").unwrap_or(0);
+    let created_at = opt_text(row, "created_at").unwrap_or_default();
     let sent_at = opt_text(row, "sent_at")
         .or_else(|| opt_text(row, "created_at"))
         .unwrap_or_default();
     json!({
         "id": text(row, "id"),
-        "cursor": rowid,
-        "cursorToken": format!("{rowid}:{sent_at}"),
+        "cursor": created_at,
+        "cursorToken": format!("{created_at}:{sent_at}"),
         "body": text(row, "body"),
         "direction": direction.to_lowercase(),
         "senderType": opt_text(row, "sender_type").unwrap_or_else(|| "contact".to_string()),
@@ -1722,24 +1722,24 @@ fn message_json(row: &SqliteRow) -> Value {
 }
 
 const MESSAGE_COLUMNS: &str =
-    "rowid, id, direction, body, sender_type, sender_name, status, sent_at, created_at";
+    "id, direction, body, sender_type, sender_name, status, sent_at, created_at";
 
 /// Visitor-visible history. Internal private notes are excluded by the query
 /// itself, never filtered after the fact.
 pub async fn visible_messages(
     pool: &DbPool,
     conversation_id: &str,
-    after_cursor: i64,
+    after_cursor: String,
     limit: i64,
 ) -> WidgetResult<Vec<Value>> {
     let rows = need(
         sqlx::query(&format!(
             "SELECT {MESSAGE_COLUMNS} FROM messages \
-             WHERE conversation_id = ? AND rowid > ? AND COALESCE(is_private, 0) = 0 \
-             ORDER BY rowid ASC LIMIT ?"
+             WHERE conversation_id = ? AND created_at > ? AND COALESCE(is_private, 0) = 0 \
+             ORDER BY created_at ASC LIMIT ?"
         ))
         .bind(conversation_id)
-        .bind(after_cursor)
+        .bind(&after_cursor)
         .bind(limit.clamp(1, MAX_POLL_LIMIT))
         .fetch_all(pool)
         .await,
@@ -1753,7 +1753,7 @@ pub async fn build_transcript(pool: &DbPool, conversation_id: &str) -> WidgetRes
     let rows = need(
         sqlx::query(&format!(
             "SELECT {MESSAGE_COLUMNS} FROM messages \
-             WHERE conversation_id = ? AND COALESCE(is_private, 0) = 0 ORDER BY rowid ASC"
+             WHERE conversation_id = ? AND COALESCE(is_private, 0) = 0 ORDER BY created_at ASC"
         ))
         .bind(conversation_id)
         .fetch_all(pool)
@@ -1784,17 +1784,17 @@ pub fn render_transcript(rows: &[Value]) -> String {
 pub async fn mark_messages_read(
     pool: &DbPool,
     conversation_id: &str,
-    up_to_cursor: i64,
+    up_to_cursor: String,
 ) -> WidgetResult<u64> {
     let result = need(
         sqlx::query(
             "UPDATE messages SET status = 'read', delivery_status = 'read' \
-             WHERE conversation_id = ? AND rowid <= ? AND direction = 'outbound' \
+             WHERE conversation_id = ? AND created_at <= ? AND direction = 'outbound' \
                AND COALESCE(is_private, 0) = 0 \
                AND (status IS NULL OR status != 'read')",
         )
         .bind(conversation_id)
-        .bind(up_to_cursor)
+        .bind(&up_to_cursor)
         .execute(pool)
         .await,
         "applying read receipts",
@@ -1805,15 +1805,15 @@ pub async fn mark_messages_read(
 pub async fn unread_outbound_count(
     pool: &DbPool,
     conversation_id: &str,
-    after_cursor: i64,
+    after_cursor: String,
 ) -> WidgetResult<i64> {
     let row = need(
         sqlx::query(
-            "SELECT COUNT(*) AS total FROM messages WHERE conversation_id = ? AND rowid > ? \
+            "SELECT COUNT(*) AS total FROM messages WHERE conversation_id = ? AND created_at > ? \
              AND direction = 'outbound' AND COALESCE(is_private, 0) = 0",
         )
         .bind(conversation_id)
-        .bind(after_cursor)
+        .bind(&after_cursor)
         .fetch_optional(pool)
         .await,
         "counting unread messages",
@@ -1887,7 +1887,7 @@ pub struct WidgetSession {
     pub origin: String,
     pub client_ip: String,
     pub state: String,
-    pub last_cursor: i64,
+    pub last_cursor: String,
     pub visitor_presence: String,
     pub last_presence_at: Option<String>,
     pub last_typing_at: Option<String>,
@@ -1901,7 +1901,7 @@ const SESSION_COLUMNS: &str = "id, conversation_id, contact_id, inbox_id, websit
      client_ip, state, last_cursor, visitor_presence, last_presence_at, last_typing_at, closed_at, \
      close_reason, created_at, updated_at";
 
-fn row_to_session(row: &SqliteRow) -> WidgetSession {
+fn row_to_session(row: &PgRow) -> WidgetSession {
     WidgetSession {
         id: text(row, "id"),
         conversation_id: text(row, "conversation_id"),
@@ -1912,10 +1912,10 @@ fn row_to_session(row: &SqliteRow) -> WidgetSession {
         client_ip: opt_text(row, "client_ip").unwrap_or_default(),
         state: opt_text(row, "state").unwrap_or_else(|| "open".to_string()),
         last_cursor: row
-            .try_get::<Option<i64>, _>("last_cursor")
+            .try_get::<Option<String>, _>("last_cursor")
             .ok()
             .flatten()
-            .unwrap_or(0),
+            .unwrap_or_default(),
         visitor_presence: opt_text(row, "visitor_presence")
             .unwrap_or_else(|| "unknown".to_string()),
         last_presence_at: opt_text(row, "last_presence_at"),
@@ -1943,7 +1943,7 @@ pub async fn create_session(
     let now = chrono::Utc::now().to_rfc3339();
     let cursor = max_message_cursor(pool, conversation_id)
         .await
-        .unwrap_or(0);
+        .unwrap_or_default();
 
     need(
         sqlx::query(
@@ -2040,11 +2040,11 @@ pub fn ensure_open(session: &WidgetSession) -> WidgetResult<()> {
 pub async fn advance_session_cursor(
     pool: &DbPool,
     session_id: &str,
-    cursor: i64,
+    cursor: &str,
 ) -> WidgetResult<()> {
     need(
         sqlx::query(
-            "UPDATE widget_sessions SET last_cursor = MAX(last_cursor, ?), updated_at = ? WHERE id = ?",
+            "UPDATE widget_sessions SET last_cursor = GREATEST(last_cursor, ?), updated_at = ? WHERE id = ?",
         )
         .bind(cursor)
         .bind(chrono::Utc::now().to_rfc3339())
@@ -2152,7 +2152,7 @@ pub fn session_json(session: &WidgetSession) -> Value {
         "contactId": session.contact_id,
         "inboxId": session.inbox_id,
         "state": session.state,
-        "cursor": session.last_cursor,
+        "cursor": session.last_cursor.as_str(),
         "visitorPresence": session.visitor_presence,
         "lastPresenceAt": session.last_presence_at,
         "lastTypingAt": session.last_typing_at,

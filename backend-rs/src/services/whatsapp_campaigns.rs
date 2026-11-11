@@ -1,7 +1,7 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
-use sqlx::{Row, SqlitePool};
+use sqlx::{Row, PgPool};
 
 use crate::config::Config;
 use crate::services::whatsapp::WhatsAppService;
@@ -83,12 +83,12 @@ pub struct RetryQueueEntry {
 // ---------------------------------------------------------------------------
 
 pub struct WhatsAppCampaignsService {
-    pool: SqlitePool,
+    pool: PgPool,
     config: Config,
 }
 
 impl WhatsAppCampaignsService {
-    pub fn new(pool: SqlitePool, config: Config) -> Self {
+    pub fn new(pool: PgPool, config: Config) -> Self {
         Self { pool, config }
     }
 

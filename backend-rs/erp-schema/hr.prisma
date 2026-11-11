@@ -1,0 +1,297 @@
+// Employee assets: which physical equipment (laptop, phone, uniform) is
+// issued to which employee, and whether it came back
+// (docs/implementation/hr-people-org/79-employee-asset-management.md).
+//
+// Every actor here is a User — this codebase never built the doc's own
+// separate Employee model (payroll.prisma made the same call first, for the
+// same reason: "one User is both the payee and, for an ADMIN, the actor who
+// acts on someone else's record"). No organizationId: this repository scopes
+// a deployment to one brand at build time (CLAUDE.md's own axis rules), and
+// no other model in this schema carries a literal organizationId column
+// either — the same single-tenant idiom CompensationRate/LeaveBalance/etc.
+// already use.
+
+// Positions and the rank ladder (hr-people-org/20-people-positions-ranks.md,
+// DECISIONS.md ADR-044). No separate Employee model — the identical call
+// this file's own header already made for assets, and payroll.prisma made
+// first: "every actor here is a User." Doc 20's own stated reason for a
+// separate model (a person who may never sign in) does not hold against
+// the actual User schema — email/phone/passwordHash are already all
+// nullable there, so a login-less worker is already representable as a
+// User row with all three null, unable to authenticate by construction
+// (AuthService.login() cannot locate or verify such a row). EmployeeProfile
+// below is NOT that fourth actor table: it is a thin, optional 1:1 sidecar
+// for the handful of HR-specific fields (employeeCode, joinedOn, leftOn,
+// status) that have no home on the universal, always-on User model and
+// mean nothing when `hr` is off — ADR-044's Option 2.
+
+enum EmploymentStatus {
+  ACTIVE
+  ON_LEAVE
+  SUSPENDED
+  LEFT
+}
+
+/// Optional HR-specific metadata about a User who works here. A User with
+/// no row here can still hold a Posting — this table only ever adds detail,
+/// never gates whether someone can be posted.
+model EmployeeProfile {
+  id           String           @id @default(cuid())
+  userId       String           @unique
+  /// The payroll/HR identifier the client already uses on paper. No
+  /// organizationId scoping it (ADR-044) — this deployment IS the tenant.
+  employeeCode String           @unique
+  status       EmploymentStatus @default(ACTIVE)
+  joinedOn     DateTime
+  /// Set on the last working day. Kept, never deleted — payroll, attendance
+  /// and completed tasks must still resolve years later.
+  leftOn       DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+/// A rank is a rung. Rows, not an enum — one client has five grades, the
+/// next has twenty-two. `level` is the only thing compared, and it is
+/// compared with `>`, never with equality against a hardcoded number.
+model Rank {
+  id    String @id @default(cuid())
+  key   String @unique
+  label String
+  /// Higher outranks lower. Gaps are deliberate: seed 10, 20, 30 so a band
+  /// can be inserted later without renumbering everyone.
+  level Int    @unique
+
+  positions Position[]
+  compensationBand CompensationBand?
+}
+
+/// Ecosystem audit 2026-10-29 (merged from @newaxhq/hr's MatrixOrgSolver):
+/// a secondary ("dotted-line") reporting edge, person to person — matrix
+/// reporting is a real relationship this schema never modelled, distinct
+/// from `Position.reportsToId`'s primary, post-to-post line. Many-to-many:
+/// one person can dot-line to several managers, one manager can hold many
+/// dotted reports.
+model DottedLineReport {
+  id                  String   @id @default(cuid())
+  userId              String
+  dottedManagerUserId String
+  createdAt           DateTime @default(now())
+
+  user          User @relation("DottedLineReportUser", fields: [userId], references: [id])
+  dottedManager User @relation("DottedLineReportManager", fields: [dottedManagerUserId], references: [id])
+
+  @@unique([userId, dottedManagerUserId])
+  @@index([dottedManagerUserId])
+}
+
+enum LifecycleChecklistType {
+  ONBOARDING
+  OFFBOARDING
+  PROMOTION
+  TRANSFER
+}
+
+enum ClearanceRole {
+  HR_ADMIN
+  IT_ADMIN
+  FACILITIES
+  FINANCE
+  MANAGER
+  EMPLOYEE
+}
+
+enum LifecycleChecklistStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  BLOCKED
+}
+
+/// Ecosystem audit 2026-10-29 (merged from @newaxhq/hr's
+/// LifecycleChecklistEngine): the admin-configured task list for one
+/// checklist type. A `LifecycleChecklist` copies these at creation time
+/// into its own `LifecycleChecklistTask` rows — the same "snapshot at
+/// write time" idiom `Task.orgUnitId`/`PayRunLine.compensationRateId`
+/// already establish — so a later template edit never rewrites a
+/// checklist already in progress.
+model LifecycleChecklistTemplateTask {
+  id                   String                  @id @default(cuid())
+  type                 LifecycleChecklistType
+  taskKey              String
+  title                String
+  description          String
+  assignedRole         ClearanceRole
+  requiredForCompletion Boolean                @default(true)
+  /// string[] of taskKey — every id here must belong to the same `type`;
+  /// validated by LifecycleChecklistService.setTemplate(), not by Postgres.
+  prerequisiteTaskKeys Json?
+  sortOrder            Int                     @default(0)
+
+  @@unique([type, taskKey])
+}
+
+/// One lifecycle event's checklist instance for one employee.
+model LifecycleChecklist {
+  id          String                    @id @default(cuid())
+  userId      String
+  type        LifecycleChecklistType
+  status      LifecycleChecklistStatus  @default(PENDING)
+  createdById String?
+  createdAt   DateTime                  @default(now())
+  completedAt DateTime?
+
+  user  User                     @relation(fields: [userId], references: [id])
+  tasks LifecycleChecklistTask[]
+
+  @@index([userId, type])
+  @@index([status])
+}
+
+/// A snapshot copy of one template task, plus its own completion state.
+model LifecycleChecklistTask {
+  id                    String         @id @default(cuid())
+  checklistId           String
+  taskKey               String
+  title                 String
+  description           String
+  assignedRole          ClearanceRole
+  requiredForCompletion Boolean
+  prerequisiteTaskKeys  Json?
+  completed             Boolean        @default(false)
+  /// Bare scalar, not a relation — this row must still explain who signed
+  /// off years later even if that User row is gone, the same
+  /// "erasure the ledger cannot obey" reasoning TaskTransition.byUserId
+  /// already documents.
+  completedByUserId     String?
+  completedByUserRole   ClearanceRole?
+  completedAt           DateTime?
+
+  checklist LifecycleChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+
+  @@unique([checklistId, taskKey])
+}
+
+/// Ecosystem audit 2026-10-29 (merged from @newaxhq/hr's
+/// CompaRatioCalculator): the salary range for one Rank, used to compute
+/// compa-ratio and range penetration. One band per rank — a rank with none
+/// is simply excluded from an audit, never assumed.
+model CompensationBand {
+  id                 String   @id @default(cuid())
+  rankId             String   @unique
+  minSalaryMinor     Int
+  midpointSalaryMinor Int
+  maxSalaryMinor     Int
+  updatedAt          DateTime @updatedAt
+
+  rank Rank @relation(fields: [rankId], references: [id])
+}
+
+/// A post in the org chart: "Finance Manager, North Region". The post
+/// carries the rank and the unit; the person occupying it is a `Posting`. A
+/// post outlives its occupant, which is what makes a vacancy expressible.
+model Position {
+  id          String  @id @default(cuid())
+  title       String
+  orgUnitId   String
+  rankId      String
+  /// The post this one reports to. The reporting line lives on the POST,
+  /// not on the person, so a leaver does not sever the chain — a later
+  /// escalation document walks this edge.
+  reportsToId String?
+
+  orgUnit   OrgUnit    @relation(fields: [orgUnitId], references: [id])
+  rank      Rank       @relation(fields: [rankId], references: [id])
+  reportsTo Position?  @relation("Reporting", fields: [reportsToId], references: [id])
+  reports   Position[] @relation("Reporting")
+  postings  Posting[]
+  /// tasks-notifications-support/23-tasks-allotment-tracking.md (ADR-049) —
+  /// the durable address work is assigned to. Cross-schema relation into
+  /// tasks.prisma, same pack ('core'), no TypeScript coupling: `tasks`
+  /// never imports `hr` and `hr` never imports `tasks`.
+  tasks     Task[]
+
+  @@index([orgUnitId])
+  @@index([reportsToId])
+}
+
+/// Who holds which post, when. History, not a current-state column: last
+/// year's attendance and payroll must resolve to the unit and rank the
+/// person held THEN, not the one they hold now.
+model Posting {
+  id         String    @id @default(cuid())
+  /// The User occupying this post — never a separate Employee row (ADR-044).
+  userId     String
+  positionId String
+  /// Exactly one posting per user may be primary at a time. A person can
+  /// genuinely hold two posts (acting cover, a shared services lead); the
+  /// primary is the one payroll and the org chart use.
+  isPrimary  Boolean   @default(true)
+  startedOn  DateTime
+  endedOn    DateTime?
+
+  user     User     @relation(fields: [userId], references: [id])
+  position Position @relation(fields: [positionId], references: [id])
+
+  @@index([userId, endedOn])
+  @@index([positionId, endedOn])
+}
+
+enum AssetStatus {
+  AVAILABLE
+  ASSIGNED
+  RETIRED
+  LOST
+}
+
+model Asset {
+  id                String      @id @default(cuid())
+  /// The physical tag/serial a staff member reads off the item.
+  assetTag          String      @unique
+  /// Free text/data-driven, never a closed enum — "laptop", "phone",
+  /// "uniform", "vehicle" and whatever a client adds later, unconstrained.
+  category          String
+  description       String
+  /// Paisa. Optional — not every asset has a tracked purchase cost.
+  purchaseCostMinor Int?
+  purchasedOn       DateTime?
+  status            AssetStatus @default(AVAILABLE)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  assignments          AssetAssignment[]
+  /// finance-accounting/147-fixed-asset-depreciation.md — at most one
+  /// active schedule, per that document's own @@unique.
+  depreciationSchedule AssetDepreciationSchedule?
+
+  @@index([status])
+}
+
+/// One row per issue/return cycle — an asset's full custody history, never
+/// overwritten. The same "history table, not a mutable current-holder
+/// column" discipline StockMovement already establishes for stock:
+/// `returnedAt IS NULL` is the one query answering "who currently has this,"
+/// never a separate currentHolderId column on Asset that could drift from
+/// the assignment history.
+model AssetAssignment {
+  id           String    @id @default(cuid())
+  assetId      String
+  userId       String
+  issuedAt     DateTime  @default(now())
+  issuedById   String
+  returnedAt   DateTime?
+  returnedById String?
+  /// Free-text note at return ("scratched screen"), never required.
+  condition    String?
+
+  asset      Asset @relation(fields: [assetId], references: [id])
+  user       User  @relation("AssetAssignmentHolder", fields: [userId], references: [id])
+  issuedBy   User  @relation("AssetAssignmentIssuer", fields: [issuedById], references: [id])
+  returnedBy User? @relation("AssetAssignmentReturner", fields: [returnedById], references: [id], onDelete: SetNull)
+
+  @@index([assetId])
+  @@index([userId, returnedAt])
+}

@@ -1,0 +1,165 @@
+// Content: pages, blog posts, banners, menus. WO-8.1,
+// docs/implementation/content-marketing-search/08-content-marketing-search.md.
+//
+// Same conventions as catalog.prisma: customer-facing text lives in
+// *Translation rows, one per locale (House Rule 6), never a column. A page
+// or post body is an ordered array of typed blocks (rich text, image,
+// product grid, banner, FAQ, video) rather than one rich-text blob — see
+// `ContentBlock` in packages/shared/src/content-blocks.ts for the shape a
+// `Json` body column here is expected to hold. A `richtext` block's `html`
+// is sanitised before it is ever written (ContentService.sanitizeBlocks),
+// so nothing downstream needs to sanitise again on render.
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Page {
+  id          String        @id @default(cuid())
+  slug        String        @unique
+  /// Which storefront template renders this page. "default" is a plain
+  /// content column; the apparel pack may add "landing" later without a
+  /// migration — a new template is a value, not a schema change.
+  template    String        @default("default")
+  status      ContentStatus @default(DRAFT)
+  publishedAt DateTime?
+  /// SEO section, matches Product.noindex (WO-3.7). False (default) means
+  /// indexable and included in sitemap.ts.
+  noindex     Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  translations PageTranslation[]
+
+  @@index([status])
+  @@index([publishedAt])
+}
+
+model PageTranslation {
+  id              String  @id @default(cuid())
+  pageId          String
+  locale          String
+  title           String
+  /// Ordered array of typed content blocks. See the file header.
+  body            Json
+  metaTitle       String?
+  metaDescription String?
+  ogImageUrl      String?
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, locale])
+}
+
+model BlogPost {
+  id           String        @id @default(cuid())
+  slug         String        @unique
+  status       ContentStatus @default(DRAFT)
+  publishedAt  DateTime?
+  authorId     String?
+  /// Free-text category, same idiom as Product.fabric/season — a taxonomy
+  /// table is speculative until there are enough posts to need filtering it.
+  category     String?
+  tags         String[]      @default([])
+  heroImageUrl String?
+  noindex      Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  author       User?                 @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  translations BlogPostTranslation[]
+
+  @@index([status, publishedAt])
+  @@index([category])
+}
+
+model BlogPostTranslation {
+  id              String  @id @default(cuid())
+  blogPostId      String
+  locale          String
+  title           String
+  body            Json
+  /// Shown on the blog listing card; falls back to a truncation of the
+  /// first rich-text block's plain text when null.
+  excerpt         String?
+  metaTitle       String?
+  metaDescription String?
+  ogImageUrl      String?
+
+  blogPost BlogPost @relation(fields: [blogPostId], references: [id], onDelete: Cascade)
+
+  @@unique([blogPostId, locale])
+}
+
+model Banner {
+  id           String    @id @default(cuid())
+  /// A fixed, code-known slot — see BANNER_PLACEMENTS in
+  /// packages/shared/src/content-blocks.ts. New placements are a shared-
+  /// constant change plus the storefront component that reads the slot, not
+  /// a migration; validated against that list in the DTO, not the schema,
+  /// same reasoning as Page.template above.
+  placementKey String
+  imageUrl     String
+  linkUrl      String?
+  order        Int       @default(0)
+  isActive     Boolean   @default(true)
+  startsAt     DateTime?
+  endsAt       DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  translations BannerTranslation[]
+
+  @@index([placementKey, isActive, order])
+}
+
+model BannerTranslation {
+  id       String  @id @default(cuid())
+  bannerId String
+  locale   String
+  headline String?
+  subtext  String?
+  /// Required for a11y whenever headline is null — enforced in the DTO.
+  altText  String?
+
+  banner Banner @relation(fields: [bannerId], references: [id], onDelete: Cascade)
+
+  @@unique([bannerId, locale])
+}
+
+/// A tree per named slot (`menuKey`: "footer_help", "footer_about", …) — see
+/// MENU_KEYS in packages/shared/src/content-blocks.ts. The header's and the
+/// legal-links column's own primary nav stay as they are (routes.ts is the
+/// document of record for those and several are permission/tier-gated in
+/// code); this model drives the two additive CMS-editable footer columns
+/// documented in the Phase 8 status note, not a wholesale nav replacement.
+model MenuItem {
+  id        String   @id @default(cuid())
+  menuKey   String
+  parentId  String?
+  /// An internal path ("/pages/about-us") or an absolute external URL.
+  url       String
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parent       MenuItem?             @relation("MenuItemTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children     MenuItem[]            @relation("MenuItemTree")
+  translations MenuItemTranslation[]
+
+  @@index([menuKey, parentId, order])
+}
+
+model MenuItemTranslation {
+  id         String @id @default(cuid())
+  menuItemId String
+  locale     String
+  label      String
+
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@unique([menuItemId, locale])
+}

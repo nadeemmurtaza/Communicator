@@ -1,4 +1,4 @@
-//! Real-data parity handlers for the integration surface.
+﻿//! Real-data parity handlers for the integration surface.
 //!
 //! Why this file exists: `/integrations/trackers/*`, `/settings` and
 //! `/settings/whatsapp/*` are already registered in `main.rs`, but the handlers

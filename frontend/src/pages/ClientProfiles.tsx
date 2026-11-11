@@ -70,7 +70,7 @@ export function ClientProfiles() {
   const tierColors: Record<string, string> = {
     platinum: 'bg-purple-100 text-purple-700 border-purple-200',
     gold: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-    silver: 'bg-gray-100 text-gray-700 border-gray-200',
+    silver: 'bg-[var(--color-accent-muted)] text-[var(--color-ink)] border-[var(--color-border)]',
     bronze: 'bg-orange-100 text-orange-700 border-orange-200',
   }
 
@@ -86,7 +86,7 @@ export function ClientProfiles() {
         </div>
         <Link
           to="/contacts"
-          className="flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-lg text-sm hover:opacity-90"
+          className="flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-[var(--radius-md)] text-sm hover:opacity-90"
         >
           <Plus className="w-4 h-4" />
           Add Contact
@@ -95,7 +95,7 @@ export function ClientProfiles() {
 
       {/* Error */}
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           <span className="flex-1">{error}</span>
           <button onClick={() => setError(null)}><X className="w-4 h-4" /></button>
@@ -104,9 +104,9 @@ export function ClientProfiles() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="rounded-xl border p-4">
+        <div className="rounded-[var(--radius-lg)] border p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-[var(--radius-md)] bg-blue-50 flex items-center justify-center">
               <Users className="w-5 h-5 text-blue-600" />
             </div>
             <div>
@@ -115,9 +115,9 @@ export function ClientProfiles() {
             </div>
           </div>
         </div>
-        <div className="rounded-xl border p-4">
+        <div className="rounded-[var(--radius-lg)] border p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-[var(--radius-md)] bg-green-50 flex items-center justify-center">
               <TrendingUp className="w-5 h-5 text-green-600" />
             </div>
             <div>
@@ -126,9 +126,9 @@ export function ClientProfiles() {
             </div>
           </div>
         </div>
-        <div className="rounded-xl border p-4">
+        <div className="rounded-[var(--radius-lg)] border p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-[var(--radius-md)] bg-purple-50 flex items-center justify-center">
               <Star className="w-5 h-5 text-purple-600" />
             </div>
             <div>
@@ -146,7 +146,7 @@ export function ClientProfiles() {
           <input
             type="text"
             placeholder="Search by name, email, phone, or company..."
-            className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm"
+            className="w-full pl-10 pr-4 py-2 border rounded-[var(--radius-md)] text-sm"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -154,7 +154,7 @@ export function ClientProfiles() {
         <div className="flex items-center gap-2">
           <Search className="w-4 h-4 text-muted-foreground" />
           <select
-            className="px-3 py-2 border rounded-lg text-sm"
+            className="px-3 py-2 border rounded-[var(--radius-md)] text-sm"
             value={tierFilter}
             onChange={(e) => setTierFilter(e.target.value as ClientTier)}
           >
@@ -165,7 +165,7 @@ export function ClientProfiles() {
             <option value="bronze">Bronze</option>
           </select>
           <select
-            className="px-3 py-2 border rounded-lg text-sm"
+            className="px-3 py-2 border rounded-[var(--radius-md)] text-sm"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
           >
@@ -196,7 +196,7 @@ export function ClientProfiles() {
           {!search && (
             <Link
               to="/contacts"
-              className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-lg text-sm hover:opacity-90"
+              className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-[var(--radius-md)] text-sm hover:opacity-90"
             >
               <Plus className="w-4 h-4" />
               Add Contact
@@ -229,7 +229,7 @@ export function ClientProfiles() {
               <Link
                 key={client.id}
                 to={`/clients/${client.id}`}
-                className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 px-4 py-3 rounded-xl border hover:border-foreground/30 hover:bg-muted/50 transition-all items-center group"
+                className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-4 px-4 py-3 rounded-[var(--radius-lg)] border hover:border-foreground/30 hover:bg-muted/50 transition-all items-center group"
               >
                 {/* Client Info */}
                 <div className="md:col-span-4 flex items-center gap-3">

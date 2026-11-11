@@ -1,0 +1,187 @@
+// The `organization` module (RETAIL-ERP.md Part 5, WO-18.3) — the top tier
+// of a multi-brand deployment, its roster of brands, per-brand policy, admin
+// scoping, and the registry of this deployment's own child nodes. A
+// togglable module, not core platform infra: off by default, and every
+// deployment today runs with it off — see modules.registry.ts and
+// module-packs.ts. Nothing outside this file's models should ever be
+// non-empty until `organization` is switched on for a chain deployment.
+
+/// The top tier — the owner's group, run by a super admin from one
+/// dashboard (Part 1). Optional: a Chain-edition deployment (one brand,
+/// many branches) has no Organization row at all; only an
+/// Organization-edition deployment's ORG-tier database does, describing
+/// itself. A BRAND-tier deployment never holds one — it knows its
+/// organization only through PARENT_URL (WO-18.1), never a local row.
+model Organization {
+  id                       String   @id @default(cuid())
+  name                     String
+  /// R9's `org.allow_inter_brand_transfers` — off by default, the same
+  /// permissive-switch-starts-closed convention `BrandPolicy`'s three flags
+  /// already use. Read directly by TransfersService (WO-22.2) via Prisma,
+  /// not through OrganizationService — a read, not a same-transaction
+  /// write, so it needs no KNOWN_MODULE_COUPLINGS entry.
+  allowInterBrandTransfers Boolean  @default(false)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  retailBrands RetailBrand[]
+}
+
+/// A retail brand — the business entity a branch belongs to. Distinct from
+/// `Brand` in catalog.prisma, which means the *maker* of a product (Gul
+/// Ahmed, Khaadi); this is the retailer. This deployment's OWN identity
+/// stays `packages/shared/src/brand.ts` (Br1: one deployment serves one
+/// brand, resolved at build time) — never a row in this table. A row here
+/// is always some OTHER retail brand: a sibling the organization also owns
+/// (at an ORG-tier database), or a sub-brand nested under this deployment's
+/// own brand (at a BRAND-tier database — "sub-brands live in here", Part 1).
+/// Nesting is arbitrary depth via `parentId`, per the owner's own ruling
+/// that a brand can have nested sub-brands.
+model RetailBrand {
+  id             String   @id @default(cuid())
+  organizationId String?
+  parentId       String?
+  name           String
+  slug           String   @unique
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  parent       RetailBrand?  @relation("RetailBrandHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children     RetailBrand[] @relation("RetailBrandHierarchy")
+  policy       BrandPolicy?
+  locations    Location[]
+  adminScopes  AdminScope[]
+  nodes        Node[]
+  /// hr-people-org/19-org-structure-offices-departments.md — units
+  /// belonging to this brand; NULL on OrgUnit means group-wide.
+  orgUnits     OrgUnit[]
+
+  @@index([organizationId])
+  @@index([parentId])
+}
+
+/// Per-brand policy switches (R9) — what R9 calls
+/// `brand.allow_branch_product_creation` and its siblings, generalised from
+/// a single Setting row (House Rule 4, still the answer while a deployment
+/// has only its one implicit brand) to one row per `RetailBrand` once
+/// sub-brands exist: sub-brand A may let its branches propose products,
+/// sub-brand B may not. Replicates down (R2); enforced at both ends — the
+/// branch for UX, the receiving tier on ingest, never trusted from the
+/// branch alone. `org.allow_inter_brand_transfers` (R9's fourth switch) is
+/// organization-level, not brand-level, and stays a plain Setting.
+model BrandPolicy {
+  id                         String   @id @default(cuid())
+  retailBrandId              String   @unique
+  allowBranchProductCreation Boolean  @default(false)
+  allowBranchLocalPurchasing Boolean  @default(false)
+  allowInterBranchTransfers  Boolean  @default(false)
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  retailBrand RetailBrand @relation(fields: [retailBrandId], references: [id], onDelete: Cascade)
+}
+
+enum AdminScopeLevel {
+  ORG
+  BRAND
+  BRANCH
+}
+
+/// What a user's admin access is scoped to (R10) — never a role check
+/// (House Rule 9 forbids `if (user.role === 'SUPER_ADMIN')`). A super admin
+/// is simply a user holding an ORG-level AdminScope; that is the entire
+/// mechanism, no special case anywhere else. `assertCanManageAtScope()` and
+/// `scopeFilterFor()` (WO-18.4) read this — nothing does yet.
+///
+/// The composite unique below is real protection only at BRANCH level,
+/// where both `retailBrandId` and `branchNodeId` are set: a null in *any*
+/// column of a Postgres composite unique index exempts that row from
+/// comparison entirely, so it cannot stop two identical ORG-level rows
+/// (both nullable columns null) or two identical BRAND-level rows
+/// (`branchNodeId` still null) for the same user — see the identical trap
+/// on `Location.code`, caught and documented rather than repeated silently
+/// here. Left unenforced at those two levels rather than reached for a
+/// NULL-safe expression index ahead of any code that would actually create
+/// a duplicate: harmless either way, since this is a grant table — a
+/// duplicate row confers nothing an existence check over the single row
+/// would not already.
+model AdminScope {
+  id            String          @id @default(cuid())
+  userId        String
+  level         AdminScopeLevel
+  retailBrandId String?
+  branchNodeId  String?
+  createdAt     DateTime        @default(now())
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  retailBrand RetailBrand? @relation(fields: [retailBrandId], references: [id], onDelete: Cascade)
+  branchNode  Node?        @relation(fields: [branchNodeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, level, retailBrandId, branchNodeId])
+  @@index([userId])
+}
+
+enum NodeRole {
+  BRANCH
+  BRAND
+}
+
+enum NodeStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+/// A child node this deployment knows about — a brand's branches, or an
+/// organization's brands (R1, R14; WO-18.1, moved here from core.prisma in
+/// WO-18.3 once it had siblings to live beside — Part 5 owns it under
+/// `organization`, not core platform infra). Recorded on the PARENT only: a
+/// branch never lists itself here, its brand does, and that is what the
+/// drill-down dashboard (R19, WO-18.5) reads and what the replication
+/// engine (Tranche 3) will authenticate a child against. This deployment's
+/// OWN identity is NODE_ROLE/NODE_ID (env.validation.ts), never a row in
+/// its own Node table — a STANDALONE or BRANCH deployment has no tier below
+/// it and this table stays empty.
+model Node {
+  id                String     @id @default(cuid())
+  /// The child deployment's own NODE_ID. Globally unique the way every other
+  /// natural key here is (R6) — two branches of the same brand, or two
+  /// brands of different organizations, must never collide.
+  nodeId            String     @unique
+  role              NodeRole
+  /// Display name for the admin drill-down — "Lahore — Gulberg", not a slug.
+  label             String
+  /// Where the parent reaches this child to pull facts and push policy.
+  url               String
+  /// SHA-256 of the credential this child presents on every replication
+  /// call (WO-20.2) — same shape as `TradingPartner.inboundApiKeyHash`
+  /// (trading-partners.prisma): issued once via `rotateInboundKey()`, shown
+  /// to the operator raw exactly that once, never persisted or echoed back.
+  /// The child is configured with the raw value as its own `PARENT_API_KEY`.
+  inboundApiKeyHash String?    @unique
+  status            NodeStatus @default(ACTIVE)
+  lastSeenAt        DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  /// WO-23.3c/e (RETAIL-ERP.md R9/R13, ADR-023). Which brand this child
+  /// belongs to — a BRAND-role Node names the one brand that deployment
+  /// represents; a BRANCH-role Node names the (sub-)brand it is a branch
+  /// of. Null until an operator sets it (registration alone cannot infer
+  /// it), which is itself meaningful: the receiving tier CANNOT resolve a
+  /// `BrandPolicy` for an unbadged node and treats that the same as "policy
+  /// says no" (fail closed, same reasoning as ADR-021's missing-row
+  /// default), never as "no brand, so nothing to check."
+  retailBrandId String?
+
+  adminScopes AdminScope[]
+  retailBrand RetailBrand? @relation(fields: [retailBrandId], references: [id], onDelete: SetNull)
+  /// hr-people-org/19-org-structure-offices-departments.md — units whose
+  /// data physically lives on this node.
+  orgUnits    OrgUnit[]
+
+  @@index([role])
+  @@index([status])
+  @@index([retailBrandId])
+}

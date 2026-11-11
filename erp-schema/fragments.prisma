@@ -1,0 +1,40 @@
+// Micro-frontend fragments, built by explicit owner override (ADR-026),
+// added alongside doc 93's single-app convention rather than replacing it
+// (architecture-patterns/143-micro-frontend-architecture.md). No
+// organizationId (ADR-044/ADR-040): this deployment IS the tenant.
+//
+// The literal `next.config.js` module-federation build this document
+// sketches (WO-143.1) is not built: `@module-federation/nextjs-mf` does
+// not support this repository's own Next.js 15 (an open, unresolved
+// upstream compatibility issue) — see DECISIONS.md ADR-049. The mount
+// mechanism this schema and FragmentsService serve is instead doc 113's
+// own iframe + short-lived embed-token pattern, reused unchanged
+// (WO-143.4, exactly as the doc's own text already asks for), scoped by
+// `mountPoints` and gated by `status`.
+
+model MicroFrontendFragment {
+  id                 String         @id @default(cuid())
+  /// Stable, admin-chosen slug — what the mount point and the token issuer
+  /// both key off. Never derived from the vendor's own name in code.
+  key                String         @unique
+  label              String
+  remoteUrl          String
+  /// Which admin screens may embed this fragment — never a blanket
+  /// "embed anywhere" grant.
+  mountPoints        String[]
+  status             FragmentStatus @default(ACTIVE)
+  /// The design-law compliance attestation doc 143 requires before a
+  /// fragment may go ACTIVE — this repository's own overflow/contrast
+  /// checks cannot reach across a federation boundary by tooling alone,
+  /// so it is enforced by process at registration instead.
+  attestedAt         DateTime
+  attestedByUserId   String?
+  attestedBy         User?          @relation("MicroFrontendFragmentRegisteredBy", fields: [attestedByUserId], references: [id], onDelete: SetNull)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+}
+
+enum FragmentStatus {
+  ACTIVE
+  SUSPENDED
+}

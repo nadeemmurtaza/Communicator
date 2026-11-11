@@ -1,0 +1,75 @@
+// Layby and instalment sales (finance-accounting/151-layby-installment-sales.md)
+// — a schedule of expected payments against one order, a variant of two
+// mechanisms this repository already has: a payment-schedule shape
+// generalised from doc 145's own paymentTermDays, and Payment's own
+// multi-tender-per-order capability (Payment.orderId is a plain FK, not
+// unique — several Payment rows already coexist against one order).
+
+/// LAYBY: goods held until paid in full — the order's own fulfilment is
+/// gated on the plan reaching COMPLETED. INSTALMENT: goods released now,
+/// paid off over time — the order proceeds through its ordinary status
+/// transitions unaffected; the schedule only tracks what remains owed.
+enum InstalmentPlanType {
+  LAYBY
+  INSTALMENT
+}
+
+enum InstalmentPlanStatus {
+  ACTIVE
+  COMPLETED
+  DEFAULTED
+  CANCELLED
+}
+
+model InstalmentPlan {
+  id           String               @id @default(cuid())
+  orderId      String               @unique
+  type         InstalmentPlanType
+  /// Snapshotted from the order's own grandTotal at plan creation — never
+  /// re-read live, so a later price correction elsewhere never reshapes an
+  /// in-progress plan.
+  totalMinor   Int
+  depositMinor Int                  @default(0)
+  status       InstalmentPlanStatus @default(ACTIVE)
+  createdAt    DateTime             @default(now())
+  cancelledAt  DateTime?
+  defaultedAt  DateTime?
+
+  order    Order                    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  schedule InstalmentScheduleLine[]
+  payments InstalmentPayment[]
+
+  @@index([status])
+}
+
+model InstalmentScheduleLine {
+  id          String   @id @default(cuid())
+  planId      String
+  dueDate     DateTime
+  amountMinor Int
+
+  plan InstalmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId, dueDate])
+}
+
+/// One row per actual payment received — never assumed to match the
+/// schedule exactly; a customer paying early, late, or a different amount
+/// than scheduled is normal, and the schedule is a plan, not a constraint
+/// on what Payment rows can exist. `paymentId` is unique: a Payment belongs
+/// to at most one plan's history, never double-counted into two.
+model InstalmentPayment {
+  id         String   @id @default(cuid())
+  planId     String
+  paymentId  String   @unique
+  receivedAt DateTime @default(now())
+  /// True only for the deposit collected at plan creation — the one payment
+  /// `cancel()`'s deposit-forfeiture Setting can apply to; every later
+  /// instalment payment is never subject to forfeiture, only the deposit is.
+  isDeposit  Boolean  @default(false)
+
+  plan    InstalmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  payment Payment        @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+}

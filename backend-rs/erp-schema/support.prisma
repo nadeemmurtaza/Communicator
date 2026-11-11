@@ -1,0 +1,142 @@
+// In-app help desk (internal) — tasks-notifications-support/64-help-desk-
+// support-ticketing.md, DECISIONS.md ADR-064. A standalone module: nothing
+// else in this repository depends on it, and it depends on no other
+// optional module (MOD-1).
+//
+// No organizationId anywhere (ADR-040/044/046/049/060/062): this
+// deployment IS the tenant boundary. raisedByUserId/assignedToUserId/
+// TicketMessage.authorId are bare scalars, no `@relation` — the same
+// "erasure the ledger cannot obey" shape MeetingInvitation.userId and
+// EscalationFire.taskId already use, so a deleted User never forces a
+// cascade decision onto this module.
+//
+// External (customer-facing) support ticketing is doc 148's own,
+// separately-scoped work — a distinct actor model (Contact/Party, not
+// User) — never conflated with this internal help desk.
+
+model SupportTicket {
+  id       String @id @default(cuid())
+  raisedByUserId String
+
+  subject  String
+  /// Free text, not a closed enum — a client's own support taxonomy
+  /// varies, the same reasoning `LeaveType`/`DeductionType` already rest
+  /// on (rows, not an enum, for anything that varies per deployment).
+  category String
+
+  status   TicketStatus   @default(OPEN)
+  priority TicketPriority @default(NORMAL)
+
+  assignedToUserId String?
+
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  messages TicketMessage[]
+
+  @@index([status, assignedToUserId])
+  @@index([raisedByUserId])
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+/// An append-only reply thread — a correction is a new message, never an
+/// edit in place, the same immutable-thread discipline this repository
+/// already applies everywhere else a conversation is recorded.
+model TicketMessage {
+  id       String @id @default(cuid())
+  ticketId String
+  authorId String
+  body     String
+
+  createdAt DateTime @default(now())
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+}
+
+// External (customer-facing) support ticketing —
+// tasks-notifications-support/148-external-customer-support-portal.md,
+// DECISIONS.md ADR-065. A genuinely different actor model from
+// SupportTicket above: the requester is Contact (doc 20's three-table
+// framework applied to a customer), never User — the document's own
+// central answer, restated in its own words: "the actor model,
+// visibility rule, and audience are genuinely different, so this is its
+// own model." Only the staff/handler side reuses doc 64's own
+// permissions and action-hub registration unchanged.
+
+/// TicketPriority above is reused unchanged — "identical shape, no reason
+/// to diverge" (the document's own words). AWAITING_CUSTOMER is the one
+/// status doc 64's own internal ticket never needed: an internal
+/// requester and handler are both staff on the same side of the trust
+/// boundary, but a customer ticket genuinely needs its own "waiting to
+/// hear back from the customer" SLA clock, distinct from "we're working
+/// on it."
+model CustomerSupportTicket {
+  id        String  @id @default(cuid())
+  contactId String
+  /// Optional — many tickets are order-specific ("where is my parcel").
+  orderId   String?
+
+  subject  String
+  category String
+  status   CustomerTicketStatus @default(OPEN)
+  priority TicketPriority       @default(NORMAL)
+
+  assignedToUserId String?
+
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  messages CustomerSupportMessage[]
+
+  @@index([status, assignedToUserId])
+  @@index([contactId])
+}
+
+enum CustomerTicketStatus {
+  OPEN
+  AWAITING_CUSTOMER
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+/// authorType makes which side of the trust boundary a message came from
+/// explicit, rather than inferring it from which id column is non-null —
+/// the document's own reasoning, quoted directly. Append-only, same
+/// immutable-thread discipline as TicketMessage above.
+model CustomerSupportMessage {
+  id         String                   @id @default(cuid())
+  ticketId   String
+  authorType SupportMessageAuthorType
+  /// Set when authorType = CUSTOMER.
+  contactId  String?
+  /// Set when authorType = STAFF.
+  userId     String?
+  body       String
+
+  createdAt DateTime @default(now())
+
+  ticket CustomerSupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+}
+
+enum SupportMessageAuthorType {
+  CUSTOMER
+  STAFF
+}

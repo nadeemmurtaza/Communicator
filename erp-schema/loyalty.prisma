@@ -1,0 +1,90 @@
+// Phase 7 WO-7.7 (docs/implementation/customer-portal-loyalty/07-customer-portal.md).
+//
+// Kept simple, per the brief's own words. Points are a ledger
+// (`LoyaltyTransaction`), mirroring how `StoreCreditTransaction` (Phase 5)
+// already proved this shape: `User.loyaltyPoints` is a cache, the ledger is
+// the source of truth, and every write goes through `LoyaltyService`'s own
+// conditional update, never a bare `prisma.user.update()`.
+//
+// Points are earned on DELIVERED, never on placement — crediting at
+// placement would mint free points on every COD order a customer cancels
+// before it ships. `@@unique([orderId, type])` is the actual guard: it makes
+// earning (and, separately, reversing) idempotent per order at the database
+// level, not merely by convention.
+//
+// Redemption does not get its own balance — it converts points straight into
+// a `StoreCreditTransaction` (Phase 5's existing ledger), so there is exactly
+// one place a customer's spendable balance lives.
+
+enum LoyaltyTransactionType {
+  EARNED
+  /// Points converted to store credit (Phase 5's ledger) at a configured rate.
+  REDEEMED
+  /// The order that earned these points was later cancelled/returned.
+  REVERSED
+  /// A manual staff correction — always carries a note.
+  ADJUSTED
+}
+
+model LoyaltyTransaction {
+  id      String                 @id @default(cuid())
+  userId  String
+  /// Null for ADJUSTED; every EARNED/REVERSED ties to the order that caused it.
+  orderId String?
+  type    LoyaltyTransactionType
+  /// Positive for EARNED/ADJUSTED-credit, negative for REDEEMED/REVERSED/ADJUSTED-debit.
+  points  Int
+  note    String?
+
+  createdAt DateTime @default(now())
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@unique([orderId, type])
+  @@index([userId, createdAt])
+}
+
+/// Trailing-12-month spend bands. Few rows, staff-editable — a reference
+/// table because a threshold and a benefit description is exactly what
+/// `TaxRate`/`DeductionType` already are elsewhere in this schema, not
+/// because loyalty needs its own framework.
+model LoyaltyTier {
+  id                   String  @id @default(cuid())
+  name                 String
+  /// Trailing-12-month spend required to hold this tier, in paisa.
+  minSpend             Int
+  benefitDescriptionEn String
+  benefitDescriptionUr String?
+  sortOrder            Int     @default(0)
+  /// Ecosystem audit 2026-10-29 (merged from @newaxhq/loyalty): basis points
+  /// applied on top of LoyaltyPointsPerRupeeBps when earning — 10000 = 1.0x
+  /// (no change), 15000 = 1.5x. Previously computed and shown in balance()
+  /// but never actually applied to earnForOrder()'s own points math, so a
+  /// higher tier displayed a reward it never paid out.
+  earnMultiplierBps    Int     @default(10000)
+
+  @@index([minSpend])
+}
+
+/// One referee can be referred exactly once (`@@unique([refereeId])`) — the
+/// actual guard against a customer collecting the same referral reward twice
+/// by re-entering a code. `LoyaltyService` additionally refuses a referral
+/// where the referrer and referee share a phone number or a shipping
+/// address, the two signals this codebase can actually check without a
+/// device-fingerprinting vendor it does not have (named honestly, not
+/// silently skipped).
+model Referral {
+  id         String    @id @default(cuid())
+  referrerId String
+  refereeId  String
+  code       String
+  rewardedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  referrer User @relation("ReferralReferrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referee  User @relation("ReferralReferee", fields: [refereeId], references: [id], onDelete: Cascade)
+
+  @@unique([refereeId])
+  @@index([referrerId])
+}

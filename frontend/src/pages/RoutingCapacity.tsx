@@ -96,7 +96,7 @@ export function RoutingCapacity() {
         </h2>
         <div className="border border-[var(--color-border)] rounded-[var(--radius-sm)] overflow-hidden divide-y divide-[var(--color-border)] text-sm">
           {agents.map((ag) => (
-            <div key={ag.id} className="p-3 flex items-center justify-between hover:bg-black/5 transition-colors">
+            <div key={ag.id} className="p-3 flex items-center justify-between hover:bg-[var(--color-accent-muted)] transition-colors">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-[var(--color-accent-soft)] text-[var(--color-accent)] flex items-center justify-center font-bold text-xs uppercase">
                   {ag.name.slice(0, 2)}

@@ -1,7 +1,7 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
-use sqlx::SqlitePool;
+use sqlx::PgPool;
 use std::time::Duration;
 
 use crate::config::Config;
@@ -65,13 +65,13 @@ pub struct LimitsUpdateResult {
 // ---------------------------------------------------------------------------
 
 pub struct TemplateSyncService {
-    pool: SqlitePool,
+    pool: PgPool,
     config: Config,
     client: reqwest::Client,
 }
 
 impl TemplateSyncService {
-    pub fn new(pool: SqlitePool, config: Config) -> Self {
+    pub fn new(pool: PgPool, config: Config) -> Self {
         Self {
             pool,
             config,

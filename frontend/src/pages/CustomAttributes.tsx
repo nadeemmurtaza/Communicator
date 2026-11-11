@@ -150,7 +150,7 @@ export function CustomAttributes() {
     switch (type) {
       case 'text':
         return (
-          <span className="inline-flex items-center gap-1 bg-slate-100 text-[var(--color-ink)] px-2 py-0.5 rounded font-mono text-[10px] font-bold border border-[var(--color-border)]">
+          <span className="inline-flex items-center gap-1 bg-[var(--color-accent-muted)] text-[var(--color-ink)] px-2 py-0.5 rounded font-mono text-[10px] font-bold border border-[var(--color-border)]">
             <FileText className="h-3 w-3 inline" /> TEXT
           </span>
         )
@@ -191,7 +191,7 @@ export function CustomAttributes() {
           </span>
         )
       default:
-        return <span className="bg-slate-100 text-[var(--color-ink-muted)] px-2 py-0.5 rounded font-mono text-[10px]">{type.toUpperCase()}</span>
+        return <span className="bg-[var(--color-accent-muted)] text-[var(--color-ink-muted)] px-2 py-0.5 rounded font-mono text-[10px]">{type.toUpperCase()}</span>
     }
   }
 
@@ -215,14 +215,14 @@ export function CustomAttributes() {
 
         <button
           onClick={openCreateModal}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 cursor-pointer transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 cursor-pointer transition-colors"
         >
           <Plus className="h-4 w-4" /> <span>Add Custom Attribute</span>
         </button>
       </div>
 
       {success && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-800 flex items-center justify-between">
+        <div className="rounded-[var(--radius-md)] border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-800 flex items-center justify-between">
           <span className="flex items-center gap-1.5">
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             <span>{success}</span>
@@ -234,7 +234,7 @@ export function CustomAttributes() {
       )}
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs text-red-800 flex items-center justify-between">
+        <div className="rounded-[var(--radius-md)] border border-red-200 bg-red-50 p-3.5 text-xs text-red-800 flex items-center justify-between">
           <span className="flex items-center gap-1.5">
             <AlertTriangle className="h-4 w-4 text-red-600" />
             <span>{error}</span>
@@ -247,10 +247,10 @@ export function CustomAttributes() {
 
       {/* Tabs & Search */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-1 rounded-lg bg-slate-200/80 p-1 text-xs font-semibold">
+        <div className="flex items-center gap-1 rounded-[var(--radius-md)] bg-[var(--color-border)]/80 p-1 text-xs font-semibold">
           <button
             onClick={() => setActiveModel('contact_attribute')}
-            className={`rounded-md px-4 py-1.5 transition-all cursor-pointer ${
+            className={`rounded-[var(--radius-sm)] px-4 py-1.5 transition-all cursor-pointer ${
               activeModel === 'contact_attribute'
                 ? 'bg-[var(--color-surface)] text-blue-600 shadow-sm'
                 : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
@@ -260,7 +260,7 @@ export function CustomAttributes() {
           </button>
           <button
             onClick={() => setActiveModel('conversation_attribute')}
-            className={`rounded-md px-4 py-1.5 transition-all cursor-pointer ${
+            className={`rounded-[var(--radius-sm)] px-4 py-1.5 transition-all cursor-pointer ${
               activeModel === 'conversation_attribute'
                 ? 'bg-[var(--color-surface)] text-blue-600 shadow-sm'
                 : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
@@ -276,7 +276,7 @@ export function CustomAttributes() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search attributes by name or slug..."
-            className="w-full sm:w-64 rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs text-slate-800 focus:border-blue-500 focus:outline-none"
+            className="w-full sm:w-64 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-ink)] focus:border-blue-500 focus:outline-none"
           />
         </div>
       </div>
@@ -321,7 +321,7 @@ export function CustomAttributes() {
                       {attr.attribute_type === 'list' && attr.options?.length > 0 ? (
                         <div className="flex flex-wrap gap-1 max-w-xs">
                           {attr.options.slice(0, 3).map((opt) => (
-                            <span key={opt} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-[var(--color-ink-muted)]">
+                            <span key={opt} className="rounded bg-[var(--color-accent-muted)] px-1.5 py-0.5 text-[10px] text-[var(--color-ink-muted)]">
                               {opt}
                             </span>
                           ))}
@@ -379,7 +379,7 @@ export function CustomAttributes() {
               </div>
               <button
                 onClick={() => setShowModal(false)}
-                className="h-7 w-7 rounded-full bg-slate-200 text-[var(--color-ink-muted)] hover:bg-slate-300 flex items-center justify-center text-xs font-bold cursor-pointer"
+                className="h-7 w-7 rounded-full bg-[var(--color-border)] text-[var(--color-ink-muted)] hover:bg-[var(--color-border)] flex items-center justify-center text-xs font-bold cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -398,7 +398,7 @@ export function CustomAttributes() {
                     }
                   }}
                   placeholder="e.g. Annual Contract Value (ARR)"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 focus:border-blue-500 focus:outline-none"
                 />
               </div>
 
@@ -410,7 +410,7 @@ export function CustomAttributes() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. annual_contract_value"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-[11px] focus:border-blue-500 focus:outline-none disabled:bg-slate-100"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 font-mono text-[11px] focus:border-blue-500 focus:outline-none disabled:bg-[var(--color-accent-muted)]"
                 />
               </div>
 
@@ -420,7 +420,7 @@ export function CustomAttributes() {
                   disabled={!!editingAttr}
                   value={attrType}
                   onChange={(e) => setAttrType(e.target.value as any)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none disabled:bg-slate-100"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 focus:border-blue-500 focus:outline-none disabled:bg-[var(--color-accent-muted)]"
                 >
                   <option value="text">Text (Single-line string)</option>
                   <option value="number">Number (Integer or decimal)</option>
@@ -442,7 +442,7 @@ export function CustomAttributes() {
                     value={optionsText}
                     onChange={(e) => setOptionsText(e.target.value)}
                     placeholder="e.g. Free, Starter, Growth, Enterprise"
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 focus:border-blue-500 focus:outline-none"
                   />
                   <p className="text-[10px] text-[var(--color-ink-faint)] mt-1">Separate options with commas.</p>
                 </div>
@@ -454,7 +454,7 @@ export function CustomAttributes() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Brief note for agents on how to use this field"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 focus:border-blue-500 focus:outline-none"
                 />
               </div>
 
@@ -464,7 +464,7 @@ export function CustomAttributes() {
                   value={defaultValue}
                   onChange={(e) => setDefaultValue(e.target.value)}
                   placeholder="Optional fallback value"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none font-mono text-[11px]"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 focus:border-blue-500 focus:outline-none font-mono text-[11px]"
                 />
               </div>
 
@@ -474,9 +474,9 @@ export function CustomAttributes() {
                     type="checkbox"
                     checked={isRequired}
                     onChange={(e) => setIsRequired(e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    className="h-4 w-4 rounded border-[var(--color-border)] text-blue-600 focus:ring-blue-500"
                   />
-                  <span className="font-semibold text-slate-800">Required field</span>
+                  <span className="font-semibold text-[var(--color-ink)]">Required field</span>
                 </label>
               </div>
 
@@ -484,14 +484,14 @@ export function CustomAttributes() {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="rounded-lg border border-slate-300 bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] cursor-pointer"
+                  className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving || !displayName.trim()}
-                  className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50 cursor-pointer"
+                  className="rounded-[var(--radius-md)] bg-blue-600 px-5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50 cursor-pointer"
                 >
                   {saving ? 'Saving...' : editingAttr ? 'Update Attribute' : 'Create Attribute'}
                 </button>

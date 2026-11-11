@@ -1,4 +1,4 @@
--- Migration 0005: Comprehensive Client Profiles with Self-Learning Engine
+﻿-- Migration 0005: Comprehensive Client Profiles with Self-Learning Engine
 -- Adds unified customer IDs, rich client profiles, self-learning engine,
 -- transaction history, preferences, and RAG integration
 
@@ -24,7 +24,7 @@ ALTER TABLE customers ADD COLUMN customer_type TEXT DEFAULT 'individual';  -- 'i
 ALTER TABLE customers ADD COLUMN customer_segment TEXT DEFAULT '';
 ALTER TABLE customers ADD COLUMN customer_tier TEXT DEFAULT '';  -- 'bronze', 'silver', 'gold', 'platinum'
 ALTER TABLE customers ADD COLUMN lifetime_value REAL DEFAULT 0;
-ALTER TABLE customers ADD COLUMN total_orders INTEGER DEFAULT 0;
+ALTER TABLE customers ADD COLUMN total_orders BOOLEAN DEFAULT false;
 ALTER TABLE customers ADD COLUMN total_spent REAL DEFAULT 0;
 ALTER TABLE customers ADD COLUMN last_order_date TEXT;
 ALTER TABLE customers ADD COLUMN first_contact_date TEXT;
@@ -33,8 +33,8 @@ ALTER TABLE customers ADD COLUMN sentiment_score REAL DEFAULT 0;
 ALTER TABLE customers ADD COLUMN notes TEXT DEFAULT '';
 ALTER TABLE customers ADD COLUMN tags TEXT DEFAULT '[]';
 ALTER TABLE customers ADD COLUMN metadata TEXT DEFAULT '{}';
-ALTER TABLE customers ADD COLUMN created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
-ALTER TABLE customers ADD COLUMN updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+ALTER TABLE customers ADD COLUMN created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE customers ADD COLUMN updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 CREATE INDEX IF NOT EXISTS idx_customers_customer_id ON customers(customer_id);
 CREATE INDEX IF NOT EXISTS idx_customers_brand ON customers(brand_id);
@@ -53,10 +53,10 @@ CREATE TABLE IF NOT EXISTS customer_channel_ids (
     channel_type TEXT NOT NULL,  -- 'whatsapp', 'sms', 'email', 'telegram', 'line', 'facebook', 'instagram', 'tiktok'
     channel_identifier TEXT NOT NULL,  -- phone number, email, telegram username, etc.
     channel_profile_name TEXT DEFAULT '',  -- name from the channel's profile
-    is_primary INTEGER NOT NULL DEFAULT 0,
-    verified_at TEXT,
+    is_primary BOOLEAN NOT NULL DEFAULT false,
+    verified_at TIMESTAMPTZ,
     last_seen_at TEXT,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_customer_channel_ids_customer ON customer_channel_ids(customer_id);
@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS client_profile_sources (
     source_url TEXT DEFAULT '',
     synced_at TEXT,
     confidence_score REAL DEFAULT 1.0,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_client_sources_customer ON client_profile_sources(customer_id);
@@ -97,14 +97,14 @@ CREATE TABLE IF NOT EXISTS client_learning_insights (
     category TEXT NOT NULL,  -- 'communication', 'product', 'service', 'pricing', 'support'
     insight TEXT NOT NULL,
     confidence REAL NOT NULL DEFAULT 0.5,
-    evidence_count INTEGER NOT NULL DEFAULT 1,
+    evidence_count BOOLEAN NOT NULL DEFAULT true,
     source_conversation_id TEXT,
     source_message_id TEXT,
     extracted_at TEXT NOT NULL,
-    is_verified INTEGER NOT NULL DEFAULT 0,
+    is_verified BOOLEAN NOT NULL DEFAULT false,
     verified_by TEXT DEFAULT '',
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_learning_insights_customer ON client_learning_insights(customer_id);
@@ -117,9 +117,9 @@ CREATE TABLE IF NOT EXISTS client_learning_patterns (
     pattern_type TEXT NOT NULL,  -- 'communication_style', 'response_time', 'channel_preference', 'time_preference'
     pattern_data TEXT NOT NULL,  -- JSON with pattern details
     confidence REAL NOT NULL DEFAULT 0.5,
-    sample_size INTEGER NOT NULL DEFAULT 0,
+    sample_size BOOLEAN NOT NULL DEFAULT false,
     last_updated TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_learning_patterns_customer ON client_learning_patterns(customer_id);
@@ -136,8 +136,8 @@ CREATE TABLE IF NOT EXISTS client_preferences (
     preference_value TEXT NOT NULL,
     confidence REAL NOT NULL DEFAULT 0.5,
     source TEXT NOT NULL DEFAULT 'ai_learning',  -- 'ai_learning', 'user_set', 'inferred'
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_client_preferences_customer ON client_preferences(customer_id);
@@ -161,8 +161,8 @@ CREATE TABLE IF NOT EXISTS client_orders (
     payment_method TEXT DEFAULT '',
     channel TEXT DEFAULT '',  -- channel where order was placed
     metadata TEXT DEFAULT '{}',
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_client_orders_customer ON client_orders(customer_id);
@@ -183,8 +183,8 @@ CREATE TABLE IF NOT EXISTS client_invoices (
     status TEXT NOT NULL DEFAULT 'pending',  -- 'pending', 'paid', 'overdue', 'cancelled'
     payment_method TEXT DEFAULT '',
     metadata TEXT DEFAULT '{}',
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_client_invoices_customer ON client_invoices(customer_id);
@@ -204,10 +204,10 @@ CREATE TABLE IF NOT EXISTS client_payment_details (
     bank_name TEXT DEFAULT '',
     routing_number TEXT DEFAULT '',
     card_last_four TEXT DEFAULT '',
-    is_default INTEGER NOT NULL DEFAULT 0,
-    is_verified INTEGER NOT NULL DEFAULT 0,
+    is_default BOOLEAN NOT NULL DEFAULT false,
+    is_verified BOOLEAN NOT NULL DEFAULT false,
     metadata TEXT DEFAULT '{}',
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_payment_details_customer ON client_payment_details(customer_id);
@@ -222,10 +222,10 @@ CREATE TABLE IF NOT EXISTS client_contact_points (
     customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
     contact_type TEXT NOT NULL,  -- 'email', 'phone', 'whatsapp', 'telegram', 'line', 'social'
     contact_value TEXT NOT NULL,
-    is_primary INTEGER NOT NULL DEFAULT 0,
-    is_verified INTEGER NOT NULL DEFAULT 0,
+    is_primary BOOLEAN NOT NULL DEFAULT false,
+    is_verified BOOLEAN NOT NULL DEFAULT false,
     last_used_at TEXT,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_contact_points_customer ON client_contact_points(customer_id);
@@ -239,13 +239,13 @@ CREATE TABLE IF NOT EXISTS client_order_stage (
     id TEXT PRIMARY KEY,
     customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
     stage_name TEXT NOT NULL,  -- 'lead', 'qualified', 'proposal', 'negotiation', 'won', 'lost'
-    stage_value INTEGER NOT NULL DEFAULT 0,
+    stage_value BOOLEAN NOT NULL DEFAULT false,
     probability REAL DEFAULT 0,
     expected_close_date TEXT,
     current_order_id TEXT REFERENCES client_orders(id),
     notes TEXT DEFAULT '',
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_order_stage_customer ON client_order_stage(customer_id);
@@ -260,9 +260,9 @@ CREATE TABLE IF NOT EXISTS client_task_checklists (
     customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
     checklist_name TEXT NOT NULL,
     checklist_type TEXT NOT NULL,  -- 'onboarding', 'order', 'support', 'custom'
-    is_active INTEGER NOT NULL DEFAULT 1,
+    is_active BOOLEAN NOT NULL DEFAULT true,
     created_by TEXT DEFAULT '',
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_task_checklists_customer ON client_task_checklists(customer_id);
@@ -272,14 +272,14 @@ CREATE TABLE IF NOT EXISTS client_task_items (
     checklist_id TEXT NOT NULL REFERENCES client_task_checklists(id) ON DELETE CASCADE,
     task_name TEXT NOT NULL,
     task_description TEXT DEFAULT '',
-    is_completed INTEGER NOT NULL DEFAULT 0,
+    is_completed BOOLEAN NOT NULL DEFAULT false,
     completed_at TEXT,
     completed_by TEXT DEFAULT '',
     due_date TEXT,
     priority TEXT NOT NULL DEFAULT 'medium',  -- 'low', 'medium', 'high', 'urgent'
-    display_order INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    display_order BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_task_items_checklist ON client_task_items(checklist_id);
@@ -297,10 +297,10 @@ CREATE TABLE IF NOT EXISTS client_interaction_history (
     direction TEXT DEFAULT 'inbound',  -- 'inbound', 'outbound'
     summary TEXT DEFAULT '',
     sentiment TEXT DEFAULT '',  -- 'positive', 'neutral', 'negative'
-    duration_seconds INTEGER DEFAULT 0,
+    duration_seconds BOOLEAN DEFAULT false,
     interaction_date TEXT NOT NULL,
     metadata TEXT DEFAULT '{}',
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_interaction_history_customer ON client_interaction_history(customer_id);
@@ -317,11 +317,11 @@ CREATE TABLE IF NOT EXISTS client_custom_sections (
     section_name TEXT NOT NULL,
     section_type TEXT NOT NULL,  -- 'table', 'list', 'paragraph', 'key_value', 'rich_text', 'timeline'
     section_source TEXT NOT NULL DEFAULT 'user',  -- 'user', 'ai_learning', 'system'
-    display_order INTEGER NOT NULL DEFAULT 0,
-    is_active INTEGER NOT NULL DEFAULT 1,
+    display_order BOOLEAN NOT NULL DEFAULT false,
+    is_active BOOLEAN NOT NULL DEFAULT true,
     created_by TEXT DEFAULT '',
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_client_custom_sections_customer ON client_custom_sections(customer_id);
@@ -333,9 +333,9 @@ CREATE TABLE IF NOT EXISTS client_custom_section_data (
     field_key TEXT NOT NULL,
     field_value TEXT NOT NULL,
     field_type TEXT NOT NULL DEFAULT 'text',
-    display_order INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    display_order BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_client_section_data_section ON client_custom_section_data(section_id);
@@ -350,10 +350,10 @@ CREATE TABLE IF NOT EXISTS client_rag_mapping (
     customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
     section_type TEXT NOT NULL,  -- 'preferences', 'insights', 'orders', 'custom_section'
     section_id TEXT DEFAULT '',
-    is_indexed INTEGER NOT NULL DEFAULT 1,
+    is_indexed BOOLEAN NOT NULL DEFAULT true,
     embedding_status TEXT NOT NULL DEFAULT 'pending',  -- 'pending', 'indexed', 'failed'
     last_indexed_at TEXT,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_client_rag_mapping_customer ON client_rag_mapping(customer_id);
@@ -366,7 +366,7 @@ CREATE INDEX IF NOT EXISTS idx_client_rag_mapping_customer ON client_rag_mapping
 UPDATE customers SET customer_id = id WHERE customer_id IS NULL;
 
 -- Create unified customer ID mapping for existing contacts
-INSERT OR IGNORE INTO customer_channel_ids (id, customer_id, channel_type, channel_identifier, is_primary)
+INSERT INTO customer_channel_ids (id, customer_id, channel_type, channel_identifier, is_primary)
 SELECT 
     'cc_' || c.id,
     c.customer_id,

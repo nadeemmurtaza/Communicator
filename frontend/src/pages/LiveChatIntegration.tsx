@@ -513,7 +513,7 @@ export function LiveChatIntegration() {
       <div className="flex h-96 items-center justify-center">
         <div className="text-center">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
-          <p className="mt-2 text-sm text-slate-500 font-medium">Loading Website Live Chat Integration...</p>
+          <p className="mt-2 text-sm text-[var(--color-ink-faint)] font-medium">Loading Website Live Chat Integration...</p>
         </div>
       </div>
     )
@@ -541,27 +541,27 @@ export function LiveChatIntegration() {
   return (
     <div className="space-y-6">
       {/* Top Breadcrumb & Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[var(--color-border)] pb-5">
         <div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
+          <div className="flex items-center gap-2 text-xs text-[var(--color-ink-faint)] mb-1">
             <Link to="/channels" className="hover:text-blue-600 flex items-center gap-1 font-medium">
               <ArrowLeft className="h-3.5 w-3.5 inline mr-1" /><span>Channels Hub</span>
             </Link>
             <span>/</span>
             <span>Channel 2</span>
             <span>/</span>
-            <span className="text-slate-800 font-semibold">Website Live Chat</span>
+            <span className="text-[var(--color-ink)] font-semibold">Website Live Chat</span>
           </div>
           <div className="flex items-center gap-3">
             <div
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-sm"
+              className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)] text-white shadow-sm"
               style={{ backgroundColor: widgetColor }}
             >
               <LiveChatIcon className="h-5 w-5 text-white" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold tracking-tight text-slate-900">{inboxName}</h1>
+                <h1 className="text-2xl font-bold tracking-tight text-[var(--color-ink)]">{inboxName}</h1>
                 {isConnected ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -573,11 +573,11 @@ export function LiveChatIntegration() {
                     Not Configured
                   </span>
                 )}
-                <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 border border-blue-200">
+                <span className="inline-flex items-center rounded-[var(--radius-sm)] bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 border border-blue-200">
                   Channel 2
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-[var(--color-ink-faint)] mt-0.5">
                 Embeddable real-time customer chat widget, pre-chat lead qualification, HMAC identity verification, and multi-channel team routing.
               </p>
             </div>
@@ -587,20 +587,20 @@ export function LiveChatIntegration() {
         <div className="flex items-center gap-2.5">
           <Link
             to="/"
-            className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+            className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-3.5 py-2 text-xs font-semibold text-[var(--color-ink)] shadow-sm hover:bg-[var(--color-accent-muted)]"
           >
             Open Shared Inbox <ArrowUpRight className="h-3.5 w-3.5 inline ml-1" />
           </Link>
           <button
             onClick={() => setActiveTab('simulator')}
-            className="rounded-lg border border-blue-200 bg-blue-50 px-3.5 py-2 text-xs font-semibold text-blue-700 shadow-sm hover:bg-blue-100"
+            className="rounded-[var(--radius-md)] border border-blue-200 bg-blue-50 px-3.5 py-2 text-xs font-semibold text-blue-700 shadow-sm hover:bg-blue-100"
           >
             <span className="flex items-center gap-1.5"><Zap className="h-3.5 w-3.5 text-amber-500" /> Test Live Chat</span>
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5"
+            className="rounded-[var(--radius-md)] bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5"
           >
             {saving ? 'Saving...' : 'Save Configuration'}
           </button>
@@ -609,43 +609,43 @@ export function LiveChatIntegration() {
 
       {/* Health & Metrics Bar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
-          <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Active Visitors</div>
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-3.5 shadow-sm">
+          <div className="text-[11px] font-medium text-[var(--color-ink-faint)] uppercase tracking-wider">Active Visitors</div>
           <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-xl font-bold text-slate-900">{data?.health.activeVisitors ?? 4}</span>
+            <span className="text-xl font-bold text-[var(--color-ink)]">{data?.health.activeVisitors ?? 4}</span>
             <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1"><span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" /> Real-time</span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-0.5">Browsing site right now</p>
+          <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">Browsing site right now</p>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
-          <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Avg Response Time</div>
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-3.5 shadow-sm">
+          <div className="text-[11px] font-medium text-[var(--color-ink-faint)] uppercase tracking-wider">Avg Response Time</div>
           <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-xl font-bold text-slate-900">{data?.health.averageResponseTime ?? '1m 30s'}</span>
+            <span className="text-xl font-bold text-[var(--color-ink)]">{data?.health.averageResponseTime ?? '1m 30s'}</span>
             <span className="text-[11px] font-semibold text-blue-600 flex items-center gap-1"><Zap className="h-3 w-3" /> High speed</span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-0.5">Agent first response speed</p>
+          <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">Agent first response speed</p>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
-          <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Resolution Rate</div>
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-3.5 shadow-sm">
+          <div className="text-[11px] font-medium text-[var(--color-ink-faint)] uppercase tracking-wider">Resolution Rate</div>
           <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-xl font-bold text-slate-900">{data?.health.resolutionRate ?? '94.2%'}</span>
+            <span className="text-xl font-bold text-[var(--color-ink)]">{data?.health.resolutionRate ?? '94.2%'}</span>
             <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-0.5"><ArrowUp className="h-3 w-3" /> +3.1%</span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-0.5">Resolved in chat session</p>
+          <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">Resolved in chat session</p>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
-          <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Widget Identity</div>
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-3.5 shadow-sm">
+          <div className="text-[11px] font-medium text-[var(--color-ink-faint)] uppercase tracking-wider">Widget Identity</div>
           <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-xl font-bold text-slate-900">{identityValidation ? 'HMAC Enforced' : 'Public'}</span>
-            <span className="text-[11px] font-semibold text-slate-500">SHA-256</span>
+            <span className="text-xl font-bold text-[var(--color-ink)]">{identityValidation ? 'HMAC Enforced' : 'Public'}</span>
+            <span className="text-[11px] font-semibold text-[var(--color-ink-faint)]">SHA-256</span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-0.5">{identityValidation ? 'Impersonation blocked' : 'Standard visitor mode'}</p>
+          <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">{identityValidation ? 'Impersonation blocked' : 'Standard visitor mode'}</p>
         </div>
       </div>
 
       {/* Real Connection Status Banner */}
       {!isConnected && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 flex items-start gap-3">
+        <div className="rounded-[var(--radius-lg)] border border-amber-200 bg-amber-50 p-4 text-amber-900 flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
           <div>
             <h4 className="text-sm font-semibold text-amber-900">Channel Not Connected</h4>
@@ -658,7 +658,7 @@ export function LiveChatIntegration() {
 
       {/* Notifications */}
       {success && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-800 flex items-center justify-between">
+        <div className="rounded-[var(--radius-md)] border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
             <span className="font-medium">{success}</span>
@@ -667,7 +667,7 @@ export function LiveChatIntegration() {
         </div>
       )}
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs text-red-800 flex items-center justify-between">
+        <div className="rounded-[var(--radius-md)] border border-red-200 bg-red-50 p-3.5 text-xs text-red-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
             <span className="font-medium">{error}</span>
@@ -677,7 +677,7 @@ export function LiveChatIntegration() {
       )}
 
       {/* Main Tabs Navigation */}
-      <div className="border-b border-slate-200">
+      <div className="border-b border-[var(--color-border)]">
         <nav className="flex space-x-6 overflow-x-auto">
           {[
             { id: 'embed', label: 'Embed & SDK Code', icon: <Code className="h-4 w-4" /> },
@@ -693,7 +693,7 @@ export function LiveChatIntegration() {
               className={`flex items-center gap-2 border-b-2 py-3 px-1 text-xs font-semibold whitespace-nowrap transition-colors ${
                 activeTab === tab.id
                   ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                  : 'border-transparent text-[var(--color-ink-faint)] hover:border-[var(--color-border)] hover:text-[var(--color-ink)]'
               }`}
             >
               <span>{tab.icon}</span>
@@ -711,11 +711,11 @@ export function LiveChatIntegration() {
             {/* TAB 1: EMBED & SDK CODE */}
       {activeTab === 'embed' && (
         <div className="space-y-6">
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-100">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-[var(--color-border)]">
               <div>
-                <h2 className="text-base font-semibold text-slate-900">Website Embed & SDK Exporter</h2>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <h2 className="text-base font-semibold text-[var(--color-ink)]">Website Embed & SDK Exporter</h2>
+                <p className="text-xs text-[var(--color-ink-faint)] mt-0.5">
                   Select your target frontend framework or tag manager to embed the real-time live chat widget powered by Captain AI.
                 </p>
               </div>
@@ -724,7 +724,7 @@ export function LiveChatIntegration() {
                   href={`${previewUrl}?token=${encodeURIComponent(websiteToken)}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 flex items-center gap-1.5"
+                  className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] shadow-sm hover:bg-[var(--color-accent-muted)] flex items-center gap-1.5"
                 >
                   <span className="flex items-center gap-1.5"><Rocket className="h-4 w-4" /> Open Live Test Page <ArrowUpRight className="h-3.5 w-3.5" /></span>
                 </a>
@@ -736,7 +736,7 @@ export function LiveChatIntegration() {
                     else if (embedFormat === 'raw') textToCopy = embedCodes?.raw_init || ''
                     copyToClipboard(textToCopy, 'embed')
                   }}
-                  className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 flex items-center gap-1.5"
+                  className="rounded-[var(--radius-md)] bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 flex items-center gap-1.5"
                 >
                   <span>{copiedKey === 'embed' ? <span className="flex items-center gap-1.5"><Check className="h-4 w-4" /> Copied</span> : 'Copy Snippet'}</span>
                 </button>
@@ -744,14 +744,14 @@ export function LiveChatIntegration() {
             </div>
 
             {/* Framework Selector Tabs */}
-            <div className="mt-4 flex items-center gap-2 border-b border-slate-200 pb-2">
+            <div className="mt-4 flex items-center gap-2 border-b border-[var(--color-border)] pb-2">
               <button
                 type="button"
                 onClick={() => setEmbedFormat('html')}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                className={`rounded-[var(--radius-md)] px-3 py-1.5 text-xs font-semibold transition-all ${
                   embedFormat === 'html'
-                    ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-none'
+                    : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-accent-muted)]'
                 }`}
               >
                 <span className="flex items-center gap-1.5"><Globe className="h-4 w-4" /> Standard HTML Script</span>
@@ -759,10 +759,10 @@ export function LiveChatIntegration() {
               <button
                 type="button"
                 onClick={() => setEmbedFormat('react')}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                className={`rounded-[var(--radius-md)] px-3 py-1.5 text-xs font-semibold transition-all ${
                   embedFormat === 'react'
-                    ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-none'
+                    : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-accent-muted)]'
                 }`}
               >
                 <span className="flex items-center gap-1.5"><Layers className="h-4 w-4" /> React / Next.js Component</span>
@@ -770,10 +770,10 @@ export function LiveChatIntegration() {
               <button
                 type="button"
                 onClick={() => setEmbedFormat('gtm')}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                className={`rounded-[var(--radius-md)] px-3 py-1.5 text-xs font-semibold transition-all ${
                   embedFormat === 'gtm'
-                    ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-none'
+                    : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-accent-muted)]'
                 }`}
               >
                 <span className="flex items-center gap-1.5"><Tag className="h-4 w-4" /> Google Tag Manager (GTM)</span>
@@ -781,10 +781,10 @@ export function LiveChatIntegration() {
               <button
                 type="button"
                 onClick={() => setEmbedFormat('raw')}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                className={`rounded-[var(--radius-md)] px-3 py-1.5 text-xs font-semibold transition-all ${
                   embedFormat === 'raw'
-                    ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-none'
+                    : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-accent-muted)]'
                 }`}
               >
                 Raw JS SDK Init
@@ -793,7 +793,7 @@ export function LiveChatIntegration() {
 
             {/* Active Code Box */}
             <div className="mt-4">
-              <pre className="rounded-lg bg-slate-950 p-4 text-xs font-mono text-emerald-400 overflow-x-auto border border-slate-800 leading-relaxed max-h-[380px]">
+              <pre className="rounded-[var(--radius-md)] bg-[var(--color-ink)] p-4 text-xs font-mono text-emerald-400 overflow-x-auto border border-[var(--color-ink)] leading-relaxed max-h-[380px]">
                 {embedFormat === 'html' && (embedCodes?.html_script || embedCode)}
                 {embedFormat === 'react' && (embedCodes?.react_nextjs || '// Loading React snippet...')}
                 {embedFormat === 'gtm' && (embedCodes?.google_tag_manager || '// Loading GTM snippet...')}
@@ -801,11 +801,11 @@ export function LiveChatIntegration() {
               </pre>
             </div>
 
-            <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-100">
-              <div className="rounded-lg bg-slate-50 p-3.5 border border-slate-200">
-                <div className="text-xs font-semibold text-slate-800 mb-1">Website Token</div>
+            <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-[var(--color-border)]">
+              <div className="rounded-[var(--radius-md)] bg-[var(--color-accent-muted)] p-3.5 border border-[var(--color-border)]">
+                <div className="text-xs font-semibold text-[var(--color-ink)] mb-1">Website Token</div>
                 <div className="flex items-center justify-between gap-2">
-                  <code className="text-xs font-mono text-slate-700 truncate">{websiteToken}</code>
+                  <code className="text-xs font-mono text-[var(--color-ink)] truncate">{websiteToken}</code>
                   <button
                     onClick={() => copyToClipboard(websiteToken, 'token')}
                     className="text-xs font-semibold text-blue-600 hover:text-blue-800 shrink-0"
@@ -815,23 +815,23 @@ export function LiveChatIntegration() {
                 </div>
               </div>
 
-              <div className="rounded-lg bg-slate-50 p-3.5 border border-slate-200">
-                <div className="text-xs font-semibold text-slate-800 mb-1">Allowed Host Domains</div>
-                <div className="text-xs text-slate-600 truncate font-mono">
+              <div className="rounded-[var(--radius-md)] bg-[var(--color-accent-muted)] p-3.5 border border-[var(--color-border)]">
+                <div className="text-xs font-semibold text-[var(--color-ink)] mb-1">Allowed Host Domains</div>
+                <div className="text-xs text-[var(--color-ink-muted)] truncate font-mono">
                   {allowedDomains || 'All domains permitted (*)'}
                 </div>
-                <div className="text-[10px] text-slate-400 mt-1">Configure in Branding & Appearance</div>
+                <div className="text-[10px] text-[var(--color-ink-faint)] mt-1">Configure in Branding & Appearance</div>
               </div>
 
-              <div className="rounded-lg bg-slate-50 p-3.5 border border-slate-200 flex items-center justify-between">
+              <div className="rounded-[var(--radius-md)] bg-[var(--color-accent-muted)] p-3.5 border border-[var(--color-border)] flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-semibold text-slate-800">Regenerate Token</div>
-                  <div className="text-[11px] text-slate-500">Invalidates existing widget sessions</div>
+                  <div className="text-xs font-semibold text-[var(--color-ink)]">Regenerate Token</div>
+                  <div className="text-[11px] text-[var(--color-ink-faint)]">Invalidates existing widget sessions</div>
                 </div>
                 <button
                   onClick={handleRegenerateToken}
                   disabled={regenerating}
-                  className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                  className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
                 >
                   {regenerating ? 'Regenerating...' : 'Regenerate'}
                 </button>
@@ -840,46 +840,46 @@ export function LiveChatIntegration() {
           </div>
 
           {/* Framework Guides */}
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-sm font-semibold text-slate-900 mb-4">Quick Integration Guides</h3>
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-6 shadow-sm">
+            <h3 className="text-sm font-semibold text-[var(--color-ink)] mb-4">Quick Integration Guides</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="rounded-lg border border-slate-200 p-4 hover:border-blue-300 transition-colors">
+              <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] p-4 hover:border-blue-300 transition-colors">
                 <div className="flex items-center gap-2 mb-2">
                   <Layers className="h-5 w-5 text-blue-500" />
-                  <span className="text-xs font-bold text-slate-800">React & Next.js</span>
+                  <span className="text-xs font-bold text-[var(--color-ink)]">React & Next.js</span>
                 </div>
-                <p className="text-[11px] text-slate-500 mb-3">
+                <p className="text-[11px] text-[var(--color-ink-faint)] mb-3">
                   Mount the ready-to-use <code className="text-blue-600 font-mono">&lt;CaptainLiveChat /&gt;</code> component inside your root layout or main App component.
                 </p>
-                <div className="rounded bg-slate-50 p-2 text-[11px] text-slate-600 border border-slate-200">
+                <div className="rounded bg-[var(--color-accent-muted)] p-2 text-[11px] text-[var(--color-ink-muted)] border border-[var(--color-border)]">
                   Import the component from our React snippet and include it in <code className="font-mono text-blue-600">app/layout.tsx</code>.
                 </div>
               </div>
 
-              <div className="rounded-lg border border-slate-200 p-4 hover:border-blue-300 transition-colors">
+              <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] p-4 hover:border-blue-300 transition-colors">
                 <div className="flex items-center gap-2 mb-2">
                   <Globe className="h-5 w-5 text-indigo-500" />
-                  <span className="text-xs font-bold text-slate-800">WordPress & Shopify</span>
+                  <span className="text-xs font-bold text-[var(--color-ink)]">WordPress & Shopify</span>
                 </div>
-                <p className="text-[11px] text-slate-500 mb-3">
+                <p className="text-[11px] text-[var(--color-ink-faint)] mb-3">
                   Go to theme settings, Header/Footer scripts, and paste the HTML snippet inside the Footer section before <code className="text-blue-600">&lt;/body&gt;</code>.
                 </p>
-                <div className="rounded bg-slate-50 p-2 text-[11px] text-slate-600 border border-slate-200 space-y-1">
+                <div className="rounded bg-[var(--color-accent-muted)] p-2 text-[11px] text-[var(--color-ink-muted)] border border-[var(--color-border)] space-y-1">
                   <div>1. Online Store &gt; Themes &gt; Edit code</div>
                   <div>2. Select <code className="text-blue-600 font-mono">theme.liquid</code> or footer</div>
                   <div>3. Paste snippet before <code className="text-blue-600 font-mono">&lt;/body&gt;</code></div>
                 </div>
               </div>
 
-              <div className="rounded-lg border border-slate-200 p-4 hover:border-blue-300 transition-colors">
+              <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] p-4 hover:border-blue-300 transition-colors">
                 <div className="flex items-center gap-2 mb-2">
                   <Tag className="h-5 w-5 text-amber-500" />
-                  <span className="text-xs font-bold text-slate-800">Google Tag Manager</span>
+                  <span className="text-xs font-bold text-[var(--color-ink)]">Google Tag Manager</span>
                 </div>
-                <p className="text-[11px] text-slate-500 mb-3">
+                <p className="text-[11px] text-[var(--color-ink-faint)] mb-3">
                   Create a "Custom HTML" tag, paste the GTM snippet, and set the firing trigger to "All Pages - Page View".
                 </p>
-                <div className="rounded bg-slate-50 p-2 text-[11px] text-slate-600 border border-slate-200 space-y-1">
+                <div className="rounded bg-[var(--color-accent-muted)] p-2 text-[11px] text-[var(--color-ink-muted)] border border-[var(--color-border)] space-y-1">
                   <div>1. New Tag &gt; Custom HTML</div>
                   <div>2. Paste the GTM script snippet</div>
                   <div>3. Trigger: Initialization or All Pages</div>
@@ -894,13 +894,13 @@ export function LiveChatIntegration() {
       {activeTab === 'branding' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-7 space-y-6">
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-6 shadow-sm space-y-5">
+              <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
                 <div>
-                  <h2 className="text-base font-semibold text-slate-900">
+                  <h2 className="text-base font-semibold text-[var(--color-ink)]">
                     Live Chat Widget Customizer
                   </h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-[var(--color-ink-faint)] mt-0.5">
                     Tailor color palette, themes, launcher button aesthetics, and real-time behavior.
                   </p>
                 </div>
@@ -908,7 +908,7 @@ export function LiveChatIntegration() {
                   type="button"
                   onClick={handleResetDefaults}
                   disabled={saving}
-                  className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+                  className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-accent-muted)] px-2.5 py-1 text-[11px] font-semibold text-[var(--color-ink-muted)] hover:bg-[var(--color-accent-muted)] transition-colors"
                 >
                   <span className="flex items-center gap-1"><RotateCcw className="h-3.5 w-3.5" /> Reset Defaults</span>
                 </button>
@@ -917,22 +917,22 @@ export function LiveChatIntegration() {
               {/* General Info */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Inbox Display Name</label>
+                  <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Inbox Display Name</label>
                   <input
                     type="text"
                     value={inboxName}
                     onChange={(e) => setInboxName(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
                     placeholder="e.g. Website Live Chat"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Primary Website Domain</label>
+                  <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Primary Website Domain</label>
                   <input
                     type="text"
                     value={websiteDomain}
                     onChange={(e) => setWebsiteDomain(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
                     placeholder="newax.co"
                   />
                 </div>
@@ -940,17 +940,17 @@ export function LiveChatIntegration() {
 
               {/* Brand Color */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Brand Accent Color</label>
+                <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Brand Accent Color</label>
                 <div className="flex items-center gap-3">
                   <div
-                    className="h-9 w-9 rounded-lg border border-slate-300 shadow-sm shrink-0"
+                    className="h-9 w-9 rounded-[var(--radius-md)] border border-[var(--color-border)] shadow-sm shrink-0"
                     style={{ backgroundColor: widgetColor }}
                   />
                   <input
                     type="text"
                     value={widgetColor}
                     onChange={(e) => setWidgetColor(e.target.value)}
-                    className="w-32 rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono uppercase focus:border-blue-500 focus:outline-none"
+                    className="w-32 rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs font-mono uppercase focus:border-blue-500 focus:outline-none"
                     placeholder="#1570EF"
                   />
                   <div className="flex items-center gap-1.5">
@@ -959,7 +959,7 @@ export function LiveChatIntegration() {
                         key={hex}
                         onClick={() => setWidgetColor(hex)}
                         className={`h-7 w-7 rounded-full border-2 transition-transform hover:scale-110 ${
-                          widgetColor.toLowerCase() === hex.toLowerCase() ? 'border-slate-900 scale-110' : 'border-white'
+                          widgetColor.toLowerCase() === hex.toLowerCase() ? 'border-[var(--color-accent)] scale-110' : 'border-white'
                         }`}
                         style={{ backgroundColor: hex }}
                       />
@@ -971,7 +971,7 @@ export function LiveChatIntegration() {
               {/* Theme Mode & Border Radius */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Widget Theme Mode</label>
+                  <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Widget Theme Mode</label>
                   <div className="grid grid-cols-3 gap-2">
                     {[
                       { id: 'light', label: 'Light', icon: <Sun className="h-3.5 w-3.5 mr-1.5 inline" /> },
@@ -982,10 +982,10 @@ export function LiveChatIntegration() {
                         key={mode.id}
                         type="button"
                         onClick={() => setThemeMode(mode.id as any)}
-                        className={`rounded-lg border py-2 text-xs font-semibold text-center transition-all ${
+                        className={`rounded-[var(--radius-md)] border py-2 text-xs font-semibold text-center transition-all ${
                           themeMode === mode.id
                             ? 'border-blue-600 bg-blue-50/60 text-blue-700 ring-2 ring-blue-500/20'
-                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                            : 'border-[var(--color-border)] text-[var(--color-ink-muted)] hover:bg-[var(--color-accent-muted)]'
                         }`}
                       >
                         {mode.icon}{mode.label}
@@ -995,7 +995,7 @@ export function LiveChatIntegration() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Corner Border Radius</label>
+                  <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Corner Border Radius</label>
                   <div className="grid grid-cols-3 gap-2">
                     {[
                       { id: 'rounded_lg', label: 'Subtle', desc: '12px' },
@@ -1006,14 +1006,14 @@ export function LiveChatIntegration() {
                         key={radius.id}
                         type="button"
                         onClick={() => setBorderRadius(radius.id as any)}
-                        className={`rounded-lg border py-2 text-xs font-semibold text-center transition-all ${
+                        className={`rounded-[var(--radius-md)] border py-2 text-xs font-semibold text-center transition-all ${
                           borderRadius === radius.id
                             ? 'border-blue-600 bg-blue-50/60 text-blue-700 ring-2 ring-blue-500/20'
-                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                            : 'border-[var(--color-border)] text-[var(--color-ink-muted)] hover:bg-[var(--color-accent-muted)]'
                         }`}
                       >
                         <div>{radius.label}</div>
-                        <div className="text-[10px] text-slate-400 font-normal">{radius.desc}</div>
+                        <div className="text-[10px] text-[var(--color-ink-faint)] font-normal">{radius.desc}</div>
                       </button>
                     ))}
                   </div>
@@ -1022,7 +1022,7 @@ export function LiveChatIntegration() {
 
               {/* Launcher Button Style */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Launcher Button Appearance</label>
+                <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Launcher Button Appearance</label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {[
                     {
@@ -1048,17 +1048,17 @@ export function LiveChatIntegration() {
                       key={style.id}
                       type="button"
                       onClick={() => setLauncherStyle(style.id as any)}
-                      className={`rounded-lg border p-3 text-left transition-all ${
+                      className={`rounded-[var(--radius-md)] border p-3 text-left transition-all ${
                         launcherStyle === style.id
                           ? 'border-blue-600 bg-blue-50/50 ring-2 ring-blue-500/20'
-                          : 'border-slate-200 hover:bg-slate-50'
+                          : 'border-[var(--color-border)] hover:bg-[var(--color-accent-muted)]'
                       }`}
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <span>{style.icon}</span>
-                        <span className="text-xs font-bold text-slate-900">{style.title}</span>
+                        <span className="text-xs font-bold text-[var(--color-ink)]">{style.title}</span>
                       </div>
-                      <p className="text-[11px] text-slate-500">{style.desc}</p>
+                      <p className="text-[11px] text-[var(--color-ink-faint)]">{style.desc}</p>
                     </button>
                   ))}
                 </div>
@@ -1067,63 +1067,63 @@ export function LiveChatIntegration() {
               {/* Launcher Icon & Launcher Text */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Launcher Icon</label>
+                  <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Launcher Icon</label>
                   <div className="grid grid-cols-4 gap-2">
                     {[
-                      { id: 'chat_bubble', icon: <MessageSquare className="h-4 w-4 mx-auto text-slate-700" />, label: 'Chat' },
-                      { id: 'sparkle_ai', icon: <Sparkles className="h-4 w-4 mx-auto text-slate-700" />, label: 'Captain' },
-                      { id: 'headset_support', icon: <Headset className="h-4 w-4 mx-auto text-slate-700" />, label: 'Support' },
-                      { id: 'envelope', icon: <Mail className="h-4 w-4 mx-auto text-slate-700" />, label: 'Mail' },
+                      { id: 'chat_bubble', icon: <MessageSquare className="h-4 w-4 mx-auto text-[var(--color-ink)]" />, label: 'Chat' },
+                      { id: 'sparkle_ai', icon: <Sparkles className="h-4 w-4 mx-auto text-[var(--color-ink)]" />, label: 'Captain' },
+                      { id: 'headset_support', icon: <Headset className="h-4 w-4 mx-auto text-[var(--color-ink)]" />, label: 'Support' },
+                      { id: 'envelope', icon: <Mail className="h-4 w-4 mx-auto text-[var(--color-ink)]" />, label: 'Mail' },
                     ].map((item) => (
                       <button
                         key={item.id}
                         type="button"
                         onClick={() => setLauncherIcon(item.id as any)}
-                        className={`rounded-lg border py-2 text-center transition-all ${
+                        className={`rounded-[var(--radius-md)] border py-2 text-center transition-all ${
                           launcherIcon === item.id
                             ? 'border-blue-600 bg-blue-50/60 ring-2 ring-blue-500/20'
-                            : 'border-slate-200 hover:bg-slate-50'
+                            : 'border-[var(--color-border)] hover:bg-[var(--color-accent-muted)]'
                         }`}
                       >
                         <div className="text-base flex items-center justify-center">{item.icon}</div>
-                        <div className="text-[10px] text-slate-600 font-semibold mt-0.5">{item.label}</div>
+                        <div className="text-[10px] text-[var(--color-ink-muted)] font-semibold mt-0.5">{item.label}</div>
                       </button>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Launcher Action Text</label>
+                  <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Launcher Action Text</label>
                   <input
                     type="text"
                     value={launcherText}
                     onChange={(e) => setLauncherText(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
                     placeholder="e.g. Chat with us / Ask Captain AI"
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">Displayed when using Pill or Minimal Tab style</p>
+                  <p className="text-[10px] text-[var(--color-ink-faint)] mt-1">Displayed when using Pill or Minimal Tab style</p>
                 </div>
               </div>
 
               {/* Greeting Header & Tagline */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Greeting Header Title</label>
+                  <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Greeting Header Title</label>
                   <input
                     type="text"
                     value={greetingTitle}
                     onChange={(e) => setGreetingTitle(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
                     placeholder="Hi there!"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Greeting Tagline</label>
+                  <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Greeting Tagline</label>
                   <input
                     type="text"
                     value={greetingTagline}
                     onChange={(e) => setGreetingTagline(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
                     placeholder="We typically reply in a few minutes."
                   />
                 </div>
@@ -1131,92 +1131,92 @@ export function LiveChatIntegration() {
 
               {/* Widget Launcher Position */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-2">Widget Screen Position</label>
+                <label className="block text-xs font-semibold text-[var(--color-ink)] mb-2">Widget Screen Position</label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setWidgetPosition('right')}
-                    className={`rounded-lg border p-3 text-left transition-all ${
+                    className={`rounded-[var(--radius-md)] border p-3 text-left transition-all ${
                       widgetPosition === 'right'
                         ? 'border-blue-600 bg-blue-50/50 ring-2 ring-blue-500/20'
-                        : 'border-slate-200 hover:bg-slate-50'
+                        : 'border-[var(--color-border)] hover:bg-[var(--color-accent-muted)]'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900">Bottom Right</span>
-                      <ArrowRight className="h-3.5 w-3.5 text-slate-500" />
+                      <span className="text-xs font-bold text-[var(--color-ink)]">Bottom Right</span>
+                      <ArrowRight className="h-3.5 w-3.5 text-[var(--color-ink-faint)]" />
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-1">Standard position for 95% of websites</p>
+                    <p className="text-[11px] text-[var(--color-ink-faint)] mt-1">Standard position for 95% of websites</p>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setWidgetPosition('left')}
-                    className={`rounded-lg border p-3 text-left transition-all ${
+                    className={`rounded-[var(--radius-md)] border p-3 text-left transition-all ${
                       widgetPosition === 'left'
                         ? 'border-blue-600 bg-blue-50/50 ring-2 ring-blue-500/20'
-                        : 'border-slate-200 hover:bg-slate-50'
+                        : 'border-[var(--color-border)] hover:bg-[var(--color-accent-muted)]'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900">Bottom Left</span>
-                      <ArrowLeft className="h-3.5 w-3.5 text-slate-500" />
+                      <span className="text-xs font-bold text-[var(--color-ink)]">Bottom Left</span>
+                      <ArrowLeft className="h-3.5 w-3.5 text-[var(--color-ink-faint)]" />
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-1">Prevents overlap with right-docked CTAs</p>
+                    <p className="text-[11px] text-[var(--color-ink-faint)] mt-1">Prevents overlap with right-docked CTAs</p>
                   </button>
                 </div>
               </div>
 
               {/* Avatar URL */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Support Avatar / Brand Logo URL</label>
+                <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Support Avatar / Brand Logo URL</label>
                 <input
                   type="text"
                   value={avatarUrl}
                   onChange={(e) => setAvatarUrl(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
                   placeholder="https://example.com/logo.png"
                 />
               </div>
 
               {/* Toggles: Audio sound, Branding, Allowed domains */}
-              <div className="rounded-lg bg-slate-50 p-4 border border-slate-200 space-y-3">
+              <div className="rounded-[var(--radius-md)] bg-[var(--color-accent-muted)] p-4 border border-[var(--color-border)] space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-xs font-semibold text-slate-800">Sound Notifications</div>
-                    <div className="text-[11px] text-slate-500">Play pleasant audio chime when incoming agent replies arrive</div>
+                    <div className="text-xs font-semibold text-[var(--color-ink)]">Sound Notifications</div>
+                    <div className="text-[11px] text-[var(--color-ink-faint)]">Play pleasant audio chime when incoming agent replies arrive</div>
                   </div>
                   <input
                     type="checkbox"
                     checked={playSound}
                     onChange={(e) => setPlaySound(e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    className="h-4 w-4 rounded border-[var(--color-border)] text-blue-600 focus:ring-blue-500"
                   />
                 </div>
 
-                <div className="flex items-center justify-between border-t border-slate-200 pt-3">
+                <div className="flex items-center justify-between border-t border-[var(--color-border)] pt-3">
                   <div>
-                    <div className="text-xs font-semibold text-slate-800">Show "Powered by Captain AI" Badge</div>
-                    <div className="text-[11px] text-slate-500">Display subtle brand endorsement badge in widget footer</div>
+                    <div className="text-xs font-semibold text-[var(--color-ink)]">Show "Powered by Captain AI" Badge</div>
+                    <div className="text-[11px] text-[var(--color-ink-faint)]">Display subtle brand endorsement badge in widget footer</div>
                   </div>
                   <input
                     type="checkbox"
                     checked={showBranding}
                     onChange={(e) => setShowBranding(e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    className="h-4 w-4 rounded border-[var(--color-border)] text-blue-600 focus:ring-blue-500"
                   />
                 </div>
 
-                <div className="border-t border-slate-200 pt-3">
-                  <label className="block text-xs font-semibold text-slate-800 mb-1">Allowed Host Domains (CORS Whitelist)</label>
+                <div className="border-t border-[var(--color-border)] pt-3">
+                  <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Allowed Host Domains (CORS Whitelist)</label>
                   <input
                     type="text"
                     value={allowedDomains}
                     onChange={(e) => setAllowedDomains(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
                     placeholder="e.g. newax.co, localhost, *.mycompany.com"
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">Comma-separated domains authorized to load this widget</p>
+                  <p className="text-[10px] text-[var(--color-ink-faint)] mt-1">Comma-separated domains authorized to load this widget</p>
                 </div>
               </div>
 
@@ -1225,14 +1225,14 @@ export function LiveChatIntegration() {
                   type="button"
                   onClick={handleResetDefaults}
                   disabled={saving}
-                  className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                  className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-4 py-2 text-xs font-semibold text-[var(--color-ink-muted)] hover:bg-[var(--color-accent-muted)] disabled:opacity-50"
                 >
                   Reset Defaults
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
+                  className="rounded-[var(--radius-md)] bg-blue-600 px-5 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
                 >
                   {saving ? 'Saving...' : 'Save Appearance'}
                 </button>
@@ -1242,19 +1242,19 @@ export function LiveChatIntegration() {
 
           {/* Real-time Widget Preview Mockup Studio */}
           <div className="lg:col-span-5">
-            <div className="sticky top-6 rounded-xl border border-slate-200 bg-slate-100 p-5 shadow-sm space-y-3">
+            <div className="sticky top-6 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-accent-muted)] p-5 shadow-sm space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Live Preview Studio</span>
-                <span className="text-[11px] font-semibold text-slate-500 capitalize">{widgetPosition} docked</span>
+                <span className="text-xs font-bold text-[var(--color-ink-muted)] uppercase tracking-wider">Live Preview Studio</span>
+                <span className="text-[11px] font-semibold text-[var(--color-ink-faint)] capitalize">{widgetPosition} docked</span>
               </div>
 
               {/* Viewport Mode Switcher */}
-              <div className="flex items-center gap-1 bg-slate-200/80 p-1 rounded-lg text-xs font-semibold">
+              <div className="flex items-center gap-1 bg-[var(--color-border)]/80 p-1 rounded-[var(--radius-md)] text-xs font-semibold">
                 <button
                   type="button"
                   onClick={() => setPreviewMode('open')}
-                  className={`flex-1 py-1.5 rounded-md transition-all text-center ${
-                    previewMode === 'open' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  className={`flex-1 py-1.5 rounded-[var(--radius-sm)] transition-all text-center ${
+                    previewMode === 'open' ? 'bg-white text-blue-600 shadow-sm' : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
                   }`}
                 >
                   <span className="flex items-center gap-1.5"><MessageSquare className="h-3.5 w-3.5" /> Open Chat</span>
@@ -1262,8 +1262,8 @@ export function LiveChatIntegration() {
                 <button
                   type="button"
                   onClick={() => setPreviewMode('launcher')}
-                  className={`flex-1 py-1.5 rounded-md transition-all text-center ${
-                    previewMode === 'launcher' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  className={`flex-1 py-1.5 rounded-[var(--radius-sm)] transition-all text-center ${
+                    previewMode === 'launcher' ? 'bg-white text-blue-600 shadow-sm' : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
                   }`}
                 >
                   <span className="flex items-center gap-1.5"><CircleDot className="h-3.5 w-3.5" /> Floating Launcher</span>
@@ -1271,8 +1271,8 @@ export function LiveChatIntegration() {
                 <button
                   type="button"
                   onClick={() => setPreviewMode('mobile')}
-                  className={`flex-1 py-1.5 rounded-md transition-all text-center ${
-                    previewMode === 'mobile' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  className={`flex-1 py-1.5 rounded-[var(--radius-sm)] transition-all text-center ${
+                    previewMode === 'mobile' ? 'bg-white text-blue-600 shadow-sm' : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
                   }`}
                 >
                   <span className="flex items-center gap-1.5"><Smartphone className="h-3.5 w-3.5" /> Mobile View</span>
@@ -1282,13 +1282,13 @@ export function LiveChatIntegration() {
               {/* 1. OPEN CHAT VIEW */}
               {previewMode === 'open' && (
                 <div
-                  className={`relative mx-auto h-[510px] w-full max-w-[340px] shadow-2xl border border-slate-200 overflow-hidden flex flex-col transition-all ${
+                  className={`relative mx-auto h-[510px] w-full max-w-[340px] shadow-2xl border border-[var(--color-border)] overflow-hidden flex flex-col transition-all ${
                     borderRadius === 'rounded_lg'
-                      ? 'rounded-xl'
+                      ? 'rounded-[var(--radius-lg)]'
                       : borderRadius === 'rounded_full'
                       ? 'rounded-3xl'
                       : 'rounded-2xl'
-                  } ${themeMode === 'dark' ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-800'}`}
+                  } ${themeMode === 'dark' ? 'bg-[var(--color-accent)] text-[var(--color-surface)]' : 'bg-white text-[var(--color-ink)]'}`}
                 >
                   {/* Widget Header */}
                   <div
@@ -1301,7 +1301,7 @@ export function LiveChatIntegration() {
                         <img
                           src={SAFE_IMAGE_URL_RE.test(avatarUrl) ? avatarUrl : DEFAULT_AVATAR_URL}
                           alt="Avatar"
-                          className="h-9 w-9 rounded-full border-2 border-white/60 object-cover shadow-xs"
+                          className="h-9 w-9 rounded-full border-2 border-white/60 object-cover shadow-none"
                         />
                         <div>
                           <div className="font-bold text-sm tracking-tight">{greetingTitle}</div>
@@ -1318,31 +1318,31 @@ export function LiveChatIntegration() {
                   {/* Widget Body */}
                   <div
                     className={`flex-1 p-3.5 space-y-3 overflow-y-auto ${
-                      themeMode === 'dark' ? 'bg-slate-950/70' : 'bg-slate-50/70'
+                      themeMode === 'dark' ? 'bg-[var(--color-ink)]/70' : 'bg-[var(--color-accent-muted)]/70'
                     }`}
                   >
                     <div
-                      className={`rounded-xl p-3 shadow-xs border max-w-[85%] text-xs ${
+                      className={`rounded-[var(--radius-lg)] p-3 shadow-none border max-w-[85%] text-xs ${
                         themeMode === 'dark'
-                          ? 'bg-slate-800 border-slate-700 text-slate-200'
-                          : 'bg-white border-slate-100 text-slate-700'
+                          ? 'bg-[var(--color-ink)] border-[var(--color-ink-muted)] text-[var(--color-ink-faint)]'
+                          : 'bg-white border-[var(--color-border)] text-[var(--color-ink)]'
                       }`}
                     >
                       {greetingMessage || 'Welcome to our live chat! How can our support team help you today?'}
                     </div>
 
                     <div
-                      className="ml-auto rounded-xl p-3 shadow-xs max-w-[80%] text-xs text-white"
+                      className="ml-auto rounded-[var(--radius-lg)] p-3 shadow-none max-w-[80%] text-xs text-white"
                       style={{ backgroundColor: widgetColor }}
                     >
                       Hi! Can you tell me about the Captain AI self-improving assistant?
                     </div>
 
                     <div
-                      className={`rounded-xl p-3 shadow-xs border max-w-[85%] text-xs ${
+                      className={`rounded-[var(--radius-lg)] p-3 shadow-none border max-w-[85%] text-xs ${
                         themeMode === 'dark'
-                          ? 'bg-slate-800 border-slate-700 text-slate-200'
-                          : 'bg-white border-slate-100 text-slate-700'
+                          ? 'bg-[var(--color-ink)] border-[var(--color-ink-muted)] text-[var(--color-ink-faint)]'
+                          : 'bg-white border-[var(--color-border)] text-[var(--color-ink)]'
                       }`}
                     >
                       Certainly! Captain AI autonomously handles customer inquiries with multi-provider routing, live simulations, and proactive knowledge retrieval.
@@ -1352,21 +1352,21 @@ export function LiveChatIntegration() {
                   {/* Widget Footer Input */}
                   <div
                     className={`border-t p-2.5 flex items-center gap-2 ${
-                      themeMode === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+                      themeMode === 'dark' ? 'bg-[var(--color-accent)] border-[var(--color-ink)]' : 'bg-white border-[var(--color-border)]'
                     }`}
                   >
                     <input
                       type="text"
                       disabled
                       placeholder="Write a message..."
-                      className={`flex-1 rounded-md px-3 py-1.5 text-xs cursor-not-allowed ${
+                      className={`flex-1 rounded-[var(--radius-sm)] px-3 py-1.5 text-xs cursor-not-allowed ${
                         themeMode === 'dark'
-                          ? 'bg-slate-800 border-slate-700 text-slate-400'
-                          : 'bg-slate-50 border-slate-200 text-slate-400'
+                          ? 'bg-[var(--color-ink)] border-[var(--color-ink-muted)] text-[var(--color-ink-faint)]'
+                          : 'bg-[var(--color-accent-muted)] border-[var(--color-border)] text-[var(--color-ink-faint)]'
                       }`}
                     />
                     <div
-                      className="h-7 w-7 rounded-md flex items-center justify-center text-white text-xs shrink-0 shadow-xs"
+                      className="h-7 w-7 rounded-[var(--radius-sm)] flex items-center justify-center text-white text-xs shrink-0 shadow-none"
                       style={{ backgroundColor: widgetColor }}
                     >
                       <Send className="h-3.5 w-3.5 text-white" />
@@ -1378,8 +1378,8 @@ export function LiveChatIntegration() {
                     <div
                       className={`py-1.5 text-center text-[10px] font-medium border-t ${
                         themeMode === 'dark'
-                          ? 'bg-slate-900 text-slate-400 border-slate-800'
-                          : 'bg-slate-50 text-slate-500 border-slate-100'
+                          ? 'bg-[var(--color-accent)] text-[var(--color-ink-faint)] border-[var(--color-ink)]'
+                          : 'bg-[var(--color-accent-muted)] text-[var(--color-ink-faint)] border-[var(--color-border)]'
                       }`}
                     >
                       Powered by <span className="font-semibold text-blue-600">Captain AI</span>
@@ -1390,9 +1390,9 @@ export function LiveChatIntegration() {
 
               {/* 2. FLOATING LAUNCHER VIEW */}
               {previewMode === 'launcher' && (
-                <div className="relative mx-auto h-[510px] w-full max-w-[340px] rounded-2xl bg-white shadow-xl border border-slate-200 overflow-hidden flex flex-col">
+                <div className="relative mx-auto h-[510px] w-full max-w-[340px] rounded-2xl bg-white shadow-xl border border-[var(--color-border)] overflow-hidden flex flex-col">
                   {/* Dummy Website Canvas */}
-                  <div className="p-3 bg-slate-100 border-b border-slate-200 flex items-center justify-between text-xs text-slate-500">
+                  <div className="p-3 bg-[var(--color-accent-muted)] border-b border-[var(--color-border)] flex items-center justify-between text-xs text-[var(--color-ink-faint)]">
                     <div className="flex items-center gap-1.5">
                       <span className="h-2 w-2 rounded-full bg-red-400"></span>
                       <span className="h-2 w-2 rounded-full bg-amber-400"></span>
@@ -1402,16 +1402,16 @@ export function LiveChatIntegration() {
                   </div>
 
                   <div className="flex-1 p-5 space-y-4 bg-linear-to-b from-white to-slate-50">
-                    <div className="h-4 w-32 bg-slate-200 rounded animate-pulse"></div>
-                    <div className="h-2.5 w-48 bg-slate-200 rounded animate-pulse"></div>
-                    <div className="h-24 bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-900 space-y-1">
+                    <div className="h-4 w-32 bg-[var(--color-border)] rounded animate-pulse"></div>
+                    <div className="h-2.5 w-48 bg-[var(--color-border)] rounded animate-pulse"></div>
+                    <div className="h-24 bg-blue-50 border border-blue-100 rounded-[var(--radius-lg)] p-3 text-xs text-blue-900 space-y-1">
                       <div className="font-bold">Enterprise Customer Communications</div>
                       <p className="text-[11px] text-blue-700">Autonomous customer support with multi-channel routing & Captain AI.</p>
                     </div>
                     <div className="space-y-2 pt-2">
-                      <div className="h-2.5 w-full bg-slate-200 rounded"></div>
-                      <div className="h-2.5 w-5/6 bg-slate-200 rounded"></div>
-                      <div className="h-2.5 w-3/4 bg-slate-200 rounded"></div>
+                      <div className="h-2.5 w-full bg-[var(--color-border)] rounded"></div>
+                      <div className="h-2.5 w-5/6 bg-[var(--color-border)] rounded"></div>
+                      <div className="h-2.5 w-3/4 bg-[var(--color-border)] rounded"></div>
                     </div>
                   </div>
 
@@ -1465,11 +1465,11 @@ export function LiveChatIntegration() {
 
               {/* 3. MOBILE DEVICE FRAME VIEW */}
               {previewMode === 'mobile' && (
-                <div className="relative mx-auto h-[510px] w-full max-w-[280px] rounded-3xl bg-slate-900 p-2.5 shadow-2xl border-4 border-slate-800 flex flex-col">
+                <div className="relative mx-auto h-[510px] w-full max-w-[280px] rounded-3xl bg-[var(--color-accent)] p-2.5 shadow-2xl border-4 border-[var(--color-ink)] flex flex-col">
                   {/* Smartphone Screen */}
                   <div className="flex-1 rounded-2xl bg-white overflow-hidden flex flex-col">
                     {/* Status bar */}
-                    <div className="h-6 bg-slate-900 text-white flex items-center justify-between px-3 text-[9px]">
+                    <div className="h-6 bg-[var(--color-accent)] text-white flex items-center justify-between px-3 text-[9px]">
                       <span>9:41</span>
                       <div className="h-2.5 w-12 bg-black rounded-full mx-auto"></div>
                       <span>5G 100%</span>
@@ -1491,22 +1491,22 @@ export function LiveChatIntegration() {
                     </div>
 
                     {/* Mobile Chat Body */}
-                    <div className="flex-1 p-2.5 space-y-2 bg-slate-50 text-[11px] overflow-y-auto">
-                      <div className="bg-white p-2 rounded-lg border border-slate-200 text-slate-800">
+                    <div className="flex-1 p-2.5 space-y-2 bg-[var(--color-accent-muted)] text-[11px] overflow-y-auto">
+                      <div className="bg-white p-2 rounded-[var(--radius-md)] border border-[var(--color-border)] text-[var(--color-ink)]">
                         {greetingMessage || 'Welcome to live chat!'}
                       </div>
-                      <div className="ml-auto bg-blue-600 text-white p-2 rounded-lg max-w-[85%]">
+                      <div className="ml-auto bg-blue-600 text-white p-2 rounded-[var(--radius-md)] max-w-[85%]">
                         Hello from iPhone mobile browser!
                       </div>
                     </div>
 
                     {/* Mobile Input */}
-                    <div className="p-2 border-t border-slate-200 flex items-center gap-1.5 bg-white">
+                    <div className="p-2 border-t border-[var(--color-border)] flex items-center gap-1.5 bg-white">
                       <input
                         type="text"
                         disabled
                         placeholder="Reply..."
-                        className="flex-1 text-[11px] bg-slate-100 rounded px-2 py-1"
+                        className="flex-1 text-[11px] bg-[var(--color-accent-muted)] rounded px-2 py-1"
                       />
                       <div
                         className="h-6 w-6 rounded flex items-center justify-center text-white text-[10px]"
@@ -1520,10 +1520,10 @@ export function LiveChatIntegration() {
               )}
 
               {/* Launcher preview helper text */}
-              <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
-                <span>Theme: <strong className="text-slate-700 capitalize">{themeMode}</strong></span>
-                <span>Radius: <strong className="text-slate-700">{borderRadius.replace('rounded_', '')}</strong></span>
-                <span>Sound: <strong className="text-slate-700">{playSound ? 'On' : 'Off'}</strong></span>
+              <div className="flex items-center justify-between text-[11px] text-[var(--color-ink-faint)] pt-1">
+                <span>Theme: <strong className="text-[var(--color-ink)] capitalize">{themeMode}</strong></span>
+                <span>Radius: <strong className="text-[var(--color-ink)]">{borderRadius.replace('rounded_', '')}</strong></span>
+                <span>Sound: <strong className="text-[var(--color-ink)]">{playSound ? 'On' : 'Off'}</strong></span>
               </div>
             </div>
           </div>
@@ -1534,11 +1534,11 @@ export function LiveChatIntegration() {
       {activeTab === 'prechat' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-7 space-y-6">
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-6 shadow-sm space-y-5">
+              <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-4">
                 <div>
-                  <h2 className="text-base font-semibold text-slate-900">Pre-Chat Intake Form Builder</h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <h2 className="text-base font-semibold text-[var(--color-ink)]">Pre-Chat Intake Form Builder</h2>
+                  <p className="text-xs text-[var(--color-ink-faint)] mt-0.5">
                     Collect visitor credentials, qualify requirements, and automatically route conversations before chat opens.
                   </p>
                 </div>
@@ -1547,7 +1547,7 @@ export function LiveChatIntegration() {
                     type="button"
                     onClick={handleResetPreChatDefaults}
                     disabled={saving}
-                    className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+                    className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-accent-muted)] px-2.5 py-1 text-[11px] font-semibold text-[var(--color-ink-muted)] hover:bg-[var(--color-accent-muted)] transition-colors"
                   >
                     <span className="flex items-center gap-1"><RotateCcw className="h-3.5 w-3.5" /> Reset Defaults</span>
                   </button>
@@ -1558,7 +1558,7 @@ export function LiveChatIntegration() {
                       onChange={(e) => setPreChatEnabled(e.target.checked)}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <div className="w-11 h-6 bg-[var(--color-border)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[var(--color-border)] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                   </label>
                 </div>
               </div>
@@ -1566,37 +1566,37 @@ export function LiveChatIntegration() {
               {preChatEnabled ? (
                 <div className="space-y-6">
                   {/* Form Header Customization */}
-                  <div className="rounded-lg bg-slate-50 p-4 border border-slate-200 space-y-3">
-                    <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">Form Presentation & Instructions</div>
+                  <div className="rounded-[var(--radius-md)] bg-[var(--color-accent-muted)] p-4 border border-[var(--color-border)] space-y-3">
+                    <div className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">Form Presentation & Instructions</div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">Form Heading Title</label>
+                        <label className="block text-[11px] font-semibold text-[var(--color-ink)] mb-1">Form Heading Title</label>
                         <input
                           type="text"
                           value={preChatTitle}
                           onChange={(e) => setPreChatTitle(e.target.value)}
-                          className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
+                          className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
                           placeholder="Welcome to Live Chat"
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">Submit CTA Button Label</label>
+                        <label className="block text-[11px] font-semibold text-[var(--color-ink)] mb-1">Submit CTA Button Label</label>
                         <input
                           type="text"
                           value={preChatSubmitText}
                           onChange={(e) => setPreChatSubmitText(e.target.value)}
-                          className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
+                          className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
                           placeholder="Start Conversation"
                         />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">Introductory Prompt</label>
+                      <label className="block text-[11px] font-semibold text-[var(--color-ink)] mb-1">Introductory Prompt</label>
                       <textarea
                         rows={2}
                         value={preChatDesc}
                         onChange={(e) => setPreChatDesc(e.target.value)}
-                        className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
+                        className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs focus:border-blue-500 focus:outline-none"
                         placeholder="Please share a few details so we can assist you..."
                       />
                     </div>
@@ -1606,9 +1606,9 @@ export function LiveChatIntegration() {
                         id="reqEmailToggle"
                         checked={requireEmail}
                         onChange={(e) => setRequireEmail(e.target.checked)}
-                        className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600"
+                        className="h-3.5 w-3.5 rounded border-[var(--color-border)] text-blue-600"
                       />
-                      <label htmlFor="reqEmailToggle" className="text-xs text-slate-700 font-medium">
+                      <label htmlFor="reqEmailToggle" className="text-xs text-[var(--color-ink)] font-medium">
                         Strict email validation: require valid RFC-compliant email to start conversation
                       </label>
                     </div>
@@ -1617,13 +1617,13 @@ export function LiveChatIntegration() {
                   {/* Field Builder */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                      <span className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">
                         Configured Form Fields ({customPreChatFields.length})
                       </span>
                       <button
                         type="button"
                         onClick={() => setShowAddField(!showAddField)}
-                        className="rounded-lg bg-blue-50 border border-blue-200 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 flex items-center gap-1"
+                        className="rounded-[var(--radius-md)] bg-blue-50 border border-blue-200 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 flex items-center gap-1"
                       >
                         {showAddField ? <span className="flex items-center gap-1"><X className="h-3.5 w-3.5" /> Cancel</span> : <span className="flex items-center gap-1"><Plus className="h-3.5 w-3.5" /> Add Custom Field</span>}
                       </button>
@@ -1631,11 +1631,11 @@ export function LiveChatIntegration() {
 
                     {/* Inline Add Field Form */}
                     {showAddField && (
-                      <div className="rounded-xl border border-blue-200 bg-blue-50/40 p-4 space-y-3 shadow-xs">
+                      <div className="rounded-[var(--radius-lg)] border border-blue-200 bg-blue-50/40 p-4 space-y-3 shadow-none">
                         <div className="text-xs font-bold text-blue-900">New Field Definition</div>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <div>
-                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">Field Label</label>
+                            <label className="block text-[11px] font-semibold text-[var(--color-ink)] mb-1">Field Label</label>
                             <input
                               type="text"
                               value={newFieldLabel}
@@ -1646,25 +1646,25 @@ export function LiveChatIntegration() {
                                 }
                               }}
                               placeholder="e.g. Budget Range"
-                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs"
+                              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs"
                             />
                           </div>
                           <div>
-                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">Variable Key (Slug)</label>
+                            <label className="block text-[11px] font-semibold text-[var(--color-ink)] mb-1">Variable Key (Slug)</label>
                             <input
                               type="text"
                               value={newFieldName}
                               onChange={(e) => setNewFieldName(e.target.value)}
                               placeholder="e.g. budgetRange"
-                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-mono"
+                              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs font-mono"
                             />
                           </div>
                           <div>
-                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">Field Type</label>
+                            <label className="block text-[11px] font-semibold text-[var(--color-ink)] mb-1">Field Type</label>
                             <select
                               value={newFieldType}
                               onChange={(e) => setNewFieldType(e.target.value as any)}
-                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs"
+                              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs"
                             >
                               <option value="text">Text (single line)</option>
                               <option value="email">Email Address</option>
@@ -1679,36 +1679,36 @@ export function LiveChatIntegration() {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">Placeholder Text</label>
+                            <label className="block text-[11px] font-semibold text-[var(--color-ink)] mb-1">Placeholder Text</label>
                             <input
                               type="text"
                               value={newFieldPlaceholder}
                               onChange={(e) => setNewFieldPlaceholder(e.target.value)}
                               placeholder="e.g. Select your budget tier..."
-                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs"
+                              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs"
                             />
                           </div>
                           {newFieldType === 'select' && (
                             <div>
-                              <label className="block text-[11px] font-semibold text-slate-700 mb-1">Choices (Comma-Separated)</label>
+                              <label className="block text-[11px] font-semibold text-[var(--color-ink)] mb-1">Choices (Comma-Separated)</label>
                               <input
                                 type="text"
                                 value={newFieldOptionsText}
                                 onChange={(e) => setNewFieldOptionsText(e.target.value)}
                                 placeholder="<$1k, $1k-$5k, $5k-$20k, $20k+"
-                                className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs"
+                                className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs"
                               />
                             </div>
                           )}
                         </div>
 
                         <div className="flex items-center justify-between pt-1">
-                          <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer">
+                          <label className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-ink)] cursor-pointer">
                             <input
                               type="checkbox"
                               checked={newFieldRequired}
                               onChange={(e) => setNewFieldRequired(e.target.checked)}
-                              className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600"
+                              className="h-3.5 w-3.5 rounded border-[var(--color-border)] text-blue-600"
                             />
                             <span>Mark this field as mandatory (Required)</span>
                           </label>
@@ -1716,7 +1716,7 @@ export function LiveChatIntegration() {
                             type="button"
                             onClick={handleAddNewField}
                             disabled={!newFieldLabel.trim()}
-                            className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                            className="rounded-[var(--radius-md)] bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
                           >
                             Add Field
                           </button>
@@ -1725,22 +1725,22 @@ export function LiveChatIntegration() {
                     )}
 
                     {/* Field List */}
-                    <div className="divide-y divide-slate-100 rounded-lg border border-slate-200 overflow-hidden bg-white shadow-xs">
+                    <div className="divide-y divide-slate-100 rounded-[var(--radius-md)] border border-[var(--color-border)] overflow-hidden bg-white shadow-none">
                       {customPreChatFields.map((field, idx) => (
-                        <div key={field.id || field.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 gap-2 hover:bg-slate-50/50 transition-colors">
+                        <div key={field.id || field.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 gap-2 hover:bg-[var(--color-accent-muted)]/50 transition-colors">
                           <div className="flex items-center gap-3">
-                            <span className="text-slate-400 font-mono text-xs w-5">#{idx + 1}</span>
+                            <span className="text-[var(--color-ink-faint)] font-mono text-xs w-5">#{idx + 1}</span>
                             <div>
                               <div className="flex items-center gap-2">
-                                <span className="text-xs font-semibold text-slate-900">{field.label}</span>
-                                <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono text-slate-600 uppercase">
+                                <span className="text-xs font-semibold text-[var(--color-ink)]">{field.label}</span>
+                                <span className="rounded bg-[var(--color-accent-muted)] px-1.5 py-0.5 text-[10px] font-mono text-[var(--color-ink-muted)] uppercase">
                                   {field.type}
                                 </span>
                               </div>
-                              <div className="text-[11px] font-mono text-slate-400 mt-0.5">
-                                key: <span className="text-slate-600">{field.name}</span>
+                              <div className="text-[11px] font-mono text-[var(--color-ink-faint)] mt-0.5">
+                                key: <span className="text-[var(--color-ink-muted)]">{field.name}</span>
                                 {field.options && field.options.length > 0 && (
-                                  <span className="ml-2 font-sans text-slate-500">
+                                  <span className="ml-2 font-sans text-[var(--color-ink-faint)]">
                                     • {field.options.length} choices ({field.options.slice(0, 3).join(', ')}{field.options.length > 3 ? '...' : ''})
                                   </span>
                                 )}
@@ -1754,7 +1754,7 @@ export function LiveChatIntegration() {
                               type="button"
                               onClick={() => handleMoveField(idx, 'up')}
                               disabled={idx === 0}
-                              className="h-6 w-6 rounded border border-slate-200 flex items-center justify-center text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+                              className="h-6 w-6 rounded border border-[var(--color-border)] flex items-center justify-center text-xs text-[var(--color-ink-muted)] hover:bg-[var(--color-accent-muted)] disabled:opacity-30"
                               title="Move Up"
                             >
                               <ArrowUp className="h-3 w-3" />
@@ -1763,7 +1763,7 @@ export function LiveChatIntegration() {
                               type="button"
                               onClick={() => handleMoveField(idx, 'down')}
                               disabled={idx === customPreChatFields.length - 1}
-                              className="h-6 w-6 rounded border border-slate-200 flex items-center justify-center text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+                              className="h-6 w-6 rounded border border-[var(--color-border)] flex items-center justify-center text-xs text-[var(--color-ink-muted)] hover:bg-[var(--color-accent-muted)] disabled:opacity-30"
                               title="Move Down"
                             >
                               <ArrowDown className="h-3 w-3" />
@@ -1776,7 +1776,7 @@ export function LiveChatIntegration() {
                               className={`rounded px-2 py-0.5 text-[11px] font-semibold border transition-all ${
                                 field.required
                                   ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                  : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                                  : 'bg-[var(--color-accent-muted)] text-[var(--color-ink-faint)] border-[var(--color-border)] hover:bg-[var(--color-accent-muted)]'
                               }`}
                             >
                               {field.required ? <span className="flex items-center gap-1"><Star className="h-3 w-3 fill-current" /> Required</span> : <span>Optional</span>}
@@ -1798,20 +1798,20 @@ export function LiveChatIntegration() {
                   </div>
 
                   {/* Conditional Routing Rules */}
-                  <div className="space-y-3 pt-3 border-t border-slate-100">
+                  <div className="space-y-3 pt-3 border-t border-[var(--color-border)]">
                     <div className="flex items-center justify-between">
                       <div>
-                        <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                        <span className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">
                           Conditional Lead Triage & Routing Rules ({routingRules.length})
                         </span>
-                        <p className="text-[11px] text-slate-500 mt-0.5">
+                        <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">
                           Automatically tag, prioritize, and route conversation to teams based on submitted answers.
                         </p>
                       </div>
                       <button
                         type="button"
                         onClick={() => setShowAddRule(!showAddRule)}
-                        className="rounded-lg bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 flex items-center gap-1"
+                        className="rounded-[var(--radius-md)] bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 flex items-center gap-1"
                       >
                         {showAddRule ? <span className="flex items-center gap-1"><X className="h-3.5 w-3.5" /> Cancel</span> : <span className="flex items-center gap-1"><Plus className="h-3.5 w-3.5" /> Add Routing Rule</span>}
                       </button>
@@ -1819,15 +1819,15 @@ export function LiveChatIntegration() {
 
                     {/* Inline Add Rule Form */}
                     {showAddRule && (
-                      <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 space-y-3 shadow-xs">
+                      <div className="rounded-[var(--radius-lg)] border border-emerald-200 bg-emerald-50/40 p-4 space-y-3 shadow-none">
                         <div className="text-xs font-bold text-emerald-900">Define Conditional Routing Logic</div>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <div>
-                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">Evaluate Field</label>
+                            <label className="block text-[11px] font-semibold text-[var(--color-ink)] mb-1">Evaluate Field</label>
                             <select
                               value={newRuleField}
                               onChange={(e) => setNewRuleField(e.target.value)}
-                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-mono"
+                              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs font-mono"
                             >
                               {customPreChatFields.map((f) => (
                                 <option key={f.name} value={f.name}>
@@ -1838,11 +1838,11 @@ export function LiveChatIntegration() {
                           </div>
 
                           <div>
-                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">Condition</label>
+                            <label className="block text-[11px] font-semibold text-[var(--color-ink)] mb-1">Condition</label>
                             <select
                               value={newRuleOp}
                               onChange={(e) => setNewRuleOp(e.target.value as any)}
-                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs"
+                              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs"
                             >
                               <option value="equals">Equals (exact match)</option>
                               <option value="contains">Contains substring</option>
@@ -1851,24 +1851,24 @@ export function LiveChatIntegration() {
                           </div>
 
                           <div>
-                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">Value to Match</label>
+                            <label className="block text-[11px] font-semibold text-[var(--color-ink)] mb-1">Value to Match</label>
                             <input
                               type="text"
                               value={newRuleVal}
                               onChange={(e) => setNewRuleVal(e.target.value)}
                               placeholder="e.g. Enterprise or Billing"
-                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs"
+                              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs"
                             />
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <div>
-                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">Set Priority</label>
+                            <label className="block text-[11px] font-semibold text-[var(--color-ink)] mb-1">Set Priority</label>
                             <select
                               value={newRulePriority}
                               onChange={(e) => setNewRulePriority(e.target.value as any)}
-                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs"
+                              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs"
                             >
                               <option value="low">Low Priority</option>
                               <option value="medium">Medium Priority</option>
@@ -1878,24 +1878,24 @@ export function LiveChatIntegration() {
                           </div>
 
                           <div>
-                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">Attach Tag</label>
+                            <label className="block text-[11px] font-semibold text-[var(--color-ink)] mb-1">Attach Tag</label>
                             <input
                               type="text"
                               value={newRuleTag}
                               onChange={(e) => setNewRuleTag(e.target.value)}
                               placeholder="e.g. enterprise_lead"
-                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs"
+                              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs"
                             />
                           </div>
 
                           <div>
-                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">Target Team / Queue</label>
+                            <label className="block text-[11px] font-semibold text-[var(--color-ink)] mb-1">Target Team / Queue</label>
                             <input
                               type="text"
                               value={newRuleTeam}
                               onChange={(e) => setNewRuleTeam(e.target.value)}
                               placeholder="e.g. Strategic Sales"
-                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs"
+                              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs"
                             />
                           </div>
                         </div>
@@ -1905,7 +1905,7 @@ export function LiveChatIntegration() {
                             type="button"
                             onClick={handleAddNewRule}
                             disabled={!newRuleVal.trim()}
-                            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                            className="rounded-[var(--radius-md)] bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
                           >
                             Save Routing Rule
                           </button>
@@ -1918,16 +1918,16 @@ export function LiveChatIntegration() {
                       {routingRules.map((rule) => (
                         <div
                           key={rule.id}
-                          className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/60 p-3 text-xs"
+                          className="flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-accent-muted)]/60 p-3 text-xs"
                         >
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-semibold text-slate-700">IF</span>
-                            <code className="rounded bg-white px-1.5 py-0.5 border border-slate-200 font-mono text-blue-600">
+                            <span className="font-semibold text-[var(--color-ink)]">IF</span>
+                            <code className="rounded bg-white px-1.5 py-0.5 border border-[var(--color-border)] font-mono text-blue-600">
                               {rule.field}
                             </code>
-                            <span className="text-slate-500">{rule.operator}</span>
-                            <span className="font-bold text-slate-900">"{rule.value}"</span>
-                            <ArrowRight className="h-3.5 w-3.5 text-slate-400" />
+                            <span className="text-[var(--color-ink-faint)]">{rule.operator}</span>
+                            <span className="font-bold text-[var(--color-ink)]">"{rule.value}"</span>
+                            <ArrowRight className="h-3.5 w-3.5 text-[var(--color-ink-faint)]" />
                             <span className="rounded bg-amber-50 px-2 py-0.5 font-bold uppercase text-[10px] text-amber-700 border border-amber-200">
                               {rule.assign_priority} Priority
                             </span>
@@ -1959,17 +1959,17 @@ export function LiveChatIntegration() {
                     <button
                       onClick={handleSave}
                       disabled={saving}
-                      className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
+                      className="rounded-[var(--radius-md)] bg-blue-600 px-5 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
                     >
                       {saving ? 'Saving...' : 'Save Pre-Chat Form Configuration'}
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="rounded-lg bg-slate-50 p-6 text-center border border-dashed border-slate-200">
+                <div className="rounded-[var(--radius-md)] bg-[var(--color-accent-muted)] p-6 text-center border border-dashed border-[var(--color-border)]">
                   <Zap className="h-7 w-7 text-amber-500" />
-                  <div className="text-xs font-semibold text-slate-800 mt-2">Pre-Chat Qualification is Disabled</div>
-                  <p className="text-[11px] text-slate-500 max-w-sm mx-auto mt-1">
+                  <div className="text-xs font-semibold text-[var(--color-ink)] mt-2">Pre-Chat Qualification is Disabled</div>
+                  <p className="text-[11px] text-[var(--color-ink-faint)] max-w-sm mx-auto mt-1">
                     Visitors will immediately see the conversation message thread without answering any required form fields.
                   </p>
                 </div>
@@ -1979,9 +1979,9 @@ export function LiveChatIntegration() {
 
           {/* Right Column: Live Interactive Visitor Preview & Simulator */}
           <div className="lg:col-span-5">
-            <div className="sticky top-6 rounded-xl border border-slate-200 bg-slate-100 p-5 shadow-sm space-y-4">
+            <div className="sticky top-6 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-accent-muted)] p-5 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                <span className="text-xs font-bold text-[var(--color-ink-muted)] uppercase tracking-wider">
                   Live Intake Preview & Simulator
                 </span>
                 <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1"><span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" /> Interactive</span>
@@ -1989,13 +1989,13 @@ export function LiveChatIntegration() {
 
               {/* Mockup Container */}
               <div
-                className={`relative mx-auto h-[510px] w-full max-w-[340px] shadow-2xl border border-slate-200 overflow-hidden flex flex-col ${
+                className={`relative mx-auto h-[510px] w-full max-w-[340px] shadow-2xl border border-[var(--color-border)] overflow-hidden flex flex-col ${
                   borderRadius === 'rounded_lg'
-                    ? 'rounded-xl'
+                    ? 'rounded-[var(--radius-lg)]'
                     : borderRadius === 'rounded_full'
                     ? 'rounded-3xl'
                     : 'rounded-2xl'
-                } ${themeMode === 'dark' ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-800'}`}
+                } ${themeMode === 'dark' ? 'bg-[var(--color-accent)] text-[var(--color-surface)]' : 'bg-white text-[var(--color-ink)]'}`}
               >
                 {/* Header */}
                 <div className="p-4 text-white shrink-0 shadow-sm" style={{ backgroundColor: widgetColor }}>
@@ -2004,7 +2004,7 @@ export function LiveChatIntegration() {
                     <img
                       src={SAFE_IMAGE_URL_RE.test(avatarUrl) ? avatarUrl : DEFAULT_AVATAR_URL}
                       alt="Avatar"
-                      className="h-9 w-9 rounded-full border-2 border-white/60 object-cover shadow-xs"
+                      className="h-9 w-9 rounded-full border-2 border-white/60 object-cover shadow-none"
                     />
                     <div>
                       <div className="font-bold text-sm tracking-tight">{greetingTitle}</div>
@@ -2016,24 +2016,24 @@ export function LiveChatIntegration() {
                 {/* Form Body */}
                 <div
                   className={`flex-1 p-4 space-y-3 overflow-y-auto ${
-                    themeMode === 'dark' ? 'bg-slate-950/70' : 'bg-slate-50/70'
+                    themeMode === 'dark' ? 'bg-[var(--color-ink)]/70' : 'bg-[var(--color-accent-muted)]/70'
                   }`}
                 >
-                  <div className="border-b border-slate-200 pb-2">
-                    <div className="text-xs font-bold text-slate-900 dark:text-white">{preChatTitle}</div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{preChatDesc}</div>
+                  <div className="border-b border-[var(--color-border)] pb-2">
+                    <div className="text-xs font-bold text-[var(--color-ink)] dark:text-white">{preChatTitle}</div>
+                    <div className="text-[11px] text-[var(--color-ink-faint)] dark:text-[var(--color-ink-faint)] mt-0.5">{preChatDesc}</div>
                   </div>
 
                   {customPreChatFields.map((field) => (
                     <div key={field.name} className="space-y-1">
-                      <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                      <label className="block text-[11px] font-semibold text-[var(--color-ink)] dark:text-[var(--color-ink-faint)]">
                         {field.label} {field.required && <span className="text-red-500">*</span>}
                       </label>
                       {field.type === 'select' ? (
                         <select
                           value={simAnswers[field.name] || ''}
                           onChange={(e) => setSimAnswers({ ...simAnswers, [field.name]: e.target.value })}
-                          className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                          className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs text-[var(--color-ink)] dark:bg-[var(--color-ink)] dark:border-[var(--color-ink-muted)] dark:text-white"
                         >
                           <option value="">{field.placeholder || 'Select an option'}</option>
                           {field.options?.map((opt) => (
@@ -2048,7 +2048,7 @@ export function LiveChatIntegration() {
                           value={simAnswers[field.name] || ''}
                           onChange={(e) => setSimAnswers({ ...simAnswers, [field.name]: e.target.value })}
                           placeholder={field.placeholder || ''}
-                          className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                          className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs text-[var(--color-ink)] dark:bg-[var(--color-ink)] dark:border-[var(--color-ink-muted)] dark:text-white"
                         />
                       ) : (
                         <input
@@ -2056,7 +2056,7 @@ export function LiveChatIntegration() {
                           value={simAnswers[field.name] || ''}
                           onChange={(e) => setSimAnswers({ ...simAnswers, [field.name]: e.target.value })}
                           placeholder={field.placeholder || ''}
-                          className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                          className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-2.5 py-1.5 text-xs text-[var(--color-ink)] dark:bg-[var(--color-ink)] dark:border-[var(--color-ink-muted)] dark:text-white"
                         />
                       )}
                     </div>
@@ -2067,7 +2067,7 @@ export function LiveChatIntegration() {
                       type="button"
                       onClick={handleRunIntakeSimulation}
                       disabled={testingIntake}
-                      className="w-full rounded-md py-2 text-xs font-bold text-white shadow-sm transition-opacity hover:opacity-95"
+                      className="w-full rounded-[var(--radius-sm)] py-2 text-xs font-bold text-white shadow-sm transition-opacity hover:opacity-95"
                       style={{ backgroundColor: widgetColor }}
                     >
                       {testingIntake ? 'Evaluating Triage...' : preChatSubmitText}
@@ -2080,8 +2080,8 @@ export function LiveChatIntegration() {
                   <div
                     className={`py-1.5 text-center text-[10px] font-medium border-t ${
                       themeMode === 'dark'
-                        ? 'bg-slate-900 text-slate-400 border-slate-800'
-                        : 'bg-white text-slate-500 border-slate-200'
+                        ? 'bg-[var(--color-accent)] text-[var(--color-ink-faint)] border-[var(--color-ink)]'
+                        : 'bg-white text-[var(--color-ink-faint)] border-[var(--color-border)]'
                     }`}
                   >
                     Powered by <span className="font-semibold text-blue-600">Captain AI</span>
@@ -2091,9 +2091,9 @@ export function LiveChatIntegration() {
 
               {/* Simulation Result Box */}
               {simIntakeResult && (
-                <div className="rounded-xl border border-blue-200 bg-white p-3.5 shadow-sm space-y-2">
+                <div className="rounded-[var(--radius-lg)] border border-blue-200 bg-white p-3.5 shadow-sm space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-800">Triage & Routing Evaluation</span>
+                    <span className="text-xs font-bold text-[var(--color-ink)]">Triage & Routing Evaluation</span>
                     <span
                       className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase ${
                         simIntakeResult.valid ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
@@ -2114,19 +2114,19 @@ export function LiveChatIntegration() {
                   {simIntakeResult.valid && (
                     <div className="space-y-1.5 text-xs pt-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-500">Calculated Priority:</span>
+                        <span className="text-[var(--color-ink-faint)]">Calculated Priority:</span>
                         <span className="font-bold text-amber-700 uppercase">
                           {simIntakeResult.routing_result.priority}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-500">Target Team / Queue:</span>
+                        <span className="text-[var(--color-ink-faint)]">Target Team / Queue:</span>
                         <span className="font-semibold text-purple-700">
                           {simIntakeResult.routing_result.team_target || 'General Support Queue'}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-500">Attached Tags:</span>
+                        <span className="text-[var(--color-ink-faint)]">Attached Tags:</span>
                         <div className="flex gap-1">
                           {simIntakeResult.routing_result.tags.map((t) => (
                             <span key={t} className="rounded bg-blue-50 text-blue-700 px-1.5 py-0.2 text-[10px] font-mono">
@@ -2147,11 +2147,11 @@ export function LiveChatIntegration() {
 {/* TAB 4: SECURITY & IDENTITY VALIDATION */}
       {activeTab === 'security' && (
         <div className="space-y-6">
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-6 shadow-sm space-y-5">
+            <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-4">
               <div>
-                <h2 className="text-base font-semibold text-slate-900">User Identity Verification (HMAC-SHA256)</h2>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <h2 className="text-base font-semibold text-[var(--color-ink)]">User Identity Verification (HMAC-SHA256)</h2>
+                <p className="text-xs text-[var(--color-ink-faint)] mt-0.5">
                   Enforces cryptographic signature checks to prevent malicious actors from impersonating logged-in customers.
                 </p>
               </div>
@@ -2162,43 +2162,43 @@ export function LiveChatIntegration() {
                   onChange={(e) => setIdentityValidation(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                <div className="w-11 h-6 bg-[var(--color-border)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[var(--color-border)] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">HMAC Secret Key</label>
+                <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">HMAC Secret Key</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
                     value={hmacSecret}
                     onChange={(e) => setHmacSecret(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs font-mono focus:border-blue-500 focus:outline-none"
                     placeholder="whsec_..."
                   />
                   <button
                     onClick={() => copyToClipboard(hmacSecret, 'hmac')}
-                    className="rounded-lg border border-slate-300 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shrink-0"
+                    className="rounded-[var(--radius-md)] border border-[var(--color-border)] px-3.5 py-2 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-accent-muted)] shrink-0"
                   >
                     {copiedKey === 'hmac' ? 'Copied!' : 'Copy Key'}
                   </button>
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className="text-[11px] text-[var(--color-ink-faint)] mt-1">
                   Keep this secret safe on your server. Do not expose this secret in client-side HTML or JS.
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Whitelisted Domain</label>
+                <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Whitelisted Domain</label>
                 <input
                   type="text"
                   value={websiteDomain}
                   onChange={(e) => setWebsiteDomain(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
                   placeholder="newax.co"
                 />
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className="text-[11px] text-[var(--color-ink-faint)] mt-1">
                   Prevents unauthorized domains from embedding your live chat widget.
                 </p>
               </div>
@@ -2207,7 +2207,7 @@ export function LiveChatIntegration() {
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
+                  className="rounded-[var(--radius-md)] bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
                 >
                   {saving ? 'Saving...' : 'Save Security Settings'}
                 </button>
@@ -2216,16 +2216,16 @@ export function LiveChatIntegration() {
           </div>
 
           {/* Server-Side Implementation Examples */}
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-            <h3 className="text-sm font-semibold text-slate-900">How to generate HMAC identifier hash</h3>
-            <p className="text-xs text-slate-500">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-6 shadow-sm space-y-4">
+            <h3 className="text-sm font-semibold text-[var(--color-ink)]">How to generate HMAC identifier hash</h3>
+            <p className="text-xs text-[var(--color-ink-faint)]">
               When a user signs into your app, calculate the HMAC-SHA256 signature of their user identifier (e.g. email or user ID) using your HMAC secret key, then provide it to the SDK:
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <div className="text-xs font-semibold text-slate-700">Node.js / Express / Next.js</div>
-                <pre className="rounded-lg bg-slate-950 p-3 text-[11px] font-mono text-emerald-400 overflow-x-auto">
+                <div className="text-xs font-semibold text-[var(--color-ink)]">Node.js / Express / Next.js</div>
+                <pre className="rounded-[var(--radius-md)] bg-[var(--color-ink)] p-3 text-[11px] font-mono text-emerald-400 overflow-x-auto">
 {`const crypto = require('crypto');
 
 function getIdentifierHash(userId) {
@@ -2238,8 +2238,8 @@ function getIdentifierHash(userId) {
               </div>
 
               <div className="space-y-2">
-                <div className="text-xs font-semibold text-slate-700">Python / FastAPI / Django</div>
-                <pre className="rounded-lg bg-slate-950 p-3 text-[11px] font-mono text-emerald-400 overflow-x-auto">
+                <div className="text-xs font-semibold text-[var(--color-ink)]">Python / FastAPI / Django</div>
+                <pre className="rounded-[var(--radius-md)] bg-[var(--color-ink)] p-3 text-[11px] font-mono text-emerald-400 overflow-x-auto">
 {`import hmac
 import hashlib
 
@@ -2252,8 +2252,8 @@ def get_identifier_hash(user_id: str) -> str:
               </div>
             </div>
 
-            <div className="rounded-lg bg-slate-50 border border-slate-200 p-4 text-xs font-mono text-slate-700">
-              <div className="font-bold text-slate-900 mb-1">// Client-side SDK invocation:</div>
+            <div className="rounded-[var(--radius-md)] bg-[var(--color-accent-muted)] border border-[var(--color-border)] p-4 text-xs font-mono text-[var(--color-ink)]">
+              <div className="font-bold text-[var(--color-ink)] mb-1">// Client-side SDK invocation:</div>
               {`window.$chatwoot.setUser(user.id, {
   name: user.fullName,
   email: user.email,
@@ -2267,8 +2267,8 @@ def get_identifier_hash(user_id: str) -> str:
       {/* TAB 5: AUTOMATIONS & WORKING HOURS */}
       {activeTab === 'automations' && (
         <div className="space-y-6">
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-6">
-            <h2 className="text-base font-semibold text-slate-900 border-b border-slate-100 pb-3">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-6 shadow-sm space-y-6">
+            <h2 className="text-base font-semibold text-[var(--color-ink)] border-b border-[var(--color-border)] pb-3">
               Automations & Response Rules
             </h2>
 
@@ -2276,14 +2276,14 @@ def get_identifier_hash(user_id: str) -> str:
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-semibold text-slate-800">Auto Greeting Message</div>
-                  <div className="text-[11px] text-slate-500">Automatically post a welcome message when visitor opens live chat</div>
+                  <div className="text-xs font-semibold text-[var(--color-ink)]">Auto Greeting Message</div>
+                  <div className="text-[11px] text-[var(--color-ink-faint)]">Automatically post a welcome message when visitor opens live chat</div>
                 </div>
                 <input
                   type="checkbox"
                   checked={greetingEnabled}
                   onChange={(e) => setGreetingEnabled(e.target.checked)}
-                  className="rounded border-slate-300 text-blue-600"
+                  className="rounded border-[var(--color-border)] text-blue-600"
                 />
               </div>
               {greetingEnabled && (
@@ -2291,24 +2291,24 @@ def get_identifier_hash(user_id: str) -> str:
                   rows={2}
                   value={greetingMessage}
                   onChange={(e) => setGreetingMessage(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2.5 text-xs focus:border-blue-500 focus:outline-none"
                   placeholder="Welcome to our live chat! How can our support team help you today?"
                 />
               )}
             </div>
 
             {/* Out of office */}
-            <div className="space-y-3 pt-3 border-t border-slate-100">
+            <div className="space-y-3 pt-3 border-t border-[var(--color-border)]">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-semibold text-slate-800">Out of Office / Away Reply</div>
-                  <div className="text-[11px] text-slate-500">Send an automated reply when visitors message outside business hours</div>
+                  <div className="text-xs font-semibold text-[var(--color-ink)]">Out of Office / Away Reply</div>
+                  <div className="text-[11px] text-[var(--color-ink-faint)]">Send an automated reply when visitors message outside business hours</div>
                 </div>
                 <input
                   type="checkbox"
                   checked={outOfOfficeEnabled}
                   onChange={(e) => setOutOfOfficeEnabled(e.target.checked)}
-                  className="rounded border-slate-300 text-blue-600"
+                  className="rounded border-[var(--color-border)] text-blue-600"
                 />
               </div>
               {outOfOfficeEnabled && (
@@ -2316,49 +2316,49 @@ def get_identifier_hash(user_id: str) -> str:
                   rows={2}
                   value={outOfOfficeMessage}
                   onChange={(e) => setOutOfOfficeMessage(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2.5 text-xs focus:border-blue-500 focus:outline-none"
                   placeholder="Our team is currently offline. Please leave your email and message, and we will get back to you shortly!"
                 />
               )}
             </div>
 
             {/* CSAT */}
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+            <div className="pt-3 border-t border-[var(--color-border)] flex items-center justify-between">
               <div>
-                <div className="text-xs font-semibold text-slate-800">Customer Satisfaction Survey (CSAT)</div>
-                <div className="text-[11px] text-slate-500">Prompt visitors to rate support satisfaction (ratings 1-5 <Star className="h-3 w-3 text-amber-400 fill-current inline" />) once conversation is marked resolved</div>
+                <div className="text-xs font-semibold text-[var(--color-ink)]">Customer Satisfaction Survey (CSAT)</div>
+                <div className="text-[11px] text-[var(--color-ink-faint)]">Prompt visitors to rate support satisfaction (ratings 1-5 <Star className="h-3 w-3 text-amber-400 fill-current inline" />) once conversation is marked resolved</div>
               </div>
               <input
                 type="checkbox"
                 checked={csatEnabled}
                 onChange={(e) => setCsatEnabled(e.target.checked)}
-                className="rounded border-slate-300 text-blue-600"
+                className="rounded border-[var(--color-border)] text-blue-600"
               />
             </div>
 
             {/* Working Hours */}
-            <div className="pt-3 border-t border-slate-100 space-y-3">
+            <div className="pt-3 border-t border-[var(--color-border)] space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-semibold text-slate-800">Working Hours Enforcement</div>
-                  <div className="text-[11px] text-slate-500">Set active support hours to toggle agent availability status</div>
+                  <div className="text-xs font-semibold text-[var(--color-ink)]">Working Hours Enforcement</div>
+                  <div className="text-[11px] text-[var(--color-ink-faint)]">Set active support hours to toggle agent availability status</div>
                 </div>
                 <input
                   type="checkbox"
                   checked={workingHoursEnabled}
                   onChange={(e) => setWorkingHoursEnabled(e.target.checked)}
-                  className="rounded border-slate-300 text-blue-600"
+                  className="rounded border-[var(--color-border)] text-blue-600"
                 />
               </div>
 
               {workingHoursEnabled && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Start Hour</label>
+                    <label className="block text-[11px] font-semibold text-[var(--color-ink)] mb-1">Start Hour</label>
                     <select
                       value={workingHoursStart}
                       onChange={(e) => setWorkingHoursStart(Number(e.target.value))}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs"
+                      className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-1.5 text-xs"
                     >
                       {Array.from({ length: 24 }).map((_, i) => (
                         <option key={i} value={i}>
@@ -2368,11 +2368,11 @@ def get_identifier_hash(user_id: str) -> str:
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">End Hour</label>
+                    <label className="block text-[11px] font-semibold text-[var(--color-ink)] mb-1">End Hour</label>
                     <select
                       value={workingHoursEnd}
                       onChange={(e) => setWorkingHoursEnd(Number(e.target.value))}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs"
+                      className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-1.5 text-xs"
                     >
                       {Array.from({ length: 24 }).map((_, i) => (
                         <option key={i} value={i}>
@@ -2382,12 +2382,12 @@ def get_identifier_hash(user_id: str) -> str:
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Timezone</label>
+                    <label className="block text-[11px] font-semibold text-[var(--color-ink)] mb-1">Timezone</label>
                     <input
                       type="text"
                       value={timezone}
                       onChange={(e) => setTimezone(e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs"
+                      className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-1.5 text-xs"
                       placeholder="UTC or America/New_York"
                     />
                   </div>
@@ -2399,7 +2399,7 @@ def get_identifier_hash(user_id: str) -> str:
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
+                className="rounded-[var(--radius-md)] bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
               >
                 {saving ? 'Saving...' : 'Save Automation Rules'}
               </button>
@@ -2412,64 +2412,64 @@ def get_identifier_hash(user_id: str) -> str:
       {activeTab === 'simulator' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-6 space-y-6">
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-6 shadow-sm space-y-4">
               <div>
-                <h2 className="text-base font-semibold text-slate-900">Live Visitor Test Simulator</h2>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <h2 className="text-base font-semibold text-[var(--color-ink)]">Live Visitor Test Simulator</h2>
+                <p className="text-xs text-[var(--color-ink-faint)] mt-0.5">
                   Send a live test message as a website visitor. This immediately registers a lead, triggers your live chat greeting, and routes into the Shared Inbox.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Visitor Full Name</label>
+                  <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Visitor Full Name</label>
                   <input
                     type="text"
                     value={simName}
                     onChange={(e) => setSimName(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
                     placeholder="Alex Mercer"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Visitor Email</label>
+                  <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Visitor Email</label>
                   <input
                     type="email"
                     value={simEmail}
                     onChange={(e) => setSimEmail(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
                     placeholder="alex.mercer@example.com"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Phone Number</label>
+                  <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Phone Number</label>
                   <input
                     type="text"
                     value={simPhone}
                     onChange={(e) => setSimPhone(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
                     placeholder="+1 (555) 234-5678"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Company</label>
+                  <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Company</label>
                   <input
                     type="text"
                     value={simCompany}
                     onChange={(e) => setSimCompany(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
                     placeholder="Acme Corporation"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Visitor Message</label>
+                <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Visitor Message</label>
                 <textarea
                   rows={3}
                   value={simMessage}
                   onChange={(e) => setSimMessage(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2.5 text-xs focus:border-blue-500 focus:outline-none"
                   placeholder="Hi! I have a question about your enterprise live chat features and setup."
                 />
               </div>
@@ -2478,14 +2478,14 @@ def get_identifier_hash(user_id: str) -> str:
                 <button
                   onClick={handleRunSimulator}
                   disabled={simulating}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                  className="rounded-[var(--radius-md)] bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
                 >
                   <span>{simulating ? 'Sending...' : 'Submit Visitor Message'}</span>
                 </button>
                 {simResult && (
                   <Link
                     to="/"
-                    className="rounded-lg border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 flex items-center gap-1.5"
+                    className="rounded-[var(--radius-md)] border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 flex items-center gap-1.5"
                   >
                     <span className="flex items-center gap-1">View in Shared Inbox <ArrowRight className="h-3.5 w-3.5" /></span>
                   </Link>
@@ -2493,7 +2493,7 @@ def get_identifier_hash(user_id: str) -> str:
               </div>
 
               {simResult && (
-                <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3.5 text-xs text-emerald-900 space-y-1">
+                <div className="rounded-[var(--radius-md)] bg-emerald-50 border border-emerald-200 p-3.5 text-xs text-emerald-900 space-y-1">
                   <div className="font-bold flex items-center gap-1.5">
                     <span className="flex items-center gap-1 text-emerald-700 font-semibold"><Check className="h-3.5 w-3.5 text-emerald-600" /> Conversation Created:</span>
                     <span className="font-mono text-emerald-700">{simResult.conversationId.slice(0, 12)}...</span>
@@ -2506,11 +2506,11 @@ def get_identifier_hash(user_id: str) -> str:
 
           {/* Real-time Events Log */}
           <div className="lg:col-span-6">
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900">Recent Live Chat Events</h3>
-                  <p className="text-xs text-slate-500">Live incoming visitor messages and agent responses</p>
+                  <h3 className="text-sm font-semibold text-[var(--color-ink)]">Recent Live Chat Events</h3>
+                  <p className="text-xs text-[var(--color-ink-faint)]">Live incoming visitor messages and agent responses</p>
                 </div>
                 <button
                   onClick={async () => {
@@ -2524,7 +2524,7 @@ def get_identifier_hash(user_id: str) -> str:
               </div>
 
               {events.length === 0 ? (
-                <div className="py-8 text-center text-xs text-slate-400">
+                <div className="py-8 text-center text-xs text-[var(--color-ink-faint)]">
                   No live chat message events logged yet. Use the simulator on the left to start a conversation!
                 </div>
               ) : (
@@ -2542,12 +2542,12 @@ def get_identifier_hash(user_id: str) -> str:
                           >
                             {ev.direction.toUpperCase()}
                           </span>
-                          <span className="text-xs font-semibold text-slate-800">{ev.senderName}</span>
-                          <span className="text-[10px] text-slate-400">
+                          <span className="text-xs font-semibold text-[var(--color-ink)]">{ev.senderName}</span>
+                          <span className="text-[10px] text-[var(--color-ink-faint)]">
                             {new Date(ev.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-600 line-clamp-2">{ev.body}</p>
+                        <p className="text-xs text-[var(--color-ink-muted)] line-clamp-2">{ev.body}</p>
                       </div>
                       <Link
                         to="/"

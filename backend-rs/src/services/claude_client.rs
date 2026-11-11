@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 //! The Anthropic Messages client.
 //!
@@ -493,6 +493,87 @@ pub async fn call_claude(
         expect_json: false,
     };
     Ok(complete(state, &request).await?.text)
+}
+
+/// Convenience wrapper: calls Claude with a single prompt and returns the text.
+/// Used by services that need a simple text response without the full MessageRequest.
+pub async fn generate_text(
+    client: &reqwest::Client,
+    prompt: &str,
+    max_tokens: u32,
+) -> Result<String, ClaudeError> {
+    let payload = json!({
+        "model": "claude-sonnet-4-20250514",
+        "max_tokens": max_tokens,
+        "messages": [{"role": "user", "content": prompt}]
+    });
+    let payload = strip_nulls(payload);
+
+    // Read API key from env; this function is used by callers that don't have AppState
+    let api_key = std::env::var("ANTHROPIC_API_KEY")
+        .or_else(|_| std::env::var("CLAUDE_API_KEY"))
+        .or_else(|_| std::env::var("ANTHROPIC_AUTH_TOKEN"))
+        .map_err(|_| ClaudeError::NotConfigured(
+            "ANTHROPIC_API_KEY is not set. No request was made to api.anthropic.com.".to_string(),
+        ))?;
+    if api_key.trim().is_empty() {
+        return Err(ClaudeError::NotConfigured(
+            "ANTHROPIC_API_KEY is empty. No request was made.".to_string(),
+        ));
+    }
+
+    let url = format!("{}/v1/messages", DEFAULT_BASE_URL);
+    let response = client
+        .post(&url)
+        .header("x-api-key", &api_key)
+        .header("anthropic-version", DEFAULT_API_VERSION)
+        .header("content-type", "application/json")
+        .timeout(DEFAULT_TIMEOUT)
+        .json(&payload)
+        .send()
+        .await;
+
+    let response = match response {
+        Ok(resp) => resp,
+        Err(err) => return Err(ClaudeError::Transport(err.to_string())),
+    };
+
+    let status = response.status();
+    let body: Value = match response.json::<Value>().await {
+        Ok(body) => body,
+        Err(err) => {
+            return Err(ClaudeError::Api {
+                status: Some(status.as_u16()),
+                error_type: if status.is_success() { "invalid_json_body".to_string() } else { "http_error".to_string() },
+                message: format!("Anthropic answered HTTP {} with a non-JSON body: {err}", status.as_u16()),
+                raw: Value::Null,
+            });
+        }
+    };
+
+    if !status.is_success() {
+        let error_msg = body.get("error").and_then(|e| e.get("message")).and_then(Value::as_str).unwrap_or("Unknown error");
+        return Err(ClaudeError::Api {
+            status: Some(status.as_u16()),
+            error_type: body.get("error").and_then(|e| e.get("type")).and_then(Value::as_str).unwrap_or("error").to_string(),
+            message: error_msg.to_string(),
+            raw: body,
+        });
+    }
+
+    let text = body
+        .get("content")
+        .and_then(|c| c.as_array())
+        .and_then(|arr| arr.first())
+        .and_then(|block| block.get("text"))
+        .and_then(Value::as_str)
+        .unwrap_or("");
+
+    if text.trim().is_empty() {
+        return Err(ClaudeError::EmptyCompletion { raw: body });
+    }
+
+    Ok(text.to_string())
 }
 
 /// A completion that must parse as JSON: a cut-off or prose answer is an error,

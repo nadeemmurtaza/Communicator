@@ -1,4 +1,4 @@
-use std::env;
+﻿use std::env;
 
 #[derive(Clone, Debug)]
 pub struct Config {
@@ -93,16 +93,9 @@ impl Config {
     pub fn from_env() -> Self {
         dotenvy::dotenv().ok();
 
-        let raw_db = env::var("RUST_DATABASE_URL")
+        let database_url = env::var("RUST_DATABASE_URL")
             .or_else(|_| env::var("DATABASE_URL"))
-            .unwrap_or_else(|_| "sqlite://communicator.db?mode=rwc".to_string());
-        
-        let database_url = if raw_db.contains("sqlite") {
-            raw_db
-        } else {
-            // For desktop & standalone portable mode, use high-speed embedded SQLite
-            "sqlite://communicator.db?mode=rwc".to_string()
-        };
+            .unwrap_or_else(|_| "postgresql://communicator_app:C0mm@nicat0r!2026#Secure@localhost:5432/communicator".to_string());
         let host = env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
         let port = env::var("PORT")
             .ok()

@@ -1,0 +1,141 @@
+// Receivables: CreditNote/DebitNote, customer credit limits, and dunning —
+// RETAIL-ERP.md R18's own named gap for the `invoicing` module
+// (docs/implementation/finance-accounting/145-receivables-credit-limits-dunning.md).
+//
+// DEVIATION from that doc's own literal sketch, documented in full in the
+// doc's own shipped-status note: R18 pairs `CreditNote` with `Invoice`, but
+// this codebase's actual `Invoice` model (invoicing.prisma) is a bounded,
+// tradingpartners-scoped MVP that is never posted to the general ledger and
+// carries no `organizationId`/`retailBrandId` of its own. The real, already-
+// working AR ledger (`accounting/aging.ts`, `gl-reports.service.ts`'s
+// `agedReceivables()`) keys off `Contact`/`Order`, not `Invoice`. So every
+// model below keys `customerId` to `Contact.id` and the document it credits
+// to `Order.id` (`orderId`, not `invoiceId`) — the only choice that makes
+// this doc's own Acceptance criterion #1 ("reconciling against
+// accounting/aging.ts's own bucket totals") true rather than aspirational.
+// `DebitNote` needed no such change: `supplierId`/`supplierBillId` already
+// match `SupplierBill`/`agedPayables()` exactly as the doc sketched them.
+//
+// Every FK below is a bare scalar, never a Prisma `@relation` — mirroring
+// `Invoice.tradingPartnerId`'s own established convention (invoicing.prisma's
+// file header: "so this file adds no coupling to any other module"). This
+// file can be read, tested or dropped independently of `orders`, `crm`,
+// `purchasing` or `accounting`.
+//
+// No `organizationId`/`retailBrandId`/`branchNodeId`/`costCentreId` column
+// here either — a further deviation from the doc's own sketch, for the same
+// reason: `Order`, `Invoice`, `PurchaseOrder` and `SupplierBill` (the sibling
+// documents these two correct) carry none of those columns themselves; only
+// `JournalLine` does (accounting.prisma), set once, at post time, by
+// `PostingRulesSubscriber` — exactly where every other document's posting
+// already sets them. Declaring `CreditNote`/`DebitNote` undimensioned here,
+// like their siblings, is CLAUDE.md's "Every column or none" lens answered
+// honestly rather than a column added for a dimension nothing else sets.
+
+enum CreditDebitNoteStatus {
+  DRAFT
+  ISSUED
+  APPLIED
+  VOID
+}
+
+/// Reduces what a customer owes — a return, a pricing correction, a
+/// goodwill credit. `amountMinor` is snapshotted at creation and never
+/// recomputed later, the same "a record keeps the meaning it had when
+/// created" discipline every other financial document in this repository
+/// already follows.
+model CreditNote {
+  id               String                @id @default(cuid())
+  /// Gapless per fiscal year within this node — documentNumber()'s own
+  /// convention (document-number.ts), collapsing to the identical
+  /// PREFIX-YEAR-SEQ a Solo deployment has always seen.
+  number           String                @unique
+  customerId       String // Contact.id — bare scalar, see file header
+  /// The Order this credits, if any — nullable: a goodwill credit may cite
+  /// none. Renamed from the doc's own `invoiceId`; see file header.
+  orderId          String?
+  /// Set only once APPLIED against an Order OTHER than `orderId` — e.g. a
+  /// return credited against invoice A later applied to invoice B.
+  appliedToOrderId String?
+  amountMinor      Int
+  reason           String
+  status           CreditDebitNoteStatus @default(DRAFT)
+  /// The "threshold nobody approves alone" lens: who created this note —
+  /// never its own approver (CreditNotesService.approve()).
+  createdById      String
+  approvedById     String?
+  issuedAt         DateTime?
+  voidedAt         DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  @@index([customerId, status])
+  @@index([orderId])
+}
+
+/// The mirror on the supplier side of the ledger — reduces what this
+/// organization owes a supplier (a return, an overcharge correction). Never
+/// conflated with CreditNote: the two sit on opposite sides of the same
+/// double-entry system (R15).
+model DebitNote {
+  id             String                @id @default(cuid())
+  number         String                @unique
+  supplierId     String // Supplier.id — bare scalar
+  supplierBillId String? // SupplierBill.id — bare scalar, nullable
+  amountMinor    Int
+  reason         String
+  status         CreditDebitNoteStatus @default(DRAFT)
+  createdById    String
+  issuedAt       DateTime?
+  voidedAt       DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@index([supplierId, status])
+}
+
+/// A policy row, checked at the one place a sale can be refused for it —
+/// never inferred, always a deliberate manual value.
+model CustomerCreditTerm {
+  id               String   @id @default(cuid())
+  customerId       String   @unique // Contact.id
+  creditLimitMinor Int
+  paymentTermDays  Int      @default(30)
+  /// A manual override — never auto-set by a missed payment without a human
+  /// decision, per "the threshold nobody approves alone" applied to a hold
+  /// instead of a spend.
+  isOnHold         Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([isOnHold])
+}
+
+/// Days-overdue thresholds and which template fires at each — a
+/// client-editable policy row, the identical "rows over enums" discipline
+/// every other policy in this repository already follows. One row per
+/// deployment today (enforced at the service layer, not a unique
+/// constraint, so a future per-brand policy needs no schema change — see
+/// this doc's own "second legal entity" lens).
+model DunningPolicy {
+  id        String   @id @default(cuid())
+  /// [{ daysOverdue: 7, templateKey: "gentle-reminder" }, ...] — ascending
+  /// by daysOverdue, validated by DunningService.
+  stepsJson Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// One row per (order, step) a dunning notice has actually gone out for —
+/// the idempotency guard that stops the nightly sweep from re-sending a
+/// step already sent, the same discipline every other registered source
+/// against a nightly watcher already requires.
+model DunningEvent {
+  id        String   @id @default(cuid())
+  orderId   String // Order.id — bare scalar
+  stepIndex Int
+  sentAt    DateTime @default(now())
+
+  @@unique([orderId, stepIndex])
+  @@index([orderId])
+}

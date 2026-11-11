@@ -1,4 +1,4 @@
-use crate::db::AppState;
+﻿use crate::db::AppState;
 use crate::services::inbound::{self, InboundMessage};
 use crate::services::signatures::{
     secrets_match, validate_line_signature, validate_meta_signature, validate_tiktok_signature,
@@ -275,7 +275,8 @@ fn extract_meta_payload_id(msg: &Value) -> Option<String> {
 fn meta_status_to_message_status(meta_status: &str) -> Option<&'static str> {
     match meta_status {
         "sent" => Some("sent"),
-        "delivered" | "read" => Some("delivered"),
+        "delivered" => Some("delivered"),
+        "read" => Some("read"),
         "failed" => Some("failed"),
         _ => None,
     }
@@ -433,25 +434,46 @@ async fn apply_meta_status(state: &AppState, status_event: &Value) -> Result<boo
         return Ok(applied);
     };
 
-    let mut set = Vec::new();
-    let mut query = format!("UPDATE broadcast_recipients SET status = '{new_status}'");
-    match meta_status {
-        "sent" => set.push(format!("sent_at = COALESCE(sent_at, '{event_at_text}')")),
-        "delivered" => set.push(format!("delivered_at = COALESCE(delivered_at, '{event_at_text}')")),
-        "read" => set.push(format!("read_at = COALESCE(read_at, '{event_at_text}')")),
+    let report = match meta_status {
+        "sent" => sqlx::query(
+            "UPDATE broadcast_recipients SET status = ?, sent_at = COALESCE(sent_at, ?) WHERE id = ?",
+        )
+        .bind(new_status)
+        .bind(&event_at_text)
+        .bind(&recipient_id)
+        .execute(&state.db)
+        .await?,
+        "delivered" => sqlx::query(
+            "UPDATE broadcast_recipients SET status = ?, delivered_at = COALESCE(delivered_at, ?) WHERE id = ?",
+        )
+        .bind(new_status)
+        .bind(&event_at_text)
+        .bind(&recipient_id)
+        .execute(&state.db)
+        .await?,
+        "read" => sqlx::query(
+            "UPDATE broadcast_recipients SET status = ?, read_at = COALESCE(read_at, ?) WHERE id = ?",
+        )
+        .bind(new_status)
+        .bind(&event_at_text)
+        .bind(&recipient_id)
+        .execute(&state.db)
+        .await?,
         "failed" => {
             let reason = failure_reason.unwrap_or_else(|| "Message delivery failed".to_string());
-            let escaped = reason.replace('\'', "''");
-            set.push(format!("error = '{escaped}'"));
+            sqlx::query(
+                "UPDATE broadcast_recipients SET status = ?, error = ? WHERE id = ?",
+            )
+            .bind(new_status)
+            .bind(&reason)
+            .bind(&recipient_id)
+            .execute(&state.db)
+            .await?
         }
-        _ => {}
-    }
-    if !set.is_empty() {
-        query.push_str(", ");
-        query.push_str(&set.join(", "));
-    }
-    query.push_str(&format!(" WHERE id = '{recipient_id}'"));
-    let report = sqlx::query(&query).execute(&state.db).await?;
+        _ => {
+            return Ok(applied);
+        }
+    };
     match report.rows_affected() {
         1 => applied = true,
         rows => {
@@ -483,21 +505,25 @@ async fn apply_meta_status(state: &AppState, status_event: &Value) -> Result<boo
             }
 
             if let Some(column) = counter {
+                // Column name comes from a closed match (delivered_count, read_count, failed_count).
+                let query_str = format!(
+                    "UPDATE broadcasts SET {column} = COALESCE({column}, 0) + 1 WHERE id = ?"
+                );
                 crate::db::report_write(
-                    sqlx::query(&format!(
-                        "UPDATE broadcasts SET {column} = COALESCE({column}, 0) + 1 WHERE id = '{broadcast_id}'"
-                    ))
-                    .execute(&state.db)
-                    .await
-                    .map(|report| report.rows_affected()),
+                    sqlx::query(&query_str)
+                        .bind(&broadcast_id)
+                        .execute(&state.db)
+                        .await
+                        .map(|report| report.rows_affected()),
                     &format!("broadcasts.{column} after a Meta {meta_status} receipt"),
                 );
             }
             if delivered_increment {
                 crate::db::report_write(
-                    sqlx::query(&format!(
-                        "UPDATE broadcasts SET delivered_count = COALESCE(delivered_count, 0) + 1 WHERE id = '{broadcast_id}'"
-                    ))
+                    sqlx::query(
+                        "UPDATE broadcasts SET delivered_count = COALESCE(delivered_count, 0) + 1 WHERE id = ?",
+                    )
+                    .bind(&broadcast_id)
                     .execute(&state.db)
                     .await
                     .map(|report| report.rows_affected()),
@@ -546,10 +572,10 @@ async fn verify_channel_info(state: &AppState, profile: &Value) -> Result<String
         );
     }
 
-    // The same row `refresh_channel_info` writes: its UPDATE targets
-    // `(SELECT rowid FROM integration_settings LIMIT 1)`.
+    // The same row `refresh_channel_info` writes: targets the first row in
+    // integration_settings (PostgreSQL-compatible — no SQLite rowid).
     let row = sqlx::query(
-        "SELECT whatsapp_display_number, whatsapp_verified_name FROM integration_settings ORDER BY rowid LIMIT 1",
+        "SELECT whatsapp_display_number, whatsapp_verified_name FROM integration_settings LIMIT 1",
     )
     .fetch_optional(&state.db)
     .await
@@ -580,7 +606,7 @@ async fn verify_channel_info(state: &AppState, profile: &Value) -> Result<String
 
 /// Resolve brand_id from a WhatsApp sender phone number.
 /// Looks up the inbox for this channel, then gets the brand_id.
-async fn resolve_whatsapp_brand(pool: &sqlx::SqlitePool, from_num: &str) -> Option<String> {
+async fn resolve_whatsapp_brand(pool: &sqlx::PgPool, from_num: &str) -> Option<String> {
     // Try to find the conversation for this sender, which may have a brand_id
     let conv = sqlx::query(r#"
         SELECT c.brand_id FROM conversations c
@@ -622,9 +648,11 @@ async fn resolve_whatsapp_brand(pool: &sqlx::SqlitePool, from_num: &str) -> Opti
     None
 }
 
-/// Sync customer profile data from Meta contacts array to whatsapp_customer_profiles
+/// Sync customer profile data from Meta contacts array to whatsapp_customer_profiles.
+/// Uses SELECT-first pattern: if a profile for this wa_id already exists, update it;
+/// otherwise insert a new row. This avoids SQLite-only `INSERT OR REPLACE` syntax.
 async fn sync_whatsapp_customer_profile(
-    pool: &sqlx::SqlitePool,
+    pool: &sqlx::PgPool,
     brand_id: &str,
     wa_id: &str,
     profile_name: &str,
@@ -632,24 +660,56 @@ async fn sync_whatsapp_customer_profile(
     about: &str,
 ) {
     let now = chrono::Utc::now().to_rfc3339();
-    let id = uuid::Uuid::new_v4().simple().to_string();
 
-    let _ = sqlx::query(
-        "INSERT OR REPLACE INTO whatsapp_customer_profiles \
-         (id, wa_id, brand_id, profile_name, profile_picture_url, about, last_fetched_at, created_at, updated_at) \
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    // Check if a profile for this wa_id already exists
+    let existing = sqlx::query(
+        "SELECT id FROM whatsapp_customer_profiles WHERE wa_id = ? LIMIT 1",
     )
-    .bind(&id)
     .bind(wa_id)
-    .bind(brand_id)
-    .bind(profile_name)
-    .bind(profile_picture_url)
-    .bind(about)
-    .bind(&now)
-    .bind(&now)
-    .bind(&now)
-    .execute(pool)
+    .fetch_optional(pool)
     .await;
+
+    match existing {
+        Ok(Some(row)) => {
+            // Update the existing profile
+            let existing_id: String = row.try_get("id").unwrap_or_default();
+            let _ = sqlx::query(
+                "UPDATE whatsapp_customer_profiles \
+                 SET brand_id = ?, profile_name = ?, profile_picture_url = ?, about = ?, \
+                     last_fetched_at = ?, updated_at = ? \
+                 WHERE id = ?",
+            )
+            .bind(brand_id)
+            .bind(profile_name)
+            .bind(profile_picture_url)
+            .bind(about)
+            .bind(&now)
+            .bind(&now)
+            .bind(&existing_id)
+            .execute(pool)
+            .await;
+        }
+        _ => {
+            // Insert a new profile
+            let id = uuid::Uuid::new_v4().simple().to_string();
+            let _ = sqlx::query(
+                "INSERT INTO whatsapp_customer_profiles \
+                 (id, wa_id, brand_id, profile_name, profile_picture_url, about, last_fetched_at, created_at, updated_at) \
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            )
+            .bind(&id)
+            .bind(wa_id)
+            .bind(brand_id)
+            .bind(profile_name)
+            .bind(profile_picture_url)
+            .bind(about)
+            .bind(&now)
+            .bind(&now)
+            .bind(&now)
+            .execute(pool)
+            .await;
+        }
+    }
 }
 
 /// Process WhatsApp automation for an inbound message

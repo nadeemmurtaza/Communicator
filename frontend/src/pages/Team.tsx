@@ -318,10 +318,10 @@ export function Team() {
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex items-center gap-1 rounded-lg bg-slate-200/80 p-1 text-xs font-semibold">
+        <div className="flex items-center gap-1 rounded-[var(--radius-md)] bg-[var(--color-border)]/80 p-1 text-xs font-semibold">
           <button
             onClick={() => setActiveTab('members')}
-            className={`rounded-md px-3.5 py-1.5 transition-all ${
+            className={`rounded-[var(--radius-sm)] px-3.5 py-1.5 transition-all ${
               activeTab === 'members'
                 ? 'bg-[var(--color-surface)] text-blue-600 shadow-sm'
                 : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
@@ -331,7 +331,7 @@ export function Team() {
           </button>
           <button
             onClick={() => setActiveTab('roles')}
-            className={`rounded-md px-3.5 py-1.5 transition-all ${
+            className={`rounded-[var(--radius-sm)] px-3.5 py-1.5 transition-all ${
               activeTab === 'roles'
                 ? 'bg-[var(--color-surface)] text-blue-600 shadow-sm'
                 : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
@@ -341,7 +341,7 @@ export function Team() {
           </button>
           <button
             onClick={() => setActiveTab('sso')}
-            className={`rounded-md px-3.5 py-1.5 transition-all ${
+            className={`rounded-[var(--radius-sm)] px-3.5 py-1.5 transition-all ${
               activeTab === 'sso'
                 ? 'bg-[var(--color-surface)] text-blue-600 shadow-sm'
                 : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
@@ -353,7 +353,7 @@ export function Team() {
       </div>
 
       {success && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-800 flex items-center justify-between">
+        <div className="rounded-[var(--radius-md)] border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-800 flex items-center justify-between">
           <span className="flex items-center gap-1.5">
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             <span>{success}</span>
@@ -365,7 +365,7 @@ export function Team() {
       )}
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs text-red-800 flex items-center justify-between">
+        <div className="rounded-[var(--radius-md)] border border-red-200 bg-red-50 p-3.5 text-xs text-red-800 flex items-center justify-between">
           <span className="flex items-center gap-1.5">
             <AlertTriangle className="h-4 w-4 text-red-600" />
             <span>{error}</span>
@@ -380,7 +380,7 @@ export function Team() {
       {activeTab === 'members' && (
         <div className="space-y-6">
           {/* Add Team Member Card */}
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm space-y-4">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm space-y-4">
             <h2 className="text-sm font-semibold text-[var(--color-ink)]">Invite New Team Member</h2>
             <form onSubmit={submitMember} className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div>
@@ -390,7 +390,7 @@ export function Team() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Jane Doe"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
                 />
               </div>
 
@@ -401,7 +401,7 @@ export function Team() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="jane@company.com"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
                 />
               </div>
 
@@ -410,7 +410,7 @@ export function Team() {
                 <select
                   value={memberRole}
                   onChange={(e) => setMemberRole(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-2 text-xs focus:border-blue-500 focus:outline-none capitalize"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs focus:border-blue-500 focus:outline-none capitalize"
                 >
                   {roles.map((r) => (
                     <option key={r.name} value={r.name}>
@@ -424,7 +424,7 @@ export function Team() {
                 <button
                   type="submit"
                   disabled={savingMember || !name.trim()}
-                  className="w-full rounded-lg bg-blue-600 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
+                  className="w-full rounded-[var(--radius-md)] bg-blue-600 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
                 >
                   {savingMember ? 'Adding...' : '+ Invite Member'}
                 </button>
@@ -433,7 +433,7 @@ export function Team() {
           </div>
 
           {/* Members Table */}
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm overflow-hidden">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm overflow-hidden">
             {loading ? (
               <div className="p-12 text-center text-xs text-[var(--color-ink-muted)]">
                 <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-blue-600 border-r-transparent"></div>
@@ -442,7 +442,7 @@ export function Team() {
             ) : !members || members.length === 0 ? (
               <div className="p-12 text-center text-xs text-[var(--color-ink-muted)]">
                 <div className="flex justify-center"><Users className="h-10 w-10 text-[var(--color-ink-muted)] mb-1" /></div>
-                <div className="font-semibold text-slate-800 mt-2">No Team Members Found</div>
+                <div className="font-semibold text-[var(--color-ink)] mt-2">No Team Members Found</div>
                 <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">
                   Add team members above to route conversations to human specialists.
                 </p>
@@ -482,7 +482,7 @@ export function Team() {
                               <select
                                 value={currentRoleName}
                                 onChange={(e) => handleRoleChange(m.id, e.target.value)}
-                                className="rounded-md border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:outline-none"
+                                className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-xs font-semibold text-[var(--color-ink)] focus:border-blue-500 focus:outline-none"
                               >
                                 {roles.map((r) => (
                                   <option key={r.name} value={r.name}>
@@ -493,7 +493,7 @@ export function Team() {
                               <button
                                 type="button"
                                 onClick={() => setInspectingMember(m)}
-                                className="rounded bg-slate-100 px-2 py-1 text-[10px] font-semibold text-[var(--color-ink-muted)] hover:bg-slate-200"
+                                className="rounded bg-[var(--color-accent-muted)] px-2 py-1 text-[10px] font-semibold text-[var(--color-ink-muted)] hover:bg-[var(--color-border)]"
                               >
                                 {currentRoleObj ? `${currentRoleObj.permissions_count} perms` : 'View Perms'}
                               </button>
@@ -544,7 +544,7 @@ export function Team() {
             </div>
             <button
               onClick={openCreateRoleModal}
-              className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow hover:bg-blue-700 flex items-center gap-1.5"
+              className="rounded-[var(--radius-md)] bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow hover:bg-blue-700 flex items-center gap-1.5"
             >
               <span>+ Create Custom Role</span>
             </button>
@@ -555,14 +555,14 @@ export function Team() {
             {roles.map((role) => (
               <div
                 key={role.id}
-                className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all space-y-4"
+                className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm flex flex-col justify-between hover:border-[var(--color-border)] transition-all space-y-4"
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <span
                       className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                         role.is_system_role
-                          ? 'bg-slate-100 text-[var(--color-ink)] border border-[var(--color-border)]'
+                          ? 'bg-[var(--color-accent-muted)] text-[var(--color-ink)] border border-[var(--color-border)]'
                           : 'bg-purple-50 text-purple-700 border border-purple-200'
                       }`}
                     >
@@ -594,7 +594,7 @@ export function Team() {
                         </span>
                       ))}
                       {role.permissions.length > 4 && (
-                        <span className="rounded bg-slate-100 px-1.5 py-0.2 text-[10px] font-semibold text-[var(--color-ink-muted)]">
+                        <span className="rounded bg-[var(--color-accent-muted)] px-1.5 py-0.2 text-[10px] font-semibold text-[var(--color-ink-muted)]">
                           +{role.permissions.length - 4} more
                         </span>
                       )}
@@ -635,7 +635,7 @@ export function Team() {
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-5">
             <div className="space-y-1">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-blue-600 font-bold text-lg">
+                <div className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-lg)] bg-blue-100 text-blue-600 font-bold text-lg">
                   <Key className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
@@ -659,11 +659,11 @@ export function Team() {
                 className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold border ${
                   ssoEnabled
                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : 'bg-slate-100 text-[var(--color-ink-muted)] border-[var(--color-border)]'
+                    : 'bg-[var(--color-accent-muted)] text-[var(--color-ink-muted)] border-[var(--color-border)]'
                 }`}
               >
                 <span
-                  className={`h-2 w-2 rounded-full ${ssoEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}
+                  className={`h-2 w-2 rounded-full ${ssoEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-[var(--color-ink-faint)]'}`}
                 />
                 {ssoEnabled ? 'SSO Enforced' : 'SSO Inactive'}
               </span>
@@ -672,7 +672,7 @@ export function Team() {
                 type="button"
                 onClick={handleRunSSOTest}
                 disabled={testingSso}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--color-ink)] shadow-xs hover:bg-[var(--color-page)] disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-1.5 text-xs font-semibold text-[var(--color-ink)] shadow-none hover:bg-[var(--color-page)] disabled:opacity-50"
               >
                 {testingSso ? 'Testing Connection...' : <span className="flex items-center gap-1"><Zap className="h-3.5 w-3.5 text-amber-500" /> Test Connection</span>}
               </button>
@@ -681,7 +681,7 @@ export function Team() {
 
           <form onSubmit={handleSaveSSO} className="space-y-6">
             {/* Identity Provider Presets */}
-            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm space-y-4">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm space-y-4">
               <div>
                 <h3 className="text-sm font-bold text-[var(--color-ink)]">1. Select Identity Provider</h3>
                 <p className="text-xs text-[var(--color-ink-muted)] mt-0.5">
@@ -701,14 +701,14 @@ export function Team() {
                     key={item.id}
                     type="button"
                     onClick={() => setSsoProvider(item.id as any)}
-                    className={`flex flex-col items-center justify-center p-3.5 rounded-xl border text-center transition-all ${
+                    className={`flex flex-col items-center justify-center p-3.5 rounded-[var(--radius-lg)] border text-center transition-all ${
                       ssoProvider === item.id
-                        ? 'border-blue-500 bg-blue-50/60 shadow-xs ring-2 ring-blue-500/20'
-                        : 'border-[var(--color-border)] bg-[var(--color-page)]/50 hover:bg-slate-100 hover:border-slate-300'
+                        ? 'border-blue-500 bg-blue-50/60 shadow-none ring-2 ring-blue-500/20'
+                        : 'border-[var(--color-border)] bg-[var(--color-page)]/50 hover:bg-[var(--color-accent-muted)] hover:border-[var(--color-border)]'
                     }`}
                   >
                     <div className="mb-1 flex items-center justify-center">{item.icon}</div>
-                    <span className="text-xs font-bold text-slate-800">{item.name}</span>
+                    <span className="text-xs font-bold text-[var(--color-ink)]">{item.name}</span>
                     <span className="text-[10px] text-[var(--color-ink-faint)] mt-0.5">{item.desc}</span>
                   </button>
                 ))}
@@ -717,7 +717,7 @@ export function Team() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* IdP Settings */}
-              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm space-y-4">
+              <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm space-y-4">
                 <div className="border-b border-[var(--color-border)] pb-3">
                   <h3 className="text-sm font-bold text-[var(--color-ink)]">2. Identity Provider (IdP) Credentials</h3>
                   <p className="text-xs text-[var(--color-ink-muted)] mt-0.5">
@@ -741,7 +741,7 @@ export function Team() {
                           ? 'https://login.microsoftonline.com/{tenant-id}/saml2'
                           : 'https://idp.example.com/sso/saml'
                       }
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none font-mono text-[11px]"
+                      className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 focus:border-blue-500 focus:outline-none font-mono text-[11px]"
                     />
                   </div>
 
@@ -760,7 +760,7 @@ export function Team() {
                           ? 'https://sts.windows.net/{tenant-id}/'
                           : 'https://idp.example.com/entity-id'
                       }
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none font-mono text-[11px]"
+                      className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 focus:border-blue-500 focus:outline-none font-mono text-[11px]"
                     />
                   </div>
 
@@ -775,7 +775,7 @@ export function Team() {
                       placeholder="-----BEGIN CERTIFICATE-----
 MIIDpDCCAoygAwIBAgIGAX...
 -----END CERTIFICATE-----"
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none font-mono text-[10px] leading-relaxed"
+                      className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 focus:border-blue-500 focus:outline-none font-mono text-[10px] leading-relaxed"
                     />
                     <p className="text-[10px] text-[var(--color-ink-faint)] mt-1">
                       Used to verify XML digital signatures on SAML authentication assertions.
@@ -785,7 +785,7 @@ MIIDpDCCAoygAwIBAgIGAX...
               </div>
 
               {/* Service Provider (SP) Metadata */}
-              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm space-y-4">
+              <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm space-y-4">
                 <div className="border-b border-[var(--color-border)] pb-3 flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-bold text-[var(--color-ink)]">3. Service Provider (SP) Settings</h3>
@@ -797,7 +797,7 @@ MIIDpDCCAoygAwIBAgIGAX...
                     href="/api/v1/sso/metadata.xml"
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1 rounded-md bg-blue-50 border border-blue-200 px-2.5 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100"
+                    className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] bg-blue-50 border border-blue-200 px-2.5 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100"
                   >
                     <Download className="h-3.5 w-3.5 mr-1" /> Download XML
                   </a>
@@ -815,7 +815,7 @@ MIIDpDCCAoygAwIBAgIGAX...
                         {copiedField === 'acs' ? <span className="flex items-center gap-1"><Check className="h-3 w-3 inline" /> Copied</span> : 'Copy'}
                       </button>
                     </div>
-                    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-page)] px-3 py-2 font-mono text-[11px] text-[var(--color-ink)] select-all">
+                    <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-page)] px-3 py-2 font-mono text-[11px] text-[var(--color-ink)] select-all">
                       {window.location.origin}/api/v1/sso/saml/acs
                     </div>
                   </div>
@@ -835,11 +835,11 @@ MIIDpDCCAoygAwIBAgIGAX...
                       type="text"
                       value={spEntityId}
                       onChange={(e) => setSpEntityId(e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none font-mono text-[11px]"
+                      className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 focus:border-blue-500 focus:outline-none font-mono text-[11px]"
                     />
                   </div>
 
-                  <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-[11px] text-amber-800 space-y-1">
+                  <div className="rounded-[var(--radius-md)] border border-amber-200 bg-amber-50/60 p-3 text-[11px] text-amber-800 space-y-1">
                     <div className="font-bold">Required SAML Attribute Claims:</div>
                     <ul className="list-disc pl-4 space-y-0.5 text-[10px]">
                       <li><strong className="font-mono">NameID</strong> or <strong className="font-mono">email</strong>: Team member email</li>
@@ -852,7 +852,7 @@ MIIDpDCCAoygAwIBAgIGAX...
             </div>
 
             {/* Access Policies & Provisioning */}
-            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm space-y-4">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm space-y-4">
               <div className="border-b border-[var(--color-border)] pb-3">
                 <h3 className="text-sm font-bold text-[var(--color-ink)]">4. Domain Enforcement & Just-in-Time (JIT) Provisioning</h3>
                 <p className="text-xs text-[var(--color-ink-muted)] mt-0.5">
@@ -871,7 +871,7 @@ MIIDpDCCAoygAwIBAgIGAX...
                       value={enforcedDomainsText}
                       onChange={(e) => setEnforcedDomainsText(e.target.value)}
                       placeholder="e.g. newax.co, acme.io, enterprise.org"
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+                      className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 focus:border-blue-500 focus:outline-none"
                     />
                     <p className="text-[10px] text-[var(--color-ink-faint)] mt-1">
                       Separate multiple domains with commas. Team members with these domains will be forced to authenticate via SSO.
@@ -885,7 +885,7 @@ MIIDpDCCAoygAwIBAgIGAX...
                     <select
                       value={defaultSsoRole}
                       onChange={(e) => setDefaultSsoRole(e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+                      className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 focus:border-blue-500 focus:outline-none"
                     >
                       {roles.map((r) => (
                         <option key={r.name} value={r.name}>
@@ -896,16 +896,16 @@ MIIDpDCCAoygAwIBAgIGAX...
                   </div>
                 </div>
 
-                <div className="space-y-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-page)]/70 p-4">
+                <div className="space-y-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-page)]/70 p-4">
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={ssoEnabled}
                       onChange={(e) => setSsoEnabled(e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 mt-0.5"
+                      className="h-4 w-4 rounded border-[var(--color-border)] text-blue-600 focus:ring-blue-500 mt-0.5"
                     />
                     <div>
-                      <div className="font-semibold text-slate-800">Enforce Enterprise SSO</div>
+                      <div className="font-semibold text-[var(--color-ink)]">Enforce Enterprise SSO</div>
                       <div className="text-[11px] text-[var(--color-ink-muted)]">
                         Require team members with matching domains to log in through your Identity Provider.
                       </div>
@@ -917,10 +917,10 @@ MIIDpDCCAoygAwIBAgIGAX...
                       type="checkbox"
                       checked={jitEnabled}
                       onChange={(e) => setJitEnabled(e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 mt-0.5"
+                      className="h-4 w-4 rounded border-[var(--color-border)] text-blue-600 focus:ring-blue-500 mt-0.5"
                     />
                     <div>
-                      <div className="font-semibold text-slate-800">Just-in-Time (JIT) User Provisioning</div>
+                      <div className="font-semibold text-[var(--color-ink)]">Just-in-Time (JIT) User Provisioning</div>
                       <div className="text-[11px] text-[var(--color-ink-muted)]">
                         Automatically create team accounts on first successful SAML login.
                       </div>
@@ -932,10 +932,10 @@ MIIDpDCCAoygAwIBAgIGAX...
                       type="checkbox"
                       checked={allowUnlinkedPasswords}
                       onChange={(e) => setAllowUnlinkedPasswords(e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 mt-0.5"
+                      className="h-4 w-4 rounded border-[var(--color-border)] text-blue-600 focus:ring-blue-500 mt-0.5"
                     />
                     <div>
-                      <div className="font-semibold text-slate-800">Allow Break-Glass Password Sign-In</div>
+                      <div className="font-semibold text-[var(--color-ink)]">Allow Break-Glass Password Sign-In</div>
                       <div className="text-[11px] text-[var(--color-ink-muted)]">
                         Enable emergency local password logins if your Identity Provider is down.
                       </div>
@@ -949,14 +949,14 @@ MIIDpDCCAoygAwIBAgIGAX...
                   type="button"
                   onClick={handleRunSSOTest}
                   disabled={testingSso}
-                  className="rounded-lg border border-slate-300 bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-50"
+                  className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-50"
                 >
                   {testingSso ? 'Testing Connection...' : <span className="flex items-center gap-1"><Zap className="h-3.5 w-3.5 text-amber-500" /> Validate Setup</span>}
                 </button>
                 <button
                   type="submit"
                   disabled={savingSso}
-                  className="rounded-lg bg-blue-600 px-6 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
+                  className="rounded-[var(--radius-md)] bg-blue-600 px-6 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
                 >
                   {savingSso ? 'Saving Configuration...' : 'Save Enterprise SSO Settings'}
                 </button>
@@ -988,7 +988,7 @@ MIIDpDCCAoygAwIBAgIGAX...
               </div>
               <button
                 onClick={() => setShowTestModal(false)}
-                className="h-7 w-7 rounded-full bg-slate-200 text-[var(--color-ink-muted)] hover:bg-slate-300 flex items-center justify-center text-xs font-bold"
+                className="h-7 w-7 rounded-full bg-[var(--color-border)] text-[var(--color-ink-muted)] hover:bg-[var(--color-border)] flex items-center justify-center text-xs font-bold"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -996,7 +996,7 @@ MIIDpDCCAoygAwIBAgIGAX...
 
             <div className="p-4 space-y-3 overflow-y-auto flex-1">
               <div
-                className={`rounded-lg p-3 text-xs border ${
+                className={`rounded-[var(--radius-md)] p-3 text-xs border ${
                   ssoTestResult.status === 'healthy'
                     ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                     : 'bg-amber-50 text-amber-800 border-amber-200'
@@ -1005,11 +1005,11 @@ MIIDpDCCAoygAwIBAgIGAX...
                 {ssoTestResult.message}
               </div>
 
-              <div className="divide-y divide-slate-100 border border-[var(--color-border)] rounded-lg overflow-hidden text-xs">
+              <div className="divide-y divide-slate-100 border border-[var(--color-border)] rounded-[var(--radius-md)] overflow-hidden text-xs">
                 {ssoTestResult.checks.map((check, idx) => (
                   <div key={idx} className="p-3 bg-[var(--color-surface)] flex items-start justify-between gap-3">
                     <div>
-                      <div className="font-semibold text-slate-800">{check.name}</div>
+                      <div className="font-semibold text-[var(--color-ink)]">{check.name}</div>
                       <div className="text-[11px] text-[var(--color-ink-muted)] mt-0.5">{check.message}</div>
                     </div>
                     <span
@@ -1029,7 +1029,7 @@ MIIDpDCCAoygAwIBAgIGAX...
             <div className="p-3 bg-[var(--color-page)] border-t border-[var(--color-border)] flex justify-end">
               <button
                 onClick={() => setShowTestModal(false)}
-                className="rounded-lg bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)]"
+                className="rounded-[var(--radius-md)] bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)]"
               >
                 Done
               </button>
@@ -1053,7 +1053,7 @@ MIIDpDCCAoygAwIBAgIGAX...
               </div>
               <button
                 onClick={() => setShowRoleModal(false)}
-                className="h-7 w-7 rounded-full bg-slate-200 text-[var(--color-ink-muted)] hover:bg-slate-300 flex items-center justify-center text-xs font-bold"
+                className="h-7 w-7 rounded-full bg-[var(--color-border)] text-[var(--color-ink-muted)] hover:bg-[var(--color-border)] flex items-center justify-center text-xs font-bold"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -1073,7 +1073,7 @@ MIIDpDCCAoygAwIBAgIGAX...
                       }
                     }}
                     placeholder="e.g. Tier 2 Support Lead"
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
                   />
                 </div>
 
@@ -1085,7 +1085,7 @@ MIIDpDCCAoygAwIBAgIGAX...
                     value={roleSlug}
                     onChange={(e) => setRoleSlug(e.target.value)}
                     placeholder="e.g. tier2_lead"
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono disabled:bg-slate-100 disabled:text-[var(--color-ink-muted)]"
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs font-mono disabled:bg-[var(--color-accent-muted)] disabled:text-[var(--color-ink-muted)]"
                   />
                 </div>
               </div>
@@ -1096,7 +1096,7 @@ MIIDpDCCAoygAwIBAgIGAX...
                   value={roleDesc}
                   onChange={(e) => setRoleDesc(e.target.value)}
                   placeholder="Summarize responsibilities and intended team..."
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
                 />
               </div>
 
@@ -1128,15 +1128,15 @@ MIIDpDCCAoygAwIBAgIGAX...
                 {categories.map((cat) => {
                   const catItems = catalog.filter((c) => c.category === cat)
                   return (
-                    <div key={cat} className="rounded-lg border border-[var(--color-border)] p-3 bg-[var(--color-page)]/50 space-y-2">
-                      <div className="text-xs font-bold text-slate-800">{cat}</div>
+                    <div key={cat} className="rounded-[var(--radius-md)] border border-[var(--color-border)] p-3 bg-[var(--color-page)]/50 space-y-2">
+                      <div className="text-xs font-bold text-[var(--color-ink)]">{cat}</div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {catItems.map((item) => {
                           const isChecked = selectedPerms.includes(item.key)
                           return (
                             <label
                               key={item.key}
-                              className={`flex items-start gap-2 p-2 rounded-md border text-xs cursor-pointer transition-colors ${
+                              className={`flex items-start gap-2 p-2 rounded-[var(--radius-sm)] border text-xs cursor-pointer transition-colors ${
                                 isChecked
                                   ? 'bg-blue-50/70 border-blue-200 text-[var(--color-ink)]'
                                   : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-ink-muted)] hover:bg-[var(--color-page)]'
@@ -1146,7 +1146,7 @@ MIIDpDCCAoygAwIBAgIGAX...
                                 type="checkbox"
                                 checked={isChecked}
                                 onChange={() => togglePermission(item.key)}
-                                className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-blue-600"
+                                className="mt-0.5 h-3.5 w-3.5 rounded border-[var(--color-border)] text-blue-600"
                               />
                               <div>
                                 <div className="font-semibold">{item.label}</div>
@@ -1165,14 +1165,14 @@ MIIDpDCCAoygAwIBAgIGAX...
                 <button
                   type="button"
                   onClick={() => setShowRoleModal(false)}
-                  className="rounded-lg border border-slate-300 bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)]"
+                  className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={savingRole || !roleDisplayName.trim()}
-                  className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
+                  className="rounded-[var(--radius-md)] bg-blue-600 px-5 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
                 >
                   {savingRole ? 'Saving Role...' : 'Save Role Permissions'}
                 </button>
@@ -1192,23 +1192,23 @@ MIIDpDCCAoygAwIBAgIGAX...
                   Effective Privileges: {inspectingMember.name}
                 </h3>
                 <p className="text-[11px] text-[var(--color-ink-muted)]">
-                  Role: <strong className="text-slate-800 capitalize">{inspectingMember.role || 'agent'}</strong> ({inspectingMember.email})
+                  Role: <strong className="text-[var(--color-ink)] capitalize">{inspectingMember.role || 'agent'}</strong> ({inspectingMember.email})
                 </p>
               </div>
               <button
                 onClick={() => setInspectingMember(null)}
-                className="h-7 w-7 rounded-full bg-slate-200 text-[var(--color-ink-muted)] hover:bg-slate-300 flex items-center justify-center text-xs font-bold"
+                className="h-7 w-7 rounded-full bg-[var(--color-border)] text-[var(--color-ink-muted)] hover:bg-[var(--color-border)] flex items-center justify-center text-xs font-bold"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             <div className="p-4 space-y-3 overflow-y-auto flex-1">
-              <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs text-blue-900">
+              <div className="rounded-[var(--radius-md)] bg-blue-50 border border-blue-200 p-3 text-xs text-blue-900">
                 Granted based on role assignment and SOC 2 RBAC governance.
               </div>
 
-              <div className="divide-y divide-slate-100 border border-[var(--color-border)] rounded-lg overflow-hidden text-xs">
+              <div className="divide-y divide-slate-100 border border-[var(--color-border)] rounded-[var(--radius-md)] overflow-hidden text-xs">
                 {catalog.map((perm) => {
                   const roleObj = roles.find((r) => r.name === (inspectingMember.role || 'agent'))
                   const isRoleGranted = roleObj?.permissions.includes(perm.key) ?? false
@@ -1218,7 +1218,7 @@ MIIDpDCCAoygAwIBAgIGAX...
                   return (
                     <div key={perm.key} className="flex items-center justify-between p-2.5 bg-[var(--color-surface)]">
                       <div>
-                        <div className="font-semibold text-slate-800">{perm.label}</div>
+                        <div className="font-semibold text-[var(--color-ink)]">{perm.label}</div>
                         <div className="text-[10px] font-mono text-[var(--color-ink-faint)]">{perm.key}</div>
                       </div>
                       <span
@@ -1239,7 +1239,7 @@ MIIDpDCCAoygAwIBAgIGAX...
             <div className="p-3 bg-[var(--color-page)] border-t border-[var(--color-border)] flex justify-end">
               <button
                 onClick={() => setInspectingMember(null)}
-                className="rounded-lg bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)]"
+                className="rounded-[var(--radius-md)] bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)]"
               >
                 Close
               </button>

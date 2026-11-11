@@ -2116,7 +2116,7 @@ pub async fn check_member_permission(
     };
 
     let table_present = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'team_members'",
+        "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'team_members'",
     )
     .fetch_optional(&state.db)
     .await;
@@ -3485,7 +3485,7 @@ pub async fn export_segment(State(state): State<AppState>, Path(id): Path<String
     // Python exported a real member list from the segment tables. This schema has
     // no `segments` table yet, so returning any CSV at all would be invented data.
     let present = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN ('segments', 'segment_members')",
+        "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('segments', 'segment_members')",
     )
     .fetch_one(&state.db)
     .await;
@@ -3631,7 +3631,7 @@ async fn report_rows<T>(
     sql: &str,
 ) -> Result<Vec<T>, ReportError>
 where
-    T: for<'r> sqlx::FromRow<'r, sqlx::sqlite::SqliteRow> + Send + Unpin,
+    T: for<'r> sqlx::FromRow<'r, sqlx::postgres::PgRow> + Send + Unpin,
 {
     sqlx::query_as::<_, T>(sql)
         .fetch_all(&state.db)
@@ -3664,8 +3664,7 @@ fn report_window(
 }
 
 /// Timestamps in this database are written as `Utc::now().to_rfc3339()` (UTC, with
-/// a `T` and an offset), while SQLite's date functions want
-/// `"YYYY-MM-DD HH:MM:SS"`. Every report window comparison truncates to the UTC
+/// a `T` and an offset). Every report window comparison truncates to the UTC
 /// date the row records instead of comparing two different text formats.
 const SQL_DT_EXPRESSION_NOTE: &str = "dates are compared as UTC calendar days via replace(substr(col,1,19),'T',' ')";
 
@@ -3703,7 +3702,7 @@ pub async fn get_live_report(
         r#"
         SELECT COUNT(*) FROM conversations
         WHERE state IN ('RESOLVED', 'CLOSED')
-          AND date(replace(substr(updated_at, 1, 19), 'T', ' ')) = date('now')
+          AND DATE(updated_at::TIMESTAMPTZ) = CURRENT_DATE
         "#,
     )
     .await?;
@@ -3796,7 +3795,7 @@ pub async fn get_live_report(
     // which is reported as null rather than the literal 135 the port shipped.
     let avg_wait_seconds: Option<f64> = sqlx::query_scalar(
         r#"
-        SELECT AVG(strftime('%s', 'now') - strftime('%s', replace(substr(last_inbound_at, 1, 19), 'T', ' ')))
+        SELECT AVG(EXTRACT(EPOCH FROM NOW()) - EXTRACT(EPOCH FROM last_inbound_at::TIMESTAMPTZ))
         FROM conversations
         WHERE state NOT IN ('RESOLVED', 'CLOSED', 'ARCHIVED')
           AND last_inbound_at IS NOT NULL
@@ -3850,7 +3849,7 @@ fn scoped_sql(
     with_channel: bool,
 ) -> String {
     let mut sql = format!(
-        "{select_and_from} WHERE date(replace(substr({window_col}, 1, 19), 'T', ' ')) >= ?"
+        "{select_and_from} WHERE DATE({window_col}::TIMESTAMPTZ) >= ?"
     );
     if !extra_where.is_empty() {
         sql.push_str(" AND ");
@@ -3899,7 +3898,7 @@ async fn scoped_day_counts(
 ) -> Result<Vec<DayCount>, ReportError> {
     let mut sql = scoped_sql(
         &format!(
-            "SELECT date(replace(substr({window_col}, 1, 19), 'T', ' ')) as day, COUNT(*) as cnt FROM {table}"
+            "SELECT DATE({window_col}::TIMESTAMPTZ) as day, COUNT(*) as cnt FROM {table}"
         ),
         window_col,
         extra_where,
@@ -4085,7 +4084,7 @@ pub async fn get_conversation_reports(
     };
     let frt_sql = format!(
         r#"
-        SELECT AVG((strftime('%s', first_out) - strftime('%s', first_in)) / 60.0) FROM (
+        SELECT AVG((EXTRACT(EPOCH FROM first_out::TIMESTAMPTZ) - EXTRACT(EPOCH FROM first_in::TIMESTAMPTZ)) / 60.0) FROM (
             SELECT conversation_id,
                    MIN(CASE WHEN UPPER(direction) = 'INBOUND' THEN dt END) AS first_in,
                    MIN(CASE WHEN UPPER(direction) = 'OUTBOUND' THEN dt END) AS first_out
@@ -4093,7 +4092,7 @@ pub async fn get_conversation_reports(
                 SELECT conversation_id, direction,
                        replace(substr(COALESCE(NULLIF(sent_at, ''), created_at), 1, 19), 'T', ' ') AS dt
                 FROM messages
-                WHERE date(replace(substr(COALESCE(NULLIF(sent_at, ''), created_at), 1, 19), 'T', ' ')) >= ?{frt_channel_clause}
+                WHERE DATE(COALESCE(NULLIF(sent_at, ''), created_at)::TIMESTAMPTZ) >= ?{frt_channel_clause}
             )
             GROUP BY conversation_id
         ) WHERE first_in IS NOT NULL AND first_out IS NOT NULL AND first_out >= first_in
@@ -4125,11 +4124,11 @@ pub async fn get_conversation_reports(
     };
     let art_sql = format!(
         r#"
-        SELECT AVG((strftime('%s', replace(substr(updated_at, 1, 19), 'T', ' ')) - strftime('%s', replace(substr(created_at, 1, 19), 'T', ' '))) / 3600.0)
+        SELECT AVG((EXTRACT(EPOCH FROM updated_at::TIMESTAMPTZ) - EXTRACT(EPOCH FROM created_at::TIMESTAMPTZ)) / 3600.0)
         FROM conversations
         WHERE state IN ('RESOLVED', 'CLOSED')
           AND created_at IS NOT NULL AND created_at <> ''
-          AND date(replace(substr(COALESCE(NULLIF(created_at, ''), updated_at), 1, 19), 'T', ' ')) >= ?{art_channel_clause}
+          AND DATE(COALESCE(NULLIF(created_at, ''), updated_at)::TIMESTAMPTZ) >= ?{art_channel_clause}
         "#
     );
     let mut art_query = sqlx::query_scalar::<_, Option<f64>>(&art_sql).bind(&cutoff);
@@ -4214,7 +4213,7 @@ fn windowed_conversation_sql(
 ) -> String {
     let mut sql = format!(
         "{select} FROM conversations WHERE {owner_column} = ? \
-         AND date(replace(substr(COALESCE(NULLIF(created_at, ''), updated_at), 1, 19), 'T', ' ')) >= ?"
+         AND DATE(COALESCE(NULLIF(created_at, ''), updated_at)::TIMESTAMPTZ) >= ?"
     );
     if !extra_where.is_empty() {
         sql.push_str(" AND ");
@@ -4604,7 +4603,7 @@ pub async fn get_csat_report(
          FROM conversations c \
          LEFT JOIN contacts ct ON ct.id = c.contact_id \
          LEFT JOIN team_members tm ON tm.id = c.assigned_to_id \
-         WHERE date(replace(substr(c.updated_at, 1, 19), 'T', ' ')) >= ? \
+         WHERE DATE(c.updated_at::TIMESTAMPTZ) >= ? \
            AND c.csat_score IS NOT NULL"
     );
     if channel.is_some() {

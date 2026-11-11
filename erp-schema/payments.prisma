@@ -1,0 +1,54 @@
+// Payments. `provider` is a plain string key, not an enum, so a new gateway is
+// a new PaymentProvider class plus an entry in the PAYMENT_PROVIDERS env
+// allowlist — no migration.
+//
+// Live today: cod, bank_transfer. Written and awaiting merchant credentials:
+// jazzcash, easypaisa.
+
+enum PaymentStatus {
+  PENDING
+  AWAITING_APPROVAL // bank transfer receipt uploaded, staff must approve
+  PAID
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+model Payment {
+  id       String        @id @default(cuid())
+  orderId  String
+  provider String // "cod" | "bank_transfer" | "jazzcash" | "easypaisa"
+  status   PaymentStatus @default(PENDING)
+  /// Amount in paisa.
+  amount   Int
+  currency String        @default("PKR")
+
+  /// Our reference sent to the gateway, and whatever it sends back.
+  reference     String? @unique
+  providerRef   String?
+  /// Raw gateway request/response and bank-transfer receipt details.
+  meta          Json?
+  receiptUrl    String?
+  failureReason String?
+
+  approvedById String?
+  paidAt       DateTime?
+  refundedAt   DateTime?
+  refundAmount Int?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  order                Order                 @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  approvedBy           User?                 @relation("PaymentApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  /// instalments.prisma — set only for a payment that is a deposit or a
+  /// scheduled instalment against a layby/instalment plan.
+  instalmentPayment    InstalmentPayment?
+  /// settlements.prisma — which SettlementBatch line(s), if any, cover this
+  /// payment. Plural: a partial-batch institution could in principle split
+  /// one payment's settlement across two batches, though none does today.
+  settlementBatchLines SettlementBatchLine[]
+
+  @@index([orderId])
+  @@index([status])
+  @@index([provider, status])
+}

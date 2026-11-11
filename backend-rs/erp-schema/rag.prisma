@@ -1,0 +1,158 @@
+// WO-35 (docs/implementation/ai-layer/35-scalable-rag-document-retrieval.md).
+// Retrieval-augmented generation over a document corpus — one more
+// `AiProvider` consumer (09-ai-layer.md), never a second AI subsystem:
+// ingestion calls `AiService.embed()` (and, for a scanned page with no text
+// layer, `AiService.describeImage()`), generation calls `AiService.complete()`,
+// through the exact same budget/timeout/absent-provider-is-invisible contract
+// every other WO-9.x feature already uses.
+//
+// --- Scoping column: a deliberate departure from the doc's own literal sketch ---
+//
+// The doc's own illustrative Prisma snippet writes `organizationId String`
+// (required) on both tables below. This file instead uses `organizationId
+// String?` (nullable), matching this codebase's own REAL, already-established
+// convention for an org-wide scope column that is present from the first
+// migration but unused outside the Organization tier — `WalletAccount`
+// (wallet.prisma) states that convention in its own words: "present in the
+// first migration and never rendering at Solo/Chain. Nullable there on
+// purpose: `organizationId` is unset outside the Organization-tier[...]
+// deployment." `JournalLine` (accounting.prisma) dimensions every one of its
+// own org/brand/branch/cost-centre columns the same nullable way. Per
+// CLAUDE.md's own "Scale: the three axes" — "One deployment serves one
+// brand, resolved at build time... do not build toward multi-brand
+// speculatively" — this deployment's own database never holds two different
+// organizations' documents under ordinary operation; the column exists so a
+// future Organization-tier context (or the doc's own named-but-explicitly-
+// NOT-built "Platform" cross-tenant tier, see the doc's "Scoping the claim"
+// section) is a data population, never a migration.
+//
+// A `null` here means exactly what a `null` `WalletAccount.organizationId`
+// means: "this deployment's own single, implicit brand," never "unscoped" —
+// `RagRetrievalService.retrieve()`'s WHERE clause names `organizationId`
+// explicitly on every call, including matching `IS NULL`, so the isolation
+// guarantee (WO-35.4) holds identically whether the column is populated or
+// not.
+//
+// `corpus` is ALSO denormalized onto `DocumentChunk`, which the doc's own
+// sketch does not show explicitly (its sketch keeps `corpus` only on
+// `DocumentSource`) even though its own `retrieve()`/`VectorStore.query()`
+// signatures filter by `corpus` too. This file makes that filter reachable
+// without a join, for exactly the reason the doc gives for denormalizing
+// `organizationId` in the first place: "the isolation filter... must be a
+// column on the table being searched, not a join a future query can
+// forget" — and `corpus` is the isolation axis that is actually live TODAY
+// (an HR assistant must never surface `SUPPLIER_CATALOG` even in a
+// deployment with no `Organization` row at all), where `organizationId`
+// mostly is not yet.
+
+enum DocumentCorpus {
+  /// doc 28's vault (docs/implementation/hr-people-org/28-recruitment-onboarding-document-vault.md)
+  /// — unbuilt in this codebase today (no `EmployeeDocument` model exists),
+  /// so nothing feeds this corpus automatically yet; a source can still be
+  /// uploaded into it directly through this module's own admin screen. See
+  /// `RagCorpusService`'s own header for why that absence is not this work
+  /// order's to fix.
+  EMPLOYEE_DOCUMENTS
+  /// Spec sheets, product manuals from trading partners (trading-partners.prisma).
+  SUPPLIER_CATALOG
+  /// Generated invoices, contracts, statements.
+  BUSINESS_DOCUMENTS
+  /// Policy docs, help content — curated for customer-facing answers (WO-9.7).
+  KNOWLEDGE_BASE
+}
+
+enum IngestStatus {
+  QUEUED
+  EXTRACTING
+  CHUNKING
+  EMBEDDING
+  READY
+  FAILED
+}
+
+/// A source document — one row per uploaded file. Ingested once; never
+/// re-parsed per query (the doc's own §1 title) — `DocumentChunk` below is
+/// what retrieval actually reads.
+model DocumentSource {
+  id             String         @id @default(cuid())
+  /// See this file's header comment — nullable, always null at Solo/Chain.
+  organizationId String?
+  /// Where the file actually lives — `StorageService`'s own key, never
+  /// re-stored here (doc 28's `EmployeeDocument` would point the same way,
+  /// the day it exists).
+  storageKey     String
+  originalName   String
+  corpus         DocumentCorpus
+  status         IngestStatus   @default(QUEUED)
+  pageCount      Int?
+  ingestedAt     DateTime?
+  /// Set only while FAILED — the ingestion-queue screen's own message, and
+  /// what a retry clears. Never left to be inferred from a log line the
+  /// operator cannot reach without shell access.
+  failureReason  String?
+  /// Plain scalar, no relation — same "reference by id, join in application
+  /// code" idiom as `ProductAiSuggestion.reviewedById` (ai_layer migration):
+  /// this row is never joined against `User` in a query, only displayed.
+  uploadedById   String?
+  /// Security review M7 — set the instant `RagIngestionService.ingestOne()`
+  /// atomically claims this row (QUEUED -> EXTRACTING), cleared on every exit
+  /// (READY, FAILED, or requeued). A claim older than
+  /// `STALE_CLAIM_MINUTES` with the row still EXTRACTING/CHUNKING/EMBEDDING
+  /// means the worker that claimed it crashed — the cron's own reaper (or a
+  /// manual retry) resets it to QUEUED with this column cleared.
+  claimedAt      DateTime?
+  /// Security review M8 — consecutive embedding failures for this source.
+  /// Reset to 0 on a successful READY transition or a manual retry; past
+  /// `MAX_EMBED_ATTEMPTS` the source moves to FAILED instead of requeueing,
+  /// so a deterministically-broken document (a vendor 4xx on malformed
+  /// input, not a transient outage) stops occupying every ingestion batch
+  /// forever.
+  attempts       Int            @default(0)
+  /// Security review M8 — exponential backoff: `processQueued()` never
+  /// selects a QUEUED source before this time. `null` means eligible
+  /// immediately (never backed off, or just reset by a retry).
+  nextAttemptAt  DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  chunks DocumentChunk[]
+
+  @@index([organizationId, corpus, status])
+  @@index([status])
+}
+
+/// One row per chunk, not per document — chunking is what makes retrieval
+/// precise instead of "here's a 40-page PDF, good luck." `organizationId`
+/// and `corpus` are both denormalized from `DocumentSource` — see this
+/// file's header comment for why `corpus` joins `organizationId` here even
+/// though the doc's own sketch only denormalizes the latter.
+model DocumentChunk {
+  id             String                      @id @default(cuid())
+  sourceId       String
+  organizationId String?
+  corpus         DocumentCorpus
+  pageFrom       Int
+  pageTo         Int
+  text           String
+  /// pgvector column, the same 1536-dim space `ProductTranslation.embedding`
+  /// already uses (WO-9.5) — one embedding-dimensionality constant for the
+  /// whole codebase (both go through the same `AiService.embed()`), not a
+  /// second one invented here. Written and read only via raw SQL —
+  /// `PgVectorStore` — never through Prisma's normal query API, the same
+  /// constraint `search.service.ts` already documents for
+  /// `ProductTranslation.embedding`.
+  embedding      Unsupported("vector(1536)")
+  createdAt      DateTime                    @default(now())
+
+  source DocumentSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  // Supports the ingestion-queue/management queries (list a source's own
+  // chunks, delete-then-insert on re-ingest). The vector index itself
+  // (HNSW, cosine ops) is created by hand in this migration's own .sql —
+  // Prisma has no schema syntax for an index method or operator class.
+  @@index([organizationId, corpus, sourceId])
+  /// L18 (security review) — the admin sources list's own chunk-count query
+  /// (`RagCorpusService`) reads by `sourceId` alone; the composite index
+  /// above requires `organizationId`/`corpus` too and does not serve it.
+  @@index([sourceId])
+}

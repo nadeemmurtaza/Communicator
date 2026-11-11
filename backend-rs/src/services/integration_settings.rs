@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 //! Typed access to the `integration_settings` table -- the Connections page's
 //! backing store.
@@ -173,14 +173,14 @@ pub fn usable(value: &str) -> bool {
     !trimmed.is_empty() && !trimmed.chars().any(|c| c == '•') && !trimmed.starts_with("•")
 }
 
-fn text(row: &sqlx::sqlite::SqliteRow, column: &str) -> String {
+fn text(row: &sqlx::postgres::PgRow, column: &str) -> String {
     row.try_get::<Option<String>, _>(column)
         .ok()
         .flatten()
         .unwrap_or_default()
 }
 
-fn flag(row: &sqlx::sqlite::SqliteRow, column: &str) -> bool {
+fn flag(row: &sqlx::postgres::PgRow, column: &str) -> bool {
     row.try_get::<Option<bool>, _>(column)
         .ok()
         .flatten()
@@ -193,7 +193,7 @@ fn flag(row: &sqlx::sqlite::SqliteRow, column: &str) -> bool {
             != 0
 }
 
-fn number(row: &sqlx::sqlite::SqliteRow, column: &str, default: i64) -> i64 {
+fn number(row: &sqlx::postgres::PgRow, column: &str, default: i64) -> i64 {
     row.try_get::<Option<i64>, _>(column)
         .ok()
         .flatten()
@@ -606,7 +606,7 @@ fn first_usable(values: &[&str]) -> String {
     String::new()
 }
 
-fn row_to_settings(row: &sqlx::sqlite::SqliteRow) -> IntegrationSettings {
+fn row_to_settings(row: &sqlx::postgres::PgRow) -> IntegrationSettings {
     IntegrationSettings {
         id: text(row, "id"),
         tenant_key: text(row, "tenant_key"),

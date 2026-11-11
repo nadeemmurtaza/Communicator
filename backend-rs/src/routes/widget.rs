@@ -1,4 +1,4 @@
-//! Customer-facing live-chat widget runtime.
+﻿//! Customer-facing live-chat widget runtime.
 //!
 //! Ports `src/communicator/api/routes/widget.py` (boot config, contact/session
 //! boot, messaging, history, presence, pre-chat form and intake) and adds the
@@ -90,15 +90,15 @@ fn insert_header(response: &mut Response, name: &str, value: String) {
     }
 }
 
-fn build(body: Value, set_cookie: Option<String>, cursor: Option<i64>) -> Response {
+fn build(body: Value, set_cookie: Option<String>, cursor: Option<String>) -> Response {
     let mut response = (StatusCode::OK, Json(body)).into_response();
     if let Some(cookie) = set_cookie {
         if let Ok(value) = cookie.parse::<HeaderValue>() {
             response.headers_mut().append(header::SET_COOKIE, value);
         }
     }
-    if let Some(cursor) = cursor {
-        insert_header(&mut response, "x-widget-cursor", cursor.to_string());
+    if let Some(ref cursor) = cursor {
+        insert_header(&mut response, "x-widget-cursor", cursor.clone());
     }
     response
 }
@@ -254,14 +254,15 @@ fn prechat_shape(cfg: &Value) -> Value {
     })
 }
 
-fn served_cursor(rows: &[Value], fallback: i64) -> i64 {
+fn served_cursor(rows: &[Value], fallback: &str) -> String {
     rows.iter()
-        .filter_map(|row| row.get("cursor").and_then(|value| value.as_i64()))
+        .filter_map(|row| row.get("cursor").and_then(|value| value.as_str()))
         .max()
-        .unwrap_or(fallback)
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| fallback.to_string())
 }
 
-fn last_cursor_token(rows: &[Value], served: i64) -> String {
+fn last_cursor_token(rows: &[Value], served: &str) -> String {
     rows.iter()
         .rev()
         .find_map(|row| row.get("cursorToken").and_then(|value| value.as_str()))
@@ -866,8 +867,8 @@ pub async fn list_messages(
 
     let after = widget::cursor_rowid(params.cursor.as_deref());
     let limit = params.limit.unwrap_or(widget::MAX_POLL_LIMIT);
-    let rows = widget::visible_messages(&state.db, &conversation_id, after, limit).await?;
-    let served = served_cursor(&rows, after);
+    let rows = widget::visible_messages(&state.db, &conversation_id, after.clone(), limit).await?;
+    let served = served_cursor(&rows, &after);
     if served > session.last_cursor {
         widget::advance_session_cursor(&state.db, &session.id, served).await?;
     }
@@ -890,7 +891,7 @@ pub async fn poll_messages(
 
     let after = match params.cursor.as_deref() {
         Some(raw) => widget::cursor_rowid(Some(raw)),
-        None => session.last_cursor,
+        None => session.last_cursor.clone(),
     };
     let limit = params
         .limit
@@ -898,10 +899,10 @@ pub async fn poll_messages(
         .clamp(1, widget::MAX_POLL_LIMIT);
 
     // One extra row reveals whether more is pending, without a second query.
-    let rows = widget::visible_messages(&state.db, &conversation_id, after, limit + 1).await?;
+    let rows = widget::visible_messages(&state.db, &conversation_id, after.clone(), limit + 1).await?;
     let has_more = rows.len() as i64 > limit;
     let page: Vec<Value> = rows.into_iter().take(limit as usize).collect();
-    let served = served_cursor(&page, after);
+    let served = served_cursor(&page, &after);
     if served > session.last_cursor {
         widget::advance_session_cursor(&state.db, &session.id, served).await?;
     }
@@ -953,8 +954,8 @@ pub async fn mark_read(
         .up_to_cursor
         .as_deref()
         .map(|raw| widget::cursor_rowid(Some(raw)))
-        .unwrap_or(session.last_cursor);
-    let up_to = claimed.min(session.last_cursor);
+        .unwrap_or(session.last_cursor.clone());
+    let up_to = if claimed < session.last_cursor { claimed } else { session.last_cursor.clone() };
     let marked = widget::mark_messages_read(&state.db, &session.conversation_id, up_to).await?;
 
     Ok(build(

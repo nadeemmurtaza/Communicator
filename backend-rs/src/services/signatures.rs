@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 use base64::Engine;
 use hmac::{Hmac, Mac};

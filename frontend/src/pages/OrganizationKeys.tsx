@@ -110,8 +110,8 @@ export function OrganizationKeys() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-        <span className="ml-2 text-sm text-gray-500">Loading API keys...</span>
+        <Loader2 className="h-6 w-6 animate-spin text-[var(--color-ink-faint)]" />
+        <span className="ml-2 text-sm text-[var(--color-ink-faint)]">Loading API keys...</span>
       </div>
     )
   }
@@ -127,13 +127,13 @@ export function OrganizationKeys() {
         </div>
         <div className="flex items-center gap-3">
           {saved && (
-            <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-3 py-1.5 rounded-lg">
+            <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-3 py-1.5 rounded-[var(--radius-md)]">
               <CheckCircle2 className="h-4 w-4" />
               <span>Saved</span>
             </div>
           )}
           <button onClick={handleSave} disabled={saving}
-            className="px-4 py-2 bg-[var(--color-accent)] text-[var(--color-on-accent)] text-sm font-medium rounded-lg hover:opacity-90 transition disabled:opacity-50 flex items-center gap-2">
+            className="px-4 py-2 bg-[var(--color-accent)] text-[var(--color-on-accent)] text-sm font-medium rounded-[var(--radius-md)] hover:opacity-90 transition disabled:opacity-50 flex items-center gap-2">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             <span>Save All</span>
           </button>
@@ -141,13 +141,13 @@ export function OrganizationKeys() {
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
-      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 flex items-start gap-2">
+      <div className="p-3 bg-blue-50 border border-blue-200 rounded-[var(--radius-md)] text-sm text-blue-700 flex items-start gap-2">
         <Shield className="h-4 w-4 mt-0.5 shrink-0" />
         <div>
           <p className="font-medium">Bring Your Own Keys (BYOK)</p>
@@ -188,10 +188,10 @@ function ChannelGroup({ channel, data, visible, toggleVisible, update }: {
   const hasAnyKey = channel.fields.some((f: any) => data[f.key]?.trim())
 
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+    <div className="border border-[var(--color-border)] rounded-[var(--radius-md)] overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-accent-muted)] border-b border-[var(--color-border)]">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-[var(--color-accent-soft)] flex items-center justify-center">
+          <div className="h-8 w-8 rounded-[var(--radius-md)] bg-[var(--color-accent-soft)] flex items-center justify-center">
             <Icon className="h-4 w-4 text-[var(--color-accent)]" />
           </div>
           <div>
@@ -210,10 +210,10 @@ function ChannelGroup({ channel, data, visible, toggleVisible, update }: {
                 value={data[field.key] || ''}
                 onChange={(e) => update(field.key, e.target.value)}
                 placeholder={`Enter ${field.label.toLowerCase()}`}
-                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-accent)] focus:outline-none font-mono"
+                className="w-full px-3 py-2 pr-10 border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm focus:ring-2 focus:ring-[var(--color-accent)] focus:outline-none font-mono"
               />
               <button type="button" onClick={() => toggleVisible(field.key)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)]">
                 {visible.has(field.key)
                   ? '👁' : '🔒'
                 }

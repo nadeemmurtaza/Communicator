@@ -1,4 +1,4 @@
--- Migration 0003: Enhanced Profiles with Data Sources, Live Sync, Conflicts, and Custom Sections
+﻿-- Migration 0003: Enhanced Profiles with Data Sources, Live Sync, Conflicts, and Custom Sections
 -- Adds unique IDs, source tracking, sync status, conflict resolution, custom sections,
 -- pricing packages, promotions, auto-vouchers, and message triggers
 
@@ -31,10 +31,10 @@ CREATE TABLE IF NOT EXISTS brand_profile_sources (
     source_url TEXT DEFAULT '',
     synced_at TEXT,
     last_verified_at TEXT,
-    is_verified INTEGER NOT NULL DEFAULT 0,
+    is_verified BOOLEAN NOT NULL DEFAULT false,
     confidence_score REAL DEFAULT 1.0,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_profile_sources_brand ON brand_profile_sources(brand_id);
@@ -53,10 +53,10 @@ CREATE TABLE IF NOT EXISTS org_profile_sources (
     source_url TEXT DEFAULT '',
     synced_at TEXT,
     last_verified_at TEXT,
-    is_verified INTEGER NOT NULL DEFAULT 0,
+    is_verified BOOLEAN NOT NULL DEFAULT false,
     confidence_score REAL DEFAULT 1.0,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_org_sources_org ON org_profile_sources(organization_id);
@@ -71,15 +71,15 @@ CREATE TABLE IF NOT EXISTS brand_sync_status (
     id TEXT PRIMARY KEY,
     brand_id TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
     platform TEXT NOT NULL,  -- 'meta', 'linkedin', 'line', 'tiktok', 'telegram', 'whatsapp'
-    is_connected INTEGER NOT NULL DEFAULT 0,
-    last_synced_at TEXT,
+    is_connected BOOLEAN NOT NULL DEFAULT false,
+    last_synced_at TIMESTAMPTZ,
     next_sync_at TEXT,
     sync_interval_seconds INTEGER NOT NULL DEFAULT 3600,
     last_error TEXT DEFAULT '',
     connection_status TEXT NOT NULL DEFAULT 'disconnected',  -- 'connected', 'syncing', 'error', 'disconnected'
     platform_data TEXT DEFAULT '{}',  -- cached platform data (limits, verified name, etc.)
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_sync_status_brand ON brand_sync_status(brand_id);
@@ -90,15 +90,15 @@ CREATE TABLE IF NOT EXISTS org_sync_status (
     id TEXT PRIMARY KEY,
     organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     platform TEXT NOT NULL,
-    is_connected INTEGER NOT NULL DEFAULT 0,
-    last_synced_at TEXT,
+    is_connected BOOLEAN NOT NULL DEFAULT false,
+    last_synced_at TIMESTAMPTZ,
     next_sync_at TEXT,
     sync_interval_seconds INTEGER NOT NULL DEFAULT 3600,
     last_error TEXT DEFAULT '',
     connection_status TEXT NOT NULL DEFAULT 'disconnected',
     platform_data TEXT DEFAULT '{}',
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_org_sync_status_org ON org_sync_status(organization_id);
@@ -123,8 +123,8 @@ CREATE TABLE IF NOT EXISTS profile_conflicts (
     resolution_status TEXT NOT NULL DEFAULT 'pending',  -- 'pending', 'auto_resolved', 'manual_resolved'
     resolved_value TEXT DEFAULT '',
     resolved_by TEXT DEFAULT '',  -- 'system' or user_id
-    resolved_at TEXT,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    resolved_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_conflicts_entity ON profile_conflicts(entity_type, entity_id);
@@ -141,11 +141,11 @@ CREATE TABLE IF NOT EXISTS profile_custom_sections (
     entity_id TEXT NOT NULL,
     section_name TEXT NOT NULL,
     section_type TEXT NOT NULL,  -- 'table', 'list', 'paragraph', 'key_value', 'rich_text'
-    display_order INTEGER NOT NULL DEFAULT 0,
-    is_active INTEGER NOT NULL DEFAULT 1,
+    display_order BOOLEAN NOT NULL DEFAULT false,
+    is_active BOOLEAN NOT NULL DEFAULT true,
     created_by TEXT DEFAULT '',
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_custom_sections_entity ON profile_custom_sections(entity_type, entity_id);
@@ -158,9 +158,9 @@ CREATE TABLE IF NOT EXISTS profile_custom_section_data (
     field_key TEXT NOT NULL,
     field_value TEXT NOT NULL,
     field_type TEXT NOT NULL DEFAULT 'text',  -- 'text', 'number', 'date', 'url', 'boolean', 'json'
-    display_order INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    display_order BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_custom_section_data_section ON profile_custom_section_data(section_id);
@@ -178,12 +178,12 @@ CREATE TABLE IF NOT EXISTS brand_packages (
     price REAL NOT NULL DEFAULT 0,
     currency TEXT NOT NULL DEFAULT 'USD',
     duration_type TEXT DEFAULT '',  -- 'one_time', 'monthly', 'yearly'
-    duration_value INTEGER DEFAULT 1,
+    duration_value BOOLEAN DEFAULT true,
     features TEXT DEFAULT '[]',  -- JSON array of feature strings
-    is_active INTEGER NOT NULL DEFAULT 1,
-    display_order INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    display_order BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_packages_brand ON brand_packages(brand_id);
@@ -199,11 +199,11 @@ CREATE TABLE IF NOT EXISTS brand_promotions (
     start_date TEXT NOT NULL,
     end_date TEXT NOT NULL,
     applicable_packages TEXT DEFAULT '[]',  -- JSON array of package IDs
-    is_active INTEGER NOT NULL DEFAULT 1,
-    usage_limit INTEGER DEFAULT 0,  -- 0 = unlimited
-    usage_count INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    usage_limit BOOLEAN DEFAULT false,  -- 0 = unlimited
+    usage_count BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_promotions_brand ON brand_promotions(brand_id);
@@ -212,17 +212,17 @@ CREATE INDEX IF NOT EXISTS idx_promotions_brand ON brand_promotions(brand_id);
 CREATE TABLE IF NOT EXISTS brand_voucher_settings (
     id TEXT PRIMARY KEY,
     brand_id TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
-    auto_generate INTEGER NOT NULL DEFAULT 0,
+    auto_generate BOOLEAN NOT NULL DEFAULT false,
     voucher_prefix TEXT NOT NULL DEFAULT 'VOUCHER',
     voucher_length INTEGER NOT NULL DEFAULT 10,
     discount_type TEXT NOT NULL DEFAULT 'percentage',
     discount_value REAL NOT NULL DEFAULT 10,
     validity_days INTEGER NOT NULL DEFAULT 30,
     trigger_event TEXT DEFAULT '',  -- 'first_contact', 'purchase', 'birthday', 'anniversary'
-    max_uses_per_customer INTEGER NOT NULL DEFAULT 1,
-    is_active INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    max_uses_per_customer BOOLEAN NOT NULL DEFAULT true,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_voucher_settings_brand ON brand_voucher_settings(brand_id);
@@ -243,9 +243,9 @@ CREATE TABLE IF NOT EXISTS message_triggers (
     trigger_conditions TEXT DEFAULT '{}',  -- JSON conditions for condition triggers
     preferred_channel TEXT NOT NULL DEFAULT 'whatsapp',  -- 'whatsapp', 'sms', 'email', 'telegram'
     message_template TEXT NOT NULL,
-    is_active INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_message_triggers_brand ON message_triggers(brand_id);
@@ -260,7 +260,7 @@ CREATE TABLE IF NOT EXISTS message_trigger_logs (
     message_sent TEXT NOT NULL,
     status TEXT NOT NULL,  -- 'sent', 'failed', 'skipped'
     error_message TEXT DEFAULT '',
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_trigger_logs_trigger ON message_trigger_logs(trigger_id);
@@ -278,9 +278,9 @@ CREATE TABLE IF NOT EXISTS platform_data_cache (
     platform TEXT NOT NULL,
     data_key TEXT NOT NULL,
     data_value TEXT NOT NULL,
-    synced_at TEXT NOT NULL,
+    synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     expires_at TEXT,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_platform_cache_entity ON platform_data_cache(entity_type, entity_id, platform);
@@ -294,10 +294,10 @@ CREATE INDEX IF NOT EXISTS idx_platform_cache_key ON platform_data_cache(data_ke
 CREATE TABLE IF NOT EXISTS rag_section_mapping (
     id TEXT PRIMARY KEY,
     section_id TEXT NOT NULL REFERENCES profile_custom_sections(id) ON DELETE CASCADE,
-    is_indexed INTEGER NOT NULL DEFAULT 1,
+    is_indexed BOOLEAN NOT NULL DEFAULT true,
     embedding_status TEXT NOT NULL DEFAULT 'pending',  -- 'pending', 'indexed', 'failed'
     last_indexed_at TEXT,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_rag_section_mapping ON rag_section_mapping(section_id);

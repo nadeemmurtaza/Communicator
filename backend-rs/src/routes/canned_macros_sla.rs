@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 use crate::db::AppState;
 use axum::{
@@ -1757,7 +1757,7 @@ struct ConversationRowForSla {
 }
 
 async fn evaluate_single_conversation_sla(
-    db: &sqlx::Pool<sqlx::Sqlite>,
+    db: &sqlx::PgPool,
     conv: &ConversationRowForSla,
     policies: &[SlaPolicyRow],
     target_policy_id: Option<&str>,

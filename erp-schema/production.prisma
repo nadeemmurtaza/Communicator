@@ -1,0 +1,95 @@
+// Production: bills of materials and work orders for variants made in-house
+// (ProductVariant.producedInHouse — catalog.prisma) rather than bought in
+// from a Supplier. Mirrors purchasing's PurchaseOrder shape deliberately: a
+// WorkOrder is the in-house equivalent of a PO, consuming component stock
+// instead of receiving it from outside.
+
+/// One recipe per produced variant: how many of each component variant it
+/// takes to make one unit. Keyed by ProductVariant (not, say, GarmentType),
+/// so the recipe applies uniformly whether the finished item is stitched,
+/// assembled, or anything else made in-house — see docs on
+/// StitchingJobsService.createForOrderItem() for how a stitched order line
+/// resolves its BOM through OrderItem.variantId.
+model BillOfMaterial {
+  id        String   @id @default(cuid())
+  variantId String   @unique
+  name      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  variant    ProductVariant       @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  components BillOfMaterialLine[]
+}
+
+model BillOfMaterialLine {
+  id                 String @id @default(cuid())
+  billOfMaterialId   String
+  componentVariantId String
+  /// Units of the component consumed per ONE unit of the produced variant.
+  quantityPerUnit    Float
+
+  billOfMaterial   BillOfMaterial @relation(fields: [billOfMaterialId], references: [id], onDelete: Cascade)
+  componentVariant ProductVariant @relation("BomComponent", fields: [componentVariantId], references: [id], onDelete: Restrict)
+
+  @@unique([billOfMaterialId, componentVariantId])
+  @@index([componentVariantId])
+}
+
+enum WorkOrderStatus {
+  DRAFT
+  RELEASED
+  COMPLETED
+  CANCELLED
+}
+
+enum WorkOrderSource {
+  REORDER
+  ORDER_CASCADE
+  MANUAL
+}
+
+/// The in-house "make this" ledger entry. DRAFT reserves nothing; RELEASED
+/// consumes each BOM component's stock (StockMovementReason
+/// PRODUCTION_CONSUMPTION); COMPLETED credits the produced variant's stock
+/// (PRODUCTION_RECEIPT). CANCELLED reverses any RELEASED consumption.
+model WorkOrder {
+  id                String          @id @default(cuid())
+  number            String          @unique // "WO-2026-0001"
+  variantId         String
+  quantityOrdered   Int
+  quantityCompleted Int             @default(0)
+  status            WorkOrderStatus @default(DRAFT)
+  source            WorkOrderSource
+
+  /// Free-form pointer to whatever triggered this — an OrderItem id, a
+  /// StitchingJob id, etc. Scalar, not a relation: production is core and
+  /// must not type-reference a pack model (same pattern as
+  /// StitchingJob.orderItemId — see MULTI-SECTOR.md).
+  sourceRefType String?
+  sourceRefId   String?
+
+  locationId  String?
+  notes       String?
+  releasedAt  DateTime?
+  completedAt DateTime?
+  cancelledAt DateTime?
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+  location  Location?      @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  createdBy User?          @relation("WorkOrderCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([variantId])
+  @@index([sourceRefType, sourceRefId])
+}
+
+/// Same shape as PurchaseOrder's OrderNumberCounter-style tables: one row
+/// per year, incremented atomically to avoid the MAX()-read race.
+model WorkOrderNumberCounter {
+  year    Int @id
+  counter Int @default(0)
+}

@@ -1,4 +1,4 @@
-use crate::db::AppState;
+﻿use crate::db::AppState;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -12,8 +12,11 @@ use uuid::Uuid;
 
 use super::auth::Tenant;
 
-async fn table_columns(pool: &sqlx::Pool<sqlx::Sqlite>, table: &str) -> Vec<String> {
-    sqlx::query_scalar::<_, String>(&format!("SELECT name FROM pragma_table_info('{table}')"))
+async fn table_columns(pool: &sqlx::PgPool, table: &str) -> Vec<String> {
+    sqlx::query_scalar::<_, String>(
+        "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name = $1"
+    )
+        .bind(table)
         .fetch_all(pool)
         .await
         .unwrap_or_default()

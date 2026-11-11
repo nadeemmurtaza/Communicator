@@ -27,7 +27,7 @@ export function ApprovalsModal(props: ApprovalsModalProps) {
           <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl max-w-4xl w-full p-6 space-y-5 animate-in fade-in zoom-in-95 max-h-[85vh] overflow-y-auto">
             <div className="flex items-start justify-between border-b border-[var(--color-border)] pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">
+                <div className="w-8 h-8 rounded-[var(--radius-md)] bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">
                   <Handshake className="h-4 w-4" />
                 </div>
                 <div>
@@ -61,9 +61,9 @@ export function ApprovalsModal(props: ApprovalsModalProps) {
                     key={st}
                     type="button"
                     onClick={() => setApprovalFilterStatus(st)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors flex items-center gap-1.5 cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-[var(--radius-md)] text-xs font-semibold capitalize transition-colors flex items-center gap-1.5 cursor-pointer ${
                       approvalFilterStatus === st
-                        ? 'bg-amber-600 text-white shadow-xs'
+                        ? 'bg-amber-600 text-white shadow-none'
                         : 'bg-[var(--color-accent-soft)] text-[var(--color-ink-muted)] hover:bg-[var(--color-border)]'
                     }`}
                   >
@@ -80,7 +80,7 @@ export function ApprovalsModal(props: ApprovalsModalProps) {
               <button
                 type="button"
                 onClick={handleTriggerRefundApprovalDemo}
-                className="ml-auto text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-300 px-3 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                className="ml-auto text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-300 px-3 py-1.5 rounded-[var(--radius-md)] flex items-center gap-1 cursor-pointer transition-colors"
               >
                 <Plus className="h-4 w-4" />
                 <span>Simulate AI Refund Request</span>
@@ -94,9 +94,9 @@ export function ApprovalsModal(props: ApprovalsModalProps) {
                 .map((app: any) => (
                   <div
                     key={app.id}
-                    className={`rounded-xl border p-4 transition-all ${
+                    className={`rounded-[var(--radius-lg)] border p-4 transition-all ${
                       app.status === 'pending'
-                        ? 'border-amber-300 bg-amber-50/40 shadow-xs'
+                        ? 'border-amber-300 bg-amber-50/40 shadow-none'
                         : app.status === 'approved' || app.status === 'amended'
                         ? 'border-emerald-200 bg-emerald-50/20'
                         : 'border-rose-200 bg-rose-50/20'
@@ -134,7 +134,7 @@ export function ApprovalsModal(props: ApprovalsModalProps) {
                     </div>
 
                     <div className="mt-2.5 space-y-2 text-xs">
-                      <p className="text-[var(--color-ink-muted)] bg-[var(--color-surface)]/70 p-2 rounded-lg border border-[var(--color-border)]/60 font-medium">
+                      <p className="text-[var(--color-ink-muted)] bg-[var(--color-surface)]/70 p-2 rounded-[var(--radius-md)] border border-[var(--color-border)]/60 font-medium">
                         <strong className="text-[var(--color-ink)]">AI Context: </strong>
                         {app.internalNote || app.internal_note}
                       </p>
@@ -142,12 +142,12 @@ export function ApprovalsModal(props: ApprovalsModalProps) {
                       {app.actionData && Object.keys(app.actionData).length > 0 && (
                         <div className="flex flex-wrap items-center gap-2 text-[11px]">
                           {app.actionData.amount && (
-                            <span className="bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-md">
+                            <span className="bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-[var(--radius-sm)]">
                               Amount: ${Number(app.actionData.amount).toFixed(2)}
                             </span>
                           )}
                           {app.actionData.order_id && (
-                            <span className="bg-[var(--color-accent-soft)] text-[var(--color-ink)] font-mono px-2 py-0.5 rounded-md">
+                            <span className="bg-[var(--color-accent-soft)] text-[var(--color-ink)] font-mono px-2 py-0.5 rounded-[var(--radius-sm)]">
                               Order #{app.actionData.order_id}
                             </span>
                           )}
@@ -160,7 +160,7 @@ export function ApprovalsModal(props: ApprovalsModalProps) {
                       )}
 
                       {/* Proposed reply display */}
-                      <div className="bg-[var(--color-surface)] rounded-lg p-2.5 border border-[var(--color-border)]">
+                      <div className="bg-[var(--color-surface)] rounded-[var(--radius-md)] p-2.5 border border-[var(--color-border)]">
                         <span className="block text-[10px] font-bold uppercase text-[var(--color-ink-faint)] mb-1">
                           {app.status === 'pending' ? 'Proposed Customer Reply:' : 'Final Dispatched Reply:'}
                         </span>
@@ -190,7 +190,7 @@ export function ApprovalsModal(props: ApprovalsModalProps) {
                           <button
                             type="button"
                             onClick={() => handleApproveRequest(app)}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg shadow-xs cursor-pointer transition-colors"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-[var(--radius-md)] shadow-none cursor-pointer transition-colors"
                           >
                             Approve &amp; Let AI Dispatch Reply
                           </button>
@@ -206,7 +206,7 @@ export function ApprovalsModal(props: ApprovalsModalProps) {
               <button
                 type="button"
                 onClick={() => setShowApprovalsModal(false)}
-                className="px-4 py-1.5 text-xs bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white rounded-lg font-semibold shadow-xs transition-colors cursor-pointer"
+                className="px-4 py-1.5 text-xs bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white rounded-[var(--radius-md)] font-semibold shadow-none transition-colors cursor-pointer"
               >
                 Close
               </button>

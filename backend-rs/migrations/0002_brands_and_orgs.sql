@@ -1,5 +1,5 @@
--- Migration 0002: Brands and Organizations hierarchy
--- Introduces Tenant → Organization → Brand hierarchy with BYOK at brand level
+﻿-- Migration 0002: Brands and Organizations hierarchy
+-- Introduces Tenant â†’ Organization â†’ Brand hierarchy with BYOK at brand level
 
 -- Organizations table
 CREATE TABLE IF NOT EXISTS organizations (
@@ -14,8 +14,8 @@ CREATE TABLE IF NOT EXISTS organizations (
     address TEXT DEFAULT '',
     timezone TEXT DEFAULT 'UTC',
     settings TEXT DEFAULT '{}',
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_orgs_tenant_key ON organizations(tenant_key);
@@ -43,8 +43,8 @@ CREATE TABLE IF NOT EXISTS brands (
     rules TEXT DEFAULT '{}',
     tone_guidelines TEXT DEFAULT '',
     keywords TEXT DEFAULT '[]',
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_brands_org_id ON brands(organization_id);
@@ -56,10 +56,10 @@ CREATE TABLE IF NOT EXISTS brand_credentials (
     brand_id TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
     channel_type TEXT NOT NULL,
     credentials TEXT NOT NULL DEFAULT '{}',
-    is_active INTEGER NOT NULL DEFAULT 1,
+    is_active BOOLEAN NOT NULL DEFAULT true,
     last_verified_at TEXT,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_brand_creds_brand_id ON brand_credentials(brand_id);
@@ -76,13 +76,13 @@ CREATE TABLE IF NOT EXISTS brand_ai_config (
     temperature REAL DEFAULT 0.7,
     max_tokens INTEGER DEFAULT 4096,
     system_prompt TEXT DEFAULT '',
-    rag_enabled INTEGER NOT NULL DEFAULT 0,
+    rag_enabled BOOLEAN NOT NULL DEFAULT false,
     embedding_provider TEXT DEFAULT '',
     embedding_api_key TEXT DEFAULT '',
     embedding_model TEXT DEFAULT '',
-    is_active INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_brand_ai_brand_id ON brand_ai_config(brand_id);
@@ -96,9 +96,9 @@ CREATE TABLE IF NOT EXISTS brand_knowledge_entries (
     source_type TEXT DEFAULT 'manual',
     topic TEXT DEFAULT '',
     tags TEXT DEFAULT '[]',
-    embedding_vector BLOB,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    embedding_vector BYTEA,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_brand_kb_brand_id ON brand_knowledge_entries(brand_id);
@@ -115,12 +115,12 @@ CREATE INDEX IF NOT EXISTS idx_conversations_brand_id ON conversations(brand_id)
 CREATE INDEX IF NOT EXISTS idx_messages_brand_id ON messages(brand_id);
 
 -- Create a default organization and brand for existing tenants for backward compatibility
-INSERT OR IGNORE INTO organizations (id, tenant_key, name, description)
+INSERT INTO organizations (id, tenant_key, name, description)
 SELECT 'org_' || substr(tenant_key, 1, 24), tenant_key, 'Primary Organization', 'Default organization for ' || tenant_key
 FROM tenants
 WHERE tenant_key NOT IN (SELECT tenant_key FROM organizations);
 
-INSERT OR IGNORE INTO brands (id, organization_id, name, slug, description)
+INSERT INTO brands (id, organization_id, name, slug, description)
 SELECT 'brand_' || substr(o.tenant_key, 1, 22), o.id, 'Primary Brand', 'primary-brand', 'Default brand for ' || o.name
 FROM organizations o
 WHERE o.id NOT IN (SELECT organization_id FROM brands);

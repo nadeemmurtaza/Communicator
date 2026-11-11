@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../lib/api'
+import { listIndustries } from '../lib/api'
 import {
   Loader2, Save, Plus, Trash2, Check, X, AlertTriangle,
   Key, Brain, BookOpen, Globe
@@ -39,6 +40,10 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
+  const [industryId, setIndustryId] = useState('')
+
+  // Industries
+  const [industries, setIndustries] = useState<any[]>([])
 
   // AI config
   const [aiProvider, setAiProvider] = useState('anthropic')
@@ -71,11 +76,12 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
     try {
       setLoading(true)
       setError(null)
-      const [prof, creds, kb, ai] = await Promise.allSettled([
+      const [prof, creds, kb, ai, inds] = await Promise.allSettled([
         api.getBrandProfile(brandId),
         api.listBrandCredentials(brandId),
         api.listBrandKnowledge(brandId),
         api.getBrandAIConfig(brandId),
+        listIndustries(),
       ])
       if (prof.status === 'fulfilled') {
         const b = prof.value.brand
@@ -89,6 +95,7 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
         setEmail(b.email || '')
         setPhone(b.phone || '')
         setAddress(b.address || '')
+        setIndustryId(b.industryId || '')
       }
       if (creds.status === 'fulfilled') setCredentials(creds.value)
       if (kb.status === 'fulfilled') setEntries(kb.value)
@@ -101,6 +108,7 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
         setAiSystemPrompt(a.systemPrompt || '')
         setRagEnabled(a.ragEnabled ?? false)
       }
+      if (inds.status === 'fulfilled') setIndustries(inds.value)
     } catch (e: any) {
       setError(e.message)
     } finally {
@@ -112,7 +120,7 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
     if (!brandId) return
     setSaving(true)
     try {
-      await api.updateBrand(brandId, { name, slug, description, tagline, bio, website, email, phone, address })
+      await api.updateBrand(brandId, { name, slug, description, tagline, bio, website, email, phone, address, industry_id: industryId || undefined })
       setError(null)
     } catch (e: any) {
       setError(e.message)
@@ -238,7 +246,7 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
         {!brandId && (
           <button
             onClick={() => navigate('/brands/select')}
-            className="px-3 py-1.5 text-sm border rounded-lg hover:bg-muted"
+            className="px-3 py-1.5 text-sm border rounded-[var(--radius-md)] hover:bg-muted"
           >
             Select Brand
           </button>
@@ -246,7 +254,7 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           <span className="flex-1">{error}</span>
           <button onClick={() => setError(null)}><X className="w-4 h-4" /></button>
@@ -282,7 +290,7 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
           <div className="md:col-span-2">
             <label className="text-sm font-medium">Description</label>
             <textarea
-              className="w-full mt-1 px-3 py-2 border rounded-lg text-sm"
+              className="w-full mt-1 px-3 py-2 border rounded-[var(--radius-md)] text-sm"
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -291,18 +299,36 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
           <div className="md:col-span-2">
             <label className="text-sm font-medium">Bio</label>
             <textarea
-              className="w-full mt-1 px-3 py-2 border rounded-lg text-sm"
+              className="w-full mt-1 px-3 py-2 border rounded-[var(--radius-md)] text-sm"
               rows={5}
               value={bio}
               onChange={(e) => setBio(e.target.value)}
             />
           </div>
           <Field label="Address" value={address} onChange={setAddress} />
+          <div>
+            <label className="text-sm font-medium">Industry</label>
+            <select
+              className="w-full mt-1 px-3 py-2 border rounded-[var(--radius-md)] text-sm"
+              value={industryId}
+              onChange={(e) => setIndustryId(e.target.value)}
+            >
+              <option value="">Select industry...</option>
+              {industries.map((ind) => (
+                <option key={ind.id} value={ind.id}>
+                  {ind.icon ? ind.icon + ' ' : ''}{ind.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground mt-1">
+              Industry selection helps group WhatsApp templates and flows
+            </p>
+          </div>
           <div className="md:col-span-2 flex justify-end">
             <button
               onClick={saveIdentity}
               disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-lg text-sm hover:opacity-90 disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-[var(--radius-md)] text-sm hover:opacity-90 disabled:opacity-50"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               Save Changes
@@ -321,7 +347,7 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
           <div>
             <label className="text-sm font-medium">Products (JSON array)</label>
             <textarea
-              className="w-full mt-1 px-3 py-2 border rounded-lg text-sm font-mono"
+              className="w-full mt-1 px-3 py-2 border rounded-[var(--radius-md)] text-sm font-mono"
               rows={8}
               defaultValue={profile?.brand?.products || '[]'}
             />
@@ -329,7 +355,7 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
           <div>
             <label className="text-sm font-medium">Services (JSON array)</label>
             <textarea
-              className="w-full mt-1 px-3 py-2 border rounded-lg text-sm font-mono"
+              className="w-full mt-1 px-3 py-2 border rounded-[var(--radius-md)] text-sm font-mono"
               rows={8}
               defaultValue={profile?.brand?.services || '[]'}
             />
@@ -337,7 +363,7 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
           <div>
             <label className="text-sm font-medium">Prices (JSON object)</label>
             <textarea
-              className="w-full mt-1 px-3 py-2 border rounded-lg text-sm font-mono"
+              className="w-full mt-1 px-3 py-2 border rounded-[var(--radius-md)] text-sm font-mono"
               rows={8}
               defaultValue={profile?.brand?.prices || '{}'}
             />
@@ -351,7 +377,7 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
           <div>
             <label className="text-sm font-medium">Policies (JSON)</label>
             <textarea
-              className="w-full mt-1 px-3 py-2 border rounded-lg text-sm font-mono"
+              className="w-full mt-1 px-3 py-2 border rounded-[var(--radius-md)] text-sm font-mono"
               rows={8}
               defaultValue={profile?.brand?.policies || '{}'}
             />
@@ -359,7 +385,7 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
           <div>
             <label className="text-sm font-medium">Rules (JSON)</label>
             <textarea
-              className="w-full mt-1 px-3 py-2 border rounded-lg text-sm font-mono"
+              className="w-full mt-1 px-3 py-2 border rounded-[var(--radius-md)] text-sm font-mono"
               rows={8}
               defaultValue={profile?.brand?.rules || '{}'}
             />
@@ -367,7 +393,7 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
           <div>
             <label className="text-sm font-medium">Tone Guidelines</label>
             <textarea
-              className="w-full mt-1 px-3 py-2 border rounded-lg text-sm"
+              className="w-full mt-1 px-3 py-2 border rounded-[var(--radius-md)] text-sm"
               rows={6}
               defaultValue={profile?.brand?.toneGuidelines || ''}
             />
@@ -382,7 +408,7 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
             <div>
               <label className="text-sm font-medium">AI Provider</label>
               <select
-                className="w-full mt-1 px-3 py-2 border rounded-lg text-sm"
+                className="w-full mt-1 px-3 py-2 border rounded-[var(--radius-md)] text-sm"
                 value={aiProvider}
                 onChange={(e) => setAiProvider(e.target.value)}
               >
@@ -407,7 +433,7 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
               <label className="text-sm font-medium">Max Tokens</label>
               <input
                 type="number"
-                className="w-full mt-1 px-3 py-2 border rounded-lg text-sm"
+                className="w-full mt-1 px-3 py-2 border rounded-[var(--radius-md)] text-sm"
                 value={aiMaxTokens}
                 onChange={(e) => setAiMaxTokens(parseInt(e.target.value) || 0)}
               />
@@ -424,7 +450,7 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
           <div>
             <label className="text-sm font-medium">System Prompt</label>
             <textarea
-              className="w-full mt-1 px-3 py-2 border rounded-lg text-sm"
+              className="w-full mt-1 px-3 py-2 border rounded-[var(--radius-md)] text-sm"
               rows={8}
               value={aiSystemPrompt}
               onChange={(e) => setAiSystemPrompt(e.target.value)}
@@ -435,7 +461,7 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
             <button
               onClick={saveAIConfig}
               disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-lg text-sm hover:opacity-90 disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-[var(--radius-md)] text-sm hover:opacity-90 disabled:opacity-50"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               Save AI Config
@@ -451,7 +477,7 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
             <div>
               <label className="text-sm font-medium">Channel</label>
               <select
-                className="w-full mt-1 px-3 py-2 border rounded-lg text-sm"
+                className="w-full mt-1 px-3 py-2 border rounded-[var(--radius-md)] text-sm"
                 value={credChannel}
                 onChange={(e) => {
                   setCredChannel(e.target.value)
@@ -477,7 +503,7 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
             <button
               onClick={saveCredentials}
               disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-lg text-sm hover:opacity-90 disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-[var(--radius-md)] text-sm hover:opacity-90 disabled:opacity-50"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               Save Credentials
@@ -487,7 +513,7 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
             <h3 className="text-sm font-medium mb-2">Connected Channels</h3>
             <div className="space-y-2">
               {credentials.map((c) => (
-                <div key={c.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={c.id} className="flex items-center justify-between p-3 border rounded-[var(--radius-md)]">
                   <div className="flex items-center gap-3">
                     {c.isActive ? <Check className="w-4 h-4 text-green-600" /> : <X className="w-4 h-4 text-red-500" />}
                     <span className="text-sm capitalize">{c.channelType}</span>
@@ -516,7 +542,7 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
           <div>
             <label className="text-sm font-medium">Content</label>
             <textarea
-              className="w-full mt-1 px-3 py-2 border rounded-lg text-sm"
+              className="w-full mt-1 px-3 py-2 border rounded-[var(--radius-md)] text-sm"
               rows={6}
               value={newContent}
               onChange={(e) => setNewContent(e.target.value)}
@@ -525,7 +551,7 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
           <button
             onClick={createKnowledgeEntry}
             disabled={saving || !newTitle.trim()}
-            className="flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-lg text-sm hover:opacity-90 disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-[var(--radius-md)] text-sm hover:opacity-90 disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
             Add Entry
@@ -536,7 +562,7 @@ export function BrandProfile({ tab: initialTab }: { tab?: string }) {
             </h3>
             <div className="space-y-2">
               {entries.map((entry) => (
-                <div key={entry.id} className="flex items-start justify-between p-3 border rounded-lg">
+                <div key={entry.id} className="flex items-start justify-between p-3 border rounded-[var(--radius-md)]">
                   <div>
                     <p className="text-sm font-medium">{entry.title}</p>
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
@@ -580,7 +606,7 @@ function Field({ label, value, onChange, type = 'text' }: {
       <label className="text-sm font-medium">{label}</label>
       <input
         type={type}
-        className="w-full mt-1 px-3 py-2 border rounded-lg text-sm"
+        className="w-full mt-1 px-3 py-2 border rounded-[var(--radius-md)] text-sm"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />

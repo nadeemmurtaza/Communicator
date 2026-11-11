@@ -1,0 +1,237 @@
+// Internal notifications, meetings and escalation
+// (tasks-notifications-support/24-internal-notifications-meetings-escalation.md,
+// DECISIONS.md ADR-060).
+//
+// Delivery itself is NOT rebuilt here — NotificationChannel/EmailChannel/
+// ExpoPushChannel/LogChannel/NotificationsService (core/notifications/)
+// already exist and are reused unchanged. What was missing was AUDIENCE:
+// saying "every department head in the North region" and having it resolve
+// to people, at send time, not at draft time.
+//
+// No organizationId anywhere in this file (ADR-040/044/046/049): this
+// deployment IS the tenant boundary. EscalationRule.sourceType is unique
+// alone, the same correction TaskStageDefinition.key already makes.
+
+/// Who a message goes to, stored as a specification, not a list of user
+/// ids — "the finance department" must mean the finance department ON THE
+/// DAY IT SENDS, not the membership frozen when somebody drafted it.
+model Audience {
+  id String @id @default(cuid())
+
+  /// Root of the subtree this addresses. NULL means the whole
+  /// organization (subject to the sender's own reach at resolve time).
+  orgUnitId String?
+  /// Include units below the root, or only the root itself.
+  includeDescendants Boolean @default(true)
+  /// Only people at or above this rank level (hr.prisma's Rank.level).
+  /// NULL means everyone.
+  minRankLevel Int?
+  /// Only these positions, when the audience is a named handful.
+  positionIds String[]
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+
+  broadcasts BroadcastMessage[]
+  meetings   Meeting[]
+
+  @@index([orgUnitId])
+}
+
+/// A record that an internal message was actually sent — the "reversal
+/// document" lens answer for this module: a sent message cannot be
+/// unsent, so this row is the permanent, immutable proof of what went out,
+/// to whom, and when. Not a second delivery mechanism: `recipientCount`
+/// and `excludedCount` are computed by AudienceService.resolve() against
+/// the sender's own reach, and the actual fan-out is NotificationsService,
+/// unchanged.
+model BroadcastMessage {
+  id       String @id @default(cuid())
+  senderId String
+  audienceId String
+
+  subject String
+  body    String
+
+  /// How many recipients the send actually reached.
+  recipientCount Int
+  /// How many the sender's own requested audience named that their reach
+  /// excluded — shown on the compose screen BEFORE send, stored here so
+  /// the record matches what the sender was shown, never a surprise
+  /// after the fact.
+  excludedCount Int @default(0)
+
+  /// Above ANNOUNCE_QUORUM_RANK (Setting) or addressed to more than N
+  /// people, a broadcast needs a countersignature before it sends — see
+  /// notify.service.ts's own comment. NULL when no approval was required.
+  approvalChainId String? @unique
+  sentAt          DateTime?
+  createdAt       DateTime  @default(now())
+
+  audience Audience @relation(fields: [audienceId], references: [id])
+
+  @@index([senderId, createdAt])
+}
+
+model Meeting {
+  id         String   @id @default(cuid())
+  title      String
+  detail     String?
+  startsAt   DateTime
+  endsAt     DateTime
+  /// A group spans zones — same rule as AttendanceEvent (doc 22).
+  timezone   String
+  location   String?
+  audienceId String
+  calledByUserId String
+  orgUnitId  String
+  createdAt  DateTime @default(now())
+  /// Cancellation is a notice to the same materialised invitation list,
+  /// never a delete — see MeetingsService.cancel()'s own comment.
+  cancelledAt DateTime?
+
+  audience    Audience            @relation(fields: [audienceId], references: [id])
+  invitations MeetingInvitation[]
+
+  @@index([orgUnitId, startsAt])
+}
+
+enum InviteResponse {
+  NO_RESPONSE
+  ACCEPTED
+  DECLINED
+  TENTATIVE
+}
+
+/// Materialised at send time — resolved once from the Audience, then
+/// fixed, so a person invited Monday can still answer Tuesday after being
+/// moved to another department. The audience is a live spec; this list is
+/// a record.
+model MeetingInvitation {
+  id         String  @id @default(cuid())
+  meetingId  String
+  userId     String
+  /// Required means the meeting's shortfall report counts this person
+  /// when they have not answered; optional means it does not.
+  required    Boolean        @default(true)
+  response    InviteResponse @default(NO_RESPONSE)
+  respondedAt DateTime?
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@unique([meetingId, userId])
+  @@index([userId, response])
+}
+
+/// The timer that makes a stalled task visible — climbs Position.reportsTo,
+/// never a person, so a vacant post is skipped to its own reportsTo (the
+/// leaver case, handled by construction, same as doc 23's own unclaiming).
+/// Watches Task rows (tasks.prisma) by Task.sourceType, the identical
+/// (type, id) convention doc 23 already uses for its own event intake, so
+/// this module imports no module it escalates for and no module imports
+/// this one.
+model EscalationRule {
+  id String @id @default(cuid())
+
+  /// Matches Task.sourceType. Unique alone (no organizationId — this
+  /// deployment IS the tenant).
+  sourceType String @unique
+  /// How long without a state change (a new TaskTransition) before it fires.
+  afterMinutes Int
+  /// How many rungs up Position.reportsTo to climb per fire.
+  stepsPerFire Int @default(1)
+  /// Stop climbing here (Rank.level). NULL climbs to the root, which is
+  /// almost never wanted.
+  ceilingRankLevel Int?
+  maxFires         Int @default(3)
+
+  fires EscalationFire[]
+}
+
+/// One row per actual escalation fire — the idempotency and fire-count
+/// tracking EscalationRule.maxFires needs. `@@unique([taskId, fireNumber])`
+/// is the guard: a cron tick that overlaps a previous one can only ever
+/// insert the same (taskId, fireNumber) once.
+model EscalationFire {
+  id                  String   @id @default(cuid())
+  taskId              String
+  ruleId              String
+  /// 1, 2, 3… up to the rule's own maxFires.
+  fireNumber          Int
+  /// The Position this fire actually notified, after skipping vacant
+  /// posts and applying the ceiling.
+  climbedToPositionId String
+  firedAt             DateTime @default(now())
+
+  rule EscalationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, fireNumber])
+  @@index([taskId])
+}
+
+// A bulletin board (tasks-notifications-support/61-policy-communications-bulletin.md,
+// DECISIONS.md ADR-062). Doc 24's own delivery is reused unchanged for the
+// "you have a new notice" ping (BulletinNotificationListener calls
+// AudienceService.resolve()/NotificationsService.send() exactly as
+// NotifyService does) — this is the missing RECORD, never a second
+// delivery mechanism. Lives here, not in `hr` (the doc's own casual
+// suggestion), because it reuses AudienceService.resolve() directly:
+// hr and notify are separate module packs with no approved coupling, and
+// the doc's own "never a bulletin-specific second audience-resolution
+// mechanism" rule leaves no other place to put it.
+
+/// One published notice. `authorId`/`BulletinAcknowledgement.userId` — no
+/// `Employee` model exists in this codebase (every actor is `User`,
+/// ADR-044/040), and no `organizationId` (this deployment IS the tenant,
+/// ADR-040/044/046/049/060) — both are deviations from this document's own
+/// literal sketch, the same two this session's every other doc-24-family
+/// build already makes.
+model Bulletin {
+  id           String           @id @default(cuid())
+  authorId     String
+  title        String
+  bodyMarkdown String
+  category     BulletinCategory
+
+  /// NULL means the whole organization; otherwise the subtree rooted here
+  /// (OrgUnit.path), exactly as Audience.orgUnitId already means for doc 24.
+  audienceOrgUnitId String?
+
+  publishedAt DateTime  @default(now())
+  /// Optional — some notices are time-bound.
+  expiresAt   DateTime?
+  requiresAcknowledgement Boolean @default(false)
+
+  /// A bulletin is retracted, never deleted — "the reversal document" lens:
+  /// removes it from the active list while the row and every
+  /// acknowledgement already recorded against it remain (JournalEntry
+  /// reversal's own "never erased, only superseded" discipline).
+  archivedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  acknowledgements BulletinAcknowledgement[]
+
+  @@index([audienceOrgUnitId, publishedAt])
+}
+
+enum BulletinCategory {
+  POLICY
+  MEMO
+  NOTICE
+  HR_ANNOUNCEMENT
+}
+
+/// `@@unique([bulletinId, userId])` is the whole mechanism: a double-click
+/// of "acknowledge" is a P2002 the service swallows, never a duplicate row.
+model BulletinAcknowledgement {
+  id             String   @id @default(cuid())
+  bulletinId     String
+  userId         String
+  acknowledgedAt DateTime @default(now())
+
+  bulletin Bulletin @relation(fields: [bulletinId], references: [id], onDelete: Cascade)
+
+  @@unique([bulletinId, userId])
+}

@@ -1,0 +1,184 @@
+// 155-wallet-stored-value-merchant-escrow.md
+//
+// Newax-issued store credit, settling merchants as an ordinary trade
+// payable — never third-party fund custody. Read the doc's own "Read this
+// section first" before touching this file: the structure exists
+// specifically so neither leg of the money movement is "holding a third
+// party's funds in trust for disbursement" (the PSO/PSP question). A
+// customer's PURCHASE is an ordinary sale of a Newax-issued product; a
+// merchant's MerchantPayable is an ordinary trade payable, the same legal
+// shape as doc 145's own SupplierBill.
+//
+// Shipped module-off (WO-155.0 is unresolved — see DECISIONS.md): this file
+// exists, compiles and is fully tested, but WalletModule is registered in
+// modules.registry.ts with no deployment enabling it in MODULES today.
+//
+// Two deliberate departures from the doc's own literal Prisma snippet,
+// each with its own reason recorded where it matters:
+//   1. WalletAccount.customerId names `User`, not `Party`/`Contact` — see
+//      the model's own comment.
+//   2. `@@unique([customerId])` alone, not `@@unique([organizationId,
+//      customerId])` — see WalletAccount's own comment.
+
+enum WalletEntryType {
+  PURCHASE // customer buys credit — real money into Newax's own bank account, booked as deferred revenue
+  RESERVE // credit earmarked against a specific order at checkout — not yet spent
+  REDEEM // the earmark converts to an actual spend, exactly when the merchant confirms the order
+  RELEASE_RESERVATION // the merchant does not confirm (rejects, expires) — the earmark returns to available, unspent
+  REFUND // reverses a PURCHASE or a REDEEM
+  ADJUSTMENT // a manual, always-approved-above-threshold, always-reasoned correction
+}
+
+enum WalletAccountStatus {
+  ACTIVE
+  FROZEN
+  CLOSED
+}
+
+/// One wallet per customer — the ONLY owner type (§1: no merchant-side
+/// wallet exists; a merchant's own money position is `MerchantPayable`
+/// below, an ordinary payable, never a balance).
+///
+/// `customerId` names `User`, not the doc's own literal `Party`/`Contact`
+/// (the "actor with three tables" lens allows any of the three named
+/// tables — this repo's own closest sibling feature, `StoreCreditService`
+/// / `StoreCreditTransaction` (giftcards.prisma), already keys an
+/// identical customer balance ledger to `User.id`, as does
+/// `WishlistItem`/`LoyaltyTransaction`. Keying `WalletAccount` to `Contact`
+/// instead would be the one inconsistent ledger in this codebase's own
+/// "customer balance" family, and would need a `Contact`-from-`User`
+/// resolution step this codebase does not otherwise need — House Rule
+/// "follow existing conventions" wins over the doc's own abstract phrasing
+/// here.
+model WalletAccount {
+  id String @id @default(cuid())
+
+  /// Newax's own Organization tier (RETAIL-ERP.md R14) — the "second legal
+  /// entity"/"three silhouettes" scope column, present in the first
+  /// migration and never rendering at Solo/Chain. Nullable there on
+  /// purpose: `organizationId` is unset outside the Organization-tier
+  /// shared-hosting deployment this document itself names as "the real
+  /// case this document exists for" (§5's own answer). NOT part of the
+  /// uniqueness key below — see that field's own comment.
+  organizationId String?
+  customerId     String              @unique
+  currency       String              @default("PKR")
+  status         WalletAccountStatus @default(ACTIVE)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  customer           User                      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  entries            WalletEntry[]
+  adjustmentRequests WalletAdjustmentRequest[]
+
+  @@index([organizationId])
+}
+
+/// Append-only, exactly as the doc requires — a correction is a new,
+/// opposite entry, never an edit. `orderId` is a plain scalar (no Prisma
+/// relation to `Order`) — the same "reference by id, join in application
+/// code" idiom `StitchingJob.orderItemId`'s own comment documents, so
+/// `orders` never has to declare a typed back-reference to a module it may
+/// never enable.
+model WalletEntry {
+  id          String          @id @default(cuid())
+  accountId   String
+  type        WalletEntryType
+  amountMinor Int // always positive; direction implied by `type`
+  orderId     String?
+  /// Idempotency key — a Payment.id, an Order.id, a WalletAdjustmentRequest.id.
+  /// Never a re-derived string (House Rule 11).
+  sourceRef   String
+  /// Set only for ADJUSTMENT — who is recorded as having caused the write:
+  /// the requester for a below-threshold self-serve adjustment, or the
+  /// approver's own decision for an above-threshold one (WalletAdjustmentRequest
+  /// carries the requester in that case).
+  actorId     String?
+  /// Required, human-readable, for ADJUSTMENT only — "a manual, always-
+  /// reasoned correction" (§1's own words).
+  reason      String?
+  createdAt   DateTime        @default(now())
+
+  account WalletAccount @relation(fields: [accountId], references: [id])
+
+  @@unique([accountId, type, sourceRef])
+  @@index([accountId, createdAt])
+}
+
+enum WalletAdjustmentRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// The "threshold nobody approves alone" lens's own artifact: an
+/// ADJUSTMENT above `SettingKey.WalletAdjustmentApprovalThresholdMinor`
+/// is a REQUEST (refusable) until a *different* holder of
+/// `finance.wallets.adjust.approve` decides it — only then does a
+/// `WalletEntry` get written. Below the threshold, `WalletService
+/// .adjustment()` writes the `WalletEntry` directly and this table is
+/// never touched — "Request or record" applies per-call, not per-type.
+///
+/// Reuses the existing generic `ApprovalChain`/`ApprovalStep` engine
+/// (`core/approvals`, doc 63's own shape) via `ApprovalSubjectType
+/// .WALLET_ADJUSTMENT` — never a bespoke chain, House Rule "no duplicate
+/// implementation."
+model WalletAdjustmentRequest {
+  id                String                        @id @default(cuid())
+  accountId         String
+  /// Signed: positive credits the account, negative debits it.
+  amountMinor       Int
+  reason            String
+  requestedByUserId String
+  status            WalletAdjustmentRequestStatus @default(PENDING)
+  /// Set once APPROVED and the resulting WalletEntry is written —
+  /// `@unique` is this table's own half of "the second copy of the write":
+  /// a retried approve() call finds this already set and no-ops.
+  walletEntryId     String?                       @unique
+  createdAt         DateTime                      @default(now())
+  decidedAt         DateTime?
+
+  account WalletAccount @relation(fields: [accountId], references: [id])
+
+  @@index([accountId, status])
+}
+
+enum MerchantPayableStatus {
+  OPEN
+  SCHEDULED
+  PAID
+  DISPUTED
+}
+
+/// The exact mirror of doc 145's own AP side (`SupplierBill`) — a merchant
+/// selling through this platform is, for settlement purposes, a vendor
+/// Newax owes money to, never a party whose own money Newax was ever
+/// holding (§3). `organizationId` here is NOT this codebase's own
+/// `organization.prisma` `Organization` (Newax's own chain/brand tier) —
+/// it is the external merchant tenant's own id under doc 39's shared-
+/// hosting control plane, hence a plain scalar with no `@relation`,
+/// exactly as the doc's own Prisma snippet declares it.
+model MerchantPayable {
+  id                String                @id @default(cuid())
+  organizationId    String
+  orderId           String                @unique
+  grossMinor        Int
+  platformFeeMinor  Int
+  netPayableMinor   Int
+  status            MerchantPayableStatus @default(OPEN)
+  scheduledPayoutAt DateTime?
+  paidAt            DateTime?
+
+  /// Set only while DISPUTED — the toxic-pair partner `resolve()` checks
+  /// against, the same "never its own approver" shape
+  /// `StockVarianceService.resolve()` already uses.
+  disputedByUserId String?
+  disputeReason    String?
+  resolvedByUserId String?
+  resolvedAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, status])
+}

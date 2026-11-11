@@ -214,7 +214,7 @@ export function SMSIntegration() {
       <div className="flex h-96 items-center justify-center">
         <div className="text-center">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
-          <p className="mt-2 text-sm text-slate-500 font-medium">Loading Twilio SMS Integration...</p>
+          <p className="mt-2 text-sm text-[var(--color-ink-faint)] font-medium">Loading Twilio SMS Integration...</p>
         </div>
       </div>
     )
@@ -225,33 +225,33 @@ export function SMSIntegration() {
   return (
     <div className="space-y-6">
       {/* Top Breadcrumb & Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[var(--color-border)] pb-5">
         <div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
+          <div className="flex items-center gap-2 text-xs text-[var(--color-ink-faint)] mb-1">
             <Link to="/channels" className="hover:text-blue-600 flex items-center gap-1 font-medium">
               <span className="flex items-center gap-1"><ArrowLeft className="h-3.5 w-3.5" /> Channels Hub</span>
             </Link>
             <span>/</span>
             <span>Channel 3</span>
             <span>/</span>
-            <span className="text-slate-800 font-semibold">SMS Messaging (Twilio)</span>
+            <span className="text-[var(--color-ink)] font-semibold">SMS Messaging (Twilio)</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-600 text-white shadow-sm">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)] bg-red-600 text-white shadow-sm">
               <SmsIcon className="h-6 w-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold tracking-tight text-slate-900">{inboxName}</h1>
+                <h1 className="text-2xl font-bold tracking-tight text-[var(--color-ink)]">{inboxName}</h1>
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
                   10DLC Verified
                 </span>
-                <span className="inline-flex items-center rounded-md bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 border border-red-200">
+                <span className="inline-flex items-center rounded-[var(--radius-sm)] bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 border border-red-200">
                   Channel 3
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-[var(--color-ink-faint)] mt-0.5">
                 Official Twilio REST API integration, 10DLC carrier compliance, automated STOP/START opt-out, and shared team queue routing.
               </p>
             </div>
@@ -261,27 +261,27 @@ export function SMSIntegration() {
         <div className="flex items-center gap-2.5">
           <Link
             to="/"
-            className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+            className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-3.5 py-2 text-xs font-semibold text-[var(--color-ink)] shadow-sm hover:bg-[var(--color-accent-muted)]"
           >
             <span className="flex items-center gap-1.5">Open Shared Inbox <ExternalLink className="h-3 w-3" /></span>
           </Link>
           <button
             onClick={handleVerify}
             disabled={verifying}
-            className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+            className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-3.5 py-2 text-xs font-semibold text-[var(--color-ink)] shadow-sm hover:bg-[var(--color-accent-muted)] disabled:opacity-50"
           >
             {verifying ? 'Checking...' : 'Verify Connection'}
           </button>
           <button
             onClick={() => setActiveTab('diagnostics')}
-            className="rounded-lg border border-blue-200 bg-blue-50 px-3.5 py-2 text-xs font-semibold text-blue-700 shadow-sm hover:bg-blue-100"
+            className="rounded-[var(--radius-md)] border border-blue-200 bg-blue-50 px-3.5 py-2 text-xs font-semibold text-blue-700 shadow-sm hover:bg-blue-100"
           >
             <span className="flex items-center gap-1.5"><Zap className="h-3.5 w-3.5 text-amber-500" /> Test Diagnostic SMS</span>
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-[var(--radius-md)] bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
           >
             {saving ? 'Saving...' : 'Save Configuration'}
           </button>
@@ -290,41 +290,41 @@ export function SMSIntegration() {
 
       {/* Metrics Bar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
-          <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Primary Twilio Number</div>
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-3.5 shadow-sm">
+          <div className="text-[11px] font-medium text-[var(--color-ink-faint)] uppercase tracking-wider">Primary Twilio Number</div>
           <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-base font-bold text-slate-900 font-mono">{phoneNumber || '+1 (415) 555-2480'}</span>
+            <span className="text-base font-bold text-[var(--color-ink)] font-mono">{phoneNumber || '+1 (415) 555-2480'}</span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-0.5">Capabilities: SMS, MMS</p>
+          <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">Capabilities: SMS, MMS</p>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
-          <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">A2P 10DLC Status</div>
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-3.5 shadow-sm">
+          <div className="text-[11px] font-medium text-[var(--color-ink-faint)] uppercase tracking-wider">A2P 10DLC Status</div>
           <div className="mt-1 flex items-baseline gap-2">
             <span className="inline-flex items-center gap-1.5 text-base font-bold text-emerald-600"><span className="h-2 w-2 rounded-full bg-emerald-500"></span>{a2pStatus}</span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-0.5">{brandTier}</p>
+          <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">{brandTier}</p>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
-          <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Carrier Deliverability</div>
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-3.5 shadow-sm">
+          <div className="text-[11px] font-medium text-[var(--color-ink-faint)] uppercase tracking-wider">Carrier Deliverability</div>
           <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-xl font-bold text-slate-900">98.7%</span>
+            <span className="text-xl font-bold text-[var(--color-ink)]">98.7%</span>
             <span className="text-[11px] font-semibold text-emerald-600">High Trust</span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-0.5">Zero carrier spam drops</p>
+          <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">Zero carrier spam drops</p>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
-          <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Throughput Quota</div>
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-3.5 shadow-sm">
+          <div className="text-[11px] font-medium text-[var(--color-ink-faint)] uppercase tracking-wider">Throughput Quota</div>
           <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-xl font-bold text-slate-900">200K</span>
-            <span className="text-[11px] text-slate-500">msgs/day</span>
+            <span className="text-xl font-bold text-[var(--color-ink)]">200K</span>
+            <span className="text-[11px] text-[var(--color-ink-faint)]">msgs/day</span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-0.5">Standard High Throughput</p>
+          <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">Standard High Throughput</p>
         </div>
       </div>
 
       {/* Notifications */}
       {success && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-800 flex items-center justify-between">
+        <div className="rounded-[var(--radius-md)] border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             <span className="font-medium">{success}</span>
@@ -333,7 +333,7 @@ export function SMSIntegration() {
         </div>
       )}
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs text-red-800 flex items-center justify-between">
+        <div className="rounded-[var(--radius-md)] border border-red-200 bg-red-50 p-3.5 text-xs text-red-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-red-600" />
             <span className="font-medium">{error}</span>
@@ -343,7 +343,7 @@ export function SMSIntegration() {
       )}
 
       {/* Tabs Navigation */}
-      <div className="border-b border-slate-200">
+      <div className="border-b border-[var(--color-border)]">
         <nav className="flex space-x-6 overflow-x-auto">
           {[
             { id: 'credentials', label: 'Credentials & Number', icon: <Key className="h-3.5 w-3.5" /> },
@@ -358,7 +358,7 @@ export function SMSIntegration() {
               className={`flex items-center gap-2 border-b-2 py-3 px-1 text-xs font-semibold whitespace-nowrap transition-colors ${
                 activeTab === tab.id
                   ? 'border-red-600 text-red-600'
-                  : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                  : 'border-transparent text-[var(--color-ink-faint)] hover:border-[var(--color-border)] hover:text-[var(--color-ink)]'
               }`}
             >
               <span>{tab.icon}</span>
@@ -376,71 +376,71 @@ export function SMSIntegration() {
       {/* TAB 1: CREDENTIALS & PHONE NUMBER */}
       {activeTab === 'credentials' && (
         <div className="space-y-6">
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
-            <h2 className="text-base font-semibold text-slate-900 border-b border-slate-100 pb-3">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-6 shadow-sm space-y-5">
+            <h2 className="text-base font-semibold text-[var(--color-ink)] border-b border-[var(--color-border)] pb-3">
               Twilio API Credentials
             </h2>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Inbox Display Name</label>
+              <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Inbox Display Name</label>
               <input
                 type="text"
                 value={inboxName}
                 onChange={(e) => setInboxName(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-red-500 focus:outline-none"
+                className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs focus:border-red-500 focus:outline-none"
                 placeholder="e.g. Twilio SMS Support"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Twilio Account SID</label>
+                <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Twilio Account SID</label>
                 <input
                   type="text"
                   value={accountSid}
                   onChange={(e) => setAccountSid(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono focus:border-red-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs font-mono focus:border-red-500 focus:outline-none"
                   placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                 />
-                <p className="text-[11px] text-slate-400 mt-1">Found in your Twilio Console Account Dashboard</p>
+                <p className="text-[11px] text-[var(--color-ink-faint)] mt-1">Found in your Twilio Console Account Dashboard</p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Twilio Auth Token</label>
+                <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Twilio Auth Token</label>
                 <input
                   type="password"
                   value={authToken}
                   onChange={(e) => setAuthToken(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono focus:border-red-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs font-mono focus:border-red-500 focus:outline-none"
                   placeholder="••••••••••••••••••••••••••••••••"
                 />
-                <p className="text-[11px] text-slate-400 mt-1">Encrypted and securely stored on the server</p>
+                <p className="text-[11px] text-[var(--color-ink-faint)] mt-1">Encrypted and securely stored on the server</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[var(--color-border)]">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Twilio Phone Number</label>
+                <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Twilio Phone Number</label>
                 <input
                   type="text"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono focus:border-red-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs font-mono focus:border-red-500 focus:outline-none"
                   placeholder="+14155552480"
                 />
-                <p className="text-[11px] text-slate-400 mt-1">E.164 formatted sender number assigned to your project</p>
+                <p className="text-[11px] text-[var(--color-ink-faint)] mt-1">E.164 formatted sender number assigned to your project</p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Messaging Service SID (Optional)</label>
+                <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Messaging Service SID (Optional)</label>
                 <input
                   type="text"
                   value={messagingServiceSid}
                   onChange={(e) => setMessagingServiceSid(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono focus:border-red-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs font-mono focus:border-red-500 focus:outline-none"
                   placeholder="MGxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                 />
-                <p className="text-[11px] text-slate-400 mt-1">Use for 10DLC number pooling or automated sender distribution</p>
+                <p className="text-[11px] text-[var(--color-ink-faint)] mt-1">Use for 10DLC number pooling or automated sender distribution</p>
               </div>
             </div>
 
@@ -448,14 +448,14 @@ export function SMSIntegration() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
+                className="rounded-[var(--radius-md)] bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
               >
                 {saving ? 'Saving...' : 'Save Credentials'}
               </button>
               <button
                 onClick={handleVerify}
                 disabled={verifying}
-                className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+                className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-3.5 py-2 text-xs font-semibold text-[var(--color-ink)] shadow-sm hover:bg-[var(--color-accent-muted)] disabled:opacity-50"
               >
                 {verifying ? 'Checking API...' : 'Test Twilio Connection'}
               </button>
@@ -467,48 +467,48 @@ export function SMSIntegration() {
       {/* TAB 2: WEBHOOKS & CARRIER SYNC */}
       {activeTab === 'webhooks' && (
         <div className="space-y-6">
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
-            <h2 className="text-base font-semibold text-slate-900 border-b border-slate-100 pb-3">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-6 shadow-sm space-y-5">
+            <h2 className="text-base font-semibold text-[var(--color-ink)] border-b border-[var(--color-border)] pb-3">
               Twilio Inbound SMS Webhook Configuration
             </h2>
 
-            <div className="rounded-lg bg-slate-50 p-4 border border-slate-200 space-y-2">
-              <div className="text-xs font-semibold text-slate-800">Inbound SMS Callback URL</div>
+            <div className="rounded-[var(--radius-md)] bg-[var(--color-accent-muted)] p-4 border border-[var(--color-border)] space-y-2">
+              <div className="text-xs font-semibold text-[var(--color-ink)]">Inbound SMS Callback URL</div>
               <div className="flex items-center justify-between gap-3">
-                <code className="text-xs font-mono text-slate-700 truncate">{callbackUrl}</code>
+                <code className="text-xs font-mono text-[var(--color-ink)] truncate">{callbackUrl}</code>
                 <button
                   onClick={() => copyToClipboard(callbackUrl, 'webhook')}
-                  className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 shrink-0"
+                  className="rounded-[var(--radius-sm)] bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 shrink-0"
                 >
                   {copiedKey === 'webhook' ? <span className="flex items-center gap-1"><Check className="h-3 w-3 inline" /> Copied</span> : <span className="flex items-center gap-1"><Copy className="h-3 w-3 inline" /> Copy URL</span>}
                 </button>
               </div>
-              <p className="text-[11px] text-slate-500">
-                Configure this URL in your Twilio Console under <span className="font-semibold text-slate-700">Phone Numbers &gt; Active Numbers &gt; A Message Comes In</span>.
+              <p className="text-[11px] text-[var(--color-ink-faint)]">
+                Configure this URL in your Twilio Console under <span className="font-semibold text-[var(--color-ink)]">Phone Numbers &gt; Active Numbers &gt; A Message Comes In</span>.
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-3">
-              <div className="rounded-lg border border-slate-200 p-3.5">
-                <div className="text-xs font-bold text-slate-800">HTTP Method</div>
+              <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] p-3.5">
+                <div className="text-xs font-bold text-[var(--color-ink)]">HTTP Method</div>
                 <div className="mt-1 text-xs font-mono text-emerald-600 font-bold">HTTP POST</div>
-                <p className="text-[11px] text-slate-400 mt-0.5">Twilio sends form-encoded payload</p>
+                <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">Twilio sends form-encoded payload</p>
               </div>
 
-              <div className="rounded-lg border border-slate-200 p-3.5">
-                <div className="text-xs font-bold text-slate-800">Signature Security</div>
+              <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] p-3.5">
+                <div className="text-xs font-bold text-[var(--color-ink)]">Signature Security</div>
                 <div className="mt-1 text-xs font-bold text-blue-600">X-Twilio-Signature</div>
-                <p className="text-[11px] text-slate-400 mt-0.5">Validated against your Auth Token</p>
+                <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">Validated against your Auth Token</p>
               </div>
 
-              <div className="rounded-lg border border-slate-200 p-3.5">
-                <div className="text-xs font-bold text-slate-800">Status Callbacks</div>
-                <div className="mt-1 text-xs font-bold text-slate-700">Delivered / Undelivered</div>
-                <p className="text-[11px] text-slate-400 mt-0.5">Real-time carrier receipt sync</p>
+              <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] p-3.5">
+                <div className="text-xs font-bold text-[var(--color-ink)]">Status Callbacks</div>
+                <div className="mt-1 text-xs font-bold text-[var(--color-ink)]">Delivered / Undelivered</div>
+                <p className="text-[11px] text-[var(--color-ink-faint)] mt-0.5">Real-time carrier receipt sync</p>
               </div>
             </div>
 
-            <div className="rounded-lg bg-blue-50 border border-blue-200 p-4 text-xs text-blue-900 space-y-2">
+            <div className="rounded-[var(--radius-md)] bg-blue-50 border border-blue-200 p-4 text-xs text-blue-900 space-y-2">
               <div className="font-bold">Step-by-Step Twilio Console Setup:</div>
               <ol className="list-decimal list-inside space-y-1 text-[11.5px] text-blue-800">
                 <li>Log into your <span className="font-semibold">Twilio Console</span>.</li>
@@ -526,18 +526,18 @@ export function SMSIntegration() {
       {/* TAB 3: 10DLC & OPT-OUT COMPLIANCE */}
       {activeTab === 'compliance' && (
         <div className="space-y-6">
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
-            <h2 className="text-base font-semibold text-slate-900 border-b border-slate-100 pb-3">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-6 shadow-sm space-y-5">
+            <h2 className="text-base font-semibold text-[var(--color-ink)] border-b border-[var(--color-border)] pb-3">
               A2P 10DLC Brand Registration & Carrier Compliance
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">A2P 10DLC Status</label>
+                <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">A2P 10DLC Status</label>
                 <select
                   value={a2pStatus}
                   onChange={(e) => setA2pStatus(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs"
                 >
                   <option value="VERIFIED">VERIFIED (Campaign Approved)</option>
                   <option value="REGISTERED">REGISTERED (Standard)</option>
@@ -547,35 +547,35 @@ export function SMSIntegration() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Registered Brand Entity Name</label>
+                <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Registered Brand Entity Name</label>
                 <input
                   type="text"
                   value={brandName}
                   onChange={(e) => setBrandName(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-red-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs focus:border-red-500 focus:outline-none"
                   placeholder="Bay Works LLC"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Brand Trust Tier</label>
+              <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Brand Trust Tier</label>
               <input
                 type="text"
                 value={brandTier}
                 onChange={(e) => setBrandTier(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-red-500 focus:outline-none"
+                className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs focus:border-red-500 focus:outline-none"
                 placeholder="Standard High Throughput (10DLC)"
               />
             </div>
 
-            <div className="pt-3 border-t border-slate-100 space-y-4">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            <div className="pt-3 border-t border-[var(--color-border)] space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-ink-faint)]">
                 Automated Carrier Opt-Out / Opt-In Enforcement
               </h3>
 
               <div className="flex flex-wrap gap-2 text-xs">
-                <span className="font-semibold text-slate-700 mr-2">Monitored Stop Keywords:</span>
+                <span className="font-semibold text-[var(--color-ink)] mr-2">Monitored Stop Keywords:</span>
                 {['STOP', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT'].map((kw) => (
                   <span key={kw} className="rounded bg-red-100 text-red-800 font-mono font-bold px-2 py-0.5 text-[11px]">
                     {kw}
@@ -584,22 +584,22 @@ export function SMSIntegration() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">
                   Automated Opt-Out Confirmation Message
                 </label>
                 <textarea
                   rows={2}
                   value={optOutMessage}
                   onChange={(e) => setOptOutMessage(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs focus:border-red-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2.5 text-xs focus:border-red-500 focus:outline-none"
                 />
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className="text-[11px] text-[var(--color-ink-faint)] mt-1">
                   Dispatched immediately when any contact texts STOP. Contact is marked OPTED_OUT across all channels.
                 </p>
               </div>
 
               <div className="flex flex-wrap gap-2 text-xs pt-2">
-                <span className="font-semibold text-slate-700 mr-2">Monitored Start Keywords:</span>
+                <span className="font-semibold text-[var(--color-ink)] mr-2">Monitored Start Keywords:</span>
                 {['START', 'UNSTOP', 'YES'].map((kw) => (
                   <span key={kw} className="rounded bg-emerald-100 text-emerald-800 font-mono font-bold px-2 py-0.5 text-[11px]">
                     {kw}
@@ -608,14 +608,14 @@ export function SMSIntegration() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">
                   Automated Opt-In / Resubscribe Message
                 </label>
                 <textarea
                   rows={2}
                   value={optInMessage}
                   onChange={(e) => setOptInMessage(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs focus:border-red-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2.5 text-xs focus:border-red-500 focus:outline-none"
                 />
               </div>
 
@@ -623,7 +623,7 @@ export function SMSIntegration() {
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
+                  className="rounded-[var(--radius-md)] bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
                 >
                   {saving ? 'Saving...' : 'Save Compliance Rules'}
                 </button>
@@ -636,8 +636,8 @@ export function SMSIntegration() {
       {/* TAB 4: AUTOMATIONS & WORKING HOURS */}
       {activeTab === 'automations' && (
         <div className="space-y-6">
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-6">
-            <h2 className="text-base font-semibold text-slate-900 border-b border-slate-100 pb-3">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-6 shadow-sm space-y-6">
+            <h2 className="text-base font-semibold text-[var(--color-ink)] border-b border-[var(--color-border)] pb-3">
               Automated Replies & Support Hours
             </h2>
 
@@ -645,14 +645,14 @@ export function SMSIntegration() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-semibold text-slate-800">Welcome Greeting SMS</div>
-                  <div className="text-[11px] text-slate-500">Automatically reply to first-time inbound SMS inquiries</div>
+                  <div className="text-xs font-semibold text-[var(--color-ink)]">Welcome Greeting SMS</div>
+                  <div className="text-[11px] text-[var(--color-ink-faint)]">Automatically reply to first-time inbound SMS inquiries</div>
                 </div>
                 <input
                   type="checkbox"
                   checked={greetingEnabled}
                   onChange={(e) => setGreetingEnabled(e.target.checked)}
-                  className="rounded border-slate-300 text-red-600"
+                  className="rounded border-[var(--color-border)] text-red-600"
                 />
               </div>
               {greetingEnabled && (
@@ -660,23 +660,23 @@ export function SMSIntegration() {
                   rows={2}
                   value={greetingMessage}
                   onChange={(e) => setGreetingMessage(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs focus:border-red-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2.5 text-xs focus:border-red-500 focus:outline-none"
                 />
               )}
             </div>
 
             {/* Out of Office */}
-            <div className="space-y-3 pt-3 border-t border-slate-100">
+            <div className="space-y-3 pt-3 border-t border-[var(--color-border)]">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-semibold text-slate-800">Out of Office / After-Hours SMS</div>
-                  <div className="text-[11px] text-slate-500">Send an automated reply when customers text outside working hours</div>
+                  <div className="text-xs font-semibold text-[var(--color-ink)]">Out of Office / After-Hours SMS</div>
+                  <div className="text-[11px] text-[var(--color-ink-faint)]">Send an automated reply when customers text outside working hours</div>
                 </div>
                 <input
                   type="checkbox"
                   checked={outOfOfficeEnabled}
                   onChange={(e) => setOutOfOfficeEnabled(e.target.checked)}
-                  className="rounded border-slate-300 text-red-600"
+                  className="rounded border-[var(--color-border)] text-red-600"
                 />
               </div>
               {outOfOfficeEnabled && (
@@ -684,48 +684,48 @@ export function SMSIntegration() {
                   rows={2}
                   value={outOfOfficeMessage}
                   onChange={(e) => setOutOfOfficeMessage(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs focus:border-red-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2.5 text-xs focus:border-red-500 focus:outline-none"
                 />
               )}
             </div>
 
             {/* CSAT */}
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+            <div className="pt-3 border-t border-[var(--color-border)] flex items-center justify-between">
               <div>
-                <div className="text-xs font-semibold text-slate-800">Customer Satisfaction (CSAT) Rating</div>
-                <div className="text-[11px] text-slate-500">Send a satisfaction survey via SMS when a conversation is resolved</div>
+                <div className="text-xs font-semibold text-[var(--color-ink)]">Customer Satisfaction (CSAT) Rating</div>
+                <div className="text-[11px] text-[var(--color-ink-faint)]">Send a satisfaction survey via SMS when a conversation is resolved</div>
               </div>
               <input
                 type="checkbox"
                 checked={csatEnabled}
                 onChange={(e) => setCsatEnabled(e.target.checked)}
-                className="rounded border-slate-300 text-red-600"
+                className="rounded border-[var(--color-border)] text-red-600"
               />
             </div>
 
             {/* Working Hours */}
-            <div className="pt-3 border-t border-slate-100 space-y-3">
+            <div className="pt-3 border-t border-[var(--color-border)] space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-semibold text-slate-800">Working Hours Enforcement</div>
-                  <div className="text-[11px] text-slate-500">Define active support hours for agent presence</div>
+                  <div className="text-xs font-semibold text-[var(--color-ink)]">Working Hours Enforcement</div>
+                  <div className="text-[11px] text-[var(--color-ink-faint)]">Define active support hours for agent presence</div>
                 </div>
                 <input
                   type="checkbox"
                   checked={workingHoursEnabled}
                   onChange={(e) => setWorkingHoursEnabled(e.target.checked)}
-                  className="rounded border-slate-300 text-red-600"
+                  className="rounded border-[var(--color-border)] text-red-600"
                 />
               </div>
 
               {workingHoursEnabled && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Start Hour</label>
+                    <label className="block text-[11px] font-semibold text-[var(--color-ink)] mb-1">Start Hour</label>
                     <select
                       value={workingHoursStart}
                       onChange={(e) => setWorkingHoursStart(Number(e.target.value))}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs"
+                      className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-1.5 text-xs"
                     >
                       {Array.from({ length: 24 }).map((_, i) => (
                         <option key={i} value={i}>
@@ -735,11 +735,11 @@ export function SMSIntegration() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">End Hour</label>
+                    <label className="block text-[11px] font-semibold text-[var(--color-ink)] mb-1">End Hour</label>
                     <select
                       value={workingHoursEnd}
                       onChange={(e) => setWorkingHoursEnd(Number(e.target.value))}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs"
+                      className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-1.5 text-xs"
                     >
                       {Array.from({ length: 24 }).map((_, i) => (
                         <option key={i} value={i}>
@@ -749,12 +749,12 @@ export function SMSIntegration() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Timezone</label>
+                    <label className="block text-[11px] font-semibold text-[var(--color-ink)] mb-1">Timezone</label>
                     <input
                       type="text"
                       value={timezone}
                       onChange={(e) => setTimezone(e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs"
+                      className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-1.5 text-xs"
                       placeholder="America/New_York"
                     />
                   </div>
@@ -766,7 +766,7 @@ export function SMSIntegration() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
+                className="rounded-[var(--radius-md)] bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-blue-700 disabled:opacity-50"
               >
                 {saving ? 'Saving...' : 'Save Automations'}
               </button>
@@ -779,29 +779,29 @@ export function SMSIntegration() {
       {activeTab === 'diagnostics' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-6 space-y-6">
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-6 shadow-sm space-y-4">
               <div>
-                <h2 className="text-base font-semibold text-slate-900">Diagnostic SMS Dispatcher</h2>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <h2 className="text-base font-semibold text-[var(--color-ink)]">Diagnostic SMS Dispatcher</h2>
+                <p className="text-xs text-[var(--color-ink-faint)] mt-0.5">
                   Send a live test message to verify carrier routing, 10DLC throughput, and Shared Inbox sync.
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Recipient Mobile Number</label>
+                <label className="block text-xs font-semibold text-[var(--color-ink)] mb-1">Recipient Mobile Number</label>
                 <input
                   type="text"
                   value={testPhone}
                   onChange={(e) => setTestPhone(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono focus:border-red-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs font-mono focus:border-red-500 focus:outline-none"
                   placeholder="+14155550199"
                 />
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-semibold text-slate-700">SMS Body</label>
-                  <span className={`text-[11px] font-mono ${charCount > 160 ? 'text-amber-600 font-bold' : 'text-slate-400'}`}>
+                  <label className="block text-xs font-semibold text-[var(--color-ink)]">SMS Body</label>
+                  <span className={`text-[11px] font-mono ${charCount > 160 ? 'text-amber-600 font-bold' : 'text-[var(--color-ink-faint)]'}`}>
                     {charCount} chars · {segmentCount} {segmentCount === 1 ? 'segment' : 'segments'}
                   </span>
                 </div>
@@ -809,7 +809,7 @@ export function SMSIntegration() {
                   rows={3}
                   value={testMessage}
                   onChange={(e) => setTestMessage(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs focus:border-red-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2.5 text-xs focus:border-red-500 focus:outline-none"
                 />
               </div>
 
@@ -817,14 +817,14 @@ export function SMSIntegration() {
                 <button
                   onClick={handleSendTest}
                   disabled={sendingTest}
-                  className="rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
+                  className="rounded-[var(--radius-md)] bg-red-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
                 >
                   <span>{sendingTest ? 'Dispatching...' : <span className="flex items-center gap-1.5"><Rocket className="h-3.5 w-3.5" /> Dispatch Test SMS</span>}</span>
                 </button>
                 {testResult && (
                   <Link
                     to="/"
-                    className="rounded-lg border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100"
+                    className="rounded-[var(--radius-md)] border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100"
                   >
                     <span className="flex items-center gap-1">View in Shared Inbox <ArrowRight className="h-3 w-3" /></span>
                   </Link>
@@ -832,7 +832,7 @@ export function SMSIntegration() {
               </div>
 
               {testResult && (
-                <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3.5 text-xs text-emerald-900 space-y-1">
+                <div className="rounded-[var(--radius-md)] bg-emerald-50 border border-emerald-200 p-3.5 text-xs text-emerald-900 space-y-1">
                   <div className="font-bold flex items-center gap-2">
                     <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-emerald-700" /> Message Queued with Twilio:</span>
                     <span className="font-mono text-emerald-700">{testResult.sid}</span>
@@ -845,11 +845,11 @@ export function SMSIntegration() {
 
           {/* Live SMS Stream */}
           <div className="lg:col-span-6">
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900">Recent Twilio SMS Events</h3>
-                  <p className="text-xs text-slate-500">Real-time incoming customer texts & agent replies</p>
+                  <h3 className="text-sm font-semibold text-[var(--color-ink)]">Recent Twilio SMS Events</h3>
+                  <p className="text-xs text-[var(--color-ink-faint)]">Real-time incoming customer texts & agent replies</p>
                 </div>
                 <button
                   onClick={async () => {
@@ -863,7 +863,7 @@ export function SMSIntegration() {
               </div>
 
               {events.length === 0 ? (
-                <div className="py-8 text-center text-xs text-slate-400">
+                <div className="py-8 text-center text-xs text-[var(--color-ink-faint)]">
                   No SMS events recorded yet. Send a test message from the left to start!
                 </div>
               ) : (
@@ -881,12 +881,12 @@ export function SMSIntegration() {
                           >
                             {ev.direction.toUpperCase()}
                           </span>
-                          <span className="text-xs font-semibold text-slate-800">{ev.senderName}</span>
-                          <span className="text-[10px] text-slate-400">
+                          <span className="text-xs font-semibold text-[var(--color-ink)]">{ev.senderName}</span>
+                          <span className="text-[10px] text-[var(--color-ink-faint)]">
                             {new Date(ev.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-600 line-clamp-2">{ev.body}</p>
+                        <p className="text-xs text-[var(--color-ink-muted)] line-clamp-2">{ev.body}</p>
                       </div>
                       <Link
                         to="/"

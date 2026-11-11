@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use sqlx::SqlitePool;
+use sqlx::PgPool;
 
 use crate::config::Config;
 use crate::services::whatsapp::WhatsAppService;
@@ -10,13 +10,13 @@ use crate::services::whatsapp::WhatsAppService;
 // ---------------------------------------------------------------------------
 
 pub struct WhatsAppAutomationEngine {
-    pool: SqlitePool,
+    pool: PgPool,
     config: Config,
     whatsapp: WhatsAppService,
 }
 
 impl WhatsAppAutomationEngine {
-    pub fn new(pool: SqlitePool, config: Config) -> Self {
+    pub fn new(pool: PgPool, config: Config) -> Self {
         Self {
             whatsapp: WhatsAppService::new(pool.clone(), config.clone()),
             pool,
@@ -71,7 +71,7 @@ impl WhatsAppAutomationEngine {
                 if parts.len() >= 2 {
                     let tag = parts[1..].join(" ");
                     let _ = sqlx::query(
-                        "INSERT OR IGNORE INTO contact_tags (id, contact_id, tag, created_at) VALUES (?1, ?2, ?3, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))"
+                        "INSERT OR IGNORE INTO contact_tags (id, contact_id, tag, created_at) VALUES (?1, ?2, ?3, NOW()::TEXT)"
                     )
                     .bind(uuid::Uuid::new_v4().to_string())
                     .bind(contact_id)
@@ -104,11 +104,11 @@ impl WhatsAppAutomationEngine {
         let name = brand_name.map(|(n,)| n).unwrap_or_else(|| "our team".to_string());
 
         let buttons = vec![
-            serde_json::json!({"id": "csat_5", "title": "⭐⭐⭐⭐⭐"}),
-            serde_json::json!({"id": "csat_4", "title": "⭐⭐⭐⭐"}),
-            serde_json::json!({"id": "csat_3", "title": "⭐⭐⭐"}),
-            serde_json::json!({"id": "csat_2", "title": "⭐⭐"}),
-            serde_json::json!({"id": "csat_1", "title": "⭐"}),
+            serde_json::json!({"id": "csat_5", "title": "?????"}),
+            serde_json::json!({"id": "csat_4", "title": "????"}),
+            serde_json::json!({"id": "csat_3", "title": "???"}),
+            serde_json::json!({"id": "csat_2", "title": "??"}),
+            serde_json::json!({"id": "csat_1", "title": "?"}),
         ];
 
         // Only send up to 3 buttons for WhatsApp
@@ -159,7 +159,7 @@ impl WhatsAppAutomationEngine {
         // Tag contact based on score
         let tag = if score >= 4 { "csat_promoter" } else if score >= 3 { "csat_passive" } else { "csat_detractor" };
         let _ = sqlx::query(
-            "INSERT OR IGNORE INTO contact_tags (id, contact_id, tag, created_at) VALUES (?1, ?2, ?3, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))"
+            "INSERT OR IGNORE INTO contact_tags (id, contact_id, tag, created_at) VALUES (?1, ?2, ?3, NOW()::TEXT)"
         )
         .bind(uuid::Uuid::new_v4().to_string())
         .bind(contact_id)
@@ -251,9 +251,9 @@ impl WhatsAppAutomationEngine {
         let name = brand_name.map(|(n,)| n).unwrap_or_else(|| "us".to_string());
 
         let buttons = vec![
-            serde_json::json!({"id": "menu_services", "title": "📋 Services"}),
-            serde_json::json!({"id": "menu_pricing", "title": "💰 Pricing"}),
-            serde_json::json!({"id": "menu_location", "title": "📍 Location"}),
+            serde_json::json!({"id": "menu_services", "title": "?? Services"}),
+            serde_json::json!({"id": "menu_pricing", "title": "?? Pricing"}),
+            serde_json::json!({"id": "menu_location", "title": "?? Location"}),
         ];
 
         self.whatsapp.send_interactive_buttons(
@@ -301,9 +301,9 @@ impl WhatsAppAutomationEngine {
         };
 
         let buttons = vec![
-            serde_json::json!({"id": "menu_pricing", "title": "💰 Pricing"}),
-            serde_json::json!({"id": "menu_agent", "title": "👤 Talk to Agent"}),
-            serde_json::json!({"id": "menu_main", "title": "🏠 Main Menu"}),
+            serde_json::json!({"id": "menu_pricing", "title": "?? Pricing"}),
+            serde_json::json!({"id": "menu_agent", "title": "?? Talk to Agent"}),
+            serde_json::json!({"id": "menu_main", "title": "?? Main Menu"}),
         ];
 
         self.whatsapp.send_interactive_buttons(
@@ -348,9 +348,9 @@ impl WhatsAppAutomationEngine {
         };
 
         let buttons = vec![
-            serde_json::json!({"id": "menu_services", "title": "📋 Services"}),
-            serde_json::json!({"id": "menu_agent", "title": "👤 Talk to Agent"}),
-            serde_json::json!({"id": "menu_main", "title": "🏠 Main Menu"}),
+            serde_json::json!({"id": "menu_services", "title": "?? Services"}),
+            serde_json::json!({"id": "menu_agent", "title": "?? Talk to Agent"}),
+            serde_json::json!({"id": "menu_main", "title": "?? Main Menu"}),
         ];
 
         self.whatsapp.send_interactive_buttons(
@@ -377,13 +377,13 @@ impl WhatsAppAutomationEngine {
         if let Some((addr,)) = address {
             if !addr.is_empty() {
                 let buttons = vec![
-                    serde_json::json!({"id": "menu_main", "title": "🏠 Main Menu"}),
-                    serde_json::json!({"id": "menu_agent", "title": "👤 Talk to Agent"}),
+                    serde_json::json!({"id": "menu_main", "title": "?? Main Menu"}),
+                    serde_json::json!({"id": "menu_agent", "title": "?? Talk to Agent"}),
                 ];
                 self.whatsapp.send_interactive_buttons(
                     brand_id,
                     contact_id,
-                    &format!("📍 Our location:\n\n{}", addr),
+                    &format!("?? Our location:\n\n{}", addr),
                     &buttons,
                     Some("Location"),
                     None,
@@ -393,7 +393,7 @@ impl WhatsAppAutomationEngine {
         }
 
         let buttons = vec![
-            serde_json::json!({"id": "menu_main", "title": "🏠 Main Menu"}),
+            serde_json::json!({"id": "menu_main", "title": "?? Main Menu"}),
         ];
         self.whatsapp.send_interactive_buttons(
             brand_id,
@@ -470,9 +470,9 @@ impl WhatsAppAutomationEngine {
         };
 
         let buttons = vec![
-            serde_json::json!({"id": "menu_services", "title": "📋 Services"}),
-            serde_json::json!({"id": "menu_pricing", "title": "💰 Pricing"}),
-            serde_json::json!({"id": "menu_agent", "title": "👤 Agent"}),
+            serde_json::json!({"id": "menu_services", "title": "?? Services"}),
+            serde_json::json!({"id": "menu_pricing", "title": "?? Pricing"}),
+            serde_json::json!({"id": "menu_agent", "title": "?? Agent"}),
         ];
 
         self.whatsapp.send_interactive_buttons(
@@ -598,7 +598,7 @@ impl WhatsAppAutomationEngine {
                 let tag = cfg["tag"].as_str().unwrap_or("");
                 if !tag.is_empty() {
                     let _ = sqlx::query(
-                        "INSERT OR IGNORE INTO contact_tags (id, contact_id, tag, created_at) VALUES (?1, ?2, ?3, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))"
+                        "INSERT OR IGNORE INTO contact_tags (id, contact_id, tag, created_at) VALUES (?1, ?2, ?3, NOW()::TEXT)"
                     )
                     .bind(uuid::Uuid::new_v4().to_string())
                     .bind(contact_id)

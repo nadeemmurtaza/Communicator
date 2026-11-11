@@ -1,0 +1,33 @@
+// A client-supplied Idempotency-Key, closing the one gap doc 117's own
+// domain-key strategy structurally cannot reach: the moment BEFORE a row
+// exists to key against — creating it in the first place.
+// architecture-patterns/157-client-request-idempotency-keys.md (WO-157.1).
+// No organizationId (ADR-044/ADR-040): this deployment IS the tenant; every
+// route this guards resolves its own actor without an organizationId today
+// (some, like guest checkout, resolve no actor at all), so `(scope, key)`
+// is already unique enough for a single-tenant deployment.
+
+enum IdempotencyKeyStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+model IdempotencyKey {
+  id             String               @id @default(cuid())
+  /// One per guarded route — "orders.place", "pos.sale.create".
+  scope          String
+  /// Client-supplied, opaque — one UUID per logical action, resent
+  /// unchanged on every retry of that same action.
+  key            String
+  /// sha256 of the request body — catches key reuse with a DIFFERENT
+  /// payload, refused rather than silently replayed.
+  requestHash    String
+  status         IdempotencyKeyStatus @default(IN_PROGRESS)
+  responseStatus Int?
+  responseBody   Json?
+  createdAt      DateTime             @default(now())
+  completedAt    DateTime?
+
+  @@unique([scope, key])
+  @@index([createdAt])
+}

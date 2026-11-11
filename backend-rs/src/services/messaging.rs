@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 //! The only path allowed to put an outbound message on the wire.
 //!

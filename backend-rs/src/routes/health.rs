@@ -1,4 +1,4 @@
-use crate::db::AppState;
+﻿use crate::db::AppState;
 use axum::{
     extract::State,
     http::StatusCode,
@@ -16,7 +16,7 @@ use tracing::warn;
 pub async fn health_check(State(state): State<AppState>) -> impl IntoResponse {
     let started = std::time::Instant::now();
 
-    match sqlx::query("SELECT sqlite_version() AS version")
+    match sqlx::query_scalar::<_, String>("SELECT version() AS version")
         .fetch_optional(&state.db)
         .await
     {
@@ -34,7 +34,7 @@ pub async fn health_check(State(state): State<AppState>) -> impl IntoResponse {
                     "status": "ok",
                     "database": {
                         "reachable": true,
-                        "engine": "sqlite",
+                        "engine": "postgresql",
                         "version": version,
                         "roundTripMs": started.elapsed().as_millis() as i64,
                         "inboxCount": checked,

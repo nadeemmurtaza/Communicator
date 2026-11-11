@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 use crate::db::AppState;
 use crate::models::BusinessProfile;
@@ -298,7 +298,7 @@ pub async fn refresh_channel_info(state: &AppState) -> Value {
                whatsapp_display_number = COALESCE(NULLIF(?, ''), whatsapp_display_number), \
                whatsapp_verified_name = COALESCE(NULLIF(?, ''), whatsapp_verified_name), \
                whatsapp_verified_at = ?, updated_at = ? \
-             WHERE rowid = (SELECT rowid FROM integration_settings LIMIT 1)",
+             WHERE id = (SELECT id FROM integration_settings LIMIT 1)",
         )
         .bind(&profile.display_phone_number)
         .bind(&profile.verified_name)

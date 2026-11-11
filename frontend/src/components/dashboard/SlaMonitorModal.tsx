@@ -23,7 +23,7 @@ export function SlaMonitorModal(props: SlaMonitorModalProps) {
           <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl max-w-2xl w-full p-6 space-y-5 animate-in fade-in zoom-in-95 max-h-[85vh] overflow-y-auto">
             <div className="flex items-start justify-between border-b border-[var(--color-border)] pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-sm">
+                <div className="w-8 h-8 rounded-[var(--radius-md)] bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-sm">
                   <Clock className="h-4 w-4" />
                 </div>
                 <div>
@@ -46,19 +46,19 @@ export function SlaMonitorModal(props: SlaMonitorModalProps) {
 
             {/* Top 4 KPI Metrics */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3 rounded-xl bg-[var(--color-page)] border border-[var(--color-border)]/80">
+              <div className="p-3 rounded-[var(--radius-lg)] bg-[var(--color-page)] border border-[var(--color-border)]/80">
                 <span className="text-[10px] font-semibold text-[var(--color-ink-muted)] uppercase">Tracked Tickets</span>
                 <p className="text-lg font-bold text-[var(--color-ink)] mt-0.5">{slaMetrics?.totalTracked ?? 12}</p>
               </div>
-              <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200/80">
+              <div className="p-3 rounded-[var(--radius-lg)] bg-emerald-50/70 border border-emerald-200/80">
                 <span className="text-[10px] font-semibold text-emerald-700 uppercase">1st Resp Rate</span>
                 <p className="text-lg font-bold text-emerald-900 mt-0.5">{slaMetrics?.firstResponseFulfillmentRate ?? 95.8}%</p>
               </div>
-              <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-200/80">
+              <div className="p-3 rounded-[var(--radius-lg)] bg-indigo-50/70 border border-indigo-200/80">
                 <span className="text-[10px] font-semibold text-indigo-700 uppercase">Resolution Rate</span>
                 <p className="text-lg font-bold text-indigo-900 mt-0.5">{slaMetrics?.resolutionFulfillmentRate ?? 92.4}%</p>
               </div>
-              <div className="p-3 rounded-xl bg-rose-50/70 border border-rose-200/80">
+              <div className="p-3 rounded-[var(--radius-lg)] bg-rose-50/70 border border-rose-200/80">
                 <span className="text-[10px] font-semibold text-rose-700 uppercase">Active Breaches</span>
                 <p className="text-lg font-bold text-rose-900 mt-0.5">{slaMetrics?.activeBreachesCount ?? (slaBreaches.length || 0)}</p>
               </div>
@@ -74,7 +74,7 @@ export function SlaMonitorModal(props: SlaMonitorModalProps) {
                 {slaPolicies.map((policy: any) => (
                   <div
                     key={policy.id}
-                    className="p-3 rounded-lg border border-[var(--color-border)]/80 bg-[var(--color-surface)] hover:border-[var(--color-border)] transition-all flex items-center justify-between gap-3 text-xs"
+                    className="p-3 rounded-[var(--radius-md)] border border-[var(--color-border)]/80 bg-[var(--color-surface)] hover:border-[var(--color-border)] transition-all flex items-center justify-between gap-3 text-xs"
                   >
                     <div>
                       <p className="font-semibold text-[var(--color-ink)]">{policy.name}</p>
@@ -105,12 +105,12 @@ export function SlaMonitorModal(props: SlaMonitorModalProps) {
                 <span className="text-[11px] font-normal text-[var(--color-ink-muted)]">{slaBreaches.length} tickets</span>
               </h4>
               {slaBreaches.length === 0 ? (
-                <div className="p-4 rounded-lg bg-emerald-50/50 border border-emerald-200 text-center text-xs text-emerald-800 flex items-center justify-center gap-1.5">
+                <div className="p-4 rounded-[var(--radius-md)] bg-emerald-50/50 border border-emerald-200 text-center text-xs text-emerald-800 flex items-center justify-center gap-1.5">
                   <Award className="h-4 w-4 text-emerald-600 inline shrink-0" />
                   <span>No active SLA breaches! All response and resolution targets are currently fulfilled.</span>
                 </div>
               ) : (
-                <div className="border border-[var(--color-border)] rounded-lg overflow-hidden divide-y divide-[var(--color-border)] text-xs">
+                <div className="border border-[var(--color-border)] rounded-[var(--radius-md)] overflow-hidden divide-y divide-[var(--color-border)] text-xs">
                   {slaBreaches.map((b: any) => (
                     <div
                       key={b.conversationId}
@@ -150,7 +150,7 @@ export function SlaMonitorModal(props: SlaMonitorModalProps) {
               <button
                 type="button"
                 onClick={() => setShowSLAMonitorModal(false)}
-                className="px-4 py-1.5 text-xs bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white rounded-lg font-semibold shadow-xs transition-colors cursor-pointer"
+                className="px-4 py-1.5 text-xs bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white rounded-[var(--radius-md)] font-semibold shadow-none transition-colors cursor-pointer"
               >
                 Close
               </button>

@@ -1,0 +1,268 @@
+// CRM: one customer record, whatever door the customer came in through.
+//
+// Contact is keyed on the normalised phone number (E.164). A guest COD order,
+// a registered account and a walk-in lead for the same person collapse into a
+// single Contact — that dedup is the whole value of the module, and it is
+// unit-tested in the crm module.
+
+enum ContactStatus {
+  LEAD
+  ACTIVE
+  REPEAT
+  DORMANT
+  BLOCKED
+}
+
+model Contact {
+  id          String        @id @default(cuid())
+  /// Normalised to +92XXXXXXXXXX. The dedup key.
+  phoneE164   String?       @unique
+  email       String?       @unique
+  name        String
+  city        String?
+  /// Free text, not an enum — never a fixed set a person has to fit into.
+  gender      String?
+  dateOfBirth DateTime?
+  avatarUrl   String?
+  /// Where they came from: "storefront", "whatsapp", "instagram", "walk_in".
+  source      String        @default("storefront")
+  status      ContactStatus @default(LEAD)
+  ownerId     String?
+  /// Set once the contact registers an account.
+  userId      String?       @unique
+  notes       String?
+
+  /// Rolled up by the CRM's order.placed subscriber, not computed on read —
+  /// the contact list has to stay fast with tens of thousands of rows.
+  orderCount    Int       @default(0)
+  lifetimeValue Int       @default(0) // paisa
+  avgOrderValue Int       @default(0) // paisa
+  lastOrderAt   DateTime?
+  firstOrderAt  DateTime?
+  /// WO-6.7 — rolled up by rto-contact.listener.ts on
+  /// DomainEvent.ShipmentReturnedToOrigin, same idiom as orderCount above.
+  /// What tells the shop which customers to require advance payment from.
+  rtoCount      Int       @default(0)
+
+  /// WO-8.4. The one opt-out Campaign sends check, regardless of channel —
+  /// deliberately separate from User.marketingEmailOptOut (email-only, and
+  /// only for account holders) because a Contact is CRM's record and a
+  /// campaign audience is a Segment of Contacts, not Users. Defaults to
+  /// opted IN, same as the existing marketingEmailOptOut default — a lead
+  /// captured at POS or WhatsApp has given no signal either way yet.
+  marketingOptOut Boolean @default(false)
+
+  /// RFM scoring (WO-8.4), quintile-ranked (1-5) among contacts with at
+  /// least one order — RfmScoringCron (crm module) recomputes all three
+  /// nightly via a single NTILE(5) query. Null until the cron has run once
+  /// for a contact with no orders yet.
+  rfmRecencyScore   Int?
+  rfmFrequencyScore Int?
+  rfmMonetaryScore  Int?
+  rfmComputedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner                 User?                  @relation("ContactOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  user                  User?                  @relation("ContactUser", fields: [userId], references: [id], onDelete: SetNull)
+  orders                Order[]
+  // No `stitchingOrders` relation field here on purpose (B7, MULTI-SECTOR.md)
+  // — see the matching note on OrderItem in orders.prisma. StitchingOrder
+  // (apparel) keeps a plain `contactId` scalar instead of a Prisma relation.
+  // This field was unused in application code, so nothing else changes.
+  leads                 Lead[]
+  interactions          Interaction[]
+  followUps             FollowUpTask[]
+  tags                  ContactTag[]
+  inboundEmails         InboundEmail[]
+  /// marketing.prisma (WO-8.4).
+  campaignReceipts      CampaignRecipient[]
+  /// whatsapp-assistant.prisma (WO-9.7).
+  whatsAppConversations WhatsAppConversation[]
+
+  @@index([status])
+  @@index([ownerId])
+  @@index([lastOrderAt])
+  @@index([lifetimeValue])
+  @@index([rfmRecencyScore, rfmFrequencyScore, rfmMonetaryScore])
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUOTED
+  WON
+  LOST
+}
+
+/// An enquiry that is not yet an order: a stitching quote request, a WhatsApp
+/// message logged by staff, a contact-form submission.
+model Lead {
+  id               String     @id @default(cuid())
+  contactId        String?
+  name             String
+  phone            String?
+  email            String?
+  message          String?
+  /// "contact_form", "whatsapp", "instagram", "phone", "walk_in"
+  source           String     @default("contact_form")
+  status           LeadStatus @default(NEW)
+  ownerId          String?
+  /// Estimated value in paisa, filled in when quoting.
+  quotedValue      Int?
+  lostReason       String?
+  convertedOrderId String?
+  convertedAt      DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  contact        Contact?       @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  owner          User?          @relation("LeadOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  convertedOrder Order?         @relation("LeadConvertedOrder", fields: [convertedOrderId], references: [id], onDelete: SetNull)
+  interactions   Interaction[]
+  followUps      FollowUpTask[]
+  inboundEmails  InboundEmail[]
+
+  @@index([status, createdAt])
+  @@index([ownerId])
+  @@index([contactId])
+}
+
+enum InteractionKind {
+  CALL
+  WHATSAPP
+  EMAIL
+  SMS
+  VISIT
+  NOTE
+  COMPLAINT
+}
+
+model Interaction {
+  id         String          @id @default(cuid())
+  contactId  String?
+  leadId     String?
+  kind       InteractionKind
+  body       String
+  actorId    String?
+  occurredAt DateTime        @default(now())
+  createdAt  DateTime        @default(now())
+
+  contact Contact? @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  lead    Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  actor   User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([contactId, occurredAt])
+  @@index([leadId, occurredAt])
+}
+
+/// A message pulled from a connected mailbox's IMAP inbox by the poller
+/// (modules/customers/crm/email-inbox) — a customer's reply to an order or support
+/// email. `messageId` is unique per account, so re-polling the same message
+/// (the poller re-checks unseen mail every run, not a durable cursor) is a
+/// no-op rather than a duplicate row. Auto-linked to a Contact only when the
+/// From: address matches one that already exists — never auto-created, so a
+/// bounce or an out-of-office reply cannot spawn a fake customer. Unlinked
+/// rows sit in the admin Support Inbox for staff to link by hand.
+model InboundEmail {
+  id             String   @id @default(cuid())
+  emailAccountId String
+  messageId      String
+  inReplyTo      String?
+  fromAddress    String
+  fromName       String?
+  subject        String?
+  /// Plain-text body only — attachments are not ingested.
+  bodyText       String?
+  receivedAt     DateTime
+  contactId      String?
+  leadId         String?
+  /// Set once linked (auto or manual), so linking twice is a no-op.
+  interactionId  String?  @unique
+  createdAt      DateTime @default(now())
+
+  emailAccount EmailAccount        @relation(fields: [emailAccountId], references: [id], onDelete: Cascade)
+  contact      Contact?            @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  lead         Lead?               @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  replies      InboundEmailReply[]
+
+  @@unique([emailAccountId, messageId])
+  @@index([contactId])
+  @@index([receivedAt])
+}
+
+/// A staff reply sent from the Support Inbox, over the SAME connected
+/// mailbox the original message arrived at (not resolved by purpose — a
+/// reply has to leave from the mailbox the customer is already talking to).
+/// One InboundEmail can have several: the thread continues as long as the
+/// customer keeps replying, ingested as further InboundEmail rows.
+model InboundEmailReply {
+  id             String   @id @default(cuid())
+  inboundEmailId String
+  actorId        String?
+  body           String
+  sentAt         DateTime @default(now())
+
+  inboundEmail InboundEmail @relation(fields: [inboundEmailId], references: [id], onDelete: Cascade)
+  actor        User?        @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([inboundEmailId, sentAt])
+}
+
+model FollowUpTask {
+  id         String    @id @default(cuid())
+  contactId  String?
+  leadId     String?
+  assigneeId String?
+  note       String
+  dueAt      DateTime
+  isDone     Boolean   @default(false)
+  doneAt     DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  contact  Contact? @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  lead     Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  assignee User?    @relation("FollowUpAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  @@index([isDone, dueAt])
+  @@index([assigneeId, isDone])
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String?
+  createdAt DateTime @default(now())
+
+  contacts ContactTag[]
+}
+
+model ContactTag {
+  contactId String
+  tagId     String
+
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([contactId, tagId])
+}
+
+/// A saved contact filter — "repeat buyers in Lahore", "bridal enquiries" —
+/// stored as a filter definition and exportable to CSV for WhatsApp broadcasts.
+model Segment {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  filter      Json
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy      User?           @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  /// marketing.prisma (WO-8.4) — a campaign's audience.
+  campaigns      Campaign[]
+  /// onsite-messaging.prisma (WO-8.6) — optional segment targeting.
+  onsiteMessages OnsiteMessage[]
+}

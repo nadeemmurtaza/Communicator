@@ -220,8 +220,8 @@ export function TikTokIntegration() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="flex items-center gap-2 text-slate-500">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
+        <div className="flex items-center gap-2 text-[var(--color-ink-faint)]">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-slate-600" />
           <span>Loading TikTok integration...</span>
         </div>
       </div>
@@ -233,21 +233,21 @@ export function TikTokIntegration() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
-            <Link to="/channels" className="hover:text-slate-700">
+          <div className="flex items-center gap-2 text-xs text-[var(--color-ink-faint)] mb-1">
+            <Link to="/channels" className="hover:text-[var(--color-ink)]">
               <span className="flex items-center gap-1"><ArrowLeft className="h-3.5 w-3.5" /> Back to Channels Hub</span>
             </Link>
           </div>
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-black text-white"><TikTokIcon className="h-6 w-6" /></span>
+            <span className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)] bg-black text-white"><TikTokIcon className="h-6 w-6" /></span>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-slate-900">TikTok Business Integration</h1>
+                <h1 className="text-xl font-bold text-[var(--color-ink)]">TikTok Business Integration</h1>
                 <span className="rounded-full bg-emerald-100 border border-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
                   {data?.health?.status || 'Connected'}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-[var(--color-ink-faint)] mt-0.5">
                 Official TikTok for Business API v2 · Direct Messages, Video Comment Moderation &amp; Auto-Replies
               </p>
             </div>
@@ -258,14 +258,14 @@ export function TikTokIntegration() {
           <button
             onClick={handleVerify}
             disabled={verifying}
-            className="rounded-md border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs flex items-center gap-1.5"
+            className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3.5 py-2 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-accent-muted)] shadow-none flex items-center gap-1.5"
           >
             {verifying ? 'Verifying...' : <><Zap className="h-3.5 w-3.5 text-amber-500" /> Test Connection</>}
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="rounded-md bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 shadow-xs flex items-center gap-1.5"
+            className="rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] shadow-none flex items-center gap-1.5"
           >
             {saving ? 'Saving...' : 'Save Settings'}
           </button>
@@ -274,7 +274,7 @@ export function TikTokIntegration() {
 
       {/* Alert Messages */}
       {success && (
-        <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3.5 text-xs text-emerald-800 flex items-center justify-between">
+        <div className="rounded-[var(--radius-md)] bg-emerald-50 border border-emerald-200 p-3.5 text-xs text-emerald-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             <span>{success}</span>
@@ -286,7 +286,7 @@ export function TikTokIntegration() {
       )}
 
       {error && (
-        <div className="rounded-lg bg-rose-50 border border-rose-200 p-3.5 text-xs text-rose-800 flex items-center justify-between">
+        <div className="rounded-[var(--radius-md)] bg-rose-50 border border-rose-200 p-3.5 text-xs text-rose-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-rose-600" />
             <span>{error}</span>
@@ -298,14 +298,14 @@ export function TikTokIntegration() {
       )}
 
       {/* Tabs */}
-      <div className="border-b border-slate-200">
+      <div className="border-b border-[var(--color-border)]">
         <nav className="flex space-x-6">
           <button
             onClick={() => setActiveTab('credentials')}
             className={`pb-3 text-xs font-semibold border-b-2 transition-colors ${
               activeTab === 'credentials'
-                ? 'border-slate-900 text-slate-900'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                ? 'border-[var(--color-accent)] text-[var(--color-ink)]'
+                : 'border-transparent text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] hover:border-[var(--color-border)]'
             }`}
           >
             <span className="flex items-center gap-1.5"><Key className="h-3.5 w-3.5" /> Credentials &amp; Account</span>
@@ -314,8 +314,8 @@ export function TikTokIntegration() {
             onClick={() => setActiveTab('webhooks')}
             className={`pb-3 text-xs font-semibold border-b-2 transition-colors ${
               activeTab === 'webhooks'
-                ? 'border-slate-900 text-slate-900'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                ? 'border-[var(--color-accent)] text-[var(--color-ink)]'
+                : 'border-transparent text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] hover:border-[var(--color-border)]'
             }`}
           >
             <span className="flex items-center gap-1.5"><Radio className="h-3.5 w-3.5" /> Webhooks &amp; Security</span>
@@ -324,8 +324,8 @@ export function TikTokIntegration() {
             onClick={() => setActiveTab('comments')}
             className={`pb-3 text-xs font-semibold border-b-2 transition-colors ${
               activeTab === 'comments'
-                ? 'border-slate-900 text-slate-900'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                ? 'border-[var(--color-accent)] text-[var(--color-ink)]'
+                : 'border-transparent text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] hover:border-[var(--color-border)]'
             }`}
           >
             <span className="flex items-center gap-1.5"><MessageSquare className="h-3.5 w-3.5" /> Video Comment Auto-Replies</span>
@@ -334,8 +334,8 @@ export function TikTokIntegration() {
             onClick={() => setActiveTab('automations')}
             className={`pb-3 text-xs font-semibold border-b-2 transition-colors ${
               activeTab === 'automations'
-                ? 'border-slate-900 text-slate-900'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                ? 'border-[var(--color-accent)] text-[var(--color-ink)]'
+                : 'border-transparent text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] hover:border-[var(--color-border)]'
             }`}
           >
             <span className="flex items-center gap-1.5"><Settings className="h-3.5 w-3.5" /> Automations &amp; Hours</span>
@@ -344,8 +344,8 @@ export function TikTokIntegration() {
             onClick={() => setActiveTab('diagnostics')}
             className={`pb-3 text-xs font-semibold border-b-2 transition-colors ${
               activeTab === 'diagnostics'
-                ? 'border-slate-900 text-slate-900'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                ? 'border-[var(--color-accent)] text-[var(--color-ink)]'
+                : 'border-transparent text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] hover:border-[var(--color-border)]'
             }`}
           >
             <span className="flex items-center gap-1.5"><FlaskConical className="h-3.5 w-3.5" /> Diagnostics &amp; Live Events</span>
@@ -356,45 +356,45 @@ export function TikTokIntegration() {
       {/* Tab 1: Credentials */}
       {activeTab === 'credentials' && (
         <div className="space-y-5">
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
-            <h2 className="text-sm font-bold text-slate-900">TikTok for Business API Configuration</h2>
-            <p className="text-xs text-slate-500">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-6 shadow-none space-y-4">
+            <h2 className="text-sm font-bold text-[var(--color-ink)]">TikTok for Business API Configuration</h2>
+            <p className="text-xs text-[var(--color-ink-faint)]">
               Obtain your App ID and App Secret from the TikTok Developer Portal to synchronize direct messages and video comments with the omnichannel inbox.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Inbox Name</label>
+                <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">Inbox Name</label>
                 <input
                   type="text"
                   value={inboxName}
                   onChange={(e) => setInboxName(e.target.value)}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                  className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Business Account ID</label>
+                <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">Business Account ID</label>
                 <input
                   type="text"
                   value={businessAccountId}
                   onChange={(e) => setBusinessAccountId(e.target.value)}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900 font-mono"
+                  className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900 font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">TikTok App ID</label>
+                <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">TikTok App ID</label>
                 <input
                   type="text"
                   value={appId}
                   onChange={(e) => setAppId(e.target.value)}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900 font-mono"
+                  className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900 font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
+                <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">
                   App Secret {data?.inbox?.credentials?.appSecret && <span className="text-emerald-600 font-normal">(Configured)</span>}
                 </label>
                 <input
@@ -402,12 +402,12 @@ export function TikTokIntegration() {
                   value={appSecret}
                   onChange={(e) => setAppSecret(e.target.value)}
                   placeholder="••••••••••••••••"
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                  className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
                 />
               </div>
 
               <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-slate-700 mb-1">
+                <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">
                   Access Token {data?.inbox?.credentials?.accessToken && <span className="text-emerald-600 font-normal">(Configured)</span>}
                 </label>
                 <input
@@ -415,26 +415,26 @@ export function TikTokIntegration() {
                   value={accessToken}
                   onChange={(e) => setAccessToken(e.target.value)}
                   placeholder="Paste permanent or long-lived TikTok Access Token"
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900 font-mono"
+                  className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900 font-mono"
                 />
               </div>
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Connected Account Profile</h3>
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-6 shadow-none space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-ink)]">Connected Account Profile</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
-              <div className="rounded-lg bg-slate-50 p-3 border border-slate-100">
-                <span className="text-[11px] text-slate-500 block">Account Handle</span>
-                <span className="text-sm font-semibold text-slate-900">{data?.businessProfile?.accountHandle || '@bayworks_official'}</span>
+              <div className="rounded-[var(--radius-md)] bg-[var(--color-accent-muted)] p-3 border border-[var(--color-border)]">
+                <span className="text-[11px] text-[var(--color-ink-faint)] block">Account Handle</span>
+                <span className="text-sm font-semibold text-[var(--color-ink)]">{data?.businessProfile?.accountHandle || '@bayworks_official'}</span>
               </div>
-              <div className="rounded-lg bg-slate-50 p-3 border border-slate-100">
-                <span className="text-[11px] text-slate-500 block">Verification Status</span>
+              <div className="rounded-[var(--radius-md)] bg-[var(--color-accent-muted)] p-3 border border-[var(--color-border)]">
+                <span className="text-[11px] text-[var(--color-ink-faint)] block">Verification Status</span>
                 <span className="text-sm font-semibold text-emerald-700">{data?.businessProfile?.accountType || 'TikTok for Business Verified'}</span>
               </div>
-              <div className="rounded-lg bg-slate-50 p-3 border border-slate-100">
-                <span className="text-[11px] text-slate-500 block">API Version</span>
-                <span className="text-sm font-semibold text-slate-900">{data?.health?.tiktokApi || 'open.tiktokapis.com/v2'}</span>
+              <div className="rounded-[var(--radius-md)] bg-[var(--color-accent-muted)] p-3 border border-[var(--color-border)]">
+                <span className="text-[11px] text-[var(--color-ink-faint)] block">API Version</span>
+                <span className="text-sm font-semibold text-[var(--color-ink)]">{data?.health?.tiktokApi || 'open.tiktokapis.com/v2'}</span>
               </div>
             </div>
           </div>
@@ -444,21 +444,21 @@ export function TikTokIntegration() {
       {/* Tab 2: Webhooks & Security */}
       {activeTab === 'webhooks' && (
         <div className="space-y-5">
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
-            <h2 className="text-sm font-bold text-slate-900">TikTok Webhook Subscription</h2>
-            <p className="text-xs text-slate-500">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-6 shadow-none space-y-4">
+            <h2 className="text-sm font-bold text-[var(--color-ink)]">TikTok Webhook Subscription</h2>
+            <p className="text-xs text-[var(--color-ink-faint)]">
               Configure this webhook URL inside your TikTok Developer App settings. TikTok will deliver incoming direct messages and comment notifications in real-time.
             </p>
 
             <div className="space-y-4 pt-2">
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Callback URL</label>
+                <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">Callback URL</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     readOnly
                     value={data?.webhookConfig?.callbackUrl || 'https://api.yourdomain.com/api/v1/webhooks/tiktok'}
-                    className="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-xs text-slate-600 font-mono"
+                    className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-accent-muted)] px-3 py-2 text-xs text-[var(--color-ink-muted)] font-mono"
                   />
                   <button
                     onClick={() =>
@@ -467,7 +467,7 @@ export function TikTokIntegration() {
                         'webhook'
                       )
                     }
-                    className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs"
+                    className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-accent-muted)] shadow-none"
                   >
                     {copiedKey === 'webhook' ? <span className="flex items-center gap-1"><Check className="h-3 w-3 inline" /> Copied!</span> : 'Copy'}
                   </button>
@@ -475,32 +475,32 @@ export function TikTokIntegration() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">Webhook Verify Token</label>
+                <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">Webhook Verify Token</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={webhookVerifyToken}
                     onChange={(e) => setWebhookVerifyToken(e.target.value)}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-xs font-mono"
+                    className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-2 text-xs font-mono"
                   />
                   <button
                     onClick={() => copyToClipboard(webhookVerifyToken, 'token')}
-                    className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs"
+                    className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-accent-muted)] shadow-none"
                   >
                     {copiedKey === 'token' ? <span className="flex items-center gap-1"><Check className="h-3 w-3 inline" /> Copied!</span> : 'Copy'}
                   </button>
                 </div>
               </div>
 
-              <div className="rounded-lg bg-slate-50 border border-slate-200 p-4 space-y-2">
-                <span className="text-xs font-bold text-slate-800">Supported Real-Time Events</span>
-                <ul className="text-xs text-slate-600 space-y-1 list-disc list-inside">
-                  <li><code className="font-mono bg-white px-1.5 py-0.5 rounded border text-slate-700">im.direct_message.receive</code> – Incoming customer DMs</li>
-                  <li><code className="font-mono bg-white px-1.5 py-0.5 rounded border text-slate-700">video.comment.receive</code> – Customer comments on brand videos</li>
-                  <li><code className="font-mono bg-white px-1.5 py-0.5 rounded border text-slate-700">video.comment.reply</code> – Agent comment responses</li>
+              <div className="rounded-[var(--radius-md)] bg-[var(--color-accent-muted)] border border-[var(--color-border)] p-4 space-y-2">
+                <span className="text-xs font-bold text-[var(--color-ink)]">Supported Real-Time Events</span>
+                <ul className="text-xs text-[var(--color-ink-muted)] space-y-1 list-disc list-inside">
+                  <li><code className="font-mono bg-white px-1.5 py-0.5 rounded border text-[var(--color-ink)]">im.direct_message.receive</code> – Incoming customer DMs</li>
+                  <li><code className="font-mono bg-white px-1.5 py-0.5 rounded border text-[var(--color-ink)]">video.comment.receive</code> – Customer comments on brand videos</li>
+                  <li><code className="font-mono bg-white px-1.5 py-0.5 rounded border text-[var(--color-ink)]">video.comment.reply</code> – Agent comment responses</li>
                 </ul>
-                <div className="pt-2 text-[11px] text-slate-500 flex items-start gap-1.5">
-                  <ShieldCheck className="h-4 w-4 text-slate-700 shrink-0 mt-0.5" />
+                <div className="pt-2 text-[11px] text-[var(--color-ink-faint)] flex items-start gap-1.5">
+                  <ShieldCheck className="h-4 w-4 text-[var(--color-ink)] shrink-0 mt-0.5" />
                   <span><strong>HMAC-SHA256 Security:</strong> Incoming webhook payloads are automatically verified against the <code className="font-mono bg-white px-1 py-0.5 rounded border">X-TikTok-Signature</code> header using your configured App Secret.</span>
                 </div>
               </div>
@@ -512,11 +512,11 @@ export function TikTokIntegration() {
       {/* Tab 3: Comments Auto-Reply */}
       {activeTab === 'comments' && (
         <div className="space-y-5">
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-6 shadow-none space-y-4">
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-sm font-bold text-slate-900">TikTok Video Comment Moderation &amp; Auto-Replies</h2>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <h2 className="text-sm font-bold text-[var(--color-ink)]">TikTok Video Comment Moderation &amp; Auto-Replies</h2>
+                <p className="text-xs text-[var(--color-ink-faint)] mt-0.5">
                   Engage commenters instantly on viral videos and convert viewers into support conversations.
                 </p>
               </div>
@@ -527,13 +527,13 @@ export function TikTokIntegration() {
                   onChange={(e) => setCommentAutoReplyEnabled(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-slate-900"></div>
+                <div className="w-9 h-5 bg-[var(--color-border)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[var(--color-border)] after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--color-accent)]"></div>
               </label>
             </div>
 
             <div className="space-y-3 pt-2">
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
+                <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">
                   Automated Comment Response Template
                 </label>
                 <textarea
@@ -541,14 +541,14 @@ export function TikTokIntegration() {
                   value={commentAutoReplyText}
                   onChange={(e) => setCommentAutoReplyText(e.target.value)}
                   disabled={!commentAutoReplyEnabled}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900 disabled:bg-slate-50 disabled:text-slate-400"
+                  className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900 disabled:bg-[var(--color-accent-muted)] disabled:text-[var(--color-ink-faint)]"
                 />
-                <p className="text-[11px] text-slate-500 mt-1">
+                <p className="text-[11px] text-[var(--color-ink-faint)] mt-1">
                   Sent automatically when customers ask questions on your public TikTok videos.
                 </p>
               </div>
 
-              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3.5 text-xs text-amber-900 flex items-start gap-1.5">
+              <div className="rounded-[var(--radius-md)] bg-amber-50 border border-amber-200 p-3.5 text-xs text-amber-900 flex items-start gap-1.5">
                 <Lightbulb className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
                 <span><strong>Inbox Integration:</strong> In addition to auto-replies, all comments appear in your team inbox as threaded conversations, allowing agents to respond directly from the message composer.</span>
               </div>
@@ -560,21 +560,21 @@ export function TikTokIntegration() {
       {/* Tab 4: Automations & Hours */}
       {activeTab === 'automations' && (
         <div className="space-y-5">
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
-            <h2 className="text-sm font-bold text-slate-900">Automated Direct Messaging &amp; Greetings</h2>
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-6 shadow-none space-y-4">
+            <h2 className="text-sm font-bold text-[var(--color-ink)]">Automated Direct Messaging &amp; Greetings</h2>
 
             {/* Welcome Greeting */}
-            <div className="border-b border-slate-100 pb-4 space-y-3">
+            <div className="border-b border-[var(--color-border)] pb-4 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-xs font-bold text-slate-800">Welcome Greeting</h3>
-                  <p className="text-[11px] text-slate-500">Send an instant greeting when a customer initiates a new TikTok DM.</p>
+                  <h3 className="text-xs font-bold text-[var(--color-ink)]">Welcome Greeting</h3>
+                  <p className="text-[11px] text-[var(--color-ink-faint)]">Send an instant greeting when a customer initiates a new TikTok DM.</p>
                 </div>
                 <input
                   type="checkbox"
                   checked={greetingEnabled}
                   onChange={(e) => setGreetingEnabled(e.target.checked)}
-                  className="rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                  className="rounded border-[var(--color-border)] text-[var(--color-ink)] focus:ring-slate-900"
                 />
               </div>
               {greetingEnabled && (
@@ -582,23 +582,23 @@ export function TikTokIntegration() {
                   rows={2}
                   value={greetingMessage}
                   onChange={(e) => setGreetingMessage(e.target.value)}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-xs"
+                  className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-2 text-xs"
                 />
               )}
             </div>
 
             {/* Out of Office */}
-            <div className="border-b border-slate-100 pb-4 space-y-3">
+            <div className="border-b border-[var(--color-border)] pb-4 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-xs font-bold text-slate-800">Out-of-Office Away Message</h3>
-                  <p className="text-[11px] text-slate-500">Respond automatically when messages arrive outside working hours.</p>
+                  <h3 className="text-xs font-bold text-[var(--color-ink)]">Out-of-Office Away Message</h3>
+                  <p className="text-[11px] text-[var(--color-ink-faint)]">Respond automatically when messages arrive outside working hours.</p>
                 </div>
                 <input
                   type="checkbox"
                   checked={outOfOfficeEnabled}
                   onChange={(e) => setOutOfOfficeEnabled(e.target.checked)}
-                  className="rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                  className="rounded border-[var(--color-border)] text-[var(--color-ink)] focus:ring-slate-900"
                 />
               </div>
               {outOfOfficeEnabled && (
@@ -606,22 +606,22 @@ export function TikTokIntegration() {
                   rows={2}
                   value={outOfOfficeMessage}
                   onChange={(e) => setOutOfOfficeMessage(e.target.value)}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-xs"
+                  className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-2 text-xs"
                 />
               )}
             </div>
 
             {/* CSAT Survey */}
-            <div className="border-b border-slate-100 pb-4 flex items-center justify-between">
+            <div className="border-b border-[var(--color-border)] pb-4 flex items-center justify-between">
               <div>
-                <h3 className="text-xs font-bold text-slate-800">CSAT Customer Satisfaction Rating</h3>
-                <p className="text-[11px] text-slate-500">Send a 1–5 star rating request after a ticket is marked resolved.</p>
+                <h3 className="text-xs font-bold text-[var(--color-ink)]">CSAT Customer Satisfaction Rating</h3>
+                <p className="text-[11px] text-[var(--color-ink-faint)]">Send a 1–5 star rating request after a ticket is marked resolved.</p>
               </div>
               <input
                 type="checkbox"
                 checked={csatEnabled}
                 onChange={(e) => setCsatEnabled(e.target.checked)}
-                className="rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                className="rounded border-[var(--color-border)] text-[var(--color-ink)] focus:ring-slate-900"
               />
             </div>
 
@@ -629,48 +629,48 @@ export function TikTokIntegration() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-xs font-bold text-slate-800">Operating Schedule &amp; Working Hours</h3>
-                  <p className="text-[11px] text-slate-500">Enforce business hours for agent routing and away messages.</p>
+                  <h3 className="text-xs font-bold text-[var(--color-ink)]">Operating Schedule &amp; Working Hours</h3>
+                  <p className="text-[11px] text-[var(--color-ink-faint)]">Enforce business hours for agent routing and away messages.</p>
                 </div>
                 <input
                   type="checkbox"
                   checked={workingHoursEnabled}
                   onChange={(e) => setWorkingHoursEnabled(e.target.checked)}
-                  className="rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+                  className="rounded border-[var(--color-border)] text-[var(--color-ink)] focus:ring-slate-900"
                 />
               </div>
 
               {workingHoursEnabled && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
                   <div>
-                    <label className="block text-[11px] text-slate-600 mb-1">Start Hour</label>
+                    <label className="block text-[11px] text-[var(--color-ink-muted)] mb-1">Start Hour</label>
                     <input
                       type="number"
                       min={0}
                       max={23}
                       value={workingHoursStart}
                       onChange={(e) => setWorkingHoursStart(parseInt(e.target.value) || 0)}
-                      className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs"
+                      className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-600 mb-1">End Hour</label>
+                    <label className="block text-[11px] text-[var(--color-ink-muted)] mb-1">End Hour</label>
                     <input
                       type="number"
                       min={0}
                       max={23}
                       value={workingHoursEnd}
                       onChange={(e) => setWorkingHoursEnd(parseInt(e.target.value) || 0)}
-                      className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs"
+                      className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-600 mb-1">Timezone</label>
+                    <label className="block text-[11px] text-[var(--color-ink-muted)] mb-1">Timezone</label>
                     <input
                       type="text"
                       value={timezone}
                       onChange={(e) => setTimezone(e.target.value)}
-                      className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs font-mono"
+                      className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-mono"
                     />
                   </div>
                 </div>
@@ -685,54 +685,54 @@ export function TikTokIntegration() {
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Direct Message Simulator */}
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-5 shadow-none space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-ink)]">
                 1. Direct Message Simulator
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[var(--color-ink-faint)]">
                 Dispatch an outbound test direct message to verify API token authentication.
               </p>
 
               <div>
-                <label className="block text-[11px] text-slate-600 mb-1">Recipient Open ID</label>
+                <label className="block text-[11px] text-[var(--color-ink-muted)] mb-1">Recipient Open ID</label>
                 <input
                   type="text"
                   value={testOpenId}
                   onChange={(e) => setTestOpenId(e.target.value)}
-                  className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs font-mono"
+                  className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] text-slate-600 mb-1">Recipient Name</label>
+                <label className="block text-[11px] text-[var(--color-ink-muted)] mb-1">Recipient Name</label>
                 <input
                   type="text"
                   value={testRecipientName}
                   onChange={(e) => setTestRecipientName(e.target.value)}
-                  className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs"
+                  className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] text-slate-600 mb-1">Message Body</label>
+                <label className="block text-[11px] text-[var(--color-ink-muted)] mb-1">Message Body</label>
                 <textarea
                   rows={2}
                   value={testMessage}
                   onChange={(e) => setTestMessage(e.target.value)}
-                  className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs"
+                  className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs"
                 />
               </div>
 
               <button
                 onClick={handleSendTestMessage}
                 disabled={sendingTestMsg}
-                className="w-full rounded-md bg-slate-900 py-2 text-xs font-semibold text-white hover:bg-slate-800 shadow-xs"
+                className="w-full rounded-[var(--radius-sm)] bg-[var(--color-accent)] py-2 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] shadow-none"
               >
                 {sendingTestMsg ? 'Dispatching...' : 'Send Test Direct Message'}
               </button>
 
               {testMsgResult && (
-                <div className="rounded-md bg-slate-50 border border-slate-200 p-2.5 text-[11px] font-mono text-slate-700">
+                <div className="rounded-[var(--radius-sm)] bg-[var(--color-accent-muted)] border border-[var(--color-border)] p-2.5 text-[11px] font-mono text-[var(--color-ink)]">
                   <div><strong>Status:</strong> {testMsgResult.messageId}</div>
                   <div className="text-emerald-700">{testMsgResult.message}</div>
                 </div>
@@ -740,55 +740,55 @@ export function TikTokIntegration() {
             </div>
 
             {/* Video Comment Reply Simulator */}
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-5 shadow-none space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-ink)]">
                 2. Video Comment Reply Simulator
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[var(--color-ink-faint)]">
                 Post an outbound reply to a customer comment on a brand video.
               </p>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-[11px] text-slate-600 mb-1">Video ID</label>
+                  <label className="block text-[11px] text-[var(--color-ink-muted)] mb-1">Video ID</label>
                   <input
                     type="text"
                     value={testVideoId}
                     onChange={(e) => setTestVideoId(e.target.value)}
-                    className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs font-mono"
+                    className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-mono"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-600 mb-1">Comment ID</label>
+                  <label className="block text-[11px] text-[var(--color-ink-muted)] mb-1">Comment ID</label>
                   <input
                     type="text"
                     value={testCommentId}
                     onChange={(e) => setTestCommentId(e.target.value)}
-                    className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs font-mono"
+                    className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-mono"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[11px] text-slate-600 mb-1">Reply Text</label>
+                <label className="block text-[11px] text-[var(--color-ink-muted)] mb-1">Reply Text</label>
                 <textarea
                   rows={2}
                   value={testCommentReply}
                   onChange={(e) => setTestCommentReply(e.target.value)}
-                  className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs"
+                  className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs"
                 />
               </div>
 
               <button
                 onClick={handleSendTestCommentReply}
                 disabled={sendingTestComment}
-                className="w-full rounded-md bg-slate-900 py-2 text-xs font-semibold text-white hover:bg-slate-800 shadow-xs"
+                className="w-full rounded-[var(--radius-sm)] bg-[var(--color-accent)] py-2 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] shadow-none"
               >
                 {sendingTestComment ? 'Posting Reply...' : 'Post Test Comment Reply'}
               </button>
 
               {testCommentResult && (
-                <div className="rounded-md bg-slate-50 border border-slate-200 p-2.5 text-[11px] font-mono text-slate-700">
+                <div className="rounded-[var(--radius-sm)] bg-[var(--color-accent-muted)] border border-[var(--color-border)] p-2.5 text-[11px] font-mono text-[var(--color-ink)]">
                   <div><strong>Reply ID:</strong> {testCommentResult.replyId}</div>
                   <div className="text-emerald-700">{testCommentResult.message}</div>
                 </div>
@@ -797,21 +797,21 @@ export function TikTokIntegration() {
           </div>
 
           {/* Live Events Stream */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs space-y-3">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-5 shadow-none space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-ink)]">
                 Recent TikTok Transmission Events
               </h3>
               <button
                 onClick={loadChannel}
-                className="text-xs text-slate-500 hover:text-slate-800 font-medium"
+                className="text-xs text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] font-medium"
               >
                 <span className="flex items-center gap-1.5"><RefreshCw className="h-3.5 w-3.5" /> Refresh Stream</span>
               </button>
             </div>
 
             {events.length === 0 ? (
-              <p className="text-xs text-slate-400 py-4 text-center">
+              <p className="text-xs text-[var(--color-ink-faint)] py-4 text-center">
                 No recent TikTok messages or comment events recorded. Use the simulators above or send a message via webhook.
               </p>
             ) : (
@@ -828,10 +828,10 @@ export function TikTokIntegration() {
                       >
                         {ev.direction.toUpperCase()}
                       </span>
-                      <span className="font-medium text-slate-800">{ev.senderName}</span>
-                      <span className="text-slate-500 truncate max-w-md">{ev.body}</span>
+                      <span className="font-medium text-[var(--color-ink)]">{ev.senderName}</span>
+                      <span className="text-[var(--color-ink-faint)] truncate max-w-md">{ev.body}</span>
                     </div>
-                    <span className="text-[11px] text-slate-400 font-mono">
+                    <span className="text-[11px] text-[var(--color-ink-faint)] font-mono">
                       {new Date(ev.sentAt).toLocaleTimeString()}
                     </span>
                   </div>

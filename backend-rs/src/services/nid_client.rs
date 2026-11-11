@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 use crate::config::Config;
 use serde::{Deserialize, Serialize};
@@ -32,6 +32,14 @@ pub struct PendingState {
     redirect_uri: String,
 }
 
+/// Result of a successful nID account sign-up (phone + OTP verification).
+#[derive(Clone, Debug, Serialize)]
+pub struct SignUpResult {
+    pub session_token: String,
+    pub account_id: String,
+    pub phone: String,
+}
+
 #[derive(Debug)]
 pub enum NidError {
     NotConfigured,
@@ -40,6 +48,7 @@ pub enum NidError {
     MalformedResponse,
     InvalidState,
     MissingIdentity,
+    OtpFailed(String),
 }
 
 pub struct NidClient {
@@ -385,5 +394,95 @@ impl NidClient {
 
     pub async fn validate_session(&self, token: &str) -> Option<SessionClaims> {
         self.sessions.read().await.get(token).cloned()
+    }
+
+    // ------------------------------------------------------------------
+    // Sign Up — Account creation via nID phone + OTP
+    // ------------------------------------------------------------------
+
+    /// Sends an OTP code to the given phone number via nID.
+    /// nID endpoint: POST /v1/accounts/otp/start
+    pub async fn start_sign_up(&self, phone: &str) -> Result<(), NidError> {
+        let response = self
+            .http
+            .post(format!("{}/v1/accounts/otp/start", self.base_url))
+            .json(&serde_json::json!({ "phone": phone }))
+            .send()
+            .await
+            .map_err(|err| NidError::Unreachable(err.to_string()))?;
+
+        let status = response.status();
+        if !status.is_success() {
+            let body: serde_json::Value = response.json().await.unwrap_or_else(|_| json!({}));
+            let detail = body
+                .pointer("/message")
+                .and_then(|v| v.as_str())
+                .unwrap_or("nID rejected the OTP request");
+            return Err(NidError::OtpFailed(detail.to_string()));
+        }
+        Ok(())
+    }
+
+    /// Verifies the OTP code and creates (or logs in to) the nID account.
+    /// nID endpoint: POST /v1/accounts/otp/verify
+    /// Returns a session token and account identity on success.
+    pub async fn verify_sign_up(&self, phone: &str, code: &str) -> Result<SignUpResult, NidError> {
+        let response = self
+            .http
+            .post(format!("{}/v1/accounts/otp/verify", self.base_url))
+            .json(&serde_json::json!({ "phone": phone, "code": code }))
+            .send()
+            .await
+            .map_err(|err| NidError::Unreachable(err.to_string()))?;
+
+        let status = response.status();
+        if !status.is_success() {
+            let body: serde_json::Value = response.json().await.unwrap_or_else(|_| json!({}));
+            let detail = body
+                .pointer("/message")
+                .and_then(|v| v.as_str())
+                .unwrap_or("OTP verification failed");
+            return Err(NidError::OtpFailed(detail.to_string()));
+        }
+
+        let data: serde_json::Value =
+            response.json().await.map_err(|_| NidError::MalformedResponse)?;
+
+        let session_token = data
+            .get("sessionToken")
+            .and_then(|v| v.as_str())
+            .filter(|v| !v.is_empty())
+            .ok_or(NidError::MalformedResponse)?
+            .to_string();
+
+        let account = data.get("account").ok_or(NidError::MalformedResponse)?;
+        let account_id = account
+            .get("id")
+            .and_then(|v| v.as_str())
+            .filter(|v| !v.is_empty())
+            .ok_or(NidError::MalformedResponse)?
+            .to_string();
+
+        // Store the session so validate_session can find it later.
+        let claims = SessionClaims {
+            account_id: account_id.clone(),
+            phone: Some(phone.to_string()),
+            email: account.get("email").and_then(|v| v.as_str()).map(String::from),
+            phone_verified: account
+                .get("phoneVerifiedAt")
+                .map(|_| true)
+                .unwrap_or(false),
+            access_token: session_token.clone(),
+        };
+        self.sessions
+            .write()
+            .await
+            .insert(session_token.clone(), claims);
+
+        Ok(SignUpResult {
+            session_token,
+            account_id,
+            phone: phone.to_string(),
+        })
     }
 }

@@ -243,7 +243,7 @@ export function EmailIntegration() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <Link to="/channels" className="text-xs font-medium text-[var(--color-ink-muted)] hover:text-slate-800">
+            <Link to="/channels" className="text-xs font-medium text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]">
               Channels Hub
             </Link>
             <span className="text-[var(--color-ink-faint)]">/</span>
@@ -272,22 +272,22 @@ export function EmailIntegration() {
           <button
             onClick={handleSyncImap}
             disabled={syncing}
-            className="rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-xs flex items-center gap-1.5"
+            className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-none flex items-center gap-1.5"
           >
-            <Download className="h-3.5 w-3.5 text-slate-600" /> {syncing ? 'Polling IMAP...' : 'Poll Mailbox Now'}
+            <Download className="h-3.5 w-3.5 text-[var(--color-ink-muted)]" /> {syncing ? 'Polling IMAP...' : 'Poll Mailbox Now'}
           </button>
           <button
             onClick={handleVerify}
             disabled={verifying}
-            className="rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-xs flex items-center gap-1.5"
+            className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-none flex items-center gap-1.5"
           >
-            <RefreshCw className={`h-3.5 w-3.5 text-slate-600 ${verifying ? 'animate-spin' : ''}`} />{' '}
+            <RefreshCw className={`h-3.5 w-3.5 text-[var(--color-ink-muted)] ${verifying ? 'animate-spin' : ''}`} />{' '}
             {verifying ? 'Verifying...' : 'Verify Connections'}
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="rounded-md bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 shadow-xs flex items-center gap-1.5"
+            className="rounded-[var(--radius-sm)] bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 shadow-none flex items-center gap-1.5"
           >
             <Save className="h-3.5 w-3.5" /> {saving ? 'Saving...' : 'Save Settings'}
           </button>
@@ -296,7 +296,7 @@ export function EmailIntegration() {
 
       {/* Real Connection Status Banner */}
       {!isConnected && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 flex items-start gap-3">
+        <div className="rounded-[var(--radius-lg)] border border-amber-200 bg-amber-50 p-4 text-amber-900 flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
           <div>
             <h4 className="text-sm font-semibold text-amber-900">Channel Not Connected</h4>
@@ -310,7 +310,7 @@ export function EmailIntegration() {
       {/* Feedback Alert */}
       {feedback && (
         <div
-          className={`flex items-center justify-between rounded-md p-3 text-xs ${
+          className={`flex items-center justify-between rounded-[var(--radius-sm)] p-3 text-xs ${
             feedback.type === 'success'
               ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
               : 'bg-rose-50 text-rose-800 border border-rose-200'
@@ -393,7 +393,7 @@ export function EmailIntegration() {
       {activeTab === 'smtp' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+            <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-none space-y-4">
               <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
                 <Send className="h-4 w-4 text-emerald-600" /> Outbound SMTP Mail Server Settings
               </h2>
@@ -408,7 +408,7 @@ export function EmailIntegration() {
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs shadow-xs focus:border-emerald-500 focus:outline-hidden"
+                    className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs shadow-none focus:border-emerald-500 focus:outline-hidden"
                   />
                 </div>
                 <div>
@@ -418,7 +418,7 @@ export function EmailIntegration() {
                     value={emailFromName}
                     onChange={(e) => setEmailFromName(e.target.value)}
                     placeholder="e.g. Newax Support"
-                    className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs shadow-xs focus:border-emerald-500 focus:outline-hidden"
+                    className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs shadow-none focus:border-emerald-500 focus:outline-hidden"
                   />
                 </div>
               </div>
@@ -430,7 +430,7 @@ export function EmailIntegration() {
                     type="email"
                     value={emailFromAddress}
                     onChange={(e) => setEmailFromAddress(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs shadow-xs focus:border-emerald-500 focus:outline-hidden"
+                    className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs shadow-none focus:border-emerald-500 focus:outline-hidden"
                     placeholder="hello@newax.co"
                   />
                 </div>
@@ -441,7 +441,7 @@ export function EmailIntegration() {
                     value={emailReplyTo}
                     onChange={(e) => setEmailReplyTo(e.target.value)}
                     placeholder="hello@newax.co"
-                    className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs shadow-xs focus:border-emerald-500 focus:outline-hidden"
+                    className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs shadow-none focus:border-emerald-500 focus:outline-hidden"
                   />
                 </div>
               </div>
@@ -453,7 +453,7 @@ export function EmailIntegration() {
                     type="text"
                     value={smtpHost}
                     onChange={(e) => setSmtpHost(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs font-mono shadow-xs focus:border-emerald-500 focus:outline-hidden"
+                    className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-mono shadow-none focus:border-emerald-500 focus:outline-hidden"
                     placeholder="smtp.newax.co or smtp.sendgrid.net"
                   />
                 </div>
@@ -463,7 +463,7 @@ export function EmailIntegration() {
                     type="number"
                     value={smtpPort}
                     onChange={(e) => setSmtpPort(Number(e.target.value))}
-                    className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs font-mono shadow-xs focus:border-emerald-500 focus:outline-hidden"
+                    className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-mono shadow-none focus:border-emerald-500 focus:outline-hidden"
                   />
                 </div>
               </div>
@@ -476,7 +476,7 @@ export function EmailIntegration() {
                     value={smtpUsername}
                     onChange={(e) => setSmtpUsername(e.target.value)}
                     placeholder="hello@newax.co"
-                    className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs font-mono shadow-xs focus:border-emerald-500 focus:outline-hidden"
+                    className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-mono shadow-none focus:border-emerald-500 focus:outline-hidden"
                   />
                 </div>
                 <div>
@@ -485,7 +485,7 @@ export function EmailIntegration() {
                     type="password"
                     value={smtpPassword}
                     onChange={(e) => setSmtpPassword(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs font-mono shadow-xs focus:border-emerald-500 focus:outline-hidden"
+                    className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-mono shadow-none focus:border-emerald-500 focus:outline-hidden"
                     placeholder="••••••••••••••••"
                   />
                 </div>
@@ -494,7 +494,7 @@ export function EmailIntegration() {
                   <select
                     value={smtpEncryption}
                     onChange={(e) => setSmtpEncryption(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs shadow-xs focus:border-emerald-500"
+                    className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs shadow-none focus:border-emerald-500"
                   >
                     <option value="tls">STARTTLS (Port 587)</option>
                     <option value="ssl">SSL / TLS (Port 465)</option>
@@ -506,7 +506,7 @@ export function EmailIntegration() {
           </div>
 
           <div className="space-y-6">
-            <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+            <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-none space-y-4">
               <h3 className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">DNS &amp; Deliverability Health</h3>
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-xs">
@@ -529,12 +529,12 @@ export function EmailIntegration() {
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-[var(--color-ink-muted)]">Thread Tracking:</span>
-                  <span className="font-semibold text-slate-800">Message-ID &amp; In-Reply-To</span>
+                  <span className="font-semibold text-[var(--color-ink)]">Message-ID &amp; In-Reply-To</span>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-5 shadow-xs space-y-2">
+            <div className="rounded-[var(--radius-md)] border border-emerald-200 bg-emerald-50/50 p-5 shadow-none space-y-2">
               <h4 className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
                 <ShieldCheck className="h-4 w-4 text-emerald-600" /> Zero-Bounce Anti-Spam Compliance
               </h4>
@@ -550,7 +550,7 @@ export function EmailIntegration() {
       {activeTab === 'imap' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* IMAP Mailbox Settings */}
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-none space-y-4">
             <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
               <Inbox className="h-4 w-4 text-emerald-600" /> IMAP Mailbox Polling
             </h2>
@@ -566,7 +566,7 @@ export function EmailIntegration() {
                     type="text"
                     value={imapHost}
                     onChange={(e) => setImapHost(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs font-mono shadow-xs"
+                    className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-mono shadow-none"
                     placeholder="imap.newax.co"
                   />
                 </div>
@@ -576,7 +576,7 @@ export function EmailIntegration() {
                     type="number"
                     value={imapPort}
                     onChange={(e) => setImapPort(Number(e.target.value))}
-                    className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs font-mono shadow-xs"
+                    className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-mono shadow-none"
                   />
                 </div>
               </div>
@@ -589,7 +589,7 @@ export function EmailIntegration() {
                     value={imapUsername}
                     onChange={(e) => setImapUsername(e.target.value)}
                     placeholder="hello@newax.co"
-                    className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs font-mono shadow-xs"
+                    className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-mono shadow-none"
                   />
                 </div>
                 <div>
@@ -598,7 +598,7 @@ export function EmailIntegration() {
                     type="password"
                     value={imapPassword}
                     onChange={(e) => setImapPassword(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs font-mono shadow-xs"
+                    className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-mono shadow-none"
                     placeholder="••••••••••••••••"
                   />
                 </div>
@@ -611,7 +611,7 @@ export function EmailIntegration() {
                     type="text"
                     value={imapFolder}
                     onChange={(e) => setImapFolder(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs shadow-xs"
+                    className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs shadow-none"
                   />
                 </div>
                 <div className="flex items-center pt-5">
@@ -620,7 +620,7 @@ export function EmailIntegration() {
                       type="checkbox"
                       checked={imapSsl}
                       onChange={(e) => setImapSsl(e.target.checked)}
-                      className="rounded-sm border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                      className="rounded-sm border-[var(--color-border)] text-emerald-600 focus:ring-emerald-500"
                     />
                     <span className="text-xs font-medium text-[var(--color-ink)]">Use SSL / TLS (Port 993)</span>
                   </label>
@@ -630,7 +630,7 @@ export function EmailIntegration() {
           </div>
 
           {/* Inbound Email Webhook */}
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-none space-y-4">
             <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
               <Mail className="h-4 w-4 text-blue-600" /> Inbound Email Webhook
             </h2>
@@ -652,15 +652,15 @@ export function EmailIntegration() {
                 <input
                   readOnly
                   value={webhookUrl}
-                  className="block w-full rounded-md bg-[var(--color-page)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-mono text-[var(--color-ink)]"
+                  className="block w-full rounded-[var(--radius-sm)] bg-[var(--color-page)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-mono text-[var(--color-ink)]"
                 />
               </div>
 
-              <div className="rounded-md bg-[var(--color-page)] p-3 border border-[var(--color-border)] text-xs text-[var(--color-ink-muted)] space-y-1.5">
-                <div className="font-bold text-slate-800">Supported Inbound Formats:</div>
-                <div><span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-400 mr-1.5" /><strong>Postmark Inbound</strong>: JSON payload with `FromFull`, `TextBody`, and attachments.</div>
-                <div><span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-400 mr-1.5" /><strong>SendGrid Inbound Parse</strong>: Multipart form-data with automatic thread headers.</div>
-                <div><span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-400 mr-1.5" /><strong>Universal JSON</strong>: Raw RFC2822 or structured &#123; from, to, subject, body &#125;.</div>
+              <div className="rounded-[var(--radius-sm)] bg-[var(--color-page)] p-3 border border-[var(--color-border)] text-xs text-[var(--color-ink-muted)] space-y-1.5">
+                <div className="font-bold text-[var(--color-ink)]">Supported Inbound Formats:</div>
+                <div><span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--color-ink-faint)] mr-1.5" /><strong>Postmark Inbound</strong>: JSON payload with `FromFull`, `TextBody`, and attachments.</div>
+                <div><span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--color-ink-faint)] mr-1.5" /><strong>SendGrid Inbound Parse</strong>: Multipart form-data with automatic thread headers.</div>
+                <div><span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--color-ink-faint)] mr-1.5" /><strong>Universal JSON</strong>: Raw RFC2822 or structured &#123; from, to, subject, body &#125;.</div>
               </div>
             </div>
           </div>
@@ -670,12 +670,12 @@ export function EmailIntegration() {
       {/* TAB 3: Templates & Signatures */}
       {activeTab === 'templates' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-none space-y-4">
             <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
               <Palette className="h-4 w-4 text-emerald-600" /> Dynamic Agent Signature
             </h2>
             <p className="text-xs text-[var(--color-ink-muted)]">
-              Customize the signature appended to outgoing emails. Use variables like <code className="bg-slate-100 px-1 py-0.5 rounded text-[11px] font-mono">{'{{agent.name}}'}</code> and <code className="bg-slate-100 px-1 py-0.5 rounded text-[11px] font-mono">{'{{inbox.name}}'}</code>.
+              Customize the signature appended to outgoing emails. Use variables like <code className="bg-[var(--color-accent-muted)] px-1 py-0.5 rounded text-[11px] font-mono">{'{{agent.name}}'}</code> and <code className="bg-[var(--color-accent-muted)] px-1 py-0.5 rounded text-[11px] font-mono">{'{{inbox.name}}'}</code>.
             </p>
 
             <div>
@@ -684,7 +684,7 @@ export function EmailIntegration() {
                 rows={4}
                 value={emailSignature}
                 onChange={(e) => setEmailSignature(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-slate-300 p-2.5 text-xs font-mono shadow-xs focus:border-emerald-500 focus:outline-hidden"
+                className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] p-2.5 text-xs font-mono shadow-none focus:border-emerald-500 focus:outline-hidden"
               />
             </div>
 
@@ -694,15 +694,15 @@ export function EmailIntegration() {
                 rows={2}
                 value={emailFooter}
                 onChange={(e) => setEmailFooter(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-slate-300 p-2.5 text-xs shadow-xs focus:border-emerald-500 focus:outline-hidden"
+                className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] p-2.5 text-xs shadow-none focus:border-emerald-500 focus:outline-hidden"
               />
             </div>
           </div>
 
           {/* HTML Preview Box */}
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-none space-y-4">
             <h3 className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">Live Email Preview</h3>
-            <div className="rounded-md border border-[var(--color-border)] p-4 bg-[var(--color-page)]/50 space-y-3 text-xs text-slate-800">
+            <div className="rounded-[var(--radius-sm)] border border-[var(--color-border)] p-4 bg-[var(--color-page)]/50 space-y-3 text-xs text-[var(--color-ink)]">
               <div className="border-b border-[var(--color-border)] pb-2 text-[11px] text-[var(--color-ink-muted)] space-y-1">
                 <div>From: <strong>{emailFromName || 'Support Team'} &lt;{emailFromAddress || 'hello@newax.co'}&gt;</strong></div>
                 <div>To: <strong>Customer &lt;customer@example.com&gt;</strong></div>
@@ -725,7 +725,7 @@ export function EmailIntegration() {
       {/* TAB 4: Auto-Reply & Hours */}
       {activeTab === 'automations' && (
         <div className="space-y-6">
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-none space-y-4">
             <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
               <Bot className="h-4 w-4 inline mr-1.5 text-indigo-600" /> Automated Email Auto-Responders
             </h2>
@@ -740,16 +740,16 @@ export function EmailIntegration() {
                     type="checkbox"
                     checked={greetingEnabled}
                     onChange={(e) => setGreetingEnabled(e.target.checked)}
-                    className="rounded-sm border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    className="rounded-sm border-[var(--color-border)] text-emerald-600 focus:ring-emerald-500"
                   />
-                  <span className="text-xs font-semibold text-slate-800">Send instant ticket acknowledgement email on first inbound message</span>
+                  <span className="text-xs font-semibold text-[var(--color-ink)]">Send instant ticket acknowledgement email on first inbound message</span>
                 </label>
                 <textarea
                   rows={2}
                   value={greetingMessage}
                   onChange={(e) => setGreetingMessage(e.target.value)}
                   disabled={!greetingEnabled}
-                  className="block w-full rounded-md border border-slate-300 p-2 text-xs shadow-xs disabled:bg-slate-100"
+                  className="block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] p-2 text-xs shadow-none disabled:bg-[var(--color-accent-muted)]"
                 />
               </div>
 
@@ -759,16 +759,16 @@ export function EmailIntegration() {
                     type="checkbox"
                     checked={outOfOfficeEnabled}
                     onChange={(e) => setOutOfOfficeEnabled(e.target.checked)}
-                    className="rounded-sm border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    className="rounded-sm border-[var(--color-border)] text-emerald-600 focus:ring-emerald-500"
                   />
-                  <span className="text-xs font-semibold text-slate-800">Out-of-Office Auto-Reply (Outside working hours)</span>
+                  <span className="text-xs font-semibold text-[var(--color-ink)]">Out-of-Office Auto-Reply (Outside working hours)</span>
                 </label>
                 <textarea
                   rows={2}
                   value={outOfOfficeMessage}
                   onChange={(e) => setOutOfOfficeMessage(e.target.value)}
                   disabled={!outOfOfficeEnabled}
-                  className="block w-full rounded-md border border-slate-300 p-2 text-xs shadow-xs disabled:bg-slate-100"
+                  className="block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] p-2 text-xs shadow-none disabled:bg-[var(--color-accent-muted)]"
                 />
               </div>
 
@@ -778,9 +778,9 @@ export function EmailIntegration() {
                     type="checkbox"
                     checked={csatEnabled}
                     onChange={(e) => setCsatEnabled(e.target.checked)}
-                    className="rounded-sm border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    className="rounded-sm border-[var(--color-border)] text-emerald-600 focus:ring-emerald-500"
                   />
-                  <span className="text-xs font-semibold text-slate-800">Send CSAT customer satisfaction rating link upon ticket resolution</span>
+                  <span className="text-xs font-semibold text-[var(--color-ink)]">Send CSAT customer satisfaction rating link upon ticket resolution</span>
                 </label>
               </div>
             </div>
@@ -792,7 +792,7 @@ export function EmailIntegration() {
       {activeTab === 'logs' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Outbound Test Email Sender */}
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-none space-y-4">
             <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
               <Send className="h-4 w-4 text-emerald-600" /> Send Diagnostic Outbound Email
             </h2>
@@ -808,7 +808,7 @@ export function EmailIntegration() {
                   required
                   value={testRecipient}
                   onChange={(e) => setTestRecipient(e.target.value)}
-                  className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs shadow-xs"
+                  className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs shadow-none"
                 />
               </div>
 
@@ -818,7 +818,7 @@ export function EmailIntegration() {
                   type="text"
                   value={testRecipientName}
                   onChange={(e) => setTestRecipientName(e.target.value)}
-                  className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs shadow-xs"
+                  className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs shadow-none"
                 />
               </div>
 
@@ -829,7 +829,7 @@ export function EmailIntegration() {
                   required
                   value={testSubject}
                   onChange={(e) => setTestSubject(e.target.value)}
-                  className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs shadow-xs"
+                  className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs shadow-none"
                 />
               </div>
 
@@ -840,14 +840,14 @@ export function EmailIntegration() {
                   required
                   value={testMessage}
                   onChange={(e) => setTestMessage(e.target.value)}
-                  className="mt-1 block w-full rounded-md border border-slate-300 p-2 text-xs shadow-xs"
+                  className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] p-2 text-xs shadow-none"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={sendingTest}
-                className="w-full rounded-md bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 shadow-xs disabled:opacity-50 flex items-center justify-center gap-1.5"
+                className="w-full rounded-[var(--radius-sm)] bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 shadow-none disabled:opacity-50 flex items-center justify-center gap-1.5"
               >
                 <Send className="h-3.5 w-3.5" /> {sendingTest ? 'Sending Email...' : 'Send Test Outbound Email'}
               </button>
@@ -855,7 +855,7 @@ export function EmailIntegration() {
           </div>
 
           {/* Email Transmission & Webhook Event Logs */}
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-none space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">Live Email Event Stream</h3>
               <button
@@ -869,12 +869,12 @@ export function EmailIntegration() {
               </button>
             </div>
 
-            <div className="rounded-md bg-[var(--color-accent)] text-slate-200 p-4 font-mono text-xs max-h-96 overflow-y-auto space-y-2">
+            <div className="rounded-[var(--radius-sm)] bg-[var(--color-accent)] text-[var(--color-ink-faint)] p-4 font-mono text-xs max-h-96 overflow-y-auto space-y-2">
               {events.length === 0 ? (
                 <div className="text-[var(--color-ink-muted)]">No email events recorded yet. Send a test email or trigger an inbound webhook!</div>
               ) : (
                 events.map((ev) => (
-                  <div key={ev.id} className="text-slate-300 border-b border-slate-800 pb-1.5">
+                  <div key={ev.id} className="text-[var(--color-ink-faint)] border-b border-[var(--color-ink)] pb-1.5">
                     <span className="text-emerald-400">[{ev.sentAt}]</span>{' '}
                     <span className="text-blue-300">[{ev.direction.toUpperCase()}]</span>{' '}
                     <span className="text-amber-300">({ev.provider})</span>{' '}

@@ -148,21 +148,21 @@ export function Dashboard() {
           <button
             onClick={loadData}
             disabled={isRefreshing}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-medium text-[var(--color-ink)] shadow-xs hover:bg-[var(--color-page)] disabled:opacity-50 cursor-pointer"
+            className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
             Refresh
           </button>
           <Link
             to="/broadcasts"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-medium text-[var(--color-ink)] shadow-xs hover:bg-[var(--color-page)]"
+            className="btn-secondary"
           >
             <Send className="w-3.5 h-3.5 text-[var(--color-ink-muted)]" />
             New Broadcast
           </Link>
           <Link
             to="/drafts"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3.5 py-1.5 text-xs font-medium text-white shadow-xs hover:bg-[var(--color-accent-hover)]"
+            className="btn-primary"
           >
             <Sparkles className="w-3.5 h-3.5" />
             Review Drafts {drafts && drafts.length > 0 && `(${drafts.length})`}
@@ -171,7 +171,7 @@ export function Dashboard() {
       </div>
 
       {error && firstLoadComplete && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
           <span>{error}</span>
         </div>
@@ -182,14 +182,14 @@ export function Dashboard() {
         {/* Pending Drafts */}
         <Link
           to="/drafts"
-          className="group block rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs transition hover:border-amber-300 hover:shadow-sm"
+          className="group block rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 transition-all duration-150 hover:border-[var(--color-accent)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
           {...hoverIcon(draftsIcon)}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-muted)]">
+            <span className="text-[11px] font-bold uppercase tracking-[0.6px] text-[var(--color-ink-faint)]">
               Pending AI Drafts
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+            <div className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-accent-soft)] text-[var(--color-accent)]">
               <SparklesAnimated ref={draftsIcon} size={20} />
             </div>
           </div>
@@ -198,7 +198,7 @@ export function Dashboard() {
               {drafts === null ? '—' : drafts.length}
             </span>
             {drafts && drafts.length > 0 && (
-              <span className="text-xs font-semibold text-amber-600">Needs review</span>
+              <span className="text-xs font-semibold text-[var(--color-accent)]">Needs review</span>
             )}
           </div>
           <p className="mt-2 text-xs text-[var(--color-ink-faint)]">
@@ -209,14 +209,14 @@ export function Dashboard() {
         {/* Hot Leads */}
         <Link
           to="/conversations"
-          className="group block rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs transition hover:border-rose-300 hover:shadow-sm"
+          className="group block rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 transition-all duration-150 hover:border-[var(--color-accent)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
           {...hoverIcon(leadsIcon)}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-muted)]">
+            <span className="text-[11px] font-bold uppercase tracking-[0.6px] text-[var(--color-ink-faint)]">
               Hot Leads
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600">
+            <div className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] bg-rose-50 text-rose-600">
               <FlameAnimated ref={leadsIcon} size={20} />
             </div>
           </div>
@@ -236,14 +236,14 @@ export function Dashboard() {
         {/* Active Conversations */}
         <Link
           to="/conversations"
-          className="group block rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs transition hover:border-indigo-300 hover:shadow-sm"
+          className="group block rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 transition-all duration-150 hover:border-[var(--color-accent)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
           {...hoverIcon(conversationsIcon)}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-muted)]">
+            <span className="text-[11px] font-bold uppercase tracking-[0.6px] text-[var(--color-ink-faint)]">
               Open Conversations
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+            <div className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] bg-blue-50 text-blue-600">
               <MessageSquareAnimated ref={conversationsIcon} size={20} />
             </div>
           </div>
@@ -263,14 +263,14 @@ export function Dashboard() {
         {/* SLA & Automation Health */}
         <Link
           to="/sla"
-          className="group block rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs transition hover:border-emerald-300 hover:shadow-sm"
+          className="group block rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 transition-all duration-150 hover:border-[var(--color-accent)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
           {...hoverIcon(slaIcon)}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-muted)]">
+            <span className="text-[11px] font-bold uppercase tracking-[0.6px] text-[var(--color-ink-faint)]">
               SLA Health
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+            <div className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] bg-emerald-50 text-emerald-600">
               <ShieldCheckAnimated ref={slaIcon} size={20} />
             </div>
           </div>
@@ -316,12 +316,12 @@ export function Dashboard() {
               {[1, 2, 3].map((i) => (
                 <div
                   key={i}
-                  className="h-24 animate-pulse rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]"
+                  className="h-24 animate-pulse rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)]"
                 />
               ))}
             </div>
           ) : drafts.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center">
+            <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center">
               <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
               <h3 className="text-sm font-semibold text-[var(--color-ink)]">All caught up!</h3>
               <p className="text-xs text-[var(--color-ink-muted)] mt-1">
@@ -333,7 +333,7 @@ export function Dashboard() {
               {drafts.slice(0, 4).map((d) => (
                 <div
                   key={d.id}
-                  className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-xs transition hover:border-slate-300"
+                  className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-none transition hover:border-[var(--color-accent)]"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0 space-y-1.5 flex-1">
@@ -351,7 +351,7 @@ export function Dashboard() {
                           {timeAgo(d.createdAt)}
                         </span>
                       </div>
-                      <p className="line-clamp-2 text-sm text-slate-800 leading-relaxed font-normal">
+                      <p className="line-clamp-2 text-sm text-[var(--color-ink)] leading-relaxed font-normal">
                         {d.body}
                       </p>
                     </div>
@@ -361,16 +361,16 @@ export function Dashboard() {
                         type="button"
                         disabled={busyDraftId === d.id}
                         onClick={() => handleDraftAction(d.id, 'reject')}
-                        className="rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-50 cursor-pointer"
+                        className="btn-ghost disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Reject draft"
                       >
-                        <XCircle className="w-4 h-4 text-slate-400 hover:text-rose-500" />
+                        <XCircle className="w-4 h-4 text-[var(--color-ink-faint)]" />
                       </button>
                       <button
                         type="button"
                         disabled={busyDraftId === d.id}
                         onClick={() => handleDraftAction(d.id, 'approve')}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white shadow-xs hover:bg-[var(--color-accent-hover)] disabled:opacity-50 cursor-pointer"
+                        className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Send className="w-3 h-3" />
                         Approve &amp; Send
@@ -401,16 +401,16 @@ export function Dashboard() {
             </Link>
           </div>
 
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] divide-y divide-[var(--color-border)] shadow-xs">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] divide-y divide-[var(--color-border)]">
             {/* WhatsApp */}
             <div className="p-3.5 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 font-bold text-xs">
+                <div className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] bg-emerald-50 text-emerald-600 font-bold text-xs">
                   WA
                 </div>
                 <div>
-                  <h4 className="text-xs font-semibold text-[var(--color-ink)]">WhatsApp Business</h4>
-                  <p className="text-[11px] text-[var(--color-ink-faint)]">
+                  <h4 className="text-sm font-semibold text-[var(--color-ink)]">WhatsApp Business</h4>
+                  <p className="text-xs text-[var(--color-ink-faint)]">
                     {settings?.whatsapp.provider === 'meta'
                       ? 'Meta Cloud Graph API'
                       : 'Twilio Gateway'}
@@ -418,13 +418,13 @@ export function Dashboard() {
                 </div>
               </div>
               {isWaConnected ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   Connected
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-500 border border-slate-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold text-[var(--color-ink-faint)] bg-[var(--color-page)] border border-[var(--color-border)]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-ink-faint)]" />
                   Not Configured
                 </span>
               )}
@@ -433,22 +433,22 @@ export function Dashboard() {
             {/* Live Chat Widget */}
             <div className="p-3.5 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 font-bold text-xs">
+                <div className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] bg-blue-50 text-blue-600 font-bold text-xs">
                   LC
                 </div>
                 <div>
-                  <h4 className="text-xs font-semibold text-[var(--color-ink)]">Live Chat Widget</h4>
-                  <p className="text-[11px] text-[var(--color-ink-faint)]">Web SDK &amp; Pre-chat</p>
+                  <h4 className="text-sm font-semibold text-[var(--color-ink)]">Live Chat Widget</h4>
+                  <p className="text-xs text-[var(--color-ink-faint)]">Web SDK &amp; Pre-chat</p>
                 </div>
               </div>
               {isLcConnected ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   Connected
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-500 border border-slate-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold text-[var(--color-ink-faint)] bg-[var(--color-page)] border border-[var(--color-border)]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-ink-faint)]" />
                   Not Configured
                 </span>
               )}
@@ -457,22 +457,22 @@ export function Dashboard() {
             {/* Email */}
             <div className="p-3.5 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600 font-bold text-xs">
+                <div className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] bg-amber-50 text-amber-600 font-bold text-xs">
                   EM
                 </div>
                 <div>
-                  <h4 className="text-xs font-semibold text-[var(--color-ink)]">Email Relay</h4>
-                  <p className="text-[11px] text-[var(--color-ink-faint)]">Inbound &amp; Outbound</p>
+                  <h4 className="text-sm font-semibold text-[var(--color-ink)]">Email Relay</h4>
+                  <p className="text-xs text-[var(--color-ink-faint)]">Inbound &amp; Outbound</p>
                 </div>
               </div>
               {isEmailConnected ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   Connected
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-500 border border-slate-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold text-[var(--color-ink-faint)] bg-[var(--color-page)] border border-[var(--color-border)]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-ink-faint)]" />
                   Not Configured
                 </span>
               )}
@@ -481,22 +481,22 @@ export function Dashboard() {
             {/* SMS */}
             <div className="p-3.5 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 text-purple-600 font-bold text-xs">
+                <div className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] bg-purple-50 text-purple-600 font-bold text-xs">
                   SMS
                 </div>
                 <div>
-                  <h4 className="text-xs font-semibold text-[var(--color-ink)]">SMS Gateway</h4>
-                  <p className="text-[11px] text-[var(--color-ink-faint)]">Universal Multi-Provider</p>
+                  <h4 className="text-sm font-semibold text-[var(--color-ink)]">SMS Gateway</h4>
+                  <p className="text-xs text-[var(--color-ink-faint)]">Universal Multi-Provider</p>
                 </div>
               </div>
               {isSmsConnected ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   Connected
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-500 border border-slate-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold text-[var(--color-ink-faint)] bg-[var(--color-page)] border border-[var(--color-border)]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-ink-faint)]" />
                   Not Configured
                 </span>
               )}
@@ -504,23 +504,23 @@ export function Dashboard() {
           </div>
 
           {/* Quick Automation & AI Rule Summary */}
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-xs space-y-3">
-            <h3 className="text-xs font-semibold text-[var(--color-ink)] uppercase tracking-wider flex items-center gap-1.5">
-              <Zap className="w-3.5 h-3.5 text-amber-500" />
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 space-y-3">
+            <h3 className="text-[11px] font-bold uppercase tracking-[0.6px] text-[var(--color-ink-faint)] flex items-center gap-1.5">
+              <Zap className="w-3.5 h-3.5 text-[var(--color-accent)]" />
               Autonomous Engine Status
             </h3>
-            <div className="space-y-2 text-xs text-[var(--color-ink-muted)]">
+            <div className="space-y-2 text-sm text-[var(--color-ink-muted)]">
               <div className="flex justify-between">
                 <span>AI Reply Engine</span>
-                <span className="font-medium text-emerald-600">Active (Claude 3.5)</span>
+                <span className="font-semibold text-emerald-600">Active (Claude 3.5)</span>
               </div>
               <div className="flex justify-between">
                 <span>Quiet Hours Guard</span>
-                <span className="font-medium text-[var(--color-ink)]">Enforced</span>
+                <span className="font-semibold text-[var(--color-ink)]">Enforced</span>
               </div>
               <div className="flex justify-between">
                 <span>Follow-up Cadence</span>
-                <span className="font-medium text-[var(--color-ink)]">Automated</span>
+                <span className="font-semibold text-[var(--color-ink)]">Automated</span>
               </div>
             </div>
           </div>
@@ -549,13 +549,13 @@ export function Dashboard() {
         </div>
 
         {conversations === null ? (
-          <div className="h-40 animate-pulse rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]" />
+          <div className="h-40 animate-pulse rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)]" />
         ) : conversations.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center text-sm text-[var(--color-ink-muted)]">
+          <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center text-sm text-[var(--color-ink-muted)]">
             No active conversations found. Inbound leads from Harvester will appear here.
           </div>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xs">
+          <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-none">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-[var(--color-border)] bg-[var(--color-page)] text-xs font-semibold text-[var(--color-ink-muted)] uppercase tracking-wider">
                 <tr>
@@ -569,13 +569,13 @@ export function Dashboard() {
               <tbody className="divide-y divide-[var(--color-border)]">
                 {conversations.slice(0, 6).map((c) => (
                   <tr key={c.id} className="hover:bg-[var(--color-page)] transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-800">
+                    <td className="px-4 py-3 font-mono text-xs font-semibold text-[var(--color-ink)]">
                       {c.contactPhone || c.phone || '—'}
                     </td>
                     <td className="px-4 py-3">
                       <Link
                         to={`/conversations/${c.id}`}
-                        className="font-semibold text-[var(--color-ink)] hover:text-emerald-700 hover:underline"
+                        className="font-semibold text-[var(--color-accent)] hover:underline"
                       >
                         {c.contactName || c.customerName || c.leadName || c.contactPhone || 'Customer'}
                       </Link>

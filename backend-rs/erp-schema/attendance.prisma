@@ -1,0 +1,253 @@
+// Attendance, shifts and leave —
+// docs/implementation/attendance-workforce/22-attendance-shifts-leave.md.
+//
+// A RECORD, not a request (RETAIL-ERP.md R5 applied to people): a punch is
+// never refused. AttendanceEvent is written unconditionally; anything that
+// does not fit becomes an AttendanceException, queued for a human — never
+// dropped, never silently coerced onto the nearest shift.
+//
+// DEVIATIONS from this doc's own schema, recorded in full in DECISIONS.md
+// ADR-046 before most of this file was written:
+//   - `employeeId` is `userId -> User`, not `Employee` — the identical call
+//     ADR-044 already made for every other hr-people-org table (Posting,
+//     EmployeeProfile, AssetAssignment). This document predates that
+//     decision; it is not re-litigated here.
+//   - `AttendanceDevice` is a NEW model this file adds. The doc's own text
+//     says a device "authenticates by key hash exactly as
+//     PosTerminal.deviceKeyHash does" but its own schema block never
+//     declares the table — WO-22.4 ("device enrolment, key hash, rotation")
+//     is that missing model, built here mirroring `PosTerminal` exactly.
+//   - Lives in its own file (`attendance.prisma`), not appended to
+//     `hr.prisma` as the doc's own text says — this document's own home is
+//     a new module (`attendance`), a genuinely distinct capability from
+//     `hr`'s assets/positions/postings, matching the one-schema-file-per-
+//     module convention `org-structure.prisma` already set for the
+//     `orgstructure` module.
+//
+// Partitioning (WO-22.1, "the one table in this set that must be designed
+// for the volume on day one"): `AttendanceEvent` is `PARTITION BY RANGE
+// (occurredAt)` in the hand-written migration. Postgres requires every
+// unique constraint and the primary key on a partitioned table to include
+// the partition key column, so this model's primary key is the composite
+// `(id, occurredAt)`, not `id` alone, and its idempotency unique constraint
+// includes `occurredAt` too — harmless for that purpose, since a genuine
+// replay of the same punch carries the identical `occurredAt` the device
+// sent the first time. A DEFAULT partition (migration) is the safety net
+// that keeps "a punch is never refused" true even if the monthly-partition
+// maintenance cron (`AttendancePartitionCron`) ever falls behind.
+//
+// A plain foreign key to `id` alone is impossible on a partitioned table —
+// Postgres requires a FK into a partitioned parent to reference an actual
+// unique/primary-key constraint on it, and this parent's real key is the
+// composite `(id, occurredAt)`. `AttendanceException` therefore denormalises
+// `eventOccurredAt` alongside `eventId` and its `event` relation is a real,
+// DB-enforced two-column foreign key against that composite key (supported
+// since Postgres 12) — not a bare scalar. `AttendanceEvent.correctsId`
+// (self-referencing the same partitioned table) stays a bare scalar with no
+// relation, the one place this file follows the documented
+// `PosTerminal.locationId` pattern instead ("a bare scalar... checks it
+// exists itself rather than leaning on a DB-level FK") — a second
+// denormalised timestamp column for the rarer correction path was not
+// worth the schema weight the core reconciliation path already justifies.
+
+enum AttendanceKind {
+  IN
+  OUT
+  BREAK_START
+  BREAK_END
+  ADJUSTMENT
+}
+
+/// Ecosystem audit 2026-10-29 (merged from @newaxhq/attendance's
+/// MealComplianceEngine): which statutory bucket a BREAK_START punch counts
+/// toward. Null (unset) is honest, not a default — the pure engine only
+/// classifies breaks it is told about, and this file's own doctrine is
+/// "never silently coerced."
+enum AttendanceBreakType {
+  MEAL
+  REST
+}
+
+enum AttendanceSource {
+  DEVICE
+  SELF
+  MANAGER
+  IMPORT
+}
+
+enum AttendanceDeviceStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+/// A biometric terminal or kiosk that punches on behalf of employees at one
+/// unit. Not a `User` and holds no permission key — see this document's own
+/// "principal with no permission key" scope lens. Same shape as
+/// `PosTerminal`: a credential issued once, verified by its hash.
+model AttendanceDevice {
+  id            String                 @id @default(cuid())
+  /// Short, human-chosen — printed on the device or its enrolment sheet.
+  code          String                 @unique
+  label         String
+  orgUnitId     String
+  /// SHA-256 of the device credential — issued once via `rotateDeviceKey()`,
+  /// shown raw exactly that once, never persisted or echoed back.
+  deviceKeyHash String?                @unique
+  status        AttendanceDeviceStatus @default(PENDING)
+  lastSeenAt    DateTime?
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+
+  orgUnit OrgUnit           @relation(fields: [orgUnitId], references: [id])
+  events  AttendanceEvent[]
+
+  @@index([orgUnitId])
+  @@index([status])
+}
+
+/// Raw, immutable. One row per punch. Never updated, never deleted — a
+/// correction is a second row of kind ADJUSTMENT referencing the first via
+/// `correctsId`.
+model AttendanceEvent {
+  id         String         @default(cuid())
+  userId     String
+  kind       AttendanceKind
+  /// The instant, in UTC, always. Never a local wall-clock string — see
+  /// `attendance-time.ts`'s own header for why every duration is computed
+  /// from this, never from a parsed local time.
+  occurredAt DateTime
+  /// The IANA zone of the place it happened, copied at write time. A group
+  /// spanning zones cannot compute a working day without it, and the zone
+  /// of a unit can change (policy, DST rules) after the fact.
+  timezone   String
+  /// Where. Copied, not joined: the unit may be re-parented later
+  /// (hr-people-org/19) and this row must keep the unit it was written
+  /// against.
+  orgUnitId  String
+
+  /// What produced it — a device, a self-service punch, a manager's screen,
+  /// or an import. Needed to judge trust when two sources disagree.
+  source   AttendanceSource
+  deviceId String?
+
+  /// Set when this row corrects an earlier one. The earlier row stays.
+  /// Bare scalar, no relation — see this file's own header for why.
+  correctsId  String?
+  /// Idempotency key from the device or import, so a replayed punch is a
+  /// no-op rather than a second day's pay.
+  externalRef String?
+
+  /// Ecosystem audit 2026-10-29 (merged from @newaxhq/attendance's
+  /// GeofenceValidator): GPS reading at punch time, null for a source that
+  /// never carries one (MANAGER, IMPORT, most DEVICE kiosks — a fixed
+  /// terminal has no meaningful coordinates of its own). Null never blocks
+  /// `classify()` — the geofence check runs only when a reading is present.
+  latitude          Float?
+  longitude         Float?
+  gpsAccuracyMeters Float?
+  isMockLocation    Boolean @default(false)
+
+  /// Set only on a BREAK_START punch, at the puncher's own choice — which
+  /// statutory bucket this break counts toward. Null on every other kind,
+  /// and on a BREAK_START whose type was never specified.
+  breakType AttendanceBreakType?
+
+  createdAt DateTime @default(now())
+
+  user       User                  @relation(fields: [userId], references: [id])
+  orgUnit    OrgUnit               @relation(fields: [orgUnitId], references: [id])
+  device     AttendanceDevice?     @relation(fields: [deviceId], references: [id])
+  exceptions AttendanceException[]
+
+  @@id([id, occurredAt])
+  @@unique([userId, source, externalRef, occurredAt])
+  @@index([userId, occurredAt])
+  @@index([orgUnitId, occurredAt])
+  @@index([id])
+}
+
+/// A planned shift. Rostering is deliberately thin here: a shift is a
+/// window and a unit, and the client's own rota rules live in policy, not
+/// in code.
+model Shift {
+  id        String   @id @default(cuid())
+  userId    String
+  orgUnitId String
+  startsAt  DateTime
+  endsAt    DateTime
+  timezone  String
+
+  user    User    @relation(fields: [userId], references: [id])
+  orgUnit OrgUnit @relation(fields: [orgUnitId], references: [id])
+
+  @@index([userId, startsAt])
+  @@index([orgUnitId, startsAt])
+}
+
+enum AttendanceExceptionReason {
+  NO_MATCHING_SHIFT
+  OUTSIDE_ROSTER
+  WRONG_UNIT
+  WHILE_ON_LEAVE
+  DUPLICATE_SUSPECTED
+  MISSING_COUNTERPART
+  /// Ecosystem audit 2026-10-29: a GPS reading present but outside every
+  /// active AttendanceGeofenceZone for the matched shift's unit.
+  OUTSIDE_GEOFENCE
+  /// A mock-location provider, or a travel speed between consecutive
+  /// readings that is not physically possible — never a hard refusal (this
+  /// file's own "a punch is never refused"), always queued for a human.
+  GPS_SPOOFING_SUSPECTED
+}
+
+/// Ecosystem audit 2026-10-29 (merged from @newaxhq/attendance's
+/// GeofenceValidator): zero or more per unit — a site with two entrances
+/// gets two zones, either one satisfies the check. No zone configured for a
+/// unit means no geofence requirement at all (`classify()`'s own gate),
+/// the same opt-in-by-presence idiom `PayrollTaxBracket` already uses.
+model AttendanceGeofenceZone {
+  id              String   @id @default(cuid())
+  orgUnitId       String
+  name            String
+  centerLat       Float
+  centerLng       Float
+  radiusMeters    Int
+  /// [{lat,lng}, ...] — when present and `enforcePolygon` is set, containment
+  /// is tested against the polygon, not just the radius.
+  polygonVertices Json?
+  enforcePolygon  Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  orgUnit OrgUnit @relation(fields: [orgUnitId], references: [id])
+
+  @@index([orgUnitId, isActive])
+}
+
+/// A punch that did not fit. The queue that makes "never refuse" safe.
+/// `userId`/`orgUnitId` are denormalised from the source event at write
+/// time — the same "click the number, sums back to the source" idiom this
+/// codebase already applies elsewhere — so the reconcile screen's own list
+/// query never has to reach back into the (much larger, partitioned)
+/// `AttendanceEvent` table just to filter by the caller's subtree.
+model AttendanceException {
+  id               String                    @id @default(cuid())
+  eventId          String
+  eventOccurredAt  DateTime
+  userId           String
+  orgUnitId        String
+  reason           AttendanceExceptionReason
+  resolvedAt       DateTime?
+  resolvedByUserId String?
+  note             String?
+  createdAt        DateTime                  @default(now())
+
+  event      AttendanceEvent @relation(fields: [eventId, eventOccurredAt], references: [id, occurredAt])
+  user       User            @relation("AttendanceExceptionUser", fields: [userId], references: [id])
+  resolvedBy User?           @relation("AttendanceExceptionResolver", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([resolvedAt])
+  @@index([userId])
+  @@index([orgUnitId])
+}

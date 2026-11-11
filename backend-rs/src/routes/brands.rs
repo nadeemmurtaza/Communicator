@@ -65,6 +65,7 @@ pub struct CreateBrandRequest {
     pub rules: Option<String>,
     pub tone_guidelines: Option<String>,
     pub keywords: Option<String>,
+    pub industry_id: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -88,6 +89,7 @@ pub struct UpdateBrandRequest {
     pub rules: Option<String>,
     pub tone_guidelines: Option<String>,
     pub keywords: Option<String>,
+    pub industry_id: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -370,7 +372,12 @@ pub fn router() -> Router<AppState> {
         .route("/brands/organizations/{id}/sections/{section_id}/data/{data_id}", delete(delete_org_section_data))
         // ===== WhatsApp Channel =====
         .route("/brands/{id}/whatsapp/health", get(whatsapp_health))
-        .route("/brands/{id}/whatsapp/templates", get(list_whatsapp_templates))
+        .route("/brands/{id}/whatsapp/quality-history", get(whatsapp_quality_history))
+        .route("/brands/{id}/whatsapp/oauth-url", get(whatsapp_oauth_url))
+        .route("/brands/{id}/whatsapp/auto-sync", post(update_whatsapp_auto_sync))
+        .route("/brands/{id}/whatsapp/messenger-switch", post(update_whatsapp_messenger_switch))
+        .route("/brands/{id}/whatsapp/costs", get(whatsapp_costs))
+        .route("/brands/{id}/whatsapp/templates", get(list_whatsapp_templates).post(create_whatsapp_template))
         .route("/brands/{id}/whatsapp/sync-templates", post(sync_whatsapp_templates))
         .route("/brands/{id}/whatsapp/sync-profile", post(sync_whatsapp_profile_now))
         .route("/brands/{id}/whatsapp/customers", get(list_whatsapp_customers))
@@ -380,6 +387,10 @@ pub fn router() -> Router<AppState> {
         .route("/brands/{id}/whatsapp/automation-rules/{rule_id}", put(update_whatsapp_rule))
         .route("/brands/{id}/whatsapp/automation-rules/{rule_id}", delete(delete_whatsapp_rule))
         .route("/brands/{id}/whatsapp/nudges", post(run_whatsapp_nudges))
+        .route("/brands/{id}/whatsapp/send-template", post(send_whatsapp_template))
+        .route("/brands/{id}/whatsapp/send-interactive", post(send_whatsapp_interactive))
+        .route("/brands/{id}/whatsapp/send-media", post(send_whatsapp_media))
+        .route("/brands/{id}/whatsapp/send-voice", post(send_whatsapp_voice))
         // ===== WhatsApp Campaigns, Flows, Industries =====
         // Industries
         .route("/brands/{id}/whatsapp/industries", get(list_industries))
@@ -640,7 +651,7 @@ pub async fn update_organization(
     if let Some(settings) = &body.settings {
         sets.push(format!("settings = '{}'", settings.replace('\'', "''")));
     }
-    sets.push("updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')".to_string());
+    sets.push("updated_at = NOW()".to_string());
 
     if sets.is_empty() {
         return Ok(Json(serde_json::json!({ "message": "No changes" })));
@@ -875,6 +886,7 @@ pub async fn get_brand(
         "rules": row.try_get::<String, _>("rules").unwrap_or_default(),
         "toneGuidelines": row.try_get::<String, _>("tone_guidelines").unwrap_or_default(),
         "keywords": row.try_get::<String, _>("keywords").unwrap_or_default(),
+        "industryId": row.try_get::<Option<String>, _>("industry_id").ok().flatten(),
         "createdAt": row.try_get::<String, _>("created_at").unwrap_or_default(),
         "updatedAt": row.try_get::<String, _>("updated_at").unwrap_or_default(),
     })))
@@ -970,7 +982,10 @@ pub async fn update_brand(
     if let Some(kw) = &body.keywords {
         sets.push(format!("keywords = '{}'", kw.replace('\'', "''")));
     }
-    sets.push("updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')".to_string());
+    if let Some(ind) = &body.industry_id {
+        sets.push(format!("industry_id = '{}'", ind.replace('\'', "''")));
+    }
+    sets.push("updated_at = NOW()".to_string());
 
     if sets.is_empty() {
         return Ok(Json(serde_json::json!({ "message": "No changes" })));
@@ -1267,7 +1282,7 @@ pub async fn upsert_credentials(
     if let Some(row) = existing {
         let cred_id = row.try_get::<String, _>("id").unwrap_or_default();
         sqlx::query(
-            "UPDATE brand_credentials SET credentials = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+            "UPDATE brand_credentials SET credentials = ?, updated_at = NOW()
              WHERE id = ?",
         )
         .bind(&credentials_json)
@@ -1430,7 +1445,7 @@ pub async fn verify_credentials(
 
     // Update last_verified_at
     sqlx::query(
-        "UPDATE brand_credentials SET last_verified_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+        "UPDATE brand_credentials SET last_verified_at = NOW()
          WHERE brand_id = ? AND channel_type = ?",
     )
     .bind(&id)
@@ -1743,7 +1758,7 @@ pub async fn upsert_ai_config(
         if let Some(em) = &body.embedding_model {
             sets.push(format!("embedding_model = '{}'", em.replace('\'', "''")));
         }
-        sets.push("updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')".to_string());
+        sets.push("updated_at = NOW()".to_string());
 
         let query = format!(
             "UPDATE brand_ai_config SET {} WHERE id = ?",
@@ -2051,7 +2066,7 @@ pub async fn update_knowledge_entry(
     if let Some(tags) = &body.tags {
         sets.push(format!("tags = '{}'", tags.replace('\'', "''")));
     }
-    sets.push("updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')".to_string());
+    sets.push("updated_at = NOW()".to_string());
 
     if sets.is_empty() {
         return Ok(Json(serde_json::json!({ "message": "No changes" })));
@@ -2233,7 +2248,7 @@ pub async fn upsert_sync_status(
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
     let now = chrono::Utc::now().to_rfc3339();
     let sync_id = gen_id();
-    sqlx::query("INSERT OR REPLACE INTO brand_sync_status (id, brand_id, platform, sync_interval_seconds, next_sync_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+    sqlx::query("INSERT INTO brand_sync_status (id, brand_id, platform, sync_interval_seconds, next_sync_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
         .bind(&sync_id).bind(&id).bind(&body.platform)
         .bind(body.sync_interval_seconds.unwrap_or(3600)).bind(&now).bind(&now).bind(&now)
         .execute(&state.db).await
@@ -2324,7 +2339,7 @@ async fn sync_line_profile(state: &AppState, brand_id: &str) -> Result<serde_jso
     Ok(data)
 }
 
-async fn cache_platform_data(pool: &sqlx::SqlitePool, entity_type: &str, entity_id: &str, platform: &str, data_key: &str, data_value: String, synced_at: &str) {
+async fn cache_platform_data(pool: &sqlx::PgPool, entity_type: &str, entity_id: &str, platform: &str, data_key: &str, data_value: String, synced_at: &str) {
     let id = Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
     sqlx::query("INSERT INTO platform_data_cache (id, entity_type, entity_id, platform, data_key, data_value, synced_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
@@ -2463,7 +2478,7 @@ pub async fn update_custom_section(
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    let mut sets = vec!["updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')".to_string()];
+    let mut sets = vec!["updated_at = NOW()".to_string()];
     if let Some(name) = body.get("sectionName").and_then(|v| v.as_str()) {
         sets.push(format!("section_name = '{}'", name.replace('\'', "''")));
     }
@@ -2635,7 +2650,7 @@ pub async fn update_package(
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    let mut sets = vec!["updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')".to_string()];
+    let mut sets = vec!["updated_at = NOW()".to_string()];
     if let Some(name) = &body.name { sets.push(format!("name = '{}'", name.replace('\'', "''"))); }
     if let Some(price) = body.price { sets.push(format!("price = {}", price)); }
     let query = format!("UPDATE brand_packages SET {} WHERE id = ? AND brand_id = ?", sets.join(", "));
@@ -2740,7 +2755,7 @@ pub async fn update_promotion(
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    let mut sets = vec!["updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')".to_string()];
+    let mut sets = vec!["updated_at = NOW()".to_string()];
     if let Some(name) = &body.name { sets.push(format!("name = '{}'", name.replace('\'', "''"))); }
     let query = format!("UPDATE brand_promotions SET {} WHERE id = ? AND brand_id = ?", sets.join(", "));
     sqlx::query(&query).bind(&promo_id).bind(&id).execute(&state.db).await
@@ -2800,7 +2815,7 @@ pub async fn upsert_voucher_settings(
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
     let now = chrono::Utc::now().to_rfc3339();
     let vs_id = gen_id();
-    sqlx::query("INSERT OR REPLACE INTO brand_voucher_settings (id, brand_id, auto_generate, voucher_prefix, voucher_length, discount_type, discount_value, validity_days, trigger_event, max_uses_per_customer, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    sqlx::query("INSERT INTO brand_voucher_settings (id, brand_id, auto_generate, voucher_prefix, voucher_length, discount_type, discount_value, validity_days, trigger_event, max_uses_per_customer, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
         .bind(&vs_id).bind(&id)
         .bind(if body.auto_generate.unwrap_or(false) { 1i64 } else { 0 })
         .bind(body.voucher_prefix.as_deref().unwrap_or("VOUCHER"))
@@ -2896,7 +2911,7 @@ pub async fn update_message_trigger(
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    let mut sets = vec!["updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')".to_string()];
+    let mut sets = vec!["updated_at = NOW()".to_string()];
     if let Some(name) = &body.name { sets.push(format!("name = '{}'", name.replace('\'', "''"))); }
     let query = format!("UPDATE message_triggers SET {} WHERE id = ? AND brand_id = ?", sets.join(", "));
     sqlx::query(&query).bind(&trigger_id).bind(&id).execute(&state.db).await
@@ -3065,7 +3080,7 @@ pub async fn upsert_org_sync_status(
     if org.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Organization not found" })))); }
     let now = chrono::Utc::now().to_rfc3339();
     let sync_id = gen_id();
-    sqlx::query("INSERT OR REPLACE INTO org_sync_status (id, organization_id, platform, sync_interval_seconds, next_sync_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+    sqlx::query("INSERT INTO org_sync_status (id, organization_id, platform, sync_interval_seconds, next_sync_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
         .bind(&sync_id).bind(&id).bind(&body.platform)
         .bind(body.sync_interval_seconds.unwrap_or(3600)).bind(&now).bind(&now).bind(&now)
         .execute(&state.db).await
@@ -3167,7 +3182,7 @@ pub async fn update_org_custom_section(
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if org.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Organization not found" })))); }
-    let mut sets = vec!["updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')".to_string()];
+    let mut sets = vec!["updated_at = NOW()".to_string()];
     if let Some(name) = body.get("sectionName").and_then(|v| v.as_str()) {
         sets.push(format!("section_name = '{}'", name.replace('\'', "''")));
     }
@@ -3355,6 +3370,81 @@ pub async fn whatsapp_health(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
 
+    // Extract quality details from provider_info if available
+    let quality_rating = profile.as_ref().and_then(|p| p.2.clone());
+    let messaging_tier = profile.as_ref().and_then(|p| p.1.clone());
+    
+    // Parse quality score and spam flags from provider_info
+    let mut quality_score: Option<i64> = None;
+    let mut spam_flags: i64 = 0;
+    let mut block_reasons: Vec<String> = Vec::new();
+    
+    if let Some(ref pi) = provider_info {
+        // Meta API returns quality rating details in nested structure
+        if let Some(quality_obj) = pi.get("quality_rating") {
+            if let Some(score) = quality_obj.get("score").and_then(|s| s.as_i64()) {
+                quality_score = Some(score);
+            }
+        }
+        // Spam flags from Meta API
+        if let Some(flags) = pi.get("spam_flags").and_then(|f| f.as_i64()) {
+            spam_flags = flags;
+        }
+        // Block reasons
+        if let Some(blocks) = pi.get("block_reasons").and_then(|v| v.as_array()) {
+            for b in blocks {
+                if let Some(reason) = b.as_str() {
+                    block_reasons.push(reason.to_string());
+                }
+            }
+        }
+    }
+    
+    // Derive quality score from rating if not in provider_info
+    if quality_score.is_none() {
+        quality_score = match quality_rating.as_deref() {
+            Some("HIGH") => Some(85),
+            Some("MEDIUM") => Some(55),
+            Some("LOW") => Some(25),
+            _ => None,
+        };
+    }
+    
+    // Parse messaging tier value
+    let tier_value: Option<i64> = messaging_tier.as_ref().and_then(|t| {
+        match t.to_uppercase().as_str() {
+            "100" | "TIER_100" => Some(100),
+            "1000" | "TIER_1000" | "1K" => Some(1000),
+            "10000" | "TIER_10000" | "10K" => Some(10000),
+            "100000" | "TIER_100000" | "100K" => Some(100000),
+            _ => t.trim().parse().ok(),
+        }
+    });
+
+    // Store quality snapshot in history table
+    if is_connected {
+        let snapshot_id = Uuid::new_v4().to_string();
+        let block_reasons_json = serde_json::to_string(&block_reasons).unwrap_or_else(|_| "[]".to_string());
+        let _ = sqlx::query(
+            "INSERT INTO whatsapp_quality_history (id, brand_id, quality_rating, quality_score, 
+             messaging_limit_tier, messaging_limit_value, block_reasons, spam_flags, matched_conversations) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)"
+        )
+        .bind(&snapshot_id)
+        .bind(&id)
+        .bind(&quality_rating)
+        .bind(quality_score)
+        .bind(&messaging_tier)
+        .bind(tier_value)
+        .bind(&block_reasons_json)
+        .bind(spam_flags)
+        .execute(&state.db)
+        .await;
+    }
+
+    // Generate recommendations based on current quality
+    let recommendations = generate_quality_recommendations(&quality_rating, quality_score, spam_flags, &block_reasons, tier_value);
+
     Ok(Json(serde_json::json!({
         "brandId": id,
         "brandName": brand_name,
@@ -3362,9 +3452,166 @@ pub async fn whatsapp_health(
         "connectionError": connection_error,
         "providerInfo": provider_info,
         "verifiedName": profile.as_ref().and_then(|p| p.0.clone()),
-        "messagingLimitTier": profile.as_ref().and_then(|p| p.1.clone()),
-        "qualityRating": profile.as_ref().and_then(|p| p.2.clone()),
+        "messagingLimitTier": messaging_tier,
+        "qualityRating": quality_rating,
+        "qualityScore": quality_score,
+        "spamFlags": spam_flags,
+        "blockReasons": block_reasons,
+        "recommendations": recommendations,
     })))
+}
+
+/// Generate quality improvement recommendations based on current metrics
+fn generate_quality_recommendations(
+    quality_rating: &Option<String>,
+    quality_score: Option<i64>,
+    spam_flags: i64,
+    block_reasons: &[String],
+    tier_value: Option<i64>,
+) -> Vec<serde_json::Value> {
+    let mut recs = Vec::new();
+    
+    // Quality rating recommendations
+    if let Some(rating) = quality_rating {
+        match rating.as_str() {
+            "LOW" => {
+                recs.push(serde_json::json!({
+                    "type": "quality",
+                    "severity": "critical",
+                    "title": "Quality Rating is LOW",
+                    "description": "Your WhatsApp quality rating has dropped to LOW. This may result in reduced messaging limits and higher costs. Review your message content and ensure recipients opt-in before sending.",
+                    "action": "Review blocked messages and improve content quality",
+                }));
+            }
+            "MEDIUM" => {
+                recs.push(serde_json::json!({
+                    "type": "quality",
+                    "severity": "warning",
+                    "title": "Quality Rating is MEDIUM",
+                    "description": "Your quality rating is MEDIUM. Monitor closely to prevent further degradation. Consider reviewing recent message templates for spam triggers.",
+                    "action": "Audit message templates for spam-like content",
+                }));
+            }
+            "HIGH" => {
+                recs.push(serde_json::json!({
+                    "type": "quality",
+                    "severity": "info",
+                    "title": "Quality Rating is HIGH",
+                    "description": "Excellent! Your quality rating is HIGH. Continue following best practices to maintain this status.",
+                    "action": null,
+                }));
+            }
+            _ => {}
+        }
+    }
+    
+    // Spam flags recommendations
+    if spam_flags > 10 {
+        recs.push(serde_json::json!({
+            "type": "spam",
+            "severity": "critical",
+            "title": format!("High Spam Flags: {} reports", spam_flags),
+            "description": "You have received many spam reports in the last 14 days. This will significantly impact your quality rating and messaging limits.",
+            "action": "Immediately review and pause campaigns that may be causing spam reports",
+        }));
+    } else if spam_flags > 0 {
+        recs.push(serde_json::json!({
+            "type": "spam",
+            "severity": "warning",
+            "title": format!("Spam Flags Detected: {} reports", spam_flags),
+            "description": "A few spam reports detected. Monitor closely and ensure all messages are sent to opted-in contacts.",
+            "action": "Verify opt-in status of recent recipients",
+        }));
+    }
+    
+    // Block reasons recommendations
+    if !block_reasons.is_empty() {
+        for reason in block_reasons {
+            recs.push(serde_json::json!({
+                "type": "quality",
+                "severity": "warning",
+                "title": format!("Block Reason: {}", reason),
+                "description": "Users have blocked your messages for this reason. Address this to improve quality rating.",
+                "action": "Modify message content to address this block reason",
+            }));
+        }
+    }
+    
+    // Messaging tier recommendations
+    if let Some(tier) = tier_value {
+        if tier <= 100 {
+            recs.push(serde_json::json!({
+                "type": "messaging_limit",
+                "severity": "info",
+                "title": "Tier 100 Messaging Limit",
+                "description": "You are on the lowest messaging tier (100 conversations/day). Maintain HIGH quality for 30 days to upgrade to Tier 1000.",
+                "action": "Maintain HIGH quality rating for 30 consecutive days",
+            }));
+        } else if tier <= 1000 {
+            recs.push(serde_json::json!({
+                "type": "messaging_limit",
+                "severity": "info",
+                "title": "Tier 1000 Messaging Limit",
+                "description": "You can send up to 1,000 conversations per day. Maintain quality to reach Tier 10,000.",
+                "action": null,
+            }));
+        }
+    }
+    
+    // Quality score recommendations
+    if let Some(score) = quality_score {
+        if score < 40 {
+            recs.push(serde_json::json!({
+                "type": "quality",
+                "severity": "critical",
+                "title": "Very Low Quality Score",
+                "description": format!("Your quality score is {}/100. This indicates significant issues with message quality. Immediate action is required.", score),
+                "action": "Pause all outbound messaging and review content",
+            }));
+        } else if score < 70 {
+            recs.push(serde_json::json!({
+                "type": "quality",
+                "severity": "warning",
+                "title": "Below Average Quality Score",
+                "description": format!("Your quality score is {}/100. Room for improvement to reach optimal quality.", score),
+                "action": "Review message templates and ensure proper opt-in flow",
+            }));
+        }
+    }
+    
+    recs
+}
+
+/// Extract {{1}}, {{2}}, etc. variables from template body text
+fn extract_variables(text: &str) -> Vec<String> {
+    let mut vars = Vec::new();
+    let mut chars = text.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '{' {
+            if chars.peek() == Some(&'{') {
+                chars.next(); // consume second {
+                let mut num = String::new();
+                while let Some(&nc) = chars.peek() {
+                    if nc == '}' {
+                        chars.next(); // consume first }
+                        if chars.peek() == Some(&'}') {
+                            chars.next(); // consume second }
+                            if !num.is_empty() {
+                                vars.push(format!("{{{{{}}}}}", num));
+                            }
+                        }
+                        break;
+                    } else if nc.is_ascii_digit() {
+                        num.push(nc);
+                        chars.next();
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    vars
 }
 
 pub async fn list_whatsapp_templates(
@@ -3384,17 +3631,228 @@ pub async fn list_whatsapp_templates(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
 
-    let templates: Vec<serde_json::Value> = rows.iter().map(|r| serde_json::json!({
-        "id": r.try_get::<String, _>("id").unwrap_or_default(),
-        "name": r.try_get::<String, _>("name").unwrap_or_default(),
-        "category": r.try_get::<Option<String>, _>("category").unwrap_or(None),
-        "language": r.try_get::<Option<String>, _>("language").unwrap_or(None),
-        "status": r.try_get::<String, _>("status").unwrap_or_default(),
-        "body": r.try_get::<String, _>("body").unwrap_or_default(),
-        "lastSyncedAt": r.try_get::<Option<String>, _>("last_synced_at").unwrap_or(None),
-    })).collect();
+    // Get template usage counts
+    let usage_rows = sqlx::query("SELECT template_name, sent_count, last_sent_at FROM whatsapp_template_usage WHERE brand_id = ?1")
+        .bind(&id)
+        .fetch_all(&state.db)
+        .await
+        .unwrap_or_default();
+    let usage_map: std::collections::HashMap<String, (i64, Option<String>)> = usage_rows.iter().map(|r| {
+        (r.try_get::<String, _>("template_name").unwrap_or_default(),
+         (r.try_get::<i64, _>("sent_count").unwrap_or(0),
+          r.try_get::<Option<String>, _>("last_sent_at").unwrap_or(None)))
+    }).collect();
+
+    let templates: Vec<serde_json::Value> = rows.iter().map(|r| {
+        let name = r.try_get::<String, _>("name").unwrap_or_default();
+        let components_json: Option<String> = r.try_get::<Option<String>, _>("components").unwrap_or(None);
+        let body_text = r.try_get::<String, _>("body").unwrap_or_default();
+
+        // Parse components and extract header, footer, buttons, variables
+        let mut header_text: Option<String> = r.try_get::<Option<String>, _>("header_text").unwrap_or(None);
+        let mut footer_text: Option<String> = r.try_get::<Option<String>, _>("footer_text").unwrap_or(None);
+        let mut buttons: Vec<serde_json::Value> = Vec::new();
+        let mut variables: Vec<String> = Vec::new();
+
+        if let Some(comp_str) = &components_json {
+            if let Ok(comps) = serde_json::from_str::<serde_json::Value>(comp_str) {
+                if let Some(arr) = comps.as_array() {
+                    for comp in arr {
+                        let comp_type = comp.get("type").and_then(|t| t.as_str()).unwrap_or("");
+                        match comp_type {
+                            "HEADER" => {
+                                if header_text.is_none() {
+                                    header_text = comp.get("text").and_then(|t| t.as_str()).map(|s| s.to_string());
+                                }
+                            }
+                            "FOOTER" => {
+                                if footer_text.is_none() {
+                                    footer_text = comp.get("text").and_then(|t| t.as_str()).map(|s| s.to_string());
+                                }
+                            }
+                            "BUTTONS" => {
+                                if let Some(btns) = comp.get("buttons").and_then(|b| b.as_array()) {
+                                    buttons = btns.clone();
+                                }
+                            }
+                            "BODY" => {
+                                // Extract variables from body text
+                                if let Some(text) = comp.get("text").and_then(|t| t.as_str()) {
+                                    variables = extract_variables(text);
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        }
+
+        // Also extract variables from body if no components
+        if variables.is_empty() {
+            variables = extract_variables(&body_text);
+        }
+
+        // Get usage data
+        let (sent_count, last_sent_at) = usage_map.get(&name).map(|(c, l)| (*c, l.clone())).unwrap_or((0, None));
+
+        // Quality score from Meta API (0-100 scale)
+        let quality_score: Option<i64> = r.try_get::<Option<i64>, _>("quality_score").unwrap_or(None);
+        let quality_rating: Option<String> = r.try_get::<Option<String>, _>("quality_rating").unwrap_or(None);
+
+        // Determine quality rating from score if not set
+        let effective_quality = quality_rating.or_else(|| {
+            quality_score.map(|score| {
+                if score >= 70 { "high".to_string() }
+                else if score >= 40 { "medium".to_string() }
+                else { "low".to_string() }
+            })
+        });
+
+        serde_json::json!({
+            "id": r.try_get::<String, _>("id").unwrap_or_default(),
+            "name": name,
+            "category": r.try_get::<Option<String>, _>("category").unwrap_or(None),
+            "language": r.try_get::<Option<String>, _>("language").unwrap_or(None),
+            "status": r.try_get::<String, _>("status").unwrap_or_default(),
+            "body": body_text,
+            "headerText": header_text,
+            "footerText": footer_text,
+            "buttons": buttons,
+            "variables": variables,
+            "components": components_json.map(|s| serde_json::from_str::<serde_json::Value>(&s).unwrap_or_else(|_| serde_json::Value::Null)),
+            "qualityScore": quality_score,
+            "qualityRating": effective_quality,
+            "sentCount": sent_count,
+            "lastSentAt": last_sent_at,
+            "lastSyncedAt": r.try_get::<Option<String>, _>("last_synced_at").unwrap_or(None),
+        })
+    }).collect();
 
     Ok(Json(serde_json::json!(templates)))
+}
+
+pub async fn create_whatsapp_template(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: axum::http::HeaderMap,
+    Json(body): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+    let tenant_key = resolve_tenant_key(&headers).await?;
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+        .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
+    if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
+
+    let name = body.get("name").and_then(|v| v.as_str()).unwrap_or("");
+    let category = body.get("category").and_then(|v| v.as_str()).unwrap_or("");
+    let language = body.get("language").and_then(|v| v.as_str()).unwrap_or("");
+    let components = body.get("components").cloned().unwrap_or_else(|| serde_json::json!([]));
+
+    if name.is_empty() {
+        return Err((StatusCode::BAD_REQUEST, Json(serde_json::json!({ "error": "Template name is required" }))));
+    }
+
+    // Extract body text from components
+    let body_text = components.as_array().and_then(|c| {
+        c.iter().find(|comp| comp.get("type").and_then(|t| t.as_str()) == Some("BODY"))
+            .and_then(|b| b.get("text").and_then(|t| t.as_str()))
+    }).unwrap_or("");
+
+    // Extract header/footer
+    let header_text = components.as_array().and_then(|c| {
+        c.iter().find(|comp| comp.get("type").and_then(|t| t.as_str()) == Some("HEADER"))
+            .and_then(|h| h.get("text").and_then(|t| t.as_str()))
+    }).map(|s| s.to_string());
+
+    let footer_text = components.as_array().and_then(|c| {
+        c.iter().find(|comp| comp.get("type").and_then(|t| t.as_str()) == Some("FOOTER"))
+            .and_then(|f| f.get("text").and_then(|t| t.as_str()))
+    }).map(|s| s.to_string());
+
+    // Extract variables from body
+    let variables = extract_variables(&body_text);
+    let variables_json = serde_json::to_string(&variables).unwrap_or_default();
+
+    let components_str = serde_json::to_string(&components).unwrap_or_default();
+    let now = chrono::Utc::now().to_rfc3339();
+    let tmpl_id = gen_id();
+
+    // First try to create via Meta API
+    let creds = resolve_whatsapp_creds(&state.db, &id).await;
+    let mut meta_error: Option<String> = None;
+
+    if let Ok(creds) = creds {
+        let token = creds["access_token"].as_str().unwrap_or("");
+        let waba_id = creds["waba_id"].as_str().unwrap_or("");
+        let api_version = creds["api_version"].as_str().unwrap_or("v18.0");
+
+        if !token.is_empty() && !waba_id.is_empty() {
+            let client = reqwest::Client::new();
+            let url = format!("https://graph.facebook.com/{}/{}", api_version, waba_id);
+
+            let meta_body = serde_json::json!({
+                "name": name,
+                "category": category,
+                "language": language,
+                "components": components,
+            });
+
+            let resp = client.post(&url)
+                .header("Authorization", format!("Bearer {}", token))
+                .header("Content-Type", "application/json")
+                .json(&meta_body)
+                .send()
+                .await;
+
+            if let Ok(resp) = resp {
+                let status = resp.status();
+                let text = resp.text().await.unwrap_or_default();
+
+                if status.is_success() {
+                    // Success - store locally
+                    let _ = sqlx::query(
+                        "INSERT INTO whatsapp_templates (id, brand_id, name, category, language, status, body, components, header_text, footer_text, variables, quality_score, updated_at, last_synced_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?13)"
+                    )
+                    .bind(&tmpl_id).bind(&id).bind(name).bind(category).bind(language)
+                    .bind("approved").bind(body_text).bind(&components_str)
+                    .bind(header_text).bind(footer_text).bind(&variables_json)
+                    .bind::<Option<i64>>(None)
+                    .bind(&now).bind(&now)
+                    .execute(&state.db).await;
+
+                    return Ok(Json(serde_json::json!({
+                        "created": true,
+                        "id": tmpl_id,
+                        "name": name,
+                        "status": "approved",
+                        "message": "Template created and submitted to Meta for approval",
+                    })));
+                } else {
+                    meta_error = Some(format!("Meta API returned {}", status));
+                }
+            }
+        }
+    }
+
+    // If Meta API failed or not configured, store locally as pending
+    let _ = sqlx::query(
+        "INSERT INTO whatsapp_templates (id, brand_id, name, category, language, status, body, components, header_text, footer_text, variables, quality_score, updated_at, last_synced_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?13)"
+    )
+    .bind(&tmpl_id).bind(&id).bind(name).bind(category).bind(language)
+    .bind("pending").bind(body_text).bind(&components_str)
+    .bind(header_text).bind(footer_text).bind(&variables_json)
+    .bind::<Option<i64>>(None)
+    .bind(&now).bind(&now)
+    .execute(&state.db).await;
+
+    Ok(Json(serde_json::json!({
+        "created": true,
+        "id": tmpl_id,
+        "name": name,
+        "status": "pending",
+        "message": meta_error.unwrap_or_else(|| "Template stored locally. Configure Meta credentials to submit for approval.".to_string()),
+    })))
 }
 
 pub async fn sync_whatsapp_templates(
@@ -3438,7 +3896,7 @@ pub async fn sync_whatsapp_templates(
     let now = chrono::Utc::now().to_rfc3339();
     let cache_id = gen_id();
     let _ = sqlx::query(
-        "INSERT OR REPLACE INTO whatsapp_business_profile_cache (id, brand_id, verified_name, messaging_limit_tier, quality_rating, updated_at, last_synced_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)"
+        "INSERT INTO whatsapp_business_profile_cache (id, brand_id, verified_name, messaging_limit_tier, quality_rating, updated_at, last_synced_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)"
     )
     .bind(&cache_id).bind(&id)
     .bind(data.get("verified_name").and_then(|v| v.as_str()).map(|s| s.to_string()))
@@ -3471,12 +3929,54 @@ pub async fn sync_whatsapp_templates(
                             }).unwrap_or("");
                             let components = serde_json::to_string(&tmpl["components"]).unwrap_or_default();
 
+                            // Extract quality score from Meta API
+                            let quality_score: Option<i64> = tmpl.get("quality_score")
+                                .and_then(|q| q.as_i64())
+                                .or_else(|| {
+                                    // Meta may return quality as a string "HIGH", "MEDIUM", "LOW"
+                                    tmpl.get("quality").and_then(|q| q.as_str()).map(|q| {
+                                        match q {
+                                            "HIGH" => 85,
+                                            "MEDIUM" => 55,
+                                            "LOW" => 25,
+                                            _ => 50,
+                                        }
+                                    })
+                                });
+
+                            // Extract header text from components
+                            let header_text: Option<String> = tmpl["components"].as_array().and_then(|c| {
+                                c.iter().find(|comp| comp["type"] == "HEADER")
+                                    .and_then(|h| h.get("text").and_then(|t| t.as_str()))
+                                    .map(|s| s.to_string())
+                            });
+
+                            // Extract footer text from components
+                            let footer_text: Option<String> = tmpl["components"].as_array().and_then(|c| {
+                                c.iter().find(|comp| comp["type"] == "FOOTER")
+                                    .and_then(|f| f.get("text").and_then(|t| t.as_str()))
+                                    .map(|s| s.to_string())
+                            });
+
+                            // Extract variables from body
+                            let body_for_vars = tmpl["components"].as_array().and_then(|c| {
+                                c.iter().find(|comp| comp["type"] == "BODY")
+                                    .and_then(|b| b.get("text").and_then(|t| t.as_str()))
+                            }).unwrap_or("");
+                            let vars = extract_variables(body_for_vars);
+                            let variables_json = serde_json::to_string(&vars).unwrap_or_default();
+
                             let tmpl_id = gen_id();
                             let _ = sqlx::query(
-                                "INSERT OR REPLACE INTO whatsapp_templates (id, brand_id, name, category, language, status, body, components, updated_at, last_synced_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9)"
+                                "INSERT INTO whatsapp_templates (id, brand_id, name, category, language, status, body, components, quality_score, variables, header_text, footer_text, updated_at, last_synced_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?13)"
                             )
                             .bind(&tmpl_id).bind(&id).bind(name).bind(category).bind(language)
-                            .bind(status).bind(body_text).bind(&components).bind(&now).bind(&now)
+                            .bind(status).bind(body_text).bind(&components)
+                            .bind(quality_score)
+                            .bind(&variables_json)
+                            .bind(header_text)
+                            .bind(footer_text)
+                            .bind(&now).bind(&now)
                             .execute(&state.db).await;
                             templates_synced += 1;
                         }
@@ -3537,7 +4037,7 @@ pub async fn sync_whatsapp_profile_now(
     });
 
     let _ = sqlx::query(
-        "INSERT OR REPLACE INTO whatsapp_business_profile_cache (id, brand_id, verified_name, about, address, description, email, websites, vertical, profile_picture_url, messaging_limit_tier, quality_rating, account_mode, updated_at, last_synced_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?14)"
+        "INSERT INTO whatsapp_business_profile_cache (id, brand_id, verified_name, about, address, description, email, websites, vertical, profile_picture_url, messaging_limit_tier, quality_rating, account_mode, updated_at, last_synced_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?14)"
     )
     .bind(&cache_id).bind(&id)
     .bind(data.get("verified_name").and_then(|v| v.as_str()).map(|s| s.to_string()))
@@ -3806,6 +4306,418 @@ pub async fn run_whatsapp_nudges(
         "nudgesSent": count,
         "runAt": now,
     })))
+}
+
+// ---------------------------------------------------------------------------
+// Send WhatsApp Template (used by conversation detail when 24h window closed)
+// ---------------------------------------------------------------------------
+
+#[derive(Deserialize)]
+pub struct SendWhatsAppTemplateRequest {
+    pub contact_id: String,
+    pub template_name: String,
+    pub language: Option<String>,
+    pub components: Option<serde_json::Value>,
+}
+
+pub async fn send_whatsapp_template(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: axum::http::HeaderMap,
+    Json(body): Json<SendWhatsAppTemplateRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+    let tenant_key = resolve_tenant_key(&headers).await?;
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+        .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
+    if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
+
+    let wa = crate::services::whatsapp::WhatsAppService::new(
+        state.db.clone(),
+        state.config.as_ref().clone(),
+    );
+
+    let language = body.language.as_deref().unwrap_or("en_US");
+    match wa.send_template(&id, &body.contact_id, &body.template_name, language, body.components.as_ref()).await {
+        Ok(result) => Ok(Json(serde_json::json!({
+            "sent": true,
+            "providerMessageId": result.provider_message_id,
+        }))),
+        Err(e) => Err((
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({ "error": e })),
+        )),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Send WhatsApp Interactive Message (buttons, list, cta_url, location, media)
+// ---------------------------------------------------------------------------
+
+#[derive(Deserialize)]
+pub struct SendWhatsAppInteractiveRequest {
+    pub contact_id: String,
+    #[serde(rename = "type")]
+    pub msg_type: String,
+    pub bodyText: String,
+    pub headerText: Option<String>,
+    pub footerText: Option<String>,
+    pub buttons: Option<Vec<serde_json::Value>>,
+    pub listButtonTitle: Option<String>,
+    pub listSections: Option<Vec<serde_json::Value>>,
+    pub mediaUrl: Option<String>,
+    pub mediaType: Option<String>,
+    pub mediaFilename: Option<String>,
+    pub ctaDisplayText: Option<String>,
+    pub ctaUrl: Option<String>,
+}
+
+pub async fn send_whatsapp_interactive(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: axum::http::HeaderMap,
+    Json(body): Json<SendWhatsAppInteractiveRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+    let tenant_key = resolve_tenant_key(&headers).await?;
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+        .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
+    if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
+
+    let wa = crate::services::whatsapp::WhatsAppService::new(
+        state.db.clone(),
+        state.config.as_ref().clone(),
+    );
+
+    let result = match body.msg_type.as_str() {
+        "buttons" => {
+            let buttons = body.buttons.unwrap_or_default();
+            wa.send_interactive_buttons(
+                &id, &body.contact_id, &body.bodyText, &buttons,
+                body.headerText.as_deref(), body.footerText.as_deref(),
+            ).await
+        }
+        "list" => {
+            let sections = body.listSections.unwrap_or_default();
+            let btn_title = body.listButtonTitle.unwrap_or_else(||"View Options".to_string());
+            wa.send_interactive_list(
+                &id, &body.contact_id, &body.bodyText, &btn_title, &sections,
+                body.headerText.as_deref(), body.footerText.as_deref(),
+            ).await
+        }
+        "cta_url" => {
+            let display = body.ctaDisplayText.unwrap_or_else(||"Visit".to_string());
+            let url = body.ctaUrl.unwrap_or_default();
+            wa.send_interactive_cta_url(
+                &id, &body.contact_id, &body.bodyText, &display, &url,
+                body.headerText.as_deref(), body.footerText.as_deref(),
+            ).await
+        }
+        "location" => {
+            wa.send_location_request(&id, &body.contact_id, &body.bodyText).await
+        }
+        "media" => {
+            let media_url = body.mediaUrl.as_deref().unwrap_or("");
+            let media_type = body.mediaType.as_deref().unwrap_or("image");
+            let caption: Option<&str> = if body.bodyText.is_empty() { None } else { Some(body.bodyText.as_str()) };
+            wa.send_media(
+                &id, &body.contact_id, media_type, media_url,
+                caption, body.mediaFilename.as_deref(),
+            ).await
+        }
+        _ => Err(format!("Unknown interactive type: {}", body.msg_type)),
+    };
+
+    match result {
+        Ok(result) => Ok(Json(serde_json::json!({
+            "sent": true,
+            "providerMessageId": result.provider_message_id,
+        }))),
+        Err(e) => Err((
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({ "error": e })),
+        )),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// WhatsApp Quality History (Priority 5)
+// ---------------------------------------------------------------------------
+
+pub async fn whatsapp_quality_history(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+    let tenant_key = resolve_tenant_key(&headers).await?;
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+        .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
+    if _brand.is_none() {
+        return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" }))));
+    }
+
+    // Fetch 30-day quality history
+    let history_rows = sqlx::query(
+        "SELECT quality_rating, quality_score, messaging_limit_tier, messaging_limit_value, \
+         block_reasons, spam_flags, matched_conversations, created_at \
+         FROM whatsapp_quality_history \
+         WHERE brand_id = ?1 AND created_at >= datetime('now', '-30 days') \
+         ORDER BY created_at ASC"
+    )
+    .bind(&id)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
+
+    let history: Vec<serde_json::Value> = history_rows.iter().map(|r| {
+        let block_reasons: Vec<String> = r.try_get::<Option<String>, _>("block_reasons")
+            .ok()
+            .flatten()
+            .and_then(|s| serde_json::from_str(&s).ok())
+            .unwrap_or_default();
+
+        serde_json::json!({
+            "qualityRating": r.try_get::<Option<String>, _>("quality_rating").ok().flatten(),
+            "qualityScore": r.try_get::<Option<i64>, _>("quality_score").ok().flatten(),
+            "messagingLimitTier": r.try_get::<Option<String>, _>("messaging_limit_tier").ok().flatten(),
+            "messagingLimitValue": r.try_get::<Option<i64>, _>("messaging_limit_value").ok().flatten(),
+            "blockReasons": block_reasons,
+            "spamFlags": r.try_get::<i64, _>("spam_flags").unwrap_or(0),
+            "matchedConversations": r.try_get::<i64, _>("matched_conversations").unwrap_or(0),
+            "createdAt": r.try_get::<String, _>("created_at").ok(),
+        })
+    }).collect();
+
+    // Calculate trend: compare first half average vs second half average
+    let score_trend = if history.len() >= 4 {
+        let mid = history.len() / 2;
+        let first_half: f64 = history[..mid].iter()
+            .filter_map(|h| h.get("qualityScore").and_then(|s| s.as_i64()).map(|s| s as f64))
+            .sum::<f64>() / mid as f64;
+        let second_half: f64 = history[mid..].iter()
+            .filter_map(|h| h.get("qualityScore").and_then(|s| s.as_i64()).map(|s| s as f64))
+            .sum::<f64>() / (history.len() - mid) as f64;
+        if (second_half - first_half).abs() < 1.0 {
+            "stable".to_string()
+        } else if second_half > first_half {
+            "improving".to_string()
+        } else {
+            "declining".to_string()
+        }
+    } else {
+        "insufficient_data".to_string()
+    };
+
+    // Current stats
+    let latest = history.last().cloned().unwrap_or_default();
+    let current_score = latest.get("qualityScore").and_then(|s| s.as_i64());
+    let current_rating = latest.get("qualityRating").and_then(|s| s.as_str()).map(|s| s.to_string());
+    let current_spam = latest.get("spamFlags").and_then(|s| s.as_i64()).unwrap_or(0);
+    let current_tier = latest.get("messagingLimitTier").and_then(|s| s.as_str()).map(|s| s.to_string());
+
+    // Aggregate stats
+    let total_snapshots = history.len();
+    let avg_score = if !history.is_empty() {
+        let sum: f64 = history.iter()
+            .filter_map(|h| h.get("qualityScore").and_then(|s| s.as_i64()).map(|s| s as f64))
+            .sum::<f64>();
+        let count = history.iter()
+            .filter_map(|h| h.get("qualityScore").and_then(|s| s.as_i64()))
+            .count();
+        if count > 0 { (sum / count as f64).round() as i64 } else { 0 }
+    } else { 0 };
+
+    // Fetch unresolved recommendations
+    let recommendations_rows = sqlx::query(
+        "SELECT recommendation_type, severity, title, description, created_at \
+         FROM whatsapp_quality_recommendations \
+         WHERE brand_id = ?1 AND is_resolved = 0 \
+         ORDER BY \
+         CASE severity WHEN 'critical' THEN 1 WHEN 'warning' THEN 2 ELSE 3 END, \
+         created_at DESC \
+         LIMIT 10"
+    )
+    .bind(&id)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
+
+    let recommendations: Vec<serde_json::Value> = recommendations_rows.iter().map(|r| {
+        serde_json::json!({
+            "type": r.try_get::<String, _>("recommendation_type").ok(),
+            "severity": r.try_get::<String, _>("severity").ok(),
+            "title": r.try_get::<String, _>("title").ok(),
+            "description": r.try_get::<String, _>("description").ok(),
+            "createdAt": r.try_get::<String, _>("created_at").ok(),
+        })
+    }).collect();
+
+    Ok(Json(serde_json::json!({
+        "brandId": id,
+        "history": history,
+        "trend": score_trend,
+        "currentScore": current_score,
+        "currentRating": current_rating,
+        "currentSpamFlags": current_spam,
+        "currentTier": current_tier,
+        "totalSnapshots": total_snapshots,
+        "averageScore": avg_score,
+        "recommendations": recommendations,
+    })))
+}
+
+// ---------------------------------------------------------------------------
+// WhatsApp Media & Voice (Priority 4)
+// ---------------------------------------------------------------------------
+
+#[derive(Deserialize)]
+pub struct SendWhatsAppMediaRequest {
+    pub conversation_id: String,
+    pub contact_id: String,
+    pub media_url: String,
+    pub media_type: String,        // "image" | "video" | "document"
+    pub media_filename: Option<String>,
+    pub media_mimetype: Option<String>,
+    pub caption: Option<String>,
+}
+
+pub async fn send_whatsapp_media(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: axum::http::HeaderMap,
+    Json(body): Json<SendWhatsAppMediaRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+    let tenant_key = resolve_tenant_key(&headers).await?;
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+        .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
+    if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
+
+    let wa = crate::services::whatsapp::WhatsAppService::new(
+        state.db.clone(),
+        state.config.as_ref().clone(),
+    );
+
+    // Send via WhatsApp API
+    let result = wa.send_media(
+        &id, &body.contact_id, &body.media_type, &body.media_url,
+        body.caption.as_deref(), body.media_filename.as_deref(),
+    ).await;
+
+    match result {
+        Ok(send_result) => {
+            // Store the outbound media message in the messages table
+            let now = chrono::Utc::now().to_rfc3339();
+            let msg_id = Uuid::new_v4().to_string();
+            let body_text = body.caption.as_deref().unwrap_or("").to_string();
+
+            let insert_result = sqlx::query(
+                "INSERT INTO messages (id, conversation_id, direction, channel, body, status, \
+                 provider_message_id, provider_metadata, media_type, media_url, media_filename, \
+                 media_mimetype, sent_at) \
+                 VALUES (?, 'outbound', 'whatsapp', ?, 'sent', ?, '{}', ?, ?, ?, ?, ?)"
+            )
+            .bind(&msg_id)
+            .bind(&body.conversation_id)
+            .bind(&body_text)
+            .bind(&send_result.provider_message_id)
+            .bind(&body.media_type)
+            .bind(&body.media_url)
+            .bind(body.media_filename.as_deref().unwrap_or(""))
+            .bind(body.media_mimetype.as_deref().unwrap_or(""))
+            .bind(&now)
+            .execute(&state.db)
+            .await;
+
+            if let Err(e) = insert_result {
+                eprintln!("Warning: could not store media message in DB: {}", e);
+            }
+
+            Ok(Json(serde_json::json!({
+                "sent": true,
+                "providerMessageId": send_result.provider_message_id,
+                "messageId": msg_id,
+            })))
+        }
+        Err(e) => Err((
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({ "error": e })),
+        )),
+    }
+}
+
+#[derive(Deserialize)]
+pub struct SendWhatsAppVoiceRequest {
+    pub conversation_id: String,
+    pub contact_id: String,
+    pub audio_url: String,
+    pub duration: Option<i64>,
+    pub transcription: Option<String>,
+}
+
+pub async fn send_whatsapp_voice(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: axum::http::HeaderMap,
+    Json(body): Json<SendWhatsAppVoiceRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+    let tenant_key = resolve_tenant_key(&headers).await?;
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+        .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
+    if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
+
+    let wa = crate::services::whatsapp::WhatsAppService::new(
+        state.db.clone(),
+        state.config.as_ref().clone(),
+    );
+
+    // Send voice as audio media via WhatsApp API
+    let result = wa.send_media(
+        &id, &body.contact_id, "audio", &body.audio_url,
+        None, Some("voice.ogg"),
+    ).await;
+
+    match result {
+        Ok(send_result) => {
+            // Store the outbound voice message in the messages table
+            let now = chrono::Utc::now().to_rfc3339();
+            let msg_id = Uuid::new_v4().to_string();
+
+            let insert_result = sqlx::query(
+                "INSERT INTO messages (id, conversation_id, direction, channel, body, status, \
+                 provider_message_id, provider_metadata, media_type, media_url, media_filename, \
+                 media_mimetype, voice_duration, transcription_text, sent_at) \
+                 VALUES (?, 'outbound', 'whatsapp', ?, 'sent', ?, '{}', 'audio', ?, 'voice.ogg', \
+                 'audio/ogg', ?, ?, ?)"
+            )
+            .bind(&msg_id)
+            .bind(&body.conversation_id)
+            .bind(body.transcription.as_deref().unwrap_or(""))
+            .bind(&send_result.provider_message_id)
+            .bind(&body.audio_url)
+            .bind(body.duration)
+            .bind(body.transcription.as_ref())
+            .bind(&now)
+            .execute(&state.db)
+            .await;
+
+            if let Err(e) = insert_result {
+                eprintln!("Warning: could not store voice message in DB: {}", e);
+            }
+
+            Ok(Json(serde_json::json!({
+                "sent": true,
+                "providerMessageId": send_result.provider_message_id,
+                "messageId": msg_id,
+            })))
+        }
+        Err(e) => Err((
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({ "error": e })),
+        )),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -4782,11 +5694,11 @@ pub async fn ai_generate_campaign(
         "goal": goal,
         "generatedContent": {
             "body": ai_body,
-            "header": format!("🎉 Special Offer from {}", brand_name.as_deref().unwrap_or("Us")),
+            "header": format!("?? Special Offer from {}", brand_name.as_deref().unwrap_or("Us")),
             "footer": "Reply STOP to unsubscribe",
             "buttons": [
-                {"type": "quick_reply", "text": "🛒 Shop Now"},
-                {"type": "quick_reply", "text": "ℹ️ Learn More"},
+                {"type": "quick_reply", "text": "?? Shop Now"},
+                {"type": "quick_reply", "text": "?? Learn More"},
             ]
         }
     })))
@@ -4825,7 +5737,7 @@ async fn verify_brand(
 // ---------------------------------------------------------------------------
 
 async fn resolve_whatsapp_creds(
-    db: &sqlx::SqlitePool,
+    db: &sqlx::PgPool,
     brand_id: &str,
 ) -> Result<serde_json::Value, (StatusCode, Json<serde_json::Value>)> {
     let row: Option<(String,)> = sqlx::query_as(
@@ -4856,4 +5768,309 @@ async fn resolve_whatsapp_creds(
     }
 
     Ok(serde_json::json!({}))
+}
+
+// ---------------------------------------------------------------------------
+// WhatsApp Gap 11-16: OAuth, Auto-Sync, Messenger Switch, Cost Tracking
+// ---------------------------------------------------------------------------
+
+/// Gap 11: Meta OAuth URL generator
+pub async fn whatsapp_oauth_url(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+    let tenant_key = resolve_tenant_key(&headers).await?;
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+        .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
+    if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
+
+    // Read Meta App ID from env or stored credentials
+    let meta_app_id = std::env::var("META_APP_ID")
+        .or_else(|_| std::env::var("WHATSAPP_META_APP_ID"))
+        .unwrap_or_default();
+
+    let base_url = format!("http://{}:{}", state.config.as_ref().host, state.config.as_ref().port);
+    let redirect_uri = format!("{}/auth/meta/callback", base_url);
+
+    if meta_app_id.is_empty() {
+        return Err((StatusCode::BAD_REQUEST, Json(serde_json::json!({
+            "error": "Meta App ID not configured. Set META_APP_ID in your environment.",
+            "instructions": "1. Create a Meta app at developers.facebook.com\n2. Add WhatsApp product\n3. Copy App ID to META_APP_ID env var",
+            "redirectUri": redirect_uri,
+        }))));
+    }
+
+    let oauth_url = format!(
+        "https://business.facebook.com/whatsapp/connections?app_id={}&redirect_uri={}",
+        meta_app_id,
+        redirect_uri
+    );
+
+    Ok(Json(serde_json::json!({
+        "oauthUrl": oauth_url,
+        "redirectUri": redirect_uri,
+        "instructions": "After connecting in Meta Business Manager, your credentials will be automatically configured."
+    })))
+}
+
+/// Gap 12: Update auto-sync display name settings
+#[derive(Deserialize)]
+pub struct UpdateAutoSyncRequest {
+    pub enabled: bool,
+    pub interval: Option<i64>,
+}
+
+pub async fn update_whatsapp_auto_sync(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: axum::http::HeaderMap,
+    Json(body): Json<UpdateAutoSyncRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+    let tenant_key = resolve_tenant_key(&headers).await?;
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+        .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
+    if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
+
+    let interval = body.interval.unwrap_or(3600); // default 1 hour
+
+    // Store auto-sync settings in integration_settings
+    let settings = serde_json::json!({
+        "enabled": body.enabled,
+        "interval_seconds": interval,
+        "updated_at": chrono::Utc::now().to_rfc3339(),
+    });
+
+    let _ = sqlx::query(
+        "INSERT INTO integration_settings (key, value, brand_id, updated_at) \
+         VALUES ('whatsapp_auto_sync', ?, ?1, NOW()) \
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, brand_id = EXCLUDED.brand_id, updated_at = EXCLUDED.updated_at"
+    )
+    .bind(&settings.to_string())
+    .bind(&id)
+    .execute(&state.db)
+    .await;
+
+    Ok(Json(serde_json::json!({
+        "enabled": body.enabled,
+        "interval": interval,
+        "message": if body.enabled {
+            format!("Auto-sync enabled. Display name will sync every {} seconds.", interval)
+        } else {
+            "Auto-sync disabled".to_string()
+        }
+    })))
+}
+
+/// Gap 16: Update messenger switch settings
+#[derive(Deserialize)]
+pub struct UpdateMessengerSwitchRequest {
+    pub enabled: bool,
+}
+
+pub async fn update_whatsapp_messenger_switch(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: axum::http::HeaderMap,
+    Json(body): Json<UpdateMessengerSwitchRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+    let tenant_key = resolve_tenant_key(&headers).await?;
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+        .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
+    if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
+
+    // Store messenger switch setting
+    let settings = serde_json::json!({
+        "enabled": body.enabled,
+        "updated_at": chrono::Utc::now().to_rfc3339(),
+    });
+
+    let _ = sqlx::query(
+        "INSERT INTO integration_settings (key, value, brand_id, updated_at) \
+         VALUES ('whatsapp_messenger_switch', ?, ?1, NOW()) \
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, brand_id = EXCLUDED.brand_id, updated_at = EXCLUDED.updated_at"
+    )
+    .bind(&settings.to_string())
+    .bind(&id)
+    .execute(&state.db)
+    .await;
+
+    Ok(Json(serde_json::json!({
+        "enabled": body.enabled,
+        "message": if body.enabled {
+            "Messenger?WhatsApp switch enabled. Customers will be offered to switch channels."
+        } else {
+            "Messenger?WhatsApp switch disabled."
+        }
+    })))
+}
+
+/// Gap 14: WhatsApp Cost Tracking endpoint
+pub async fn whatsapp_costs(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+    let tenant_key = resolve_tenant_key(&headers).await?;
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+        .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
+    if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
+
+    // Get pricing rates from whatsapp_pricing_rates table
+    let rates_rows = sqlx::query(
+        "SELECT region_code, conversation_category, rate_per_conversation, currency \
+         FROM whatsapp_pricing_rates WHERE region_code IS NOT NULL"
+    )
+    .fetch_all(&state.db)
+    .await
+    .unwrap_or_default();
+
+    // Build rate lookup by category
+    let mut rates_by_category: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
+    for r in &rates_rows {
+        let category: Option<String> = r.try_get("conversation_category").ok().flatten();
+        let rate: Option<f64> = r.try_get("rate_per_conversation").ok().flatten();
+        if let (Some(cat), Some(rate_val)) = (category, rate) {
+            rates_by_category.entry(cat).or_insert(0.0);
+            *rates_by_category.get_mut(&cat).unwrap() = rate_val;
+        }
+    }
+
+    // Default rates if no rates configured (USD averages)
+    let default_rates = [
+        ("marketing".to_string(), 0.0200_f64),
+        ("utility".to_string(), 0.0150_f64),
+        ("authentication".to_string(), 0.0100_f64),
+        ("service".to_string(), 0.0080_f64),
+    ];
+    for (cat, rate) in &default_rates {
+        rates_by_category.entry(cat.clone()).or_insert(*rate);
+    }
+
+    // Count conversations by category from campaigns
+    let campaign_rows = sqlx::query(
+        "SELECT c.id, c.name, c.campaign_type, c.sent_count, c.category \
+         FROM whatsapp_campaigns c \
+         WHERE c.brand_id = ?1 AND c.sent_count > 0 \
+         ORDER BY c.created_at DESC LIMIT 50"
+    )
+    .bind(&id)
+    .fetch_all(&state.db)
+    .await
+    .unwrap_or_default();
+
+    // Calculate costs by category
+    let mut by_category: std::collections::HashMap<String, serde_json::Value> = std::collections::HashMap::new();
+    let mut total_cost_30d = 0.0_f64;
+    let mut total_conversations_30d = 0_i64;
+    let mut today_cost = 0.0_f64;
+    let mut today_conversations = 0_i64;
+
+    for cat in &["marketing", "utility", "authentication", "service"] {
+        let mut conversations = 0_i64;
+        for row in &campaign_rows {
+            let campaign_type: Option<String> = row.try_get("campaign_type").ok().flatten();
+            let category: Option<String> = row.try_get("category").ok().flatten();
+            let sent_count: i64 = row.try_get("sent_count").unwrap_or(0);
+            let created_at: Option<String> = row.try_get("created_at").ok().flatten();
+
+            // Match category
+            let is_match = category.as_deref() == Some(*cat) ||
+                          campaign_type.as_deref() == Some(*cat) ||
+                          (category.is_none() && campaign_type.as_deref() == Some("promotional") && *cat == "marketing") ||
+                          (category.is_none() && campaign_type.as_deref() != Some("promotional") && *cat == "utility");
+
+            if is_match {
+                conversations += sent_count;
+                // Check if within 30 days
+                if let Some(ctime) = &created_at {
+                    if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(ctime) {
+                        let days_ago = (chrono::Utc::now() - dt.with_timezone(&chrono::Utc)).num_days();
+                        if days_ago <= 30 {
+                            total_conversations_30d += sent_count;
+                            let rate = *rates_by_category.get(*cat).unwrap_or(&0.01);
+                            let cost = sent_count as f64 * rate;
+                            total_cost_30d += cost;
+                        }
+                        // Check if today
+                        if days_ago == 0 {
+                            today_conversations += sent_count;
+                            let rate = *rates_by_category.get(*cat).unwrap_or(&0.01);
+                            today_cost += sent_count as f64 * rate;
+                        }
+                    }
+                }
+            }
+        }
+
+        let cat_str = (*cat).to_string();
+        let rate = *rates_by_category.get(&cat_str).unwrap_or(&0.01);
+        let cost = conversations as f64 * rate;
+        by_category.insert(cat_str, serde_json::json!({
+            "conversations": conversations,
+            "rate": rate,
+            "cost": cost,
+        }));
+    }
+
+    // Build campaign cost list
+    let by_campaign: Vec<serde_json::Value> = campaign_rows.iter().map(|row| {
+        let name: Option<String> = row.try_get("name").ok().flatten();
+        let sent_count: i64 = row.try_get("sent_count").unwrap_or(0);
+        let category: Option<String> = row.try_get("category").ok().flatten()
+            .or_else(|| row.try_get("campaign_type").ok().flatten());
+        let cat_str = category.as_deref().unwrap_or("utility");
+        let rate = *rates_by_category.get(cat_str).unwrap_or(&0.01);
+        serde_json::json!({
+            "id": row.try_get::<String, _>("id").ok(),
+            "name": name,
+            "sent": sent_count,
+            "category": category,
+            "cost": sent_count as f64 * rate,
+        })
+    }).collect();
+
+    // Get messaging tier from health
+    let tier: Option<String> = sqlx::query_scalar(
+        "SELECT value FROM integration_settings WHERE brand_id = ?1 AND key = 'whatsapp_health' LIMIT 1"
+    )
+    .bind(&id)
+    .fetch_optional(&state.db)
+    .await
+    .unwrap_or(None);
+
+    let tier_value: serde_json::Value = if let Some(t) = tier {
+        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&t) {
+            parsed.get("messagingLimitTier").cloned().unwrap_or(serde_json::json!("100K"))
+        } else {
+            serde_json::json!("100K")
+        }
+    } else {
+        serde_json::json!("100K")
+    };
+
+    let avg_per = if total_conversations_30d > 0 {
+        total_cost_30d / total_conversations_30d as f64
+    } else {
+        0.0
+    };
+
+    Ok(Json(serde_json::json!({
+        "brandId": id,
+        "totalCost30d": total_cost_30d,
+        "totalConversations30d": total_conversations_30d,
+        "todayCost": today_cost,
+        "todayConversations": today_conversations,
+        "avgPerConversation": avg_per,
+        "messagingTier": tier_value,
+        "tierLimit": "100000",
+        "byCategory": by_category,
+        "byCampaign": by_campaign,
+        "currency": "USD",
+        "lastUpdated": chrono::Utc::now().to_rfc3339(),
+    })))
 }

@@ -1,0 +1,76 @@
+// Financial institution settlement partnerships
+// (finance-accounting/49-financial-institution-settlement-partnerships.md).
+// `PaymentProvider` (payments.prisma) already answers "how does a customer
+// pay"; this is the merchant-settlement mirror — "how does the money that
+// left the customer actually arrive, reconciled, in the merchant's own bank
+// account." A SettlementBatch is a reconciliation target, not a payment
+// record: Payment already records what the business believes it is owed,
+// this records what a bank or gateway says it actually paid out.
+
+model SettlementProvider {
+  id       String  @id @default(cuid())
+  /// "easypaisa-settlement", "jazzcash-settlement", "hbl-merchant-account" —
+  /// matches whichever FinancialInstitutionConnector.institution key is
+  /// registered for it (settlement-connector.ts).
+  key      String  @unique
+  label    String
+  isActive Boolean @default(true)
+
+  batches SettlementBatch[]
+}
+
+enum SettlementBatchStatus {
+  EXPECTED
+  CONFIRMED
+  SHORT
+  DISPUTED
+}
+
+model SettlementBatch {
+  id                    String                @id @default(cuid())
+  settlementProviderId  String
+  /// The institution's own batch/reference id — external, opaque, never
+  /// reused as this repository's own key. Unique per provider so a
+  /// redelivered confirmation resolves to the same batch, never a duplicate.
+  externalBatchRef      String
+  /// Sum of the Payment rows this batch is meant to cover.
+  expectedAmountMinor   Int
+  /// What the institution actually confirmed — null until reconciled.
+  settledAmountMinor    Int?
+  status                SettlementBatchStatus @default(EXPECTED)
+  settledAt             DateTime?
+  /// Set only when a SHORT batch's shortfall has been accepted and posted
+  /// as a write-off (SettlementService.writeOffShortfall()) — a SHORT batch
+  /// with this null is still an open, unresolved variance.
+  writtenOffAt          DateTime?
+  /// The maker-checker pair CreditNotesService.issue() already establishes
+  /// (145-receivables-credit-limits-dunning.md), applied here: above the
+  /// configured value threshold, writeOffShortfall() refuses unless
+  /// writeoffApprovedById is set and differs from writeoffRequestedById.
+  /// Below the threshold, a single actor's own request is enough — neither
+  /// field is required.
+  writeoffRequestedById String?
+  writeoffApprovedById  String?
+  writeoffNote          String?
+  createdAt             DateTime              @default(now())
+
+  provider SettlementProvider    @relation(fields: [settlementProviderId], references: [id])
+  lines    SettlementBatchLine[]
+
+  @@unique([settlementProviderId, externalBatchRef])
+  @@index([status])
+}
+
+/// Which of our own Payment rows this settlement batch is meant to cover —
+/// the join a reconciliation report walks.
+model SettlementBatchLine {
+  id          String @id @default(cuid())
+  batchId     String
+  paymentId   String
+  amountMinor Int
+
+  batch   SettlementBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  payment Payment         @relation(fields: [paymentId], references: [id])
+
+  @@unique([batchId, paymentId])
+}

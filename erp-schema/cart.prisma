@@ -1,0 +1,149 @@
+// Cart. Guest carts are keyed by an opaque token held in a cookie and merged
+// into the account on login — a COD store cannot afford to force signup before
+// checkout.
+
+model Cart {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  expiresAt DateTime
+
+  /// MarketingAutomationCron's dedup flags (marketing.abandoned_cart_reminder,
+  /// then marketing.abandoned_cart_incentive) — logged-in carts only, since a
+  /// guest cart has no email captured until checkout to send either to.
+  /// Placing an order empties CartItem but leaves this row, so these persist
+  /// past a converted cart; the cron's own `items: { some: {} }` filter is
+  /// what actually excludes a converted cart, not these fields.
+  reminderSentAt       DateTime?
+  incentiveSentAt      DateTime?
+
+  stockHolds CartStockHold[]
+  /// WO-8.5 — the 1-hour first touch the doc's 3-step sequence (1h/24h/72h)
+  /// was missing. A soft nudge, never an incentive (doc: "sending one
+  /// immediately trains customers to abandon").
+  firstTouchSentAt     DateTime?
+  /// The single-use code minted for this cart's incentiveSentAt send —
+  /// nullable because most carts convert before ever reaching that stage.
+  /// PromoCode lives in promotions.prisma; the relation crosses that module
+  /// boundary the same sanctioned way orders -> promotions already does
+  /// (KNOWN_MODULE_COUPLINGS), via PromotionsService.createPromoCode(), not
+  /// a raw write into a table `marketing` does not own.
+  incentivePromoCodeId String?
+
+  /// WO-8.5 — a guest checkout has no account to hold a phone or a consent
+  /// flag, so both are captured onto the cart itself the moment the
+  /// customer types a phone number at checkout (CartController's own
+  /// guest-contact endpoint), before the cart can be abandoned. Normalised
+  /// E.164 (packages/shared/normalizePhone), same as Contact.phoneE164 and
+  /// Order.guestPhone.
+  guestPhone              String?
+  /// Null = no consent given (or not yet asked). Set = the customer
+  /// explicitly opted in to a marketing SMS/WhatsApp touch on this cart —
+  /// checked again at send time against PhoneOptOut (marketing.prisma),
+  /// since consent can be withdrawn after it was given.
+  guestMarketingConsentAt DateTime?
+
+  user               User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  incentivePromoCode PromoCode? @relation(fields: [incentivePromoCodeId], references: [id], onDelete: SetNull)
+  items              CartItem[]
+  /// orders.prisma (WO-8.5) — revenue-attribution: which order (if any) this
+  /// cart converted into, for the recovered-revenue report.
+  convertedOrders    Order[]
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([guestPhone])
+}
+
+model CartItem {
+  id        String @id @default(cuid())
+  cartId    String
+  productId String
+  variantId String
+  quantity  Int    @default(1)
+
+  /// Set when the customer ticked "get it stitched" on unstitched fabric.
+  /// garmentTypeId is what is being made, and what the stitching is priced from;
+  /// stitchingServiceId points at a STITCHING_SERVICE product, an optional
+  /// premium make-up that overrides the garment's own price.
+  garmentTypeId        String?
+  stitchingServiceId   String?
+  measurementProfileId String?
+  stitchingNotes       String?
+  /// field key -> value, typed straight into the panel. Guests have no profile
+  /// to pick, so this carries the measurements when measurementProfileId is null.
+  measurementValues    Json?
+  /// Option group key -> the customer's own words for that design area.
+  customDesignText     Json?
+  /// Which standard size (XS-XXL) the customer picked, when they used the RTW size chart instead of typing measurements. Kept for tailor/support reference; measurementValues still carries the actual numbers used.
+  sizeToken            String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cart             Cart                      @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product          Product                   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant          ProductVariant            @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  stitchingService Product?                  @relation("CartItemStitchingService", fields: [stitchingServiceId], references: [id], onDelete: SetNull)
+  stitchingOptions CartItemStitchingOption[]
+
+  @@index([cartId])
+}
+
+model CartItemStitchingOption {
+  cartItemId String
+  optionId   String
+
+  cartItem CartItem        @relation(fields: [cartItemId], references: [id], onDelete: Cascade)
+  option   StitchingOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  @@id([cartItemId, optionId])
+}
+
+/// Ecosystem audit 2026-10-29 (merged from @newaxhq/cart): a short-lived
+/// reservation against a variant's stock, held by a cart while the shopper
+/// is between add-to-cart and checkout — a real gap this module never had
+/// (`CartLineView.exceedsStock` is only a display warning today; nothing
+/// actually reserves the stock a cart line claims). Persisted, unlike the
+/// in-memory map core-newax's own extraction used — this server restarts
+/// and runs more than one instance, so an in-memory hold would silently
+/// vanish or disagree between instances; this table is the one source of
+/// truth either way. **Not yet wired into addItem()'s stock check** — that
+/// is a real product decision (does a SOFT hold reduce what other
+/// shoppers see as available? how does it interact with
+/// orders.allowBackorder?) this merge does not make unilaterally. Built
+/// and tested as its own capability; wiring it into the live add-to-cart
+/// path is the next, separate step.
+enum CartStockHoldTier {
+  SOFT
+  HARD
+}
+
+enum CartStockHoldStatus {
+  ACTIVE
+  EXPIRED
+  RELEASED
+  CONSUMED
+}
+
+model CartStockHold {
+  id           String              @id @default(cuid())
+  cartId       String
+  variantId    String
+  quantity     Int
+  tier         CartStockHoldTier   @default(SOFT)
+  status       CartStockHoldStatus @default(ACTIVE)
+  heartbeatAt  DateTime            @default(now())
+  expiresAt    DateTime
+  renewCount   Int                 @default(0)
+  maxRenewals  Int                 @default(5)
+  createdAt    DateTime            @default(now())
+
+  cart    Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([cartId])
+  @@index([status, expiresAt])
+}

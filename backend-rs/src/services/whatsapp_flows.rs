@@ -1,7 +1,7 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
-use sqlx::{Row, SqlitePool};
+use sqlx::{Row, PgPool};
 
 use crate::config::Config;
 
@@ -80,12 +80,12 @@ pub struct FlowWithSteps {
 // ---------------------------------------------------------------------------
 
 pub struct WhatsAppFlowsService {
-    pool: SqlitePool,
+    pool: PgPool,
     _config: Config,
 }
 
 impl WhatsAppFlowsService {
-    pub fn new(pool: SqlitePool, config: Config) -> Self {
+    pub fn new(pool: PgPool, config: Config) -> Self {
         Self {
             pool,
             _config: config,
@@ -298,21 +298,16 @@ impl WhatsAppFlowsService {
         description: Option<&str>,
         sort_order: Option<i32>,
     ) -> Result<(), String> {
-        let now = chrono::Utc::now().to_rfc3339();
         let mut sets = Vec::new();
-        let mut binds: Vec<Box<dyn std::any::Any>> = Vec::new();
 
-        if let Some(n) = name {
+        if name.is_some() {
             sets.push("name = ?");
-            binds.push(Box::new(n));
         }
-        if let Some(d) = description {
+        if description.is_some() {
             sets.push("description = ?");
-            binds.push(Box::new(d));
         }
-        if let Some(s) = sort_order {
+        if sort_order.is_some() {
             sets.push("sort_order = ?");
-            binds.push(Box::new(s));
         }
 
         if sets.is_empty() {
@@ -326,13 +321,16 @@ impl WhatsAppFlowsService {
             sets.join(", ")
         );
 
+        let now = chrono::Utc::now().to_rfc3339();
         let mut qb = sqlx::query(&query);
-        for b in &binds {
-            if let Some(s) = b.downcast_ref::<&str>() {
-                qb = qb.bind(s);
-            } else if let Some(i) = b.downcast_ref::<i32>() {
-                qb = qb.bind(i);
-            }
+        if let Some(n) = name {
+            qb = qb.bind(n);
+        }
+        if let Some(d) = description {
+            qb = qb.bind(d);
+        }
+        if let Some(s) = sort_order {
+            qb = qb.bind(s);
         }
         qb.bind(&now)
             .bind(group_id)

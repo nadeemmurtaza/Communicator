@@ -1,0 +1,39 @@
+// Search. WO-8.3,
+// docs/implementation/content-marketing-search/08-content-marketing-search.md.
+//
+// The full-text infrastructure itself — ProductTranslation.searchVector, its
+// GIN index, and the pg_trgm trigram index for fuzzy matching — lives on
+// catalog.prisma's ProductTranslation, since it is product data recomputed
+// by product writes. This file holds the two tables that are genuinely
+// search's own: the synonym table staff edit, and the query log a
+// merchandiser reads as the zero-result report.
+
+model SearchSynonym {
+  id        String   @id @default(cuid())
+  locale    String
+  /// The term a customer types.
+  term      String
+  /// What it should also match, e.g. term "kameez", synonym "shirt". Applied
+  /// both ways at query time (SearchService expands a query into its
+  /// synonym set before building the tsquery).
+  synonym   String
+  createdAt DateTime @default(now())
+
+  @@unique([locale, term, synonym])
+  @@index([locale, term])
+}
+
+/// No FK to User: most rows are anonymous storefront visitors, and a search
+/// log at this volume must never be constrained by, or block on, account
+/// lifecycle — same reasoning that kept Order.guestPhone a bare scalar.
+model SearchQueryLog {
+  id          String   @id @default(cuid())
+  locale      String
+  term        String
+  resultCount Int
+  userId      String?
+  createdAt   DateTime @default(now())
+
+  @@index([resultCount, createdAt])
+  @@index([term])
+}

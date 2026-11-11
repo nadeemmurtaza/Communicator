@@ -201,7 +201,7 @@ export function Simulations() {
           <button
             onClick={handleRunBatchSuite}
             disabled={batchRunning}
-            className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
+            className="inline-flex items-center justify-center rounded-[var(--radius-md)] bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
           >
             {batchRunning ? 'Running Test Suite...' : 'Run Batch Test Suite'}
           </button>
@@ -211,7 +211,7 @@ export function Simulations() {
       {/* KPI Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 shadow-sm">
+          <div className="rounded-[var(--radius-lg)] border border-emerald-200 bg-emerald-50/50 p-4 shadow-sm">
             <div className="text-xs font-medium text-emerald-800 uppercase tracking-wider">
               Simulation Pass Rate
             </div>
@@ -228,7 +228,7 @@ export function Simulations() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4 shadow-sm">
+          <div className="rounded-[var(--radius-lg)] border border-blue-200 bg-blue-50/50 p-4 shadow-sm">
             <div className="text-xs font-medium text-blue-800 uppercase tracking-wider">
               Overall Benchmark Score
             </div>
@@ -241,7 +241,7 @@ export function Simulations() {
             <div className="mt-2 text-xs text-blue-700">Adherence, Empathy & Accuracy</div>
           </div>
 
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-accent-soft)]/50 p-4 shadow-sm">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-accent-soft)]/50 p-4 shadow-sm">
             <div className="text-xs font-medium text-indigo-800 uppercase tracking-wider">
               Trained SOP Policies
             </div>
@@ -252,7 +252,7 @@ export function Simulations() {
             <div className="mt-2 text-xs text-[var(--color-accent)]">Refunds, Shipping, Returns, VIP</div>
           </div>
 
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
             <div className="text-xs font-medium text-[var(--color-ink-muted)] uppercase tracking-wider">
               Pre-flight Test Scenarios
             </div>
@@ -272,7 +272,7 @@ export function Simulations() {
           className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
             activeTab === 'sandbox'
               ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
           <span className="flex items-center gap-1.5"><FlaskConical className="h-4 w-4" /> <span>Interactive Policy Sandbox</span></span>
@@ -282,7 +282,7 @@ export function Simulations() {
           className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
             activeTab === 'scenarios'
               ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
           <span className="flex items-center gap-1.5"><Target className="h-4 w-4" /> <span>Scenarios & Test Suite ({scenarios.length})</span></span>
@@ -292,7 +292,7 @@ export function Simulations() {
           className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
             activeTab === 'policies'
               ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
           <span className="flex items-center gap-1.5"><ClipboardList className="h-4 w-4 inline mr-1" /> Agent Training SOPs ({policies.length})</span>
@@ -304,7 +304,7 @@ export function Simulations() {
           Loading simulation environment...
         </div>
       ) : error ? (
-        <div className="rounded-lg bg-rose-50 p-4 text-sm text-rose-700">{error}</div>
+        <div className="rounded-[var(--radius-md)] bg-rose-50 p-4 text-sm text-rose-700">{error}</div>
       ) : (
         <>
           {/* TAB 1: INTERACTIVE POLICY SANDBOX */}
@@ -315,14 +315,14 @@ export function Simulations() {
                 <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3 bg-[var(--color-page)]">
                   <div className="flex items-center gap-2">
                     <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span className="text-xs font-bold text-slate-800">
+                    <span className="text-xs font-bold text-[var(--color-ink)]">
                       Captain AI Agent - Live Sandbox Runner
                     </span>
                   </div>
                   <select
                     value={selectedSandboxPolicy}
                     onChange={(e) => setSelectedSandboxPolicy(e.target.value)}
-                    className="rounded-lg border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1 text-xs text-[var(--color-ink)] focus:outline-none"
+                    className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-xs text-[var(--color-ink)] focus:outline-none"
                   >
                     <option value="">Auto-detect matching SOP</option>
                     {policies.map((p) => (
@@ -349,7 +349,7 @@ export function Simulations() {
                         className={`max-w-lg rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
                           item.role === 'customer'
                             ? 'bg-blue-600 text-white rounded-br-xs'
-                            : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-slate-800 shadow-2xs rounded-bl-xs'
+                            : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-ink)] shadow-2xs rounded-bl-xs'
                         }`}
                       >
                         <p className="whitespace-pre-wrap">{item.text}</p>
@@ -359,7 +359,7 @@ export function Simulations() {
                 </div>
 
                 {/* Quick Test Prompt Shortcuts */}
-                <div className="px-4 py-2 bg-slate-100/70 border-t border-[var(--color-border)] flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--color-ink-muted)]">
+                <div className="px-4 py-2 bg-[var(--color-accent-muted)]/70 border-t border-[var(--color-border)] flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--color-ink-muted)]">
                   <span className="font-semibold text-[var(--color-ink-muted)]">Quick Prompts:</span>
                   <button
                     type="button"
@@ -402,12 +402,12 @@ export function Simulations() {
                     value={sandboxMessage}
                     onChange={(e) => setSandboxMessage(e.target.value)}
                     placeholder="Type a test customer message or scenario query..."
-                    className="flex-1 rounded-xl border border-slate-300 px-3.5 py-2 text-xs focus:border-blue-500 focus:outline-none"
+                    className="flex-1 rounded-[var(--radius-lg)] border border-[var(--color-border)] px-3.5 py-2 text-xs focus:border-blue-500 focus:outline-none"
                   />
                   <button
                     type="submit"
                     disabled={!sandboxMessage.trim() || sendingSandbox}
-                    className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
+                    className="rounded-[var(--radius-lg)] bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
                   >
                     {sendingSandbox ? 'Evaluating...' : 'Send Test'}
                   </button>
@@ -417,10 +417,10 @@ export function Simulations() {
               {/* Right Col: Real-time Agent Policy Inspector */}
               <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm space-y-4">
                 <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
-                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <h3 className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider flex items-center gap-1.5">
                     <span className="flex items-center gap-1.5"><Search className="h-4 w-4 text-blue-600" /> <span>Real-time Policy Inspector</span></span>
                   </h3>
-                  <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-[var(--color-ink-muted)]">
+                  <span className="rounded bg-[var(--color-accent-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-ink-muted)]">
                     Live Diagnostics
                   </span>
                 </div>
@@ -431,7 +431,7 @@ export function Simulations() {
                       <span className="text-[var(--color-ink-faint)] font-medium block mb-1">
                         Matched SOP Policy:
                       </span>
-                      <div className="rounded-lg bg-blue-50 border border-blue-200 p-2.5 font-semibold text-blue-900">
+                      <div className="rounded-[var(--radius-md)] bg-blue-50 border border-blue-200 p-2.5 font-semibold text-blue-900">
                         {latestSandboxResult.policy_matched}
                       </div>
                     </div>
@@ -444,7 +444,7 @@ export function Simulations() {
                         {(latestSandboxResult.matched_rules || []).map((rule, i) => (
                           <div
                             key={i}
-                            className="rounded bg-[var(--color-page)] border border-[var(--color-border)] p-2 text-slate-800 font-medium flex items-center gap-1.5"
+                            className="rounded bg-[var(--color-page)] border border-[var(--color-border)] p-2 text-[var(--color-ink)] font-medium flex items-center gap-1.5"
                           >
                             <Check className="h-3.5 w-3.5 text-blue-600 inline shrink-0" />
                             <span>{rule}</span>
@@ -519,7 +519,7 @@ export function Simulations() {
                 <button
                   onClick={handleRunBatchSuite}
                   disabled={batchRunning}
-                  className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
+                  className="rounded-[var(--radius-md)] bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
                 >
                   {batchRunning ? 'Running Test Suite...' : 'Run All Scenarios'}
                 </button>
@@ -533,7 +533,7 @@ export function Simulations() {
                   >
                     <div className="flex items-start justify-between">
                       <div>
-                        <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-[var(--color-ink-muted)] uppercase">
+                        <span className="rounded bg-[var(--color-accent-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-ink-muted)] uppercase">
                           {s.category}
                         </span>
                         <h4 className="mt-1 text-sm font-bold text-[var(--color-ink)]">{s.name}</h4>
@@ -554,11 +554,11 @@ export function Simulations() {
                     <p className="text-xs text-[var(--color-ink-muted)] leading-relaxed">{s.description}</p>
 
                     {/* Customer Persona Box */}
-                    <div className="rounded-xl bg-[var(--color-page)] p-3 border border-[var(--color-border)] text-xs space-y-1">
+                    <div className="rounded-[var(--radius-lg)] bg-[var(--color-page)] p-3 border border-[var(--color-border)] text-xs space-y-1">
                       <div className="flex items-center justify-between text-[var(--color-ink-muted)]">
                         <span>
                           Customer Persona:{' '}
-                          <strong className="text-slate-800">{s.customer_persona?.name || 'Customer'}</strong>
+                          <strong className="text-[var(--color-ink)]">{s.customer_persona?.name || 'Customer'}</strong>
                         </span>
                         <span className="capitalize">
                           Sentiment: <strong>{s.customer_persona?.sentiment || 'Neutral'}</strong>
@@ -587,7 +587,7 @@ export function Simulations() {
                       <button
                         onClick={() => handleRunSimulation(s.id)}
                         disabled={runningScenarioId === s.id}
-                        className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
+                        className="rounded-[var(--radius-md)] bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
                       >
                         {runningScenarioId === s.id ? 'Simulating...' : 'Run Simulation'}
                       </button>
@@ -612,7 +612,7 @@ export function Simulations() {
                 </div>
                 <button
                   onClick={() => setShowCreatePolicyModal(true)}
-                  className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700"
+                  className="rounded-[var(--radius-md)] bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700"
                 >
                   + Add New Policy
                 </button>
@@ -630,7 +630,7 @@ export function Simulations() {
                           {p.version}
                         </span>
                         <h4 className="text-base font-bold text-[var(--color-ink)]">{p.name}</h4>
-                        <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-[var(--color-ink-muted)] uppercase">
+                        <span className="rounded bg-[var(--color-accent-muted)] px-2 py-0.5 text-xs font-medium text-[var(--color-ink-muted)] uppercase">
                           {p.category}
                         </span>
                       </div>
@@ -643,14 +643,14 @@ export function Simulations() {
 
                     {/* Step-by-Step Procedure */}
                     <div>
-                      <span className="text-xs font-bold text-slate-800 block mb-2">
+                      <span className="text-xs font-bold text-[var(--color-ink)] block mb-2">
                         Step-by-Step Process Flow:
                       </span>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                         {(p.process_steps || []).map((st) => (
                           <div
                             key={st.step}
-                            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-page)] p-2.5 text-xs"
+                            className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-page)] p-2.5 text-xs"
                           >
                             <span className="font-bold text-blue-700 block mb-0.5">
                               Step {st.step}: {st.title}
@@ -665,14 +665,14 @@ export function Simulations() {
 
                     {/* Guardrails */}
                     <div>
-                      <span className="text-xs font-bold text-slate-800 block mb-1">
+                      <span className="text-xs font-bold text-[var(--color-ink)] block mb-1">
                         Active Guardrails:
                       </span>
                       <div className="flex flex-wrap gap-1.5">
                         {(p.guardrails || []).map((g, idx) => (
                           <span
                             key={idx}
-                            className="inline-flex items-center gap-1 rounded-lg bg-rose-50 border border-rose-200 px-2.5 py-1 text-xs text-rose-900 font-medium"
+                            className="inline-flex items-center gap-1 rounded-[var(--radius-md)] bg-rose-50 border border-rose-200 px-2.5 py-1 text-xs text-rose-900 font-medium"
                           >
                             <ShieldCheck className="h-3.5 w-3.5 text-rose-600 inline shrink-0" />
                             <span>{g}</span>
@@ -720,7 +720,7 @@ export function Simulations() {
             <div className="flex-1 overflow-y-auto p-6 space-y-5">
               {/* Scorecard */}
               <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-page)] p-3">
+                <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-page)] p-3">
                   <div className="text-[10px] font-semibold text-[var(--color-ink-muted)] uppercase">
                     Policy Adherence
                   </div>
@@ -728,7 +728,7 @@ export function Simulations() {
                     {activeRunResult.policy_adherence_score}%
                   </div>
                 </div>
-                <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-page)] p-3">
+                <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-page)] p-3">
                   <div className="text-[10px] font-semibold text-[var(--color-ink-muted)] uppercase">
                     Empathy & Tone
                   </div>
@@ -736,7 +736,7 @@ export function Simulations() {
                     {activeRunResult.empathy_score}%
                   </div>
                 </div>
-                <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-page)] p-3">
+                <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-page)] p-3">
                   <div className="text-[10px] font-semibold text-[var(--color-ink-muted)] uppercase">
                     Factual Accuracy
                   </div>
@@ -747,7 +747,7 @@ export function Simulations() {
               </div>
 
               {/* Evaluation Summary */}
-              <div className="rounded-xl bg-blue-50/70 border border-blue-200 p-3.5 text-xs text-blue-900 leading-relaxed">
+              <div className="rounded-[var(--radius-lg)] bg-blue-50/70 border border-blue-200 p-3.5 text-xs text-blue-900 leading-relaxed">
                 <span className="font-bold block mb-1">Coach Evaluation:</span>
                 {activeRunResult.evaluation_summary}
               </div>
@@ -757,14 +757,14 @@ export function Simulations() {
                 <h4 className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">
                   Turn-by-Turn Simulated Dialogue ({activeRunResult.transcript.length} turns)
                 </h4>
-                <div className="space-y-2 border border-[var(--color-border)] rounded-xl p-3 bg-[var(--color-page)]/30 max-h-72 overflow-y-auto">
+                <div className="space-y-2 border border-[var(--color-border)] rounded-[var(--radius-lg)] p-3 bg-[var(--color-page)]/30 max-h-72 overflow-y-auto">
                   {activeRunResult.transcript.map((t, idx) => (
                     <div
                       key={idx}
-                      className={`rounded-lg p-3 text-xs ${
+                      className={`rounded-[var(--radius-md)] p-3 text-xs ${
                         t.role === 'customer'
                           ? 'bg-blue-50/60 border border-blue-100 text-blue-950'
-                          : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-slate-800'
+                          : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-ink)]'
                       }`}
                     >
                       <div className="flex items-center justify-between text-[11px] font-semibold mb-1 text-[var(--color-ink-muted)]">
@@ -799,7 +799,7 @@ export function Simulations() {
             <div className="border-t border-[var(--color-border)] px-6 py-3 bg-[var(--color-page)] flex justify-end">
               <button
                 onClick={() => setActiveRunResult(null)}
-                className="rounded-lg bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)]"
+                className="rounded-[var(--radius-md)] bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)]"
               >
                 Close Evaluation
               </button>
@@ -833,7 +833,7 @@ export function Simulations() {
                   value={policyName}
                   onChange={(e) => setPolicyName(e.target.value)}
                   placeholder="e.g. VIP Concierge Escalation Protocol"
-                  className="w-full rounded-lg border border-slate-300 p-2 text-xs focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs focus:border-blue-500 focus:outline-none"
                 />
               </div>
 
@@ -845,7 +845,7 @@ export function Simulations() {
                   <select
                     value={policyCategory}
                     onChange={(e) => setPolicyCategory(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-[var(--color-surface)] p-2 text-xs focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-2 text-xs focus:border-blue-500 focus:outline-none"
                   >
                     <option value="refunds">Refunds & Returns</option>
                     <option value="shipping">Shipping & Delays</option>
@@ -862,7 +862,7 @@ export function Simulations() {
                     value={policyVersion}
                     onChange={(e) => setPolicyVersion(e.target.value)}
                     placeholder="1.0"
-                    className="w-full rounded-lg border border-slate-300 p-2 text-xs focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs focus:border-blue-500 focus:outline-none"
                   />
                 </div>
               </div>
@@ -876,7 +876,7 @@ export function Simulations() {
                   value={policyDescription}
                   onChange={(e) => setPolicyDescription(e.target.value)}
                   placeholder="Objectives and scope of this policy..."
-                  className="w-full rounded-lg border border-slate-300 p-2 text-xs focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs focus:border-blue-500 focus:outline-none"
                 />
               </div>
 
@@ -889,7 +889,7 @@ export function Simulations() {
                   value={guardrailText}
                   onChange={(e) => setGuardrailText(e.target.value)}
                   placeholder="Never promise refunds exceeding $150 without approval&#10;Always maintain empathetic tone&#10;Do not mention internal supplier names"
-                  className="w-full rounded-lg border border-slate-300 p-2 text-xs focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs focus:border-blue-500 focus:outline-none"
                 />
               </div>
 
@@ -897,14 +897,14 @@ export function Simulations() {
                 <button
                   type="button"
                   onClick={() => setShowCreatePolicyModal(false)}
-                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-[var(--color-ink-muted)] hover:bg-slate-100"
+                  className="rounded-[var(--radius-md)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink-muted)] hover:bg-[var(--color-accent-muted)]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={creatingPolicy}
-                  className="rounded-lg bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
+                  className="rounded-[var(--radius-md)] bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
                 >
                   {creatingPolicy ? 'Creating...' : 'Save Policy'}
                 </button>

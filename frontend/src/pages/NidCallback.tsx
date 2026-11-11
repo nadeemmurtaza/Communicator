@@ -45,7 +45,7 @@ export function NidCallback() {
             <p className="text-sm text-red-600">{error}</p>
             <button
               onClick={() => navigate('/login', { replace: true })}
-              className="px-4 py-2 bg-[var(--color-accent)] text-[var(--color-on-accent)] text-sm font-medium rounded-lg"
+              className="px-4 py-2 bg-[var(--color-accent)] text-[var(--color-on-accent)] text-sm font-medium rounded-[var(--radius-md)]"
             >
               Back to sign in
             </button>

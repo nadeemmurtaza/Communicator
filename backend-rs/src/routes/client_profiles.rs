@@ -571,7 +571,7 @@ async fn update_customer(
         sets.push("customer_segment = ?");
         binds.push(segment);
     }
-    sets.push("updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')");
+    sets.push("updated_at = NOW()");
     binds.push("");
 
     if sets.is_empty() {
@@ -625,7 +625,7 @@ async fn get_customer_profile(
 }
 
 async fn get_customer_profile_impl(
-    db: &sqlx::SqlitePool,
+    db: &sqlx::PgPool,
     customer_id: &str,
 ) -> Result<Json<UnifiedCustomerProfile>, (StatusCode, Json<serde_json::Value>)> {
     let customer = sqlx::query_as::<_, Customer>("SELECT * FROM customers WHERE id = ?")
@@ -934,7 +934,7 @@ async fn update_insight(
 
     sqlx::query(
         "UPDATE client_learning_insights SET insight_type = ?, category = ?, insight = ?, 
-         confidence = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?",
+         confidence = ?, updated_at = NOW() WHERE id = ?",
     )
     .bind(&req.insight_type)
     .bind(&req.category)
@@ -1238,7 +1238,7 @@ async fn update_order(
     if sets.is_empty() {
         return get_order(State(state), Path((_customer_id, order_id))).await;
     }
-    sets.push("updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')");
+    sets.push("updated_at = NOW()");
 
     let sql = format!("UPDATE client_orders SET {} WHERE id = ?", sets.join(", "));
     let mut query = sqlx::query(&sql);
@@ -1377,7 +1377,7 @@ async fn update_invoice(
 
     if let Some(ref status) = req.status {
         sqlx::query(
-            "UPDATE client_invoices SET status = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?",
+            "UPDATE client_invoices SET status = ?, updated_at = NOW() WHERE id = ?",
         )
         .bind(status)
         .bind(&invoice_id)
@@ -1658,7 +1658,7 @@ async fn update_order_stage(
         sets.push("notes = ?");
         binds.push(notes);
     }
-    sets.push("updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')");
+    sets.push("updated_at = NOW()");
     binds.push("");
 
     if sets.is_empty() {
@@ -1898,7 +1898,7 @@ async fn update_task_item(
         sets.push("priority = ?");
         binds.push(priority);
     }
-    sets.push("updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')");
+    sets.push("updated_at = NOW()");
     binds.push("");
 
     if sets.is_empty() {
@@ -2137,7 +2137,7 @@ async fn update_custom_section(
     if let Some(active) = req.is_active {
         sets.push("is_active = ?");
     }
-    sets.push("updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')");
+    sets.push("updated_at = NOW()");
 
     if sets.is_empty() {
         return get_custom_section(State(state), Path((_customer_id, section_id))).await;
@@ -2251,7 +2251,7 @@ async fn update_custom_section_data(
 
     sqlx::query(
         "UPDATE client_custom_section_data SET field_key = ?, field_value = ?, field_type = ?, 
-         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?",
+         updated_at = NOW() WHERE id = ?",
     )
     .bind(&req.field_key)
     .bind(&req.field_value)

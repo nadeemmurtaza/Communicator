@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 //! Port of `services/draft_actions.py`.
 //!
@@ -141,7 +141,7 @@ impl ApprovalReport {
     }
 }
 
-async fn load_draft(state: &AppState, draft_id: &str) -> Result<Option<sqlx::sqlite::SqliteRow>, DraftActionError> {
+async fn load_draft(state: &AppState, draft_id: &str) -> Result<Option<sqlx::postgres::PgRow>, DraftActionError> {
     sqlx::query(
         "SELECT id, conversation_id, body, confidence, citations, status, created_at \
          FROM drafts WHERE id = ? LIMIT 1",

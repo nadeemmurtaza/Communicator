@@ -1,0 +1,284 @@
+// The `accounting` module (RETAIL-ERP.md R15, Part 5, WO-19.1) — a
+// double-entry general ledger that posts from domain events. Off by default
+// (modules.registry.ts): nothing here runs, and nothing else in the app
+// imports it — R15's own "accounting couples to nothing", verified by the
+// module boundary checker the same way every other pack is.
+//
+// "Without double entry, profit is an opinion." Expenses, salaries, losses,
+// revenue and COGS become a query over JournalLine, the same way
+// StockMovement already makes "why is stock 4" answerable — money gets the
+// identical discipline. Three invariants are enforced by the database
+// itself, not merely intended by the application: a posted entry balances
+// (checked by a deferred constraint trigger — see the migration), a posted
+// entry is immutable (checked by a trigger that permits exactly one
+// transition, POSTED -> REVERSED, and nothing else), and nothing posts into
+// a LOCKED (or CLOSED) period — AccountingService.resolveOpenPeriod() only
+// ever considers `status: 'OPEN'` periods, so a late fact reroutes to
+// whatever period is open today instead (R15) rather than failing or
+// reaching a closed one (WO-19.5).
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  INCOME
+  EXPENSE
+}
+
+/// The chart of accounts. Policy — replicates down (R2), never posted to
+/// directly by a branch. `isControl` marks an account a human never posts
+/// to by hand (AR, AP) — only posting rules (posting-rules.subscriber.ts,
+/// WO-19.2) write it. The six accounts posting rules actually use today are
+/// seeded in prisma/seed.ts from chart-of-accounts.ts's ACCOUNT_CODE map.
+model Account {
+  id             String      @id @default(cuid())
+  /// "1000", "4000" — the chart-of-accounts code a bookkeeper already knows.
+  code           String      @unique
+  name           String
+  type           AccountType
+  parentId       String?
+  isIntercompany Boolean     @default(false)
+  isBank         Boolean     @default(false)
+  isControl      Boolean     @default(false)
+  isActive       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  parent   Account?      @relation("AccountHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children Account[]     @relation("AccountHierarchy")
+  lines    JournalLine[]
+
+  @@index([type])
+  @@index([parentId])
+}
+
+/// A trading year. Exists mostly to own `FiscalPeriod` rows — nothing posts
+/// to a `FiscalYear` directly.
+model FiscalYear {
+  id       String   @id @default(cuid())
+  /// "FY2026" — the journal number's own year segment (R18), not
+  /// necessarily calendar-aligned.
+  name     String   @unique
+  startsOn DateTime
+  endsOn   DateTime
+
+  /// Set once by `FiscalPeriodsService.closeFiscalYear()` (WO-19.5) — the
+  /// year-end closing entry that zeros INCOME/EXPENSE into Retained Earnings
+  /// has posted, and the year can never be closed a second time. Every
+  /// period within it must already be CLOSED or LOCKED before this is set;
+  /// this field itself is never cleared — a mistaken close is fixed with a
+  /// reversing entry, the same as any other POSTED journal entry (R2), not
+  /// by un-closing the year.
+  closedAt DateTime?
+
+  periods       FiscalPeriod[]
+  numberCounter JournalEntryNumberCounter?
+
+  @@index([startsOn])
+}
+
+enum FiscalPeriodStatus {
+  OPEN
+  CLOSED
+  LOCKED
+}
+
+/// What a `JournalEntry` posts into. `status` governs what may still happen
+/// to it: OPEN takes new postings, CLOSED is a soft boundary (WO-19.5 —
+/// reopenable), LOCKED refuses everything, including a late fact (R15) —
+/// which posts to whatever period is *currently* open instead, keeping its
+/// own `occurredAt` on `JournalEntry.date` regardless.
+model FiscalPeriod {
+  id           String             @id @default(cuid())
+  fiscalYearId String
+  /// "2026-01" — sorts and reads correctly without joining FiscalYear.
+  name         String
+  startsOn     DateTime
+  endsOn       DateTime
+  status       FiscalPeriodStatus @default(OPEN)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  fiscalYear FiscalYear     @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
+  entries    JournalEntry[]
+
+  @@unique([fiscalYearId, name])
+  @@index([status])
+  @@index([startsOn, endsOn])
+}
+
+enum JournalEntryStatus {
+  POSTED
+  REVERSED
+}
+
+/// One fact, posted as a balanced set of `JournalLine` rows. Immutable once
+/// created except for the single `POSTED -> REVERSED` transition (enforced
+/// by a database trigger, not application discipline alone — see the
+/// migration). A correction is a new entry with `reversalOfId` set, mirrored
+/// debit/credit, never an edit to this one.
+model JournalEntry {
+  id           String             @id @default(cuid())
+  /// A legal sequence, not an id — gapless per fiscal year (R18). Never
+  /// node-prefixed the way Order.number is (R6): unlike an offline sale, a
+  /// journal is never posted at branch tier, so there is nothing to
+  /// disambiguate between nodes yet. See accounting.service.ts.
+  number       String             @unique
+  /// The fact's own original time — retained even when a late arrival lands
+  /// in a later period than the date itself would suggest (R15).
+  date         DateTime
+  periodId     String
+  /// The domain event name that caused this posting — "order.placed",
+  /// "payment.succeeded" — set by the posting rules in
+  /// posting-rules.subscriber.ts (WO-19.2). Free text, not an enum: a new
+  /// posting rule is a new subscriber method, never a migration here.
+  source       String
+  sourceRef    String?
+  status       JournalEntryStatus @default(POSTED)
+  reversalOfId String?            @unique
+  memo         String?
+  createdAt    DateTime           @default(now())
+
+  period     FiscalPeriod  @relation(fields: [periodId], references: [id], onDelete: Restrict)
+  reversalOf JournalEntry? @relation("JournalReversal", fields: [reversalOfId], references: [id], onDelete: SetNull)
+  reversedBy JournalEntry? @relation("JournalReversal")
+  lines      JournalLine[]
+
+  @@index([periodId])
+  @@index([source, sourceRef])
+  @@index([status])
+}
+
+/// One debit or credit. `SUM(debitMinor) = SUM(creditMinor)` across every
+/// line of one `entryId` is enforced by a deferred constraint trigger — see
+/// the migration — not merely checked in application code before the
+/// insert (that check exists too, in accounting.service.ts, but it is the
+/// friendlier error message, not the guarantee).
+///
+/// Dimensions are plain scalars, no `@relation` — R15's own decoupling
+/// principle applied at the schema level: `accounting` names a contact or a
+/// supplier without importing `crm` or `purchasing`'s models, the same way
+/// its service imports neither module.
+model JournalLine {
+  id          String @id @default(cuid())
+  entryId     String
+  accountId   String
+  debitMinor  Int    @default(0)
+  creditMinor Int    @default(0)
+
+  /// ISO 4217. `debitMinor`/`creditMinor` themselves are ALWAYS posted in
+  /// the deployment's own base currency (`BRAND.locale.currency`) — that is
+  /// what the balance trigger sums, raw, per entry. `currency` here is the
+  /// ORIGINATING document's currency when one exists (a foreign-currency
+  /// supplier bill, say); informational/audit, never something a reader
+  /// re-derives the base amount from. See posting-rules.subscriber.ts (R16,
+  /// WO-19.3) and `convertToBase` (@newax/shared).
+  currency        String
+  /// rate * 1_000_000, an integer (House Rule 5 / R16) — 1_000_000 is "no
+  /// conversion", the rate used to produce this line's base-currency amount
+  /// from the originating document's own currency.
+  fxRateScaled    Int    @default(1000000)
+  /// Always equal to whichever of debitMinor/creditMinor is non-zero — kept
+  /// as its own column so a report never needs a CASE WHEN to pick one.
+  baseAmountMinor Int
+
+  organizationId      String?
+  retailBrandId       String?
+  branchNodeId        String?
+  costCentreId        String?
+  contactId           String?
+  supplierId          String?
+  /// R17: set only on an intercompany line (its account is also flagged
+  /// `isIntercompany`) — the OTHER brand in the trade, so consolidation at
+  /// the org tier (WO-20.6) can find this line's matching opposite number
+  /// and eliminate the pair before producing the group P&L/balance sheet.
+  /// A bare scalar, not a `@relation`, the same decoupling this model's own
+  /// header already explains for `contactId`/`supplierId`.
+  counterpartyBrandId String?
+
+  entry   JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  account Account      @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([entryId])
+  @@index([accountId])
+  @@index([retailBrandId])
+  @@index([branchNodeId])
+  @@index([counterpartyBrandId])
+}
+
+/// Backing store for gapless per-fiscal-year journal numbers (R18) — same
+/// atomic-counter shape as `OrderNumberCounter` and its siblings
+/// (orders.prisma), keyed by `fiscalYearId` instead of a calendar year
+/// because a journal number's "year" is the fiscal year, not the calendar
+/// one. Genuinely gapless, not merely usually so (R6's order numbers accept
+/// a gap from a failed checkout): the increment happens inside the exact
+/// same transaction as the entry it numbers, so a rolled-back posting rolls
+/// the counter back with it.
+model JournalEntryNumberCounter {
+  fiscalYearId String     @id
+  counter      Int        @default(0)
+  fiscalYear   FiscalYear @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
+}
+
+/// Book depreciation for an `Asset` (hr.prisma, doc 79) — the "separately-
+/// scoped fixed-asset accounting capability" doc 79's own status note
+/// deferred. `Asset` never posts to the GL at acquisition (doc 79's own
+/// scope lens); this schedule is the first thing that does, monthly, once
+/// created. `accountingModule` reads `Asset` by its bare Prisma model, the
+/// same "core data, no module import" shape `PostingRulesSubscriber`
+/// already uses for `Order`/`Payment` — `accounting` still imports no other
+/// module (accounting.module.ts's own header comment, unchanged).
+enum DepreciationMethod {
+  STRAIGHT_LINE
+  DECLINING_BALANCE
+}
+
+model AssetDepreciationSchedule {
+  id      String             @id @default(cuid())
+  /// hr.prisma's Asset.id — one active schedule per asset at a time.
+  assetId String             @unique
+  method  DepreciationMethod
+
+  /// Snapshotted from Asset.purchaseCostMinor at schedule creation — never
+  /// re-read live, so a later correction to the asset's own record does not
+  /// silently reshape an in-progress schedule (the version-stamp discipline
+  /// this document's own scope lenses require).
+  acquisitionCostMinor Int
+  salvageValueMinor    Int      @default(0)
+  usefulLifeMonths     Int
+  /// DECLINING_BALANCE only; null for STRAIGHT_LINE.
+  decliningRateBps     Int?
+  startDate            DateTime
+
+  createdById String
+  createdAt   DateTime  @default(now())
+  /// Set when disposeAsset() closes this schedule out. A closed schedule's
+  /// own postings are never deleted — the reversal document lens.
+  closedAt    DateTime?
+
+  asset     Asset                      @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  createdBy User                       @relation(fields: [createdById], references: [id])
+  postings  AssetDepreciationPosting[]
+
+  @@index([closedAt])
+}
+
+/// One row per period posted — the same "snapshot at write time, never
+/// re-derived" discipline PayRunLine/OrderEconomics already establish.
+/// Never updated or deleted once created; `postMonthlyDepreciation()`'s own
+/// idempotency (`@@unique([scheduleId, periodStart])` here, plus
+/// `findPostedEntry()`'s own key on the journal entry itself) makes a
+/// second run for an already-posted period a guaranteed no-op.
+model AssetDepreciationPosting {
+  id          String   @id @default(cuid())
+  scheduleId  String
+  periodStart DateTime
+  periodEnd   DateTime
+  amountMinor Int
+  postedAt    DateTime @default(now())
+
+  schedule AssetDepreciationSchedule @relation(fields: [scheduleId], references: [id])
+
+  @@unique([scheduleId, periodStart])
+  @@index([scheduleId])
+}

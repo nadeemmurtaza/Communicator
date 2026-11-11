@@ -1,0 +1,78 @@
+// Approvals: one generic, subject-agnostic approval chain, referenced by a
+// (subjectType, subjectId) pair rather than a bespoke chain per feature —
+// doc 63's own shape (docs/implementation/hr-people-org/63-multi-tier-approval-hierarchies.md).
+// Built here scoped to what WO-152 (purchase requisitions) actually needs;
+// ApprovalSubjectType is deliberately a plain enum, extended by adding a
+// value, not a plugin registry — WALLET_ADJUSTMENT (doc 155, WO-155.2) is
+// its second consumer, added the same way: a new enum value, never a
+// bespoke chain (no speculative functionality, CLAUDE.md).
+
+enum ApprovalSubjectType {
+  PURCHASE_REQUISITION
+  /// doc 155 (WO-155.2) — an above-threshold WalletAdjustmentRequest.
+  WALLET_ADJUSTMENT
+  /// doc 149 (WO-149.1) — a B2BOrderRequest at or above its account's own
+  /// B2BPurchaseApprovalPolicy.thresholdMinor.
+  B2B_ORDER
+  /// doc 24 (WO-24.5) — a BroadcastMessage above ANNOUNCE_QUORUM_RANK or
+  /// addressed to more than the configured recipient count.
+  BROADCAST_MESSAGE
+}
+
+enum ApprovalChainStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ApprovalStepStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SKIPPED
+}
+
+model ApprovalChain {
+  id          String              @id @default(cuid())
+  subjectType ApprovalSubjectType
+  subjectId   String
+  currentStep Int                 @default(1)
+  status      ApprovalChainStatus @default(PENDING)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  steps ApprovalStep[]
+
+  @@unique([subjectType, subjectId])
+  @@index([subjectType, status])
+}
+
+model ApprovalStep {
+  id             String             @id @default(cuid())
+  chainId        String
+  stepOrder      Int
+  /// Never all empty — resolved to a specific approver at decide() time,
+  /// either directly (approverUserId), by whoever holds the role
+  /// (approverRoleId), or by any ONE of a named set of the buyer's OWN
+  /// Contacts (approverContactIds, doc 149) — a set, not a sequence: this
+  /// document's own single-tier case, never a User of this deployment.
+  approverRoleId     String?
+  approverUserId     String?
+  approverContactIds String[]           @default([])
+  status             ApprovalStepStatus @default(PENDING)
+  decidedAt          DateTime?
+  decidedById        String?
+  /// Set instead of decidedById when a buyer's own Contact decides (a
+  /// B2B_ORDER step, doc 149) — decidedById's own @relation is typed to
+  /// User, so a Contact's id cannot be written there. A bare scalar, not a
+  /// `@relation`, same decoupling as JournalLine.contactId
+  /// (accounting.prisma).
+  decidedByContactId String?
+  comment            String?
+
+  chain     ApprovalChain @relation(fields: [chainId], references: [id], onDelete: Cascade)
+  decidedBy User?         @relation("ApprovalStepDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+
+  @@unique([chainId, stepOrder])
+  @@index([approverUserId, status])
+}

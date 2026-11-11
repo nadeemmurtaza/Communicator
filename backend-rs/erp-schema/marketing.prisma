@@ -1,0 +1,86 @@
+// Campaigns and broadcasts. WO-8.4,
+// docs/implementation/content-marketing-search/08-content-marketing-search.md.
+//
+// The `marketing` module already existed before this file (settings +
+// MarketingAutomationCron's abandoned-cart/review/replenishment automation)
+// — this is the data model that automation never needed but a campaign send
+// does: who it went to, on which channel, and what happened.
+
+enum CampaignChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  CANCELLED
+}
+
+enum CampaignRecipientStatus {
+  PENDING
+  SENT
+  /// Contact.marketingOptOut was true, or the phone was in PhoneOptOut, at
+  /// send time — checked then, never at list-build time (the doc's own
+  /// non-negotiable).
+  SKIPPED_OPT_OUT
+  /// The channel needs something this Contact doesn't have — an email
+  /// channel and no email on file, for one.
+  SKIPPED_NO_CONTACT
+  FAILED
+  OPENED
+  CLICKED
+}
+
+model Campaign {
+  id          String          @id @default(cuid())
+  name        String
+  channel     CampaignChannel
+  segmentId   String
+  /// locale -> { subject?, body }. `subject` is read for EMAIL only.
+  content     Json
+  status      CampaignStatus  @default(DRAFT)
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  createdById String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  segment    Segment             @relation(fields: [segmentId], references: [id], onDelete: Restrict)
+  createdBy  User?               @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  recipients CampaignRecipient[]
+
+  @@index([status, scheduledAt])
+}
+
+model CampaignRecipient {
+  id            String                  @id @default(cuid())
+  campaignId    String
+  contactId     String
+  status        CampaignRecipientStatus @default(PENDING)
+  sentAt        DateTime?
+  /// Set by the 1x1 open-tracking pixel route (email only).
+  openedAt      DateTime?
+  /// Set by the click-through redirect route.
+  clickedAt     DateTime?
+  failureReason String?
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact  Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, contactId])
+  @@index([campaignId, status])
+}
+
+/// The phone-number equivalent of User.marketingEmailOptOut's unsubscribe
+/// link. A campaign or an abandoned-cart phone touch (WO-8.5) may reach
+/// someone with no account row to carry an opt-out flag on — this is the
+/// durable record for that case, checked at send time by both
+/// CampaignsService and MarketingAutomationCron.
+model PhoneOptOut {
+  phoneE164  String   @id
+  optedOutAt DateTime @default(now())
+}

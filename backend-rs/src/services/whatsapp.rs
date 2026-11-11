@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
-use sqlx::SqlitePool;
+use sqlx::PgPool;
 use std::time::Duration;
 
 use crate::config::Config;
@@ -31,13 +31,13 @@ pub struct WhatsAppCredentials {
 // ---------------------------------------------------------------------------
 
 pub struct WhatsAppService {
-    pool: SqlitePool,
+    pool: PgPool,
     config: Config,
     client: reqwest::Client,
 }
 
 impl WhatsAppService {
-    pub fn new(pool: SqlitePool, config: Config) -> Self {
+    pub fn new(pool: PgPool, config: Config) -> Self {
         Self {
             pool,
             config,
@@ -747,7 +747,7 @@ impl WhatsAppService {
         let msg_id = Self::extract_message_id(&response);
         let log_id = uuid::Uuid::new_v4().to_string();
         let _ = sqlx::query(
-            "INSERT OR IGNORE INTO whatsapp_template_log (id, brand_id, template_name, message_id, status, created_at) VALUES (?1, ?2, ?3, ?4, 'sent', strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))"
+            "INSERT OR IGNORE INTO whatsapp_template_log (id, brand_id, template_name, message_id, status, created_at) VALUES (?1, ?2, ?3, ?4, 'sent', NOW()::TEXT)"
         )
         .bind(&log_id)
         .bind(brand_id)
@@ -777,7 +777,7 @@ impl WhatsAppService {
         let started = now - chrono::Duration::seconds(0);
 
         let _ = sqlx::query(
-            "INSERT OR REPLACE INTO whatsapp_session_windows (id, brand_id, contact_id, started_at, expires_at, is_active, message_count, created_at)
+            "INSERT INTO whatsapp_session_windows (id, brand_id, contact_id, started_at, expires_at, is_active, message_count, created_at)
              VALUES (?1, ?2, ?3, ?4, ?5, 1, 1, ?6)"
         )
         .bind(uuid::Uuid::new_v4().to_string())
@@ -855,9 +855,9 @@ impl WhatsAppService {
     ) -> Result<(), String> {
         let _ = sqlx::query(
             "INSERT INTO whatsapp_automation_state (id, brand_id, conversation_id, greeting_sent, csat_sent, last_menu, current_flow, metadata, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NOW()::TEXT, NOW()::TEXT)
              ON CONFLICT(brand_id, conversation_id) DO UPDATE SET
-             greeting_sent = ?4, csat_sent = ?5, last_menu = ?6, current_flow = ?7, metadata = ?8, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')"
+             greeting_sent = ?4, csat_sent = ?5, last_menu = ?6, current_flow = ?7, metadata = ?8, updated_at = NOW()::TEXT"
         )
         .bind(uuid::Uuid::new_v4().to_string())
         .bind(brand_id)

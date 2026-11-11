@@ -1,4 +1,4 @@
--- WhatsApp Channel: Templates, Customer Profiles, Session Windows, Automation State
+﻿-- WhatsApp Channel: Templates, Customer Profiles, Session Windows, Automation State
 
 -- WhatsApp templates cached from Meta Graph API
 CREATE TABLE IF NOT EXISTS whatsapp_templates (
@@ -10,9 +10,9 @@ CREATE TABLE IF NOT EXISTS whatsapp_templates (
     status TEXT DEFAULT 'approved',
     body TEXT NOT NULL,
     components TEXT,
-    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    last_synced_at TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    last_synced_at TIMESTAMPTZ,
     FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE
 );
 
@@ -27,8 +27,8 @@ CREATE TABLE IF NOT EXISTS whatsapp_customer_profiles (
     profile_name TEXT,
     profile_picture_url TEXT,
     about TEXT,
-    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
     last_fetched_at TEXT,
     FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE
 );
@@ -42,10 +42,10 @@ CREATE TABLE IF NOT EXISTS whatsapp_session_windows (
     brand_id TEXT NOT NULL,
     contact_id TEXT NOT NULL,
     started_at TEXT NOT NULL,
-    expires_at TEXT NOT NULL,
-    is_active INTEGER DEFAULT 1,
-    message_count INTEGER DEFAULT 0,
-    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    is_active BOOLEAN DEFAULT true,
+    message_count BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
     FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE
 );
 
@@ -58,13 +58,13 @@ CREATE TABLE IF NOT EXISTS whatsapp_automation_state (
     id TEXT PRIMARY KEY,
     brand_id TEXT NOT NULL,
     conversation_id TEXT NOT NULL,
-    greeting_sent INTEGER DEFAULT 0,
-    csat_sent INTEGER DEFAULT 0,
+    greeting_sent BOOLEAN DEFAULT false,
+    csat_sent BOOLEAN DEFAULT false,
     last_menu TEXT,
     current_flow TEXT,
     metadata TEXT,
-    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
     FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE
 );
 
@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS whatsapp_template_log (
     message_id TEXT,
     status TEXT,
     error TEXT,
-    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
     FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE
 );
 
@@ -99,10 +99,10 @@ CREATE TABLE IF NOT EXISTS whatsapp_automation_rules (
     trigger_value TEXT,
     action_type TEXT NOT NULL,
     action_config TEXT,
-    is_active INTEGER DEFAULT 1,
-    priority INTEGER DEFAULT 0,
-    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+    is_active BOOLEAN DEFAULT true,
+    priority BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
     FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE
 );
 
@@ -124,9 +124,9 @@ CREATE TABLE IF NOT EXISTS whatsapp_business_profile_cache (
     messaging_limit_tier TEXT,
     quality_rating TEXT,
     account_mode TEXT,
-    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
-    last_synced_at TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    last_synced_at TIMESTAMPTZ,
     FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE
 );
 

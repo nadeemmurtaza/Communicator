@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 //! Organization profile, BYOK settings, and stats endpoints.
 //!

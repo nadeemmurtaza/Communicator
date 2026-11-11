@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
@@ -312,6 +312,19 @@ pub struct Message {
     pub provider_metadata: Option<String>,
     pub sender_name: Option<String>,
     pub is_private: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct MessageFeedback {
+    pub id: String,
+    pub message_id: String,
+    pub conversation_id: String,
+    pub rating: i32,
+    pub comment: Option<String>,
+    pub author_type: String,
+    pub author_id: Option<String>,
+    pub created_at: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
@@ -2183,4 +2196,2728 @@ pub struct CampaignRetryQueue {
     pub status: String,
     pub created_at: String,
     pub updated_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Engine - Enums
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OrderStatus {
+    Draft,
+    Pending,
+    Confirmed,
+    Processing,
+    Shipped,
+    Delivered,
+    Cancelled,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PaymentStatus {
+    Pending,
+    Paid,
+    PartiallyPaid,
+    Refunded,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SyncDirection {
+    Inbound,
+    Outbound,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SyncPlatform {
+    Shopify,
+    WooCommerce,
+    Wix,
+    Square,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ShipmentStatus {
+    Pending,
+    InTransit,
+    Delivered,
+    Returned,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DeliveryEventType {
+    PickedUp,
+    InTransit,
+    OutForDelivery,
+    Delivered,
+    Returned,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum InventoryTransactionType {
+    Inbound,
+    Outbound,
+    Adjustment,
+    Transfer,
+    Reserved,
+    Released,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Engine - Category
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct Category {
+    pub id: String,
+    pub brand_id: String,
+    pub name: String,
+    pub parent_id: Option<String>,
+    pub sort_order: i32,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Engine - Product
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct Product {
+    pub id: String,
+    pub brand_id: String,
+    pub category_id: Option<String>,
+    pub name: String,
+    pub description: Option<String>,
+    pub sku: Option<String>,
+    pub price: f64,
+    pub compare_at_price: Option<f64>,
+    pub currency: String,
+    pub images: Option<String>,
+    pub variants: Option<String>,
+    pub inventory_count: i32,
+    pub track_inventory: bool,
+    pub visibility: Option<String>,
+    pub metadata: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProductVariant {
+    pub id: String,
+    pub name: String,
+    pub options: serde_json::Value,
+    pub price_adjustment: f64,
+    pub sku: Option<String>,
+    pub inventory_count: i32,
+    pub image: Option<String>,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Engine - Product Channel Visibility
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ProductChannelVisibility {
+    pub id: String,
+    pub product_id: String,
+    pub channel_type: String,
+    pub is_visible: bool,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Engine - Cart
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct Cart {
+    pub id: String,
+    pub customer_id: String,
+    pub brand_id: String,
+    pub channel_type: Option<String>,
+    pub status: String,
+    pub metadata: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct CartItem {
+    pub id: String,
+    pub cart_id: String,
+    pub product_id: String,
+    pub variant_id: Option<String>,
+    pub quantity: i32,
+    pub unit_price: f64,
+    pub metadata: Option<String>,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Engine - Orders
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct CommerceOrder {
+    pub id: String,
+    pub brand_id: String,
+    pub customer_id: String,
+    pub order_number: String,
+    pub channel_type: Option<String>,
+    pub status: String,
+    pub total_amount: f64,
+    pub subtotal: f64,
+    pub tax: f64,
+    pub shipping: f64,
+    pub currency: String,
+    pub items_snapshot: Option<String>,
+    pub shipping_address: Option<String>,
+    pub payment_status: String,
+    pub payment_method: Option<String>,
+    pub metadata: Option<String>,
+    pub source: String,
+    pub external_order_id: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct CommerceOrderItem {
+    pub id: String,
+    pub order_id: String,
+    pub product_id: String,
+    pub variant_id: Option<String>,
+    pub product_name: String,
+    pub sku: Option<String>,
+    pub quantity: i32,
+    pub unit_price: f64,
+    pub total_price: f64,
+    pub metadata: Option<String>,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Engine - Payments
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct CommercePayment {
+    pub id: String,
+    pub order_id: String,
+    pub amount: f64,
+    pub currency: String,
+    pub method: String,
+    pub status: String,
+    pub transaction_id: Option<String>,
+    pub metadata: Option<String>,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Engine - Sync
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncConnection {
+    pub id: String,
+    pub brand_id: String,
+    pub platform: String,
+    pub credentials: Option<String>,
+    pub sync_status: String,
+    pub last_sync_at: Option<String>,
+    pub metadata: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncLog {
+    pub id: String,
+    pub connection_id: String,
+    pub direction: String,
+    pub entity_type: String,
+    pub entity_id: Option<String>,
+    pub status: String,
+    pub error: Option<String>,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Engine - Discounts
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct Coupon {
+    pub id: String,
+    pub brand_id: String,
+    pub code: String,
+    pub r#type: String,
+    pub value: f64,
+    pub min_order_amount: Option<f64>,
+    pub max_discount: Option<f64>,
+    pub usage_limit: Option<i32>,
+    pub used_count: i32,
+    pub starts_at: Option<String>,
+    pub ends_at: Option<String>,
+    pub applicable_products: Option<String>,
+    pub applicable_categories: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct CouponUsage {
+    pub id: String,
+    pub coupon_id: String,
+    pub order_id: String,
+    pub customer_id: String,
+    pub discount_amount: f64,
+    pub used_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct MembershipTier {
+    pub id: String,
+    pub brand_id: String,
+    pub name: String,
+    pub discount_percent: f64,
+    pub monthly_price: Option<f64>,
+    pub benefits: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomerMembership {
+    pub id: String,
+    pub customer_id: String,
+    pub membership_tier_id: String,
+    pub started_at: String,
+    pub ends_at: Option<String>,
+    pub status: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Engine - Analytics
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct AnalyticsDailyStat {
+    pub id: String,
+    pub brand_id: String,
+    pub date: String,
+    pub orders_count: i32,
+    pub revenue: f64,
+    pub avg_order_value: f64,
+    pub unique_customers: i32,
+    pub products_sold: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct AnalyticsEvent {
+    pub id: String,
+    pub brand_id: String,
+    pub event_type: String,
+    pub entity_type: String,
+    pub entity_id: String,
+    pub properties: Option<String>,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Engine - Delivery
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ShippingMethod {
+    pub id: String,
+    pub brand_id: String,
+    pub name: String,
+    pub r#type: String,
+    pub rate: f64,
+    pub free_shipping_threshold: Option<f64>,
+    pub regions: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct Shipment {
+    pub id: String,
+    pub order_id: String,
+    pub tracking_number: Option<String>,
+    pub carrier: Option<String>,
+    pub status: String,
+    pub estimated_delivery: Option<String>,
+    pub actual_delivery: Option<String>,
+    pub shipping_label_url: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct DeliveryEvent {
+    pub id: String,
+    pub shipment_id: String,
+    pub event_type: String,
+    pub location: Option<String>,
+    pub description: Option<String>,
+    pub timestamp: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Engine - Storefront
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct Storefront {
+    pub id: String,
+    pub brand_id: String,
+    pub slug: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub theme: Option<String>,
+    pub hero_image: Option<String>,
+    pub seo_title: Option<String>,
+    pub seo_description: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct StorefrontSection {
+    pub id: String,
+    pub storefront_id: String,
+    pub section_type: String,
+    pub sort_order: i32,
+    pub content: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct StorefrontVisit {
+    pub id: String,
+    pub storefront_id: String,
+    pub visitor_ip: String,
+    pub user_agent: Option<String>,
+    pub path: String,
+    pub visited_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Engine - Inventory
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct Warehouse {
+    pub id: String,
+    pub brand_id: String,
+    pub name: String,
+    pub address: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct InventoryByWarehouse {
+    pub id: String,
+    pub product_id: String,
+    pub warehouse_id: String,
+    pub quantity: i32,
+    pub reserved_quantity: i32,
+    pub reorder_point: i32,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct InventoryTransaction {
+    pub id: String,
+    pub product_id: String,
+    pub warehouse_id: String,
+    pub transaction_type: String,
+    pub quantity: i32,
+    pub reference_type: Option<String>,
+    pub reference_id: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct LowStockAlert {
+    pub id: String,
+    pub product_id: String,
+    pub warehouse_id: String,
+    pub current_quantity: i32,
+    pub reorder_point: i32,
+    pub alerted_at: String,
+    pub acknowledged: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct BackInStockRequest {
+    pub id: String,
+    pub product_id: String,
+    pub customer_id: String,
+    pub channel_type: Option<String>,
+    pub notified_at: Option<String>,
+    pub status: String,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Engine - Sync Mapping (External ID tracking)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ExternalProductMapping {
+    pub id: String,
+    pub product_id: String,
+    pub platform: String,
+    pub connection_id: String,
+    pub external_id: String,
+    pub external_sku: Option<String>,
+    pub last_synced_at: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ExternalOrderMapping {
+    pub id: String,
+    pub order_id: String,
+    pub platform: String,
+    pub connection_id: String,
+    pub external_id: String,
+    pub external_order_number: Option<String>,
+    pub last_synced_at: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncQueueItem {
+    pub id: String,
+    pub connection_id: String,
+    pub entity_type: String,
+    pub entity_id: Option<String>,
+    pub direction: String,
+    pub payload: Option<String>,
+    pub status: String,
+    pub priority: i32,
+    pub retries: i32,
+    pub max_retries: i32,
+    pub error: Option<String>,
+    pub scheduled_at: Option<String>,
+    pub started_at: Option<String>,
+    pub completed_at: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct WebhookEvent {
+    pub id: String,
+    pub platform: String,
+    pub event_type: String,
+    pub payload: String,
+    pub processed: bool,
+    pub error: Option<String>,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Product Options/Add-ons (Gap #1)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ProductOption {
+    pub id: String,
+    pub product_id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub price_adjustment: f64,
+    pub required: bool,
+    pub max_selections: i32,
+    pub sort_order: i32,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ProductOptionValue {
+    pub id: String,
+    pub option_id: String,
+    pub name: String,
+    pub price_adjustment: f64,
+    pub sku: Option<String>,
+    pub sort_order: i32,
+    pub is_active: bool,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Delivery Fee Calculator (Gap #2)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct DeliveryFeeRule {
+    pub id: String,
+    pub brand_id: String,
+    pub name: String,
+    pub r#type: String,
+    pub base_fee: f64,
+    pub per_km_fee: f64,
+    pub per_gram_fee: f64,
+    pub max_distance: Option<f64>,
+    pub free_delivery_threshold: Option<f64>,
+    pub min_order_value: Option<f64>,
+    pub postal_codes: Option<String>,
+    pub regions: Option<String>,
+    pub is_active: bool,
+    pub sort_order: i32,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Payment Proof Upload (Gap #3)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentProof {
+    pub id: String,
+    pub order_id: String,
+    pub customer_id: String,
+    pub file_url: String,
+    pub file_name: Option<String>,
+    pub file_size: Option<i32>,
+    pub status: String,
+    pub merchant_notes: Option<String>,
+    pub verified_at: Option<String>,
+    pub verified_by: Option<String>,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Order Notifications (Gap #4)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct OrderNotificationTemplate {
+    pub id: String,
+    pub brand_id: String,
+    pub channel_type: String,
+    pub trigger_event: String,
+    pub template_name: String,
+    pub template_body: String,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct OrderNotificationLog {
+    pub id: String,
+    pub order_id: String,
+    pub customer_id: String,
+    pub channel_type: String,
+    pub trigger_event: String,
+    pub message_id: Option<String>,
+    pub status: String,
+    pub sent_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Local Payment Methods (Gap #6)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentGateway {
+    pub id: String,
+    pub brand_id: String,
+    pub name: String,
+    pub provider: String,
+    pub credentials: Option<String>,
+    pub currency: String,
+    pub is_active: bool,
+    pub sort_order: i32,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Service Types (Gap #7)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ServiceType {
+    pub id: String,
+    pub brand_id: String,
+    pub name: String,
+    pub r#type: String,
+    pub description: Option<String>,
+    pub is_active: bool,
+    pub sort_order: i32,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Delivery Schedules & Time Slots (Gap #8)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct DeliverySchedule {
+    pub id: String,
+    pub brand_id: String,
+    pub day_of_week: i32,
+    pub start_time: String,
+    pub end_time: String,
+    pub cutoff_time: Option<String>,
+    pub max_capacity: Option<i32>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct DeliveryTimeSlot {
+    pub id: String,
+    pub brand_id: String,
+    pub day_of_week: i32,
+    pub slot_start: String,
+    pub slot_end: String,
+    pub label: Option<String>,
+    pub max_orders: i32,
+    pub is_active: bool,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Invoices (Gap #9)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct Invoice {
+    pub id: String,
+    pub order_id: String,
+    pub invoice_number: String,
+    pub pdf_url: Option<String>,
+    pub issued_at: String,
+    pub due_date: Option<String>,
+    pub status: String,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - CSV Import/Export (Gap #10)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct CsvImportJob {
+    pub id: String,
+    pub brand_id: String,
+    pub entity_type: String,
+    pub file_url: String,
+    pub status: String,
+    pub total_rows: i32,
+    pub processed_rows: i32,
+    pub error_count: i32,
+    pub errors: Option<String>,
+    pub completed_at: Option<String>,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Customer Accounts (Gap #11)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomerAccount {
+    pub id: String,
+    pub customer_id: String,
+    pub email: Option<String>,
+    pub phone: Option<String>,
+    pub password_hash: Option<String>,
+    pub is_verified: bool,
+    pub last_login_at: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Customer Reviews (Gap #12)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomerReview {
+    pub id: String,
+    pub order_id: String,
+    pub customer_id: String,
+    pub product_id: Option<String>,
+    pub rating: i32,
+    pub comment: Option<String>,
+    pub is_public: bool,
+    pub status: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Loyalty/Rewards (Gap #13)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct LoyaltyProgram {
+    pub id: String,
+    pub brand_id: String,
+    pub name: String,
+    pub points_per_currency: f64,
+    pub points_expiry_days: i32,
+    pub redemption_rate: f64,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomerPoints {
+    pub id: String,
+    pub customer_id: String,
+    pub brand_id: String,
+    pub points_balance: i32,
+    pub points_earned: i32,
+    pub points_redeemed: i32,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct PointsTransaction {
+    pub id: String,
+    pub customer_id: String,
+    pub brand_id: String,
+    pub points: i32,
+    pub transaction_type: String,
+    pub reference_type: Option<String>,
+    pub reference_id: Option<String>,
+    pub description: Option<String>,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Payment Reminders (Gap #14)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentReminder {
+    pub id: String,
+    pub order_id: String,
+    pub customer_id: String,
+    pub channel_type: String,
+    pub reminder_type: String,
+    pub scheduled_at: Option<String>,
+    pub sent_at: Option<String>,
+    pub status: String,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Delivery Reminders (Gap #15)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct DeliveryReminder {
+    pub id: String,
+    pub order_id: String,
+    pub customer_id: String,
+    pub channel_type: String,
+    pub reminder_type: String,
+    pub scheduled_at: Option<String>,
+    pub sent_at: Option<String>,
+    pub status: String,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Staff Management (Gap #16)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct StaffMember {
+    pub id: String,
+    pub brand_id: String,
+    pub name: String,
+    pub email: String,
+    pub role: String,
+    pub permissions: Option<String>,
+    pub is_active: bool,
+    pub last_login_at: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - POS Sessions (Gap #17)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct PosSession {
+    pub id: String,
+    pub brand_id: String,
+    pub staff_id: Option<String>,
+    pub session_token: String,
+    pub status: String,
+    pub started_at: String,
+    pub ended_at: Option<String>,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Receipts (Gap #18)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct Receipt {
+    pub id: String,
+    pub order_id: String,
+    pub receipt_number: String,
+    pub pdf_url: Option<String>,
+    pub sent_via: Option<String>,
+    pub sent_at: Option<String>,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Commerce Inbox Threads (Gap #19)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct CommerceInboxThread {
+    pub id: String,
+    pub brand_id: String,
+    pub customer_id: String,
+    pub channel_type: String,
+    pub last_message_at: Option<String>,
+    pub unread_count: i32,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Wholesale Pricing (Gap #20)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct WholesalePricing {
+    pub id: String,
+    pub product_id: String,
+    pub customer_group: String,
+    pub price: f64,
+    pub min_quantity: i32,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Payment Fees (Gap #21)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentFee {
+    pub id: String,
+    pub order_id: String,
+    pub gateway_id: Option<String>,
+    pub fee_amount: f64,
+    pub fee_percentage: f64,
+    pub passed_to_customer: bool,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Payment Recovery (Gap #22)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentRecovery {
+    pub id: String,
+    pub order_id: String,
+    pub customer_id: String,
+    pub channel_type: String,
+    pub attempt_count: i32,
+    pub last_attempt_at: Option<String>,
+    pub status: String,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Automated Follow-ups (Gap #23)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct AutomatedFollowup {
+    pub id: String,
+    pub brand_id: String,
+    pub name: String,
+    pub trigger_type: String,
+    pub trigger_days: i32,
+    pub channel_type: String,
+    pub template_body: String,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct FollowupLog {
+    pub id: String,
+    pub followup_id: String,
+    pub customer_id: String,
+    pub channel_type: String,
+    pub sent_at: Option<String>,
+    pub status: String,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Custom Domains (Gap #24)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomDomain {
+    pub id: String,
+    pub brand_id: String,
+    pub domain: String,
+    pub storefront_id: Option<String>,
+    pub ssl_enabled: bool,
+    pub verified: bool,
+    pub dns_records: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Storefront Pages (Gap #25)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct StorefrontPage {
+    pub id: String,
+    pub storefront_id: String,
+    pub slug: String,
+    pub title: String,
+    pub content: Option<String>,
+    pub sort_order: i32,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Meta Pixels (Gap #27)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct MetaPixel {
+    pub id: String,
+    pub brand_id: String,
+    pub pixel_id: String,
+    pub access_token: Option<String>,
+    pub events: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Checkout Questions (Gap #29)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct CheckoutQuestion {
+    pub id: String,
+    pub brand_id: String,
+    pub question: String,
+    pub question_type: String,
+    pub options: Option<String>,
+    pub is_required: bool,
+    pub sort_order: i32,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct CheckoutQuestionAnswer {
+    pub id: String,
+    pub order_id: String,
+    pub question_id: String,
+    pub answer: String,
+    pub created_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// Commerce Gaps - Delivery Proofs (Gap #30)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct DeliveryProof {
+    pub id: String,
+    pub shipment_id: String,
+    pub order_id: String,
+    pub file_url: String,
+    pub file_name: Option<String>,
+    pub uploaded_by: Option<String>,
+    pub uploaded_at: String,
+}
+
+// ---------------------------------------------------------------------------
+// ERP Catalog Module (Port of catalog.prisma — 790 lines)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ErpProductKind {
+    Goods,
+    Service,
+    Digital,
+    Stitched,
+    Unstitched,
+    StitchingService,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ErpProductStatus {
+    Draft,
+    Active,
+    Archived,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ErpOptionDisplay {
+    Button,
+    Dropdown,
+    Swatch,
+    Text,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ErpCollectionSortStrategy {
+    Manual,
+    BestSelling,
+    Newest,
+    PriceAsc,
+    PriceDesc,
+    Margin,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ErpAiSuggestionKind {
+    AltText,
+    MetaTitle,
+    MetaDescription,
+    Description,
+    CareInstructions,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ErpAiSuggestionStatus {
+    Pending,
+    Approved,
+    Rejected,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpCategory {
+    pub id: String,
+    pub slug: String,
+    pub code: Option<String>,
+    pub parent_id: Option<String>,
+    pub image_url: Option<String>,
+    pub sort_order: i32,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpCategoryTranslation {
+    pub id: String,
+    pub category_id: String,
+    pub locale: String,
+    pub name: String,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpBrand {
+    pub id: String,
+    pub slug: String,
+    pub logo_url: Option<String>,
+    pub sort_order: i32,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpBrandTranslation {
+    pub id: String,
+    pub brand_id: String,
+    pub locale: String,
+    pub name: String,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpProduct {
+    pub id: String,
+    pub slug: String,
+    pub kind: String,
+    pub status: String,
+    pub category_id: Option<String>,
+    pub base_price: i64,
+    pub compare_at_price: Option<i64>,
+    pub brand_id: Option<String>,
+    pub fabric: Option<String>,
+    pub season: Option<String>,
+    pub tags: String,
+    pub code: Option<String>,
+    pub noindex: bool,
+    pub canonical_override: Option<String>,
+    pub piece_count: Option<i32>,
+    pub fabric_meters: Option<f64>,
+    pub stitching_available: bool,
+    pub is_consumable: bool,
+    pub garment_type_id: Option<String>,
+    pub shipping_class_id: Option<String>,
+    pub featured_rank: i32,
+    pub published_at: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpProductTranslation {
+    pub id: String,
+    pub product_id: String,
+    pub locale: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub care_instructions: Option<String>,
+    pub meta_title: Option<String>,
+    pub meta_description: Option<String>,
+    pub focus_keyword: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpProductVariant {
+    pub id: String,
+    pub product_id: String,
+    pub sku: String,
+    pub size: Option<String>,
+    pub color: Option<String>,
+    pub color_hex: Option<String>,
+    pub label: Option<String>,
+    pub price_override: Option<i64>,
+    pub stock: i32,
+    pub low_stock_threshold: i32,
+    pub is_active: bool,
+    pub cost_price: i64,
+    pub reorder_point: Option<i32>,
+    pub reorder_quantity: Option<i32>,
+    pub preferred_supplier_id: Option<String>,
+    pub barcode: Option<String>,
+    pub sku_is_manual: bool,
+    pub produced_in_house: bool,
+    pub lot_tracked: bool,
+    pub tracks_serials: bool,
+    pub warranty_months: Option<i32>,
+    pub tax_class_id: Option<String>,
+    pub sort_order: i32,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpProductImage {
+    pub id: String,
+    pub product_id: String,
+    pub variant_id: Option<String>,
+    pub url: String,
+    pub alt: Option<String>,
+    pub sort_order: i32,
+    pub is_primary: bool,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpProductImageTranslation {
+    pub id: String,
+    pub image_id: String,
+    pub locale: String,
+    pub alt: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpProductOption {
+    pub id: String,
+    pub product_id: String,
+    pub key: String,
+    pub display: String,
+    pub sort_order: i32,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpProductOptionTranslation {
+    pub id: String,
+    pub option_id: String,
+    pub locale: String,
+    pub label: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpProductOptionValue {
+    pub id: String,
+    pub option_id: String,
+    pub key: String,
+    pub swatch_hex: Option<String>,
+    pub swatch_url: Option<String>,
+    pub sort_order: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpProductOptionValueTranslation {
+    pub id: String,
+    pub value_id: String,
+    pub locale: String,
+    pub label: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpVariantOptionValue {
+    pub variant_id: String,
+    pub option_id: String,
+    pub value_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpOptionTemplate {
+    pub id: String,
+    pub key: String,
+    pub display: String,
+    pub sort_order: i32,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpOptionTemplateValue {
+    pub id: String,
+    pub template_id: String,
+    pub key: String,
+    pub swatch_hex: Option<String>,
+    pub swatch_url: Option<String>,
+    pub sort_order: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpCollection {
+    pub id: String,
+    pub slug: String,
+    pub rule: Option<String>,
+    pub sort_strategy: String,
+    pub image_url: Option<String>,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpCollectionTranslation {
+    pub id: String,
+    pub collection_id: String,
+    pub locale: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub meta_title: Option<String>,
+    pub meta_description: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpCollectionProduct {
+    pub collection_id: String,
+    pub product_id: String,
+    pub sort_order: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpRedirect {
+    pub id: String,
+    pub from_path: String,
+    pub to_path: String,
+    pub status_code: i32,
+    pub is_automatic: bool,
+    pub hit_count: i32,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpStockAdjustment {
+    pub id: String,
+    pub variant_id: String,
+    pub delta: i32,
+    pub resulting_stock: i32,
+    pub reason: String,
+    pub note: Option<String>,
+    pub actor_id: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpProductSizeBias {
+    pub product_id: String,
+    pub too_small_pct: f64,
+    pub true_to_size_pct: f64,
+    pub too_large_pct: f64,
+    pub sample_size: i32,
+    pub shift: i32,
+    pub computed_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpProductCrossSell {
+    pub source_product_id: String,
+    pub target_product_id: String,
+    pub label: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpProductAiSuggestion {
+    pub id: String,
+    pub product_id: String,
+    pub image_id: Option<String>,
+    pub kind: String,
+    pub locale: String,
+    pub suggested_text: String,
+    pub status: String,
+    pub created_at: String,
+    pub reviewed_at: Option<String>,
+    pub reviewed_by_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpCategoryPreset {
+    pub id: String,
+    pub key: String,
+    pub label: String,
+    pub tree_json: String,
+    pub description: Option<String>,
+}
+
+// Request/Response DTOs for catalog API
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateCategoryRequest {
+    pub slug: String,
+    pub code: Option<String>,
+    pub parent_id: Option<String>,
+    pub image_url: Option<String>,
+    pub sort_order: Option<i32>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateCategoryRequest {
+    pub slug: Option<String>,
+    pub code: Option<String>,
+    pub parent_id: Option<String>,
+    pub image_url: Option<String>,
+    pub sort_order: Option<i32>,
+    pub is_active: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateProductRequest {
+    pub slug: String,
+    pub kind: String,
+    pub category_id: Option<String>,
+    pub base_price: i64,
+    pub compare_at_price: Option<i64>,
+    pub brand_id: Option<String>,
+    pub fabric: Option<String>,
+    pub season: Option<String>,
+    pub tags: Option<Vec<String>>,
+    pub code: Option<String>,
+    pub piece_count: Option<i32>,
+    pub fabric_meters: Option<f64>,
+    pub stitching_available: Option<bool>,
+    pub is_consumable: Option<bool>,
+    pub featured_rank: Option<i32>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateProductRequest {
+    pub slug: Option<String>,
+    pub kind: Option<String>,
+    pub status: Option<String>,
+    pub category_id: Option<String>,
+    pub base_price: Option<i64>,
+    pub compare_at_price: Option<i64>,
+    pub brand_id: Option<String>,
+    pub fabric: Option<String>,
+    pub season: Option<String>,
+    pub tags: Option<Vec<String>>,
+    pub code: Option<String>,
+    pub piece_count: Option<i32>,
+    pub fabric_meters: Option<f64>,
+    pub stitching_available: Option<bool>,
+    pub is_consumable: Option<bool>,
+    pub featured_rank: Option<i32>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateVariantRequest {
+    pub product_id: String,
+    pub sku: String,
+    pub size: Option<String>,
+    pub color: Option<String>,
+    pub color_hex: Option<String>,
+    pub label: Option<String>,
+    pub price_override: Option<i64>,
+    pub stock: Option<i32>,
+    pub low_stock_threshold: Option<i32>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateVariantRequest {
+    pub sku: Option<String>,
+    pub size: Option<String>,
+    pub color: Option<String>,
+    pub color_hex: Option<String>,
+    pub label: Option<String>,
+    pub price_override: Option<i64>,
+    pub stock: Option<i32>,
+    pub low_stock_threshold: Option<i32>,
+    pub is_active: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateProductImageRequest {
+    pub product_id: String,
+    pub variant_id: Option<String>,
+    pub url: String,
+    pub alt: Option<String>,
+    pub sort_order: Option<i32>,
+    pub is_primary: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateProductOptionRequest {
+    pub product_id: String,
+    pub key: String,
+    pub display: Option<String>,
+    pub sort_order: Option<i32>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateOptionValueRequest {
+    pub option_id: String,
+    pub key: String,
+    pub swatch_hex: Option<String>,
+    pub swatch_url: Option<String>,
+    pub sort_order: Option<i32>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateCollectionRequest {
+    pub slug: String,
+    pub rule: Option<String>,
+    pub sort_strategy: Option<String>,
+    pub image_url: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StockAdjustmentRequest {
+    pub variant_id: String,
+    pub delta: i32,
+    pub reason: String,
+    pub note: Option<String>,
+}
+
+// ============================================================
+// ERP Orders Module (orders.prisma — 369 lines)
+// ============================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpOrder {
+    pub id: String,
+    pub number: String,
+    pub user_id: Option<String>,
+    pub contact_id: Option<String>,
+    pub status: String,
+    pub currency: String,
+    pub channel: String,
+    pub location_id: Option<String>,
+    pub terminal_id: Option<String>,
+    pub shift_id: Option<String>,
+    pub origin_node_id: Option<String>,
+    pub guest_name: Option<String>,
+    pub guest_email: Option<String>,
+    pub guest_phone: Option<String>,
+    pub source_cart_id: Option<String>,
+    pub shipping_address: serde_json::Value,
+    pub billing_address: Option<serde_json::Value>,
+    pub items_subtotal: i64,
+    pub stitching_subtotal: i64,
+    pub item_discount_total: i64,
+    pub order_discount: i64,
+    pub shipping_fee: i64,
+    pub cod_fee: i64,
+    pub tax_amount: i64,
+    pub grand_total: i64,
+    pub shipping_zone: Option<String>,
+    pub customer_note: Option<String>,
+    pub staff_note: Option<String>,
+    pub cancel_reason: Option<String>,
+    pub placed_at: String,
+    pub confirmed_at: Option<String>,
+    pub delivered_at: Option<String>,
+    pub cancelled_at: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+    pub review_request_sent_at: Option<String>,
+    pub cod_risk_score: Option<i32>,
+    pub cod_risk_action: Option<String>,
+    pub cod_risk_computed_at: Option<String>,
+    pub cod_risk_reason_en: Option<String>,
+    pub source_type: Option<String>,
+    pub source_ref: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpOrderItem {
+    pub id: String,
+    pub order_id: String,
+    pub product_id: Option<String>,
+    pub variant_id: Option<String>,
+    pub kind: String,
+    pub name_en: String,
+    pub name_ur: Option<String>,
+    pub sku: Option<String>,
+    pub image_url: Option<String>,
+    pub variant_label: Option<String>,
+    pub unit_price: i64,
+    pub unit_cost: i64,
+    pub quantity: i32,
+    pub stitching_fee_unit: i64,
+    pub discount_unit: i64,
+    pub line_total: i64,
+    pub tax_amount: i64,
+    pub tax_rate_bps: i64,
+    pub stitching_service_id: Option<String>,
+    pub stitching_service_name: Option<String>,
+    pub garment_type_key: Option<String>,
+    pub measurement_snapshot: Option<serde_json::Value>,
+    pub options_snapshot: Option<serde_json::Value>,
+    pub stitching_notes: Option<String>,
+    pub measurement_values: Option<serde_json::Value>,
+    pub custom_design_text: Option<serde_json::Value>,
+    pub size_token: Option<String>,
+    pub replenishment_reminder_sent_at: Option<String>,
+    pub fulfillment_status: String,
+    pub awaiting_since: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpOrderStatusEvent {
+    pub id: String,
+    pub order_id: String,
+    pub from_status: Option<String>,
+    pub to_status: String,
+    pub note: Option<String>,
+    pub actor_id: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpCart {
+    pub id: String,
+    pub user_id: Option<String>,
+    pub contact_id: Option<String>,
+    pub guest_name: Option<String>,
+    pub guest_email: Option<String>,
+    pub guest_phone: Option<String>,
+    pub status: String,
+    pub metadata: serde_json::Value,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpCartItem {
+    pub id: String,
+    pub cart_id: String,
+    pub product_id: String,
+    pub variant_id: Option<String>,
+    pub quantity: i32,
+    pub metadata: serde_json::Value,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpShipment {
+    pub id: String,
+    pub order_id: String,
+    pub courier: String,
+    pub tracking_number: Option<String>,
+    pub tracking_url: Option<String>,
+    pub status: String,
+    pub cost: Option<i64>,
+    pub dispatched_at: Option<String>,
+    pub delivered_at: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+    pub method_id: Option<String>,
+    pub weight_grams: Option<i32>,
+    pub package_count: i32,
+    pub label_url: Option<String>,
+    pub manifest_id: Option<String>,
+    pub meta: Option<serde_json::Value>,
+    pub is_rto: bool,
+    pub rto_at: Option<String>,
+    pub failed_attempts: i32,
+    pub last_polled_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpShipmentItem {
+    pub id: String,
+    pub shipment_id: String,
+    pub order_item_id: String,
+    pub quantity: i32,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpShipmentEvent {
+    pub id: String,
+    pub shipment_id: String,
+    pub event_type: String,
+    pub location: Option<String>,
+    pub description: Option<String>,
+    pub timestamp: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpCityCodRiskStat {
+    pub city: String,
+    pub total_shipments: i32,
+    pub rto_shipments: i32,
+    pub avg_order_value: i64,
+    pub computed_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpOrderNumberCounter {
+    pub year: i32,
+    pub counter: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpBackInStockRequest {
+    pub id: String,
+    pub product_id: String,
+    pub variant_id: Option<String>,
+    pub customer_email: String,
+    pub status: String,
+    pub notified_at: Option<String>,
+    pub created_at: String,
+}
+
+// ============================================================
+// ERP Orders Request/Response DTOs
+// ============================================================
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateOrderRequest {
+    pub user_id: Option<String>,
+    pub contact_id: Option<String>,
+    pub guest_name: Option<String>,
+    pub guest_email: Option<String>,
+    pub guest_phone: Option<String>,
+    pub source_cart_id: Option<String>,
+    pub shipping_address: serde_json::Value,
+    pub billing_address: Option<serde_json::Value>,
+    pub currency: Option<String>,
+    pub shipping_zone: Option<String>,
+    pub customer_note: Option<String>,
+    pub items: Vec<CreateOrderItemRequest>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateOrderItemRequest {
+    pub product_id: String,
+    pub variant_id: Option<String>,
+    pub kind: Option<String>,
+    pub name_en: String,
+    pub name_ur: Option<String>,
+    pub sku: Option<String>,
+    pub image_url: Option<String>,
+    pub variant_label: Option<String>,
+    pub unit_price: i64,
+    pub unit_cost: i64,
+    pub quantity: i32,
+    pub stitching_fee_unit: Option<i64>,
+    pub discount_unit: Option<i64>,
+    pub tax_rate_bps: Option<i64>,
+    pub stitching_service_id: Option<String>,
+    pub stitching_service_name: Option<String>,
+    pub garment_type_key: Option<String>,
+    pub measurement_snapshot: Option<serde_json::Value>,
+    pub options_snapshot: Option<serde_json::Value>,
+    pub stitching_notes: Option<String>,
+    pub measurement_values: Option<serde_json::Value>,
+    pub custom_design_text: Option<serde_json::Value>,
+    pub size_token: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateOrderStatusRequest {
+    pub status: String,
+    pub note: Option<String>,
+    pub actor_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateCartRequest {
+    pub user_id: Option<String>,
+    pub contact_id: Option<String>,
+    pub guest_name: Option<String>,
+    pub guest_email: Option<String>,
+    pub guest_phone: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateCartItemRequest {
+    pub cart_id: String,
+    pub product_id: String,
+    pub variant_id: Option<String>,
+    pub quantity: i32,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateCartItemRequest {
+    pub quantity: i32,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CheckoutCartRequest {
+    pub cart_id: String,
+    pub shipping_address: serde_json::Value,
+    pub billing_address: Option<serde_json::Value>,
+    pub customer_note: Option<String>,
+    pub currency: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateShipmentRequest {
+    pub order_id: String,
+    pub courier: Option<String>,
+    pub tracking_number: Option<String>,
+    pub tracking_url: Option<String>,
+    pub weight_grams: Option<i32>,
+    pub package_count: Option<i32>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateShipmentStatusRequest {
+    pub status: String,
+    pub tracking_number: Option<String>,
+    pub tracking_url: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateShipmentEventRequest {
+    pub shipment_id: String,
+    pub event_type: String,
+    pub location: Option<String>,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateBackInStockRequestRequest {
+    pub product_id: String,
+    pub variant_id: Option<String>,
+    pub customer_email: String,
+}
+
+// ============================================================
+// ERP Payments Module (payments.prisma — 55 lines)
+// ============================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpPayment {
+    pub id: String,
+    pub order_id: String,
+    pub provider: String,
+    pub status: String,
+    pub amount: i64,
+    pub currency: String,
+    pub reference: Option<String>,
+    pub provider_ref: Option<String>,
+    pub meta: Option<serde_json::Value>,
+    pub receipt_url: Option<String>,
+    pub failure_reason: Option<String>,
+    pub approved_by_id: Option<String>,
+    pub paid_at: Option<String>,
+    pub refunded_at: Option<String>,
+    pub refund_amount: Option<i64>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpPaymentMethod {
+    pub id: String,
+    pub name: String,
+    pub code: String,
+    pub config: serde_json::Value,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// ============================================================
+// ERP Payments Request/Response DTOs
+// ============================================================
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreatePaymentRequest {
+    pub order_id: String,
+    pub provider: String,
+    pub amount: i64,
+    pub currency: Option<String>,
+    pub reference: Option<String>,
+    pub meta: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdatePaymentStatusRequest {
+    pub status: String,
+    pub provider_ref: Option<String>,
+    pub receipt_url: Option<String>,
+    pub failure_reason: Option<String>,
+    pub approved_by_id: Option<String>,
+    pub meta: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RefundPaymentRequest {
+    pub refund_amount: i64,
+    pub reason: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UploadReceiptRequest {
+    pub receipt_url: String,
+    pub meta: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreatePaymentMethodRequest {
+    pub name: String,
+    pub code: String,
+    pub config: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdatePaymentMethodRequest {
+    pub name: Option<String>,
+    pub config: Option<serde_json::Value>,
+    pub is_active: Option<bool>,
+}
+
+// ============================================================
+// ERP Fulfilment Module (fulfilment.prisma — 281 lines)
+// Returns/RMA, shipping zones, methods, rates, manifests
+// ============================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpShippingZone {
+    pub id: String,
+    pub key: String,
+    pub sort_order: i32,
+    pub cities: String,
+    pub is_active: bool,
+    pub is_catch_all: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpShippingMethod {
+    pub id: String,
+    pub key: String,
+    pub courier_key: Option<String>,
+    pub eta_min_days: i32,
+    pub eta_max_days: i32,
+    pub is_active: bool,
+    pub sort_order: i32,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpShippingRate {
+    pub id: String,
+    pub zone_id: String,
+    pub method_id: String,
+    pub rate_type: String,
+    pub fee: i32,
+    pub base_fee: i32,
+    pub included_units: i32,
+    pub free_above: Option<i32>,
+    pub min_value: Option<i32>,
+    pub max_value: Option<i32>,
+    pub is_active: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpShippingClass {
+    pub id: String,
+    pub key: String,
+    pub handling_fee: i32,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpManifest {
+    pub id: String,
+    pub number: String,
+    pub courier_key: String,
+    pub status: String,
+    pub dispatched_at: Option<String>,
+    pub created_by_id: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpReturnReasonCode {
+    pub id: String,
+    pub key: String,
+    pub is_active: bool,
+    pub sort_order: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpReturnRequest {
+    pub id: String,
+    pub number: String,
+    pub order_id: String,
+    pub user_id: Option<String>,
+    pub status: String,
+    pub resolution: Option<String>,
+    pub customer_note: Option<String>,
+    pub staff_note: Option<String>,
+    pub photo_urls: String,
+    pub requested_at: String,
+    pub approved_at: Option<String>,
+    pub received_at: Option<String>,
+    pub inspected_at: Option<String>,
+    pub refunded_at: Option<String>,
+    pub refund_amount: Option<i32>,
+    pub restocking_fee_minor: Option<i32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpReturnRequestItem {
+    pub id: String,
+    pub return_id: String,
+    pub order_item_id: String,
+    pub reason_id: String,
+    pub quantity: i32,
+    pub restockable: Option<bool>,
+    pub restocked: bool,
+}
+
+// ERP Fulfilment Request DTOs
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateShippingZoneRequest {
+    pub key: String,
+    pub cities: Option<Vec<String>>,
+    pub is_catch_all: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateShippingZoneRequest {
+    pub cities: Option<Vec<String>>,
+    pub is_active: Option<bool>,
+    pub is_catch_all: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateShippingMethodRequest {
+    pub key: String,
+    pub courier_key: Option<String>,
+    pub eta_min_days: Option<i32>,
+    pub eta_max_days: Option<i32>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateShippingMethodRequest {
+    pub courier_key: Option<String>,
+    pub eta_min_days: Option<i32>,
+    pub eta_max_days: Option<i32>,
+    pub is_active: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateShippingRateRequest {
+    pub zone_id: String,
+    pub method_id: String,
+    pub rate_type: Option<String>,
+    pub fee: i32,
+    pub base_fee: Option<i32>,
+    pub included_units: Option<i32>,
+    pub free_above: Option<i32>,
+    pub min_value: Option<i32>,
+    pub max_value: Option<i32>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateReturnRequestRequest {
+    pub order_id: String,
+    pub user_id: Option<String>,
+    pub customer_note: Option<String>,
+    pub photo_urls: Option<Vec<String>>,
+    pub items: Vec<CreateReturnItemRequest>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateReturnItemRequest {
+    pub order_item_id: String,
+    pub reason_id: String,
+    pub quantity: i32,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateReturnStatusRequest {
+    pub status: String,
+    pub resolution: Option<String>,
+    pub staff_note: Option<String>,
+    pub refund_amount: Option<i32>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InspectReturnItemRequest {
+    pub return_item_id: String,
+    pub restockable: bool,
+    pub restocked: bool,
+}
+
+// ============================================================
+// ERP Inventory Module (inventory.prisma — 535 lines)
+// ============================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpLocation {
+    pub id: String,
+    pub name: String,
+    pub code: String,
+    pub r#type: String,
+    pub retail_brand_id: Option<String>,
+    pub origin_node_id: Option<String>,
+    pub is_default: bool,
+    pub is_active: bool,
+    pub address: Option<serde_json::Value>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpVariantLocationStock {
+    pub variant_id: String,
+    pub location_id: String,
+    pub quantity: i32,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpStockMovement {
+    pub id: String,
+    pub variant_id: String,
+    pub delta: i32,
+    pub resulting_stock: i32,
+    pub reason: String,
+    pub location_id: Option<String>,
+    pub ref_type: Option<String>,
+    pub ref_id: Option<String>,
+    pub unit_cost: Option<i32>,
+    pub note: Option<String>,
+    pub actor_id: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpStockVariance {
+    pub id: String,
+    pub variant_id: String,
+    pub location_id: String,
+    pub overshoot_qty: i32,
+    pub stock_movement_id: String,
+    pub ref_type: Option<String>,
+    pub ref_id: Option<String>,
+    pub status: String,
+    pub resolved_by_user_id: Option<String>,
+    pub resolved_at: Option<String>,
+    pub resolution_note: Option<String>,
+    pub pos_shift_id: Option<String>,
+    pub serialized_unit_id: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpSpotCheckPolicy {
+    pub id: String,
+    pub location_id: Option<String>,
+    pub min_skus_per_check: i32,
+    pub frequency_days: i32,
+    pub is_active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpSpotCheck {
+    pub id: String,
+    pub policy_id: String,
+    pub location_id: String,
+    pub status: String,
+    pub scheduled_for: String,
+    pub started_at: Option<String>,
+    pub completed_at: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpSpotCheckLine {
+    pub id: String,
+    pub spot_check_id: String,
+    pub variant_id: String,
+    pub expected: i32,
+    pub counted: Option<i32>,
+    pub variance: Option<i32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpVariantSalesStat {
+    pub variant_id: String,
+    pub units_30: i32,
+    pub units_90: i32,
+    pub last_sold_at: Option<String>,
+    pub days_of_cover: Option<f64>,
+    pub age_days: Option<i32>,
+    pub is_slow_mover: bool,
+    pub is_dead_stock: bool,
+    pub last_low_stock_alert_at: Option<String>,
+    pub computed_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpVariantForecast {
+    pub variant_id: String,
+    pub forecasted_daily_demand: f64,
+    pub seasonal_factor: Option<f64>,
+    pub projected_stockout_at: Option<String>,
+    pub reason_en: Option<String>,
+    pub computed_at: String,
+    pub safety_stock_units: Option<i32>,
+    pub suggested_reorder_point: Option<i32>,
+    pub service_level_percent: Option<i32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpMarkdownSuggestion {
+    pub id: String,
+    pub variant_id: String,
+    pub discount_id: Option<String>,
+    pub suggested_bps: i32,
+    pub estimated_clearance_pct: f64,
+    pub estimated_clearance_days: i32,
+    pub margin_before_paisa: i32,
+    pub margin_after_paisa: i32,
+    pub status: String,
+    pub created_at: String,
+    pub resolved_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpLot {
+    pub id: String,
+    pub product_variant_id: String,
+    pub lot_code: String,
+    pub expires_on: Option<String>,
+    pub received_on: String,
+    pub source_receipt_id: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpLotStock {
+    pub id: String,
+    pub lot_id: String,
+    pub location_id: String,
+    pub quantity: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpLotAllocation {
+    pub id: String,
+    pub lot_id: String,
+    pub stock_movement_id: String,
+    pub quantity: i32,
+    pub allocated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpSerializedUnit {
+    pub id: String,
+    pub product_variant_id: String,
+    pub serial_number: String,
+    pub status: String,
+    pub lot_id: Option<String>,
+    pub location_id: Option<String>,
+    pub order_id: Option<String>,
+    pub stock_movement_id: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpStockCount {
+    pub id: String,
+    pub count_number: String,
+    pub status: String,
+    pub note: Option<String>,
+    pub started_at: Option<String>,
+    pub completed_at: Option<String>,
+    pub cancelled_at: Option<String>,
+    pub created_by: Option<String>,
+    pub assigned_to: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct ErpStockCountLine {
+    pub id: String,
+    pub stock_count_id: String,
+    pub variant_id: String,
+    pub expected: Option<i32>,
+    pub counted: Option<i32>,
+    pub note: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+// ============================================================
+// ERP Inventory Request/Response DTOs
+// ============================================================
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateLocationRequest {
+    pub name: String,
+    pub code: String,
+    pub r#type: Option<String>,
+    pub address: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateLocationRequest {
+    pub name: Option<String>,
+    pub r#type: Option<String>,
+    pub is_active: Option<bool>,
+    pub address: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateStockMovementRequest {
+    pub variant_id: String,
+    pub delta: i32,
+    pub reason: String,
+    pub location_id: Option<String>,
+    pub ref_type: Option<String>,
+    pub ref_id: Option<String>,
+    pub unit_cost: Option<i32>,
+    pub note: Option<String>,
+    pub actor_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateStockVarianceRequest {
+    pub variant_id: String,
+    pub location_id: String,
+    pub overshoot_qty: i32,
+    pub stock_movement_id: String,
+    pub ref_type: Option<String>,
+    pub ref_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResolveVarianceRequest {
+    pub resolved_by_user_id: String,
+    pub resolution_note: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateSpotCheckPolicyRequest {
+    pub location_id: Option<String>,
+    pub min_skus_per_check: i32,
+    pub frequency_days: i32,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateSpotCheckRequest {
+    pub policy_id: String,
+    pub location_id: String,
+    pub scheduled_for: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateSpotCheckLineRequest {
+    pub spot_check_id: String,
+    pub variant_id: String,
+    pub expected: i32,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateSpotCheckLineRequest {
+    pub counted: i32,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateLotRequest {
+    pub product_variant_id: String,
+    pub lot_code: String,
+    pub expires_on: Option<String>,
+    pub source_receipt_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateLotStockRequest {
+    pub lot_id: String,
+    pub location_id: String,
+    pub quantity: i32,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateLotAllocationRequest {
+    pub lot_id: String,
+    pub stock_movement_id: String,
+    pub quantity: i32,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateSerializedUnitRequest {
+    pub product_variant_id: String,
+    pub serial_number: String,
+    pub lot_id: Option<String>,
+    pub location_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateSerializedUnitStatusRequest {
+    pub status: String,
+    pub order_id: Option<String>,
+    pub location_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateStockCountRequest {
+    pub count_number: Option<String>,
+    pub note: Option<String>,
+    pub assigned_to: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateStockCountLineRequest {
+    pub stock_count_id: String,
+    pub variant_id: String,
+    pub expected: Option<i32>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateStockCountLineRequest {
+    pub counted: i32,
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateVariantForecastRequest {
+    pub variant_id: String,
+    pub forecasted_daily_demand: f64,
+    pub seasonal_factor: Option<f64>,
+    pub reason_en: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateMarkdownSuggestionRequest {
+    pub variant_id: String,
+    pub suggested_bps: i32,
+    pub estimated_clearance_pct: f64,
+    pub estimated_clearance_days: i32,
+    pub margin_before_paisa: i32,
+    pub margin_after_paisa: i32,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateMarkdownSuggestionStatusRequest {
+    pub status: String,
+    pub discount_id: Option<String>,
+}
+
+// ---------------------------------------------------------------------------
+// Phase 35: Embed Widget
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct EmbedWidgetConfig {
+    pub id: String,
+    pub org_id: String,
+    pub name: String,
+    pub widget_type: String,
+    pub status: String,
+    pub settings: serde_json::Value,
+    pub styles: serde_json::Value,
+    pub trigger_config: serde_json::Value,
+    pub domain_whitelist: Option<serde_json::Value>,
+    pub install_count: i32,
+    pub last_installed_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateEmbedWidgetRequest {
+    pub name: String,
+    pub widget_type: String,
+    pub settings: Option<serde_json::Value>,
+    pub styles: Option<serde_json::Value>,
+    pub trigger_config: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordWidgetEventRequest {
+    pub instance_id: String,
+    pub event_type: String,
+    pub payload: Option<serde_json::Value>,
 }

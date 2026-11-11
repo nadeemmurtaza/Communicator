@@ -49,8 +49,8 @@ export function OrganizationProfile() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-        <span className="ml-2 text-sm text-gray-500">Loading organization profile...</span>
+        <Loader2 className="h-6 w-6 animate-spin text-[var(--color-ink-faint)]" />
+        <span className="ml-2 text-sm text-[var(--color-ink-faint)]">Loading organization profile...</span>
       </div>
     )
   }
@@ -69,7 +69,7 @@ export function OrganizationProfile() {
           </p>
         </div>
         {saved && (
-          <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-3 py-1.5 rounded-lg">
+          <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-3 py-1.5 rounded-[var(--radius-md)]">
             <CheckCircle2 className="h-4 w-4" />
             <span>Saved</span>
           </div>
@@ -77,7 +77,7 @@ export function OrganizationProfile() {
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>{error}</span>
         </div>
@@ -111,13 +111,13 @@ export function OrganizationProfile() {
               <label className="block text-sm font-medium text-[var(--color-ink)] mb-1">Address</label>
               <input value={data?.organizationAddress || ''}
                 onChange={(e) => update('organizationAddress', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-accent)] focus:outline-none" />
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm focus:ring-2 focus:ring-[var(--color-accent)] focus:outline-none" />
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-[var(--color-ink)] mb-1">Business Description</label>
               <textarea rows={3} value={data?.businessDescription || ''}
                 onChange={(e) => update('businessDescription', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-accent)] focus:outline-none resize-none" />
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm focus:ring-2 focus:ring-[var(--color-accent)] focus:outline-none resize-none" />
             </div>
           </div>
         </Section>
@@ -126,11 +126,11 @@ export function OrganizationProfile() {
         <Section title="Channel Connections">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {Object.entries(connections).map(([channel, status]: [string, any]) => (
-              <div key={channel} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+              <div key={channel} className="flex items-center justify-between p-3 border border-[var(--color-border)] rounded-[var(--radius-md)]">
                 <div className="flex items-center gap-3">
                   {status?.connected
                     ? <CheckCircle2 className="h-5 w-5 text-green-500" />
-                    : <XCircle className="h-5 w-5 text-gray-300" />
+                    : <XCircle className="h-5 w-5 text-[var(--color-ink-faint)]" />
                   }
                   <div>
                     <p className="text-sm font-medium text-[var(--color-ink)] capitalize">{channel}</p>
@@ -144,7 +144,7 @@ export function OrganizationProfile() {
                 <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                   status?.connected
                     ? 'bg-green-100 text-green-700'
-                    : 'bg-gray-100 text-gray-500'
+                    : 'bg-[var(--color-accent-muted)] text-[var(--color-ink-faint)]'
                 }`}>
                   {status?.connected ? 'Connected' : 'Not configured'}
                 </span>
@@ -156,19 +156,19 @@ export function OrganizationProfile() {
         {/* AI Agent Status */}
         <Section title="AI Agent">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 border border-gray-200 rounded-lg">
+            <div className="p-4 border border-[var(--color-border)] rounded-[var(--radius-md)]">
               <p className="text-xs text-[var(--color-ink-muted)] mb-1">Status</p>
-              <p className={`text-sm font-semibold ${data?.aiAgentEnabled ? 'text-green-600' : 'text-gray-400'}`}>
+              <p className={`text-sm font-semibold ${data?.aiAgentEnabled ? 'text-green-600' : 'text-[var(--color-ink-faint)]'}`}>
                 {data?.aiAgentEnabled ? 'Enabled' : 'Disabled'}
               </p>
             </div>
-            <div className="p-4 border border-gray-200 rounded-lg">
+            <div className="p-4 border border-[var(--color-border)] rounded-[var(--radius-md)]">
               <p className="text-xs text-[var(--color-ink-muted)] mb-1">Tone</p>
               <p className="text-sm font-semibold text-[var(--color-ink)] capitalize">
                 {data?.aiAgentTone || 'professional'}
               </p>
             </div>
-            <div className="p-4 border border-gray-200 rounded-lg">
+            <div className="p-4 border border-[var(--color-border)] rounded-[var(--radius-md)]">
               <p className="text-xs text-[var(--color-ink-muted)] mb-1">Auto-reply Confidence</p>
               <p className="text-sm font-semibold text-[var(--color-ink)]">
                 {data?.aiAgentAutoReplyConfidence ?? 0.85}
@@ -179,7 +179,7 @@ export function OrganizationProfile() {
 
         <div className="flex justify-end">
           <button type="submit" disabled={saving}
-            className="px-4 py-2 bg-[var(--color-accent)] text-[var(--color-on-accent)] text-sm font-medium rounded-lg hover:opacity-90 transition disabled:opacity-50 flex items-center gap-2">
+            className="px-4 py-2 bg-[var(--color-accent)] text-[var(--color-on-accent)] text-sm font-medium rounded-[var(--radius-md)] hover:opacity-90 transition disabled:opacity-50 flex items-center gap-2">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             <span>Save Changes</span>
           </button>
@@ -191,9 +191,9 @@ export function OrganizationProfile() {
 
 function StatCard({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
   return (
-    <div className="p-4 border border-gray-200 rounded-lg bg-white">
+    <div className="p-4 border border-[var(--color-border)] rounded-[var(--radius-md)] bg-white">
       <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-lg bg-[var(--color-accent-soft)] flex items-center justify-center">
+        <div className="h-10 w-10 rounded-[var(--radius-md)] bg-[var(--color-accent-soft)] flex items-center justify-center">
           <Icon className="h-5 w-5 text-[var(--color-accent)]" />
         </div>
         <div>
@@ -207,8 +207,8 @@ function StatCard({ icon: Icon, label, value }: { icon: any; label: string; valu
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="border border-gray-200 rounded-lg bg-white">
-      <div className="px-4 py-3 border-b border-gray-200">
+    <div className="border border-[var(--color-border)] rounded-[var(--radius-md)] bg-white">
+      <div className="px-4 py-3 border-b border-[var(--color-border)]">
         <h2 className="text-sm font-semibold text-[var(--color-ink)]">{title}</h2>
       </div>
       <div className="p-4">{children}</div>
@@ -223,11 +223,11 @@ function Field({ label, value, onChange, icon: Icon }: {
     <div>
       <label className="block text-sm font-medium text-[var(--color-ink)] mb-1">{label}</label>
       <div className="relative">
-        {Icon && <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />}
+        {Icon && <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-ink-faint)]" />}
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-accent)] focus:outline-none ${Icon ? 'pl-10' : ''}`}
+          className={`w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm focus:ring-2 focus:ring-[var(--color-accent)] focus:outline-none ${Icon ? 'pl-10' : ''}`}
         />
       </div>
     </div>

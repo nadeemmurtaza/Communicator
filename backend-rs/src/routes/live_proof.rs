@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 use crate::db::AppState;
 use crate::routes::auth::Tenant;
@@ -64,7 +64,7 @@ struct ProofSession {
     rejection_reason: Option<String>,
 }
 
-async fn fetch_session(pool: &sqlx::SqlitePool, id: &str) -> Result<Option<ProofSession>, sqlx::Error> {
+async fn fetch_session(pool: &sqlx::PgPool, id: &str) -> Result<Option<ProofSession>, sqlx::Error> {
     let row = sqlx::query(
         "SELECT id, tenant_id, organization_id, order_id, customer_identifier, claim_type,
                 session_token, status, anti_spoof_nonce, max_video_seconds, require_video,

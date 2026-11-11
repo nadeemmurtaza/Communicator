@@ -204,7 +204,7 @@ export function FacebookIntegration() {
     return (
       <div className="flex items-center justify-center min-h-[500px]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-3 text-sm text-gray-500 font-medium">Loading Facebook Messenger settings...</span>
+        <span className="ml-3 text-sm text-[var(--color-ink-faint)] font-medium">Loading Facebook Messenger settings...</span>
       </div>
     )
   }
@@ -214,23 +214,23 @@ export function FacebookIntegration() {
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6">
       {/* Top Banner Navigation */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-gray-200">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-[var(--color-border)]">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Link to="/channels" className="text-sm font-medium text-blue-600 hover:text-blue-800">
               <ArrowLeft className="h-4 w-4 inline mr-1" />
               <span>Back to Channels Hub</span>
             </Link>
-            <span className="text-gray-300">/</span>
-            <span className="text-sm font-medium text-gray-500">Facebook Messenger</span>
+            <span className="text-[var(--color-ink-faint)]">/</span>
+            <span className="text-sm font-medium text-[var(--color-ink-faint)]">Facebook Messenger</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-sm">
+            <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-sm">
               <FacebookIcon className="h-6 w-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Facebook Messenger Integration</h1>
+                <h1 className="text-2xl font-bold text-[var(--color-ink)] tracking-tight">Facebook Messenger Integration</h1>
                 {isConnected ? (
                   <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 border border-emerald-200 flex items-center gap-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -243,7 +243,7 @@ export function FacebookIntegration() {
                   </span>
                 )}
               </div>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-[var(--color-ink-faint)]">
                 Official Meta Graph API v21.0 connector with Page messaging, 24h window compliance, and Icebreakers.
               </p>
             </div>
@@ -254,14 +254,14 @@ export function FacebookIntegration() {
           <button
             onClick={handleVerifyConnection}
             disabled={verifying}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 shadow-sm transition disabled:opacity-50"
+            className="px-4 py-2 text-sm font-medium text-[var(--color-ink)] bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] hover:bg-[var(--color-accent-muted)] shadow-sm transition disabled:opacity-50"
           >
             {verifying ? 'Checking Meta...' : <span className="flex items-center gap-1"><Zap className="h-3.5 w-3.5 text-amber-500" /> Test Connection</span>}
           </button>
           <button
             onClick={handleSaveSettings}
             disabled={saving}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm transition disabled:opacity-50 flex items-center gap-2"
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-[var(--radius-md)] hover:bg-blue-700 shadow-sm transition disabled:opacity-50 flex items-center gap-2"
           >
             {saving ? 'Saving...' : 'Save Configuration'}
           </button>
@@ -270,7 +270,7 @@ export function FacebookIntegration() {
 
       {/* Real Connection Status Banner */}
       {!isConnected && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 flex items-start gap-3">
+        <div className="rounded-[var(--radius-lg)] border border-amber-200 bg-amber-50 p-4 text-amber-900 flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
           <div>
             <h4 className="text-sm font-semibold text-amber-900">Channel Not Connected</h4>
@@ -283,7 +283,7 @@ export function FacebookIntegration() {
 
       {/* Alert Notices */}
       {success && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-sm flex items-center justify-between">
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-[var(--radius-lg)] text-emerald-800 text-sm flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             <span>{success}</span>
@@ -295,7 +295,7 @@ export function FacebookIntegration() {
       )}
 
       {error && (
-        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-sm flex items-center justify-between">
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-[var(--radius-lg)] text-rose-800 text-sm flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AlertCircle className="h-4 w-4 text-rose-600" />
             <span>{error}</span>
@@ -308,55 +308,55 @@ export function FacebookIntegration() {
 
       {/* KPI & Status Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
-          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Page Connection</div>
+        <div className="p-4 bg-white border border-[var(--color-border)] rounded-[var(--radius-lg)] shadow-sm">
+          <div className="text-xs font-semibold text-[var(--color-ink-faint)] uppercase tracking-wider mb-1">Page Connection</div>
           <div className="flex items-center justify-between">
-            <span className="text-lg font-bold text-gray-900">{pageName || 'Your Facebook Page Name'}</span>
+            <span className="text-lg font-bold text-[var(--color-ink)]">{pageName || 'Your Facebook Page Name'}</span>
             <span className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${
               isConnected ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
             }`}>
               {isConnected ? 'Connected' : 'Not Configured'}
             </span>
           </div>
-          <p className="text-xs text-gray-500 mt-1">Page ID: {pageId}</p>
+          <p className="text-xs text-[var(--color-ink-faint)] mt-1">Page ID: {pageId}</p>
         </div>
 
-        <div className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
-          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Messaging Window</div>
+        <div className="p-4 bg-white border border-[var(--color-border)] rounded-[var(--radius-lg)] shadow-sm">
+          <div className="text-xs font-semibold text-[var(--color-ink-faint)] uppercase tracking-wider mb-1">Messaging Window</div>
           <div className="flex items-center justify-between">
-            <span className="text-lg font-bold text-gray-900">24 Hours</span>
+            <span className="text-lg font-bold text-[var(--color-ink)]">24 Hours</span>
             <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-200">
               Human Tag Active
             </span>
           </div>
-          <p className="text-xs text-gray-500 mt-1">7-day extended response tag</p>
+          <p className="text-xs text-[var(--color-ink-faint)] mt-1">7-day extended response tag</p>
         </div>
 
-        <div className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
-          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Icebreakers</div>
+        <div className="p-4 bg-white border border-[var(--color-border)] rounded-[var(--radius-lg)] shadow-sm">
+          <div className="text-xs font-semibold text-[var(--color-ink-faint)] uppercase tracking-wider mb-1">Icebreakers</div>
           <div className="flex items-center justify-between">
-            <span className="text-lg font-bold text-gray-900">{icebreakers.length} Active</span>
+            <span className="text-lg font-bold text-[var(--color-ink)]">{icebreakers.length} Active</span>
             <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-50 text-purple-700 border border-purple-200">
               FAQ Chips
             </span>
           </div>
-          <p className="text-xs text-gray-500 mt-1">Displayed to first-time contacts</p>
+          <p className="text-xs text-[var(--color-ink-faint)] mt-1">Displayed to first-time contacts</p>
         </div>
 
-        <div className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
-          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Meta Graph API</div>
+        <div className="p-4 bg-white border border-[var(--color-border)] rounded-[var(--radius-lg)] shadow-sm">
+          <div className="text-xs font-semibold text-[var(--color-ink-faint)] uppercase tracking-wider mb-1">Meta Graph API</div>
           <div className="flex items-center justify-between">
-            <span className="text-lg font-bold text-gray-900">v21.0</span>
+            <span className="text-lg font-bold text-[var(--color-ink)]">v21.0</span>
             <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
               Healthy
             </span>
           </div>
-          <p className="text-xs text-gray-500 mt-1">Avg latency: ~320ms</p>
+          <p className="text-xs text-[var(--color-ink-faint)] mt-1">Avg latency: ~320ms</p>
         </div>
       </div>
 
       {/* Navigation Tabs */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-[var(--color-border)]">
         <nav className="flex space-x-8">
           {[
             { id: 'credentials', label: 'Page Credentials & IDs', icon: Key },
@@ -371,7 +371,7 @@ export function FacebookIntegration() {
               className={`py-4 px-1 inline-flex items-center gap-2 border-b-2 font-medium text-sm transition ${
                 activeTab === tab.id
                   ? 'border-blue-600 text-blue-600 font-semibold'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] hover:border-[var(--color-border)]'
               }`}
             >
               <tab.icon className="h-4 w-4" />
@@ -383,75 +383,75 @@ export function FacebookIntegration() {
 
       {/* Tab 1: Credentials & Page Linking */}
       {activeTab === 'credentials' && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm space-y-6">
+        <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] p-6 shadow-sm space-y-6">
           <div>
-            <h3 className="text-base font-semibold text-gray-900">Facebook Page & Graph API Credentials</h3>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <h3 className="text-base font-semibold text-[var(--color-ink)]">Facebook Page & Graph API Credentials</h3>
+            <p className="text-sm text-[var(--color-ink-faint)] mt-0.5">
               Connect your official Facebook Page via Meta Graph API v21.0. Messages sent to your page will route straight to the Shared Inbox.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-[var(--color-border)]">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Inbox Display Name</label>
+              <label className="block text-sm font-medium text-[var(--color-ink)] mb-1">Inbox Display Name</label>
               <input
                 type="text"
                 value={inboxName}
                 onChange={(e) => setInboxName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 placeholder="e.g. Facebook Messenger Support"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Facebook Page Name</label>
+              <label className="block text-sm font-medium text-[var(--color-ink)] mb-1">Facebook Page Name</label>
               <input
                 type="text"
                 value={pageName}
                 onChange={(e) => setPageName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 placeholder="e.g. Your Facebook Page Name"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Facebook Page ID</label>
+              <label className="block text-sm font-medium text-[var(--color-ink)] mb-1">Facebook Page ID</label>
               <input
                 type="text"
                 value={pageId}
                 onChange={(e) => setPageId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 placeholder="e.g. 100234567890123"
               />
-              <p className="text-xs text-gray-400 mt-1">Found in Facebook Page Settings &gt; About &gt; Page ID.</p>
+              <p className="text-xs text-[var(--color-ink-faint)] mt-1">Found in Facebook Page Settings &gt; About &gt; Page ID.</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[var(--color-ink)] mb-1">
                 Page Access Token (EAAB...)
               </label>
               <input
                 type="password"
                 value={pageAccessToken}
                 onChange={(e) => setPageAccessToken(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 placeholder="••••••••••••••••••••••••"
               />
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-[var(--color-ink-faint)] mt-1">
                 Generated from Meta Developer Console with <code className="text-blue-600">pages_messaging</code> permission. Leave blank to keep existing.
               </p>
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">App Secret</label>
+              <label className="block text-sm font-medium text-[var(--color-ink)] mb-1">App Secret</label>
               <input
                 type="password"
                 value={appSecret}
                 onChange={(e) => setAppSecret(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 placeholder="••••••••••••••••••••••••"
               />
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-[var(--color-ink-faint)] mt-1">
                 Used to validate incoming <code className="text-blue-600">X-Hub-Signature-256</code> HMAC headers from Meta webhooks.
               </p>
             </div>
@@ -461,23 +461,23 @@ export function FacebookIntegration() {
 
       {/* Tab 2: Webhooks & Graph Sync */}
       {activeTab === 'webhooks' && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm space-y-6">
+        <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] p-6 shadow-sm space-y-6">
           <div>
-            <h3 className="text-base font-semibold text-gray-900">Meta Webhook Configuration</h3>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <h3 className="text-base font-semibold text-[var(--color-ink)]">Meta Webhook Configuration</h3>
+            <p className="text-sm text-[var(--color-ink-faint)] mt-0.5">
               Configure these webhook parameters in your Meta App Dashboard under <strong>Messenger &gt; Webhooks</strong>.
             </p>
           </div>
 
-          <div className="space-y-4 pt-4 border-t border-gray-100">
+          <div className="space-y-4 pt-4 border-t border-[var(--color-border)]">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Webhook Callback URL</label>
+              <label className="block text-sm font-medium text-[var(--color-ink)] mb-1">Webhook Callback URL</label>
               <div className="flex gap-2">
                 <input
                   type="text"
                   readOnly
                   value={data?.webhookConfig.callbackUrl || 'https://api.yourdomain.com/api/v1/webhooks/meta/facebook'}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm font-mono text-gray-600"
+                  className="w-full px-3 py-2 bg-[var(--color-accent-muted)] border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm font-mono text-[var(--color-ink-muted)]"
                 />
                 <button
                   onClick={() =>
@@ -486,7 +486,7 @@ export function FacebookIntegration() {
                       'callback'
                     )
                   }
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 transition"
+                  className="px-4 py-2 bg-[var(--color-accent-muted)] hover:bg-[var(--color-border)] border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm font-medium text-[var(--color-ink)] transition"
                 >
                   {copiedKey === 'callback' ? <span className="inline-flex items-center gap-1"><Check className="h-4 w-4 text-emerald-600" /> Copied</span> : 'Copy'}
                 </button>
@@ -494,31 +494,31 @@ export function FacebookIntegration() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Verify Token</label>
+              <label className="block text-sm font-medium text-[var(--color-ink)] mb-1">Verify Token</label>
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={webhookVerifyToken}
                   onChange={(e) => setWebhookVerifyToken(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
                 <button
                   onClick={() => copyToClipboard(webhookVerifyToken, 'verifyToken')}
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 transition"
+                  className="px-4 py-2 bg-[var(--color-accent-muted)] hover:bg-[var(--color-border)] border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm font-medium text-[var(--color-ink)] transition"
                 >
                   {copiedKey === 'verifyToken' ? <span className="inline-flex items-center gap-1"><Check className="h-4 w-4 text-emerald-600" /> Copied</span> : 'Copy'}
                 </button>
               </div>
-              <p className="text-xs text-gray-400 mt-1">Enter this identical string into Meta when verifying your webhook endpoint.</p>
+              <p className="text-xs text-[var(--color-ink-faint)] mt-1">Enter this identical string into Meta when verifying your webhook endpoint.</p>
             </div>
 
-            <div className="pt-4 border-t border-gray-100">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Subscribed Webhook Fields</label>
+            <div className="pt-4 border-t border-[var(--color-border)]">
+              <label className="block text-sm font-medium text-[var(--color-ink)] mb-2">Subscribed Webhook Fields</label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {['messages', 'messaging_postbacks', 'message_deliveries', 'message_reads'].map((field) => (
-                  <div key={field} className="p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-2">
+                  <div key={field} className="p-3 bg-[var(--color-accent-muted)] border border-[var(--color-border)] rounded-[var(--radius-md)] flex items-center gap-2">
                     <Check className="h-4 w-4 text-emerald-500 shrink-0" />
-                    <span className="text-xs font-mono font-medium text-gray-700">{field}</span>
+                    <span className="text-xs font-mono font-medium text-[var(--color-ink)]">{field}</span>
                   </div>
                 ))}
               </div>
@@ -529,25 +529,25 @@ export function FacebookIntegration() {
 
       {/* Tab 3: Icebreakers & FAQ Chips */}
       {activeTab === 'icebreakers' && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm space-y-6">
+        <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] p-6 shadow-sm space-y-6">
           <div>
-            <h3 className="text-base font-semibold text-gray-900">Messenger Icebreakers (Pre-chat FAQ Chips)</h3>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <h3 className="text-base font-semibold text-[var(--color-ink)]">Messenger Icebreakers (Pre-chat FAQ Chips)</h3>
+            <p className="text-sm text-[var(--color-ink-faint)] mt-0.5">
               Icebreakers appear as quick clickable question chips when a customer opens a new conversation with your Page before sending their first message.
             </p>
           </div>
 
-          <div className="space-y-4 pt-4 border-t border-gray-100">
+          <div className="space-y-4 pt-4 border-t border-[var(--color-border)]">
             <div className="space-y-3">
               {icebreakers.map((ib, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3.5 bg-gray-50 border border-gray-200 rounded-xl">
+                <div key={idx} className="flex items-center justify-between p-3.5 bg-[var(--color-accent-muted)] border border-[var(--color-border)] rounded-[var(--radius-lg)]">
                   <div className="flex items-center gap-3">
                     <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center">
                       {idx + 1}
                     </span>
                     <div>
-                      <div className="text-sm font-medium text-gray-900">{ib.question}</div>
-                      <div className="text-xs font-mono text-gray-500">Payload: {ib.payload}</div>
+                      <div className="text-sm font-medium text-[var(--color-ink)]">{ib.question}</div>
+                      <div className="text-xs font-mono text-[var(--color-ink-faint)]">Payload: {ib.payload}</div>
                     </div>
                   </div>
                   <button
@@ -560,7 +560,7 @@ export function FacebookIntegration() {
               ))}
             </div>
 
-            <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl space-y-3">
+            <div className="p-4 bg-blue-50 border border-blue-100 rounded-[var(--radius-lg)] space-y-3">
               <h4 className="text-xs font-semibold text-blue-900 uppercase tracking-wider">Add New Icebreaker</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <input
@@ -568,20 +568,20 @@ export function FacebookIntegration() {
                   placeholder="Question text (e.g. What are your opening hours?)"
                   value={newQuestion}
                   onChange={(e) => setNewQuestion(e.target.value)}
-                  className="px-3 py-2 border border-blue-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-2 border border-blue-200 rounded-[var(--radius-md)] text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <input
                   type="text"
                   placeholder="Custom Payload (e.g. HOURS_INQUIRY)"
                   value={newPayload}
                   onChange={(e) => setNewPayload(e.target.value)}
-                  className="px-3 py-2 border border-blue-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                  className="px-3 py-2 border border-blue-200 rounded-[var(--radius-md)] text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
                 />
               </div>
               <button
                 onClick={handleAddIcebreaker}
                 disabled={!newQuestion.trim()}
-                className="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
+                className="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-[var(--radius-md)] hover:bg-blue-700 disabled:opacity-50 transition"
               >
                 + Add Icebreaker Chip
               </button>
@@ -592,27 +592,27 @@ export function FacebookIntegration() {
 
       {/* Tab 4: Automations & Schedule */}
       {activeTab === 'automations' && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm space-y-6">
+        <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] p-6 shadow-sm space-y-6">
           <div>
-            <h3 className="text-base font-semibold text-gray-900">Messenger Automations & Working Hours</h3>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <h3 className="text-base font-semibold text-[var(--color-ink)]">Messenger Automations & Working Hours</h3>
+            <p className="text-sm text-[var(--color-ink-faint)] mt-0.5">
               Automated greetings, after-hours responses, and CSAT customer satisfaction surveys.
             </p>
           </div>
 
-          <div className="space-y-6 pt-4 border-t border-gray-100">
+          <div className="space-y-6 pt-4 border-t border-[var(--color-border)]">
             {/* Welcome Greeting */}
-            <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-3">
+            <div className="p-4 bg-[var(--color-accent-muted)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-900">Automated Welcome Greeting</h4>
-                  <p className="text-xs text-gray-500">Sent immediately when a customer initiates contact on Facebook Messenger.</p>
+                  <h4 className="text-sm font-semibold text-[var(--color-ink)]">Automated Welcome Greeting</h4>
+                  <p className="text-xs text-[var(--color-ink-faint)]">Sent immediately when a customer initiates contact on Facebook Messenger.</p>
                 </div>
                 <input
                   type="checkbox"
                   checked={greetingEnabled}
                   onChange={(e) => setGreetingEnabled(e.target.checked)}
-                  className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                  className="h-4 w-4 text-blue-600 rounded border-[var(--color-border)] focus:ring-blue-500"
                 />
               </div>
               {greetingEnabled && (
@@ -620,23 +620,23 @@ export function FacebookIntegration() {
                   rows={2}
                   value={greetingMessage}
                   onChange={(e) => setGreetingMessage(e.target.value)}
-                  className="w-full p-2.5 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full p-2.5 bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               )}
             </div>
 
             {/* Out of Office */}
-            <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-3">
+            <div className="p-4 bg-[var(--color-accent-muted)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-900">Out of Office / Away Responder</h4>
-                  <p className="text-xs text-gray-500">Sent when customers message outside scheduled working hours.</p>
+                  <h4 className="text-sm font-semibold text-[var(--color-ink)]">Out of Office / Away Responder</h4>
+                  <p className="text-xs text-[var(--color-ink-faint)]">Sent when customers message outside scheduled working hours.</p>
                 </div>
                 <input
                   type="checkbox"
                   checked={outOfOfficeEnabled}
                   onChange={(e) => setOutOfOfficeEnabled(e.target.checked)}
-                  className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                  className="h-4 w-4 text-blue-600 rounded border-[var(--color-border)] focus:ring-blue-500"
                 />
               </div>
               {outOfOfficeEnabled && (
@@ -644,71 +644,71 @@ export function FacebookIntegration() {
                   rows={2}
                   value={outOfOfficeMessage}
                   onChange={(e) => setOutOfOfficeMessage(e.target.value)}
-                  className="w-full p-2.5 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full p-2.5 bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               )}
             </div>
 
             {/* CSAT Rating */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-xl">
+            <div className="flex items-center justify-between p-4 bg-[var(--color-accent-muted)] border border-[var(--color-border)] rounded-[var(--radius-lg)]">
               <div>
-                <h4 className="text-sm font-semibold text-gray-900">CSAT Customer Satisfaction Rating</h4>
-                <p className="text-xs text-gray-500">Automatically asks for a 1-5 rating when an agent marks a conversation resolved.</p>
+                <h4 className="text-sm font-semibold text-[var(--color-ink)]">CSAT Customer Satisfaction Rating</h4>
+                <p className="text-xs text-[var(--color-ink-faint)]">Automatically asks for a 1-5 rating when an agent marks a conversation resolved.</p>
               </div>
               <input
                 type="checkbox"
                 checked={csatEnabled}
                 onChange={(e) => setCsatEnabled(e.target.checked)}
-                className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                className="h-4 w-4 text-blue-600 rounded border-[var(--color-border)] focus:ring-blue-500"
               />
             </div>
 
             {/* Working Hours Schedule */}
-            <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-4">
+            <div className="p-4 bg-[var(--color-accent-muted)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-900">Working Hours Schedule</h4>
-                  <p className="text-xs text-gray-500">Set team availability hours to route conversations and trigger away messages.</p>
+                  <h4 className="text-sm font-semibold text-[var(--color-ink)]">Working Hours Schedule</h4>
+                  <p className="text-xs text-[var(--color-ink-faint)]">Set team availability hours to route conversations and trigger away messages.</p>
                 </div>
                 <input
                   type="checkbox"
                   checked={workingHoursEnabled}
                   onChange={(e) => setWorkingHoursEnabled(e.target.checked)}
-                  className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                  className="h-4 w-4 text-blue-600 rounded border-[var(--color-border)] focus:ring-blue-500"
                 />
               </div>
 
               {workingHoursEnabled && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Start Time (24h)</label>
+                    <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">Start Time (24h)</label>
                     <input
                       type="number"
                       min={0}
                       max={23}
                       value={workingHoursStart}
                       onChange={(e) => setWorkingHoursStart(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm"
+                      className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">End Time (24h)</label>
+                    <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">End Time (24h)</label>
                     <input
                       type="number"
                       min={0}
                       max={23}
                       value={workingHoursEnd}
                       onChange={(e) => setWorkingHoursEnd(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm"
+                      className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Timezone</label>
+                    <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">Timezone</label>
                     <input
                       type="text"
                       value={timezone}
                       onChange={(e) => setTimezone(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm"
+                      className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm"
                     />
                   </div>
                 </div>
@@ -721,44 +721,44 @@ export function FacebookIntegration() {
       {/* Tab 5: Diagnostic Dispatcher & Live Events */}
       {activeTab === 'diagnostics' && (
         <div className="space-y-6">
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm space-y-4">
+          <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] p-6 shadow-sm space-y-4">
             <div>
-              <h3 className="text-base font-semibold text-gray-900">Live Diagnostic Message Dispatcher</h3>
-              <p className="text-sm text-gray-500 mt-0.5">
+              <h3 className="text-base font-semibold text-[var(--color-ink)]">Live Diagnostic Message Dispatcher</h3>
+              <p className="text-sm text-[var(--color-ink-faint)] mt-0.5">
                 Dispatch a test outbound message to a Page-Scoped ID (PSID) to verify Meta API connectivity and delivery.
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Recipient PSID</label>
+                <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">Recipient PSID</label>
                 <input
                   type="text"
                   value={testPsid}
                   onChange={(e) => setTestPsid(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   placeholder="e.g. psid_test_902184"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Recipient Name</label>
+                <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">Recipient Name</label>
                 <input
                   type="text"
                   value={testRecipientName}
                   onChange={(e) => setTestRecipientName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   placeholder="e.g. Sarah Jenkins"
                 />
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-xs font-medium text-gray-700 mb-1">Test Message Body</label>
+                <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">Test Message Body</label>
                 <textarea
                   rows={2}
                   value={testMessage}
                   onChange={(e) => setTestMessage(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
             </div>
@@ -767,7 +767,7 @@ export function FacebookIntegration() {
               <button
                 onClick={handleSendTestMessage}
                 disabled={sendingTest || !testPsid.trim() || !testMessage.trim()}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm transition disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-[var(--radius-md)] hover:bg-blue-700 shadow-sm transition disabled:opacity-50 flex items-center gap-2"
               >
                 {sendingTest ? 'Dispatching...' : <span className="flex items-center gap-1.5"><Send className="h-3.5 w-3.5" /> Send Diagnostic Message</span>}
               </button>
@@ -781,28 +781,28 @@ export function FacebookIntegration() {
           </div>
 
           {/* Live Events Table */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm space-y-4">
+          <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] p-6 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-base font-semibold text-gray-900">Recent Facebook Messenger Events</h3>
-                <p className="text-sm text-gray-500">Live feed of inbound messages, agent replies, and delivery receipts.</p>
+                <h3 className="text-base font-semibold text-[var(--color-ink)]">Recent Facebook Messenger Events</h3>
+                <p className="text-sm text-[var(--color-ink-faint)]">Live feed of inbound messages, agent replies, and delivery receipts.</p>
               </div>
               <button
                 onClick={async () => setEvents(await api.listFacebookEvents())}
-                className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+                className="px-3 py-1.5 text-xs font-medium text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] bg-[var(--color-accent-muted)] hover:bg-[var(--color-border)] rounded-[var(--radius-md)] transition"
               >
                 Refresh
               </button>
             </div>
 
             {events.length === 0 ? (
-              <div className="py-12 text-center text-sm text-gray-500">
+              <div className="py-12 text-center text-sm text-[var(--color-ink-faint)]">
                 No recent Facebook Messenger events recorded yet. Dispatch a diagnostic message above to verify.
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-gray-600">
-                  <thead className="bg-gray-50 text-xs font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-200">
+                <table className="w-full text-left text-sm text-[var(--color-ink-muted)]">
+                  <thead className="bg-[var(--color-accent-muted)] text-xs font-semibold text-[var(--color-ink-faint)] uppercase tracking-wider border-b border-[var(--color-border)]">
                     <tr>
                       <th className="py-3 px-4">Direction</th>
                       <th className="py-3 px-4">Sender</th>
@@ -814,7 +814,7 @@ export function FacebookIntegration() {
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {events.map((ev) => (
-                      <tr key={ev.id} className="hover:bg-gray-50/60 transition">
+                      <tr key={ev.id} className="hover:bg-[var(--color-accent-muted)]/60 transition">
                         <td className="py-3 px-4">
                           <span
                             className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
@@ -826,15 +826,15 @@ export function FacebookIntegration() {
                             {ev.direction === 'inbound' ? 'Inbound' : 'Outbound'}
                           </span>
                         </td>
-                        <td className="py-3 px-4 font-medium text-gray-900">{ev.senderName}</td>
-                        <td className="py-3 px-4 text-gray-700 max-w-xs truncate">{ev.body}</td>
+                        <td className="py-3 px-4 font-medium text-[var(--color-ink)]">{ev.senderName}</td>
+                        <td className="py-3 px-4 text-[var(--color-ink)] max-w-xs truncate">{ev.body}</td>
                         <td className="py-3 px-4">
                           <span className="text-xs font-medium text-emerald-600 inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />{ev.status}</span>
                         </td>
-                        <td className="py-3 px-4 font-mono text-xs text-gray-400">
+                        <td className="py-3 px-4 font-mono text-xs text-[var(--color-ink-faint)]">
                           {ev.providerMessageId ? ev.providerMessageId.slice(0, 16) + '...' : '—'}
                         </td>
-                        <td className="py-3 px-4 text-xs text-gray-400">
+                        <td className="py-3 px-4 text-xs text-[var(--color-ink-faint)]">
                           {new Date(ev.sentAt).toLocaleTimeString()}
                         </td>
                       </tr>

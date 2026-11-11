@@ -1,0 +1,368 @@
+// Orders and shipments.
+//
+// Order lines are SNAPSHOTS. Name, price, measurements and stitching options
+// are copied in at purchase time and never joined back to the live product —
+// a price change or a renamed product must not rewrite history.
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  READY_TO_SHIP
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+/// R11: a till sale is a channel of `orders`, not a parallel order system.
+enum OrderChannel {
+  WEB
+  POS
+}
+
+/// WO-9.4 (09-ai-layer.md). The recommended action a rule-based COD-risk
+/// score sorts an order into — never an instruction the system carries out
+/// itself. "A person decides; the score sorts a queue" (the doc's own
+/// words): nothing in this codebase auto-cancels or auto-requires payment
+/// off this field alone.
+enum CodRiskAction {
+  AUTO_CONFIRM
+  CONFIRMATION_CALL
+  REQUIRE_ADVANCE_PAYMENT
+}
+
+model Order {
+  id        String      @id @default(cuid())
+  number    String      @unique // "YSN-2026-0001"
+  userId    String?
+  contactId String?
+  status    OrderStatus @default(PENDING)
+  currency  String      @default("PKR")
+
+  /// R11's additive scalar columns. Bare scalars, not relations — `pos` and
+  /// `organization` are separate modules from `orders` (module-boundary
+  /// rule), and originNodeId is replication scaffolding (R6/R7), not
+  /// currently written by anything. Null for every WEB order.
+  channel      OrderChannel @default(WEB)
+  locationId   String?
+  terminalId   String?
+  shiftId      String?
+  originNodeId String?
+
+  /// Guest checkout: no account, so contact details live on the order.
+  guestName  String?
+  guestEmail String?
+  guestPhone String?
+
+  /// WO-8.5 — which cart this order was placed from, set once at
+  /// checkout(place()) and never rewritten. Purely for the recovered-revenue
+  /// report: an order whose sourceCart had a reminder/incentive/first-touch
+  /// send before placedAt is revenue marketing recovered. SetNull, not
+  /// Cascade — a cart row can outlive or be pruned independently of an order
+  /// that already has its own full snapshot of everything it needs.
+  sourceCartId String?
+
+  /// Address snapshots, not foreign keys — the address book is editable.
+  shippingAddress Json
+  billingAddress  Json?
+
+  /// All amounts in paisa. Recomputed server-side from the cart at placement;
+  /// the client's numbers are never trusted.
+  itemsSubtotal     Int
+  stitchingSubtotal Int @default(0)
+  itemDiscountTotal Int @default(0)
+  orderDiscount     Int @default(0)
+  shippingFee       Int @default(0)
+  codFee            Int @default(0)
+  /// EXCLUSIVE-mode tax across the whole order, mirroring OrderItem.taxAmount
+  /// summed -- kept here too so order lists/reports don't need to sum lines.
+  /// 0 when tax is off or the shop uses INCLUSIVE mode (see 15-tax-module.md).
+  taxAmount         Int @default(0)
+  grandTotal        Int
+
+  shippingZone String?
+  customerNote String?
+  staffNote    String?
+  cancelReason String?
+  placedAt     DateTime  @default(now())
+  confirmedAt  DateTime?
+  deliveredAt  DateTime?
+  cancelledAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  /// Set once MarketingAutomationCron sends the post-delivery review-request
+  /// email (marketing.review_request) — the dedup flag, since the cron scans
+  /// every DELIVERED order past the threshold on every run.
+  reviewRequestSentAt DateTime?
+
+  /// WO-9.4 — computed synchronously at place(), COD orders only (a paid
+  /// order has already cleared, RTO risk does not apply). Null for every
+  /// non-COD order, and for a COD order placed before this existed.
+  codRiskScore      Int?
+  codRiskAction     CodRiskAction?
+  codRiskComputedAt DateTime?
+  /// The single dominant reason CodRiskService picked codRiskAction — "start
+  /// with a transparent rule-based score. It is explainable to staff" (the
+  /// doc's own words). Staff-facing only, same as VariantForecast.reasonEn
+  /// (WO-9.3); never shown to the customer.
+  codRiskReasonEn   String?
+
+  /// Which other module asked for this order and by what key (an auction
+  /// settlement, WO-234.6). Null for every checkout and point-of-sale order.
+  /// Unique together, so asking twice for the same thing yields the first order
+  /// and never a second: the guard against a retry after a crash.
+  sourceType String?
+  sourceRef  String?
+
+  user                    User?                    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  contact                 Contact?                 @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  sourceCart              Cart?                    @relation(fields: [sourceCartId], references: [id], onDelete: SetNull)
+  items                   OrderItem[]
+  payments                Payment[]
+  shipments               Shipment[]
+  statusEvents            OrderStatusEvent[]
+  convertedLeads          Lead[]                   @relation("LeadConvertedOrder")
+  /// finance.prisma's OrderEconomics (WO-B.3) — null until DELIVERED.
+  economics               OrderEconomics?
+  /// fulfilment.prisma's ReturnRequest (WO-6.6) — independent of
+  /// Order.status; see ReturnRequest's own doc comment for why a return
+  /// does not by itself move the order out of DELIVERED.
+  returnRequests          ReturnRequest[]
+  /// promotions.prisma's snapshot of every discount this order received (WO-5.3).
+  orderDiscounts          OrderDiscount[]
+  /// giftcards.prisma — gift-card/store-credit tender applied to this order, and any gift card this order purchased (WO-5.4/5.5).
+  giftCardTransactions    GiftCardTransaction[]
+  storeCreditTransactions StoreCreditTransaction[]
+  /// instalments.prisma (finance-accounting/151-layby-installment-sales.md)
+  /// — null for every ordinary immediate-tender-in-full sale.
+  instalmentPlan          InstalmentPlan?
+  giftCardsSold           GiftCard[]               @relation("GiftCardSourceOrder")
+  /// Phase 7 (docs/implementation/customer-portal-loyalty/07-customer-portal.md).
+  loyaltyTransactions     LoyaltyTransaction[]
+
+  @@unique([sourceType, sourceRef])
+  @@index([status, placedAt])
+  @@index([userId])
+  @@index([contactId])
+  @@index([guestPhone])
+  @@index([channel])
+  @@index([shiftId])
+  @@index([sourceCartId])
+  @@index([codRiskAction, placedAt])
+}
+
+enum OrderItemFulfillmentStatus {
+  READY
+  /// Backordered against an externally sourced variant — waiting on a
+  /// PurchaseOrder receipt (StockReplenished).
+  AWAITING_STOCK
+  /// Backordered against a producedInHouse variant — waiting on a WorkOrder
+  /// completion (also StockReplenished; the two are indistinguishable to
+  /// the customer, both just "stock isn't here yet").
+  AWAITING_PRODUCTION
+}
+
+model OrderItem {
+  id      String @id @default(cuid())
+  orderId String
+
+  /// Kept for reporting; nullable so deleting a product cannot delete history.
+  productId String?
+  variantId String?
+
+  kind         ProductKind
+  nameEn       String
+  nameUr       String?
+  sku          String?
+  imageUrl     String?
+  variantLabel String? // "Medium / Ferozi"
+
+  /// Per-unit amounts in paisa.
+  unitPrice        Int
+  unitCost         Int @default(0)
+  quantity         Int @default(1)
+  stitchingFeeUnit Int @default(0)
+  discountUnit     Int @default(0)
+  /// unitPrice*qty + stitchingFeeUnit*qty - discountUnit*qty
+  lineTotal        Int
+
+  /// Tax on this line, in paisa, AT THE MOMENT OF PURCHASE -- a snapshot
+  /// like unitCost and unitPrice (House Rule 7). Zero for every order placed
+  /// before this module existed or while tax.enabled is off; never
+  /// backfilled. In EXCLUSIVE mode this is added on top of lineTotal; in
+  /// INCLUSIVE mode it is extracted from a lineTotal that already contains
+  /// it, for the invoice, and changes nothing the customer paid.
+  taxAmount  Int @default(0)
+  /// The rate actually applied, basis points, snapshotted for the same
+  /// reason as taxAmount -- a later rate change must not rewrite history.
+  taxRateBps Int @default(0)
+
+  /// Stitching add-on snapshot.
+  stitchingServiceId   String?
+  stitchingServiceName String?
+  garmentTypeKey       String?
+  measurementSnapshot  Json?
+  optionsSnapshot      Json?
+  stitchingNotes       String?
+  /// What the customer actually typed, kept alongside measurementSnapshot so a
+  /// dispute can be settled against their own entry rather than the resolved set.
+  measurementValues    Json?
+  /// Option group key -> the customer's own words for that design area.
+  customDesignText     Json?
+  /// Which standard size (XS-XXL) the customer picked, when they used the RTW size chart instead of typing measurements. Kept for tailor/support reference; measurementValues still carries the actual numbers used.
+  sizeToken            String?
+
+  /// Set once MarketingAutomationCron sends a replenishment nudge
+  /// (marketing.replenishment_reminder) for this line's Product.isConsumable
+  /// item — per item, not per order, since one order can hold several.
+  replenishmentReminderSentAt DateTime?
+
+  /// Scoped to the LINE, not Order.status — a backordered item does not
+  /// change what CONFIRMED/PROCESSING/etc. mean for the order as a whole
+  /// (that state machine already tracks payment/fulfillment separately).
+  /// Only set away from READY when checkout.allow_backorder is on; stays
+  /// READY (the default) for every order placed with it off.
+  fulfillmentStatus OrderItemFulfillmentStatus @default(READY)
+  awaitingSince     DateTime?
+
+  createdAt DateTime @default(now())
+
+  order              Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product            Product?            @relation(fields: [productId], references: [id], onDelete: SetNull)
+  variant            ProductVariant?     @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  stitchingService   Product?            @relation("OrderItemStitchingService", fields: [stitchingServiceId], references: [id], onDelete: SetNull)
+  /// fulfilment.prisma (WO-6.4/6.6) — both core, same as economics above.
+  shipmentItems      ShipmentItem[]
+  returnRequestItems ReturnRequestItem[]
+  // No `stitchingJob` relation field here on purpose (B7, MULTI-SECTOR.md):
+  // core must never type-reference an apparel-pack model, or core.prisma
+  // cannot compile without the apparel schema present — which breaks any
+  // client extraction that excludes apparel. StitchingJob (apparel) keeps a
+  // plain `orderItemId` scalar column pointing here instead of a Prisma
+  // relation; the join happens in application code
+  // (EntityEnrichmentRegistry, or StitchingJobsService.attachOrderContext).
+
+  /// Phase 7 (docs/implementation/customer-portal-loyalty/07-customer-portal.md).
+  review Review?
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model OrderStatusEvent {
+  id         String       @id @default(cuid())
+  orderId    String
+  fromStatus OrderStatus?
+  toStatus   OrderStatus
+  note       String?
+  actorId    String?
+  createdAt  DateTime     @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([orderId, createdAt])
+}
+
+enum ShipmentStatus {
+  PENDING
+  DISPATCHED
+  IN_TRANSIT
+  DELIVERED
+  RETURNED
+  LOST
+}
+
+model Shipment {
+  id             String         @id @default(cuid())
+  orderId        String
+  /// Courier provider key: "manual", "tcs", "leopards" — matches a live
+  /// CourierProvider.key (fulfilment/courier-provider.ts), never trusted
+  /// beyond that: booking goes through the provider the key names, not a
+  /// courier-specific branch anywhere in this module.
+  courier        String         @default("manual")
+  trackingNumber String?
+  trackingUrl    String?
+  status         ShipmentStatus @default(PENDING)
+  cost           Int? // paisa
+  dispatchedAt   DateTime?
+  deliveredAt    DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  /// WO-6.4's own extension fields (fulfilment module — Shipment itself
+  /// stays here because orders already owns its lifecycle columns).
+  methodId       String?
+  weightGrams    Int?
+  packageCount   Int       @default(1)
+  labelUrl       String?
+  manifestId     String?
+  /// Courier-specific detail (label payload, webhook body) that doesn't earn
+  /// its own column — never read for logic, only shown to support.
+  meta           Json?
+  /// Set the moment this shipment is recognised as a return-to-origin
+  /// (WO-6.7) — a courier-initiated RETURNED with no matching customer
+  /// ReturnRequest, as opposed to one raised through the returns flow.
+  isRto          Boolean   @default(false)
+  rtoAt          DateTime?
+  failedAttempts Int       @default(0)
+  /// FulfilmentCron's own bookkeeping: when this shipment was last polled,
+  /// so a consignment that hasn't moved in days is not hit every 30 minutes
+  /// forever (WO-6.5's own backoff rule) — see FulfilmentCron.pollActive().
+  lastPolledAt   DateTime?
+
+  order    Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  method   ShippingMethod? @relation(fields: [methodId], references: [id], onDelete: SetNull)
+  manifest Manifest?       @relation(fields: [manifestId], references: [id], onDelete: SetNull)
+  items    ShipmentItem[]
+  events   ShipmentEvent[]
+
+  @@index([orderId])
+  @@index([trackingNumber])
+  @@index([status])
+  @@index([manifestId])
+}
+
+/// WO-9.4 (09-ai-layer.md) — nightly-cached inputs to CodRiskService's
+/// "city RTO rate" and "order value versus the city's average" signals.
+/// CodRiskCron recomputes every row from this node's own COD Shipment/Order
+/// history; place() reads a row by city (a single indexed lookup) rather
+/// than aggregating this on every checkout. Both counts come from the same
+/// COD-shipment population, so the two signals never disagree about which
+/// orders they're describing. A city absent from this table, or below the
+/// shop's own minimum-sample setting, is simply not trusted yet — CodRiskService
+/// treats that as "no signal", never as "zero risk".
+model CityCodRiskStat {
+  city           String   @id
+  totalShipments Int
+  rtoShipments   Int
+  /// paisa.
+  avgOrderValue  Int
+  computedAt     DateTime @default(now())
+}
+
+/// Backing store for sequential per-year order numbers (YSN-2026-0001). One
+/// row per year — this node's own row, in this node's own database, which
+/// is why it stays correct once a chain deployment has more than one node
+/// (WO-18.2): the sequence is allocated purely locally, and NODE_ID is
+/// folded into the final string by document-number.ts, not into this
+/// table. `counter` is incremented via a single atomic
+/// `INSERT ... ON CONFLICT DO UPDATE ... RETURNING`, which Postgres
+/// serialises at the row level — no application-side lock or transaction
+/// needed. See nextOrderNumber() in orders.service.ts for why: an earlier
+/// version derived the next number by reading MAX(Order.number), which is a
+/// read-then-write race (two concurrent checkouts could read the same max),
+/// and a later version tried to fix that with an advisory lock — but the
+/// lock has to span both the read AND the eventual Order insert to mean
+/// anything, and by the time that insert happens the checkout has moved on
+/// to unrelated work (inventory, payment, cart) that has nothing to do with
+/// numbering. A counter reserves the number as its own atomic step, so it is
+/// correct regardless of what the rest of checkout does afterwards — the
+/// same way a gap appears after any failed insert on an auto-increment key
+/// if the reserving checkout never completes.
+model OrderNumberCounter {
+  year    Int @id
+  counter Int @default(0)
+}

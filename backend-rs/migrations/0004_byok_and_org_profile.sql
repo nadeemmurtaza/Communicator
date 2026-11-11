@@ -106,7 +106,7 @@ ALTER TABLE integration_settings ADD COLUMN organization_social_links TEXT NOT N
 -- ============================================================
 -- AI Agent Configuration
 -- ============================================================
-ALTER TABLE integration_settings ADD COLUMN ai_agent_enabled INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE integration_settings ADD COLUMN ai_agent_enabled BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE integration_settings ADD COLUMN ai_agent_tone TEXT NOT NULL DEFAULT 'professional';
 ALTER TABLE integration_settings ADD COLUMN ai_agent_language TEXT NOT NULL DEFAULT 'en';
 ALTER TABLE integration_settings ADD COLUMN ai_agent_max_context_messages INTEGER NOT NULL DEFAULT 40;
@@ -117,46 +117,46 @@ ALTER TABLE integration_settings ADD COLUMN ai_agent_system_prompt TEXT NOT NULL
 -- ============================================================
 -- AI Memory & RAG Configuration
 -- ============================================================
-ALTER TABLE integration_settings ADD COLUMN ai_memory_enabled INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE integration_settings ADD COLUMN ai_memory_enabled BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE integration_settings ADD COLUMN ai_memory_max_entries INTEGER NOT NULL DEFAULT 100;
-ALTER TABLE integration_settings ADD COLUMN ai_rag_enabled INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE integration_settings ADD COLUMN ai_rag_enabled BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE integration_settings ADD COLUMN ai_rag_top_k INTEGER NOT NULL DEFAULT 5;
 ALTER TABLE integration_settings ADD COLUMN ai_rag_similarity_threshold REAL NOT NULL DEFAULT 0.75;
 
 -- ============================================================
 -- Auto-Reply Configuration (per-channel overrides)
 -- ============================================================
-ALTER TABLE integration_settings ADD COLUMN auto_reply_whatsapp INTEGER NOT NULL DEFAULT 1;
-ALTER TABLE integration_settings ADD COLUMN auto_reply_sms INTEGER NOT NULL DEFAULT 1;
-ALTER TABLE integration_settings ADD COLUMN auto_reply_email INTEGER NOT NULL DEFAULT 1;
-ALTER TABLE integration_settings ADD COLUMN auto_reply_telegram INTEGER NOT NULL DEFAULT 1;
-ALTER TABLE integration_settings ADD COLUMN auto_reply_facebook INTEGER NOT NULL DEFAULT 1;
-ALTER TABLE integration_settings ADD COLUMN auto_reply_instagram INTEGER NOT NULL DEFAULT 1;
-ALTER TABLE integration_settings ADD COLUMN auto_reply_line INTEGER NOT NULL DEFAULT 1;
-ALTER TABLE integration_settings ADD COLUMN auto_reply_tiktok INTEGER NOT NULL DEFAULT 1;
-ALTER TABLE integration_settings ADD COLUMN auto_reply_voice INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE integration_settings ADD COLUMN auto_reply_live_chat INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE integration_settings ADD COLUMN auto_reply_whatsapp BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE integration_settings ADD COLUMN auto_reply_sms BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE integration_settings ADD COLUMN auto_reply_email BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE integration_settings ADD COLUMN auto_reply_telegram BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE integration_settings ADD COLUMN auto_reply_facebook BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE integration_settings ADD COLUMN auto_reply_instagram BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE integration_settings ADD COLUMN auto_reply_line BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE integration_settings ADD COLUMN auto_reply_tiktok BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE integration_settings ADD COLUMN auto_reply_voice BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE integration_settings ADD COLUMN auto_reply_live_chat BOOLEAN NOT NULL DEFAULT true;
 
 -- ============================================================
 -- Connection Status Tracking
 -- ============================================================
-ALTER TABLE integration_settings ADD COLUMN whatsapp_connected INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE integration_settings ADD COLUMN whatsapp_connected BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE integration_settings ADD COLUMN whatsapp_last_connected_at TEXT;
-ALTER TABLE integration_settings ADD COLUMN sms_connected INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE integration_settings ADD COLUMN sms_connected BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE integration_settings ADD COLUMN sms_last_connected_at TEXT;
-ALTER TABLE integration_settings ADD COLUMN telegram_connected INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE integration_settings ADD COLUMN telegram_connected BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE integration_settings ADD COLUMN telegram_last_connected_at TEXT;
-ALTER TABLE integration_settings ADD COLUMN line_connected INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE integration_settings ADD COLUMN line_connected BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE integration_settings ADD COLUMN line_last_connected_at TEXT;
-ALTER TABLE integration_settings ADD COLUMN tiktok_connected INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE integration_settings ADD COLUMN tiktok_connected BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE integration_settings ADD COLUMN tiktok_last_connected_at TEXT;
-ALTER TABLE integration_settings ADD COLUMN facebook_connected INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE integration_settings ADD COLUMN facebook_connected BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE integration_settings ADD COLUMN facebook_last_connected_at TEXT;
-ALTER TABLE integration_settings ADD COLUMN instagram_connected INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE integration_settings ADD COLUMN instagram_connected BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE integration_settings ADD COLUMN instagram_last_connected_at TEXT;
-ALTER TABLE integration_settings ADD COLUMN email_connected INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE integration_settings ADD COLUMN email_connected BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE integration_settings ADD COLUMN email_last_connected_at TEXT;
-ALTER TABLE integration_settings ADD COLUMN voice_connected INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE integration_settings ADD COLUMN voice_connected BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE integration_settings ADD COLUMN voice_last_connected_at TEXT;
-ALTER TABLE integration_settings ADD COLUMN ai_connected INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE integration_settings ADD COLUMN ai_connected BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE integration_settings ADD COLUMN ai_last_connected_at TEXT;
