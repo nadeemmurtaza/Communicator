@@ -72,15 +72,26 @@ Run before major changes:
 .\backup-databases.ps1 -Databases communicator,nid,erp,yaseenecom
 ```
 
-### 2. Automated Daily Backups (Production)
-Use Windows Task Scheduler to run daily:
+### 2. Automated Daily Backups (Production) — ✅ Configured
 
-1. Open **Task Scheduler** → **Create Task**
-2. **Trigger**: Daily at your preferred time (e.g., 2:00 AM)
-3. **Action**: Start a program
-   - Program: `powershell.exe`
-   - Arguments: `-ExecutionPolicy Bypass -File "C:\path\to\backup-databases.ps1" -Databases communicator,nid,erp,yaseenecom`
-4. **Conditions**: Run only when AC power is on (optional)
+A Windows Task Scheduler task **`Communicator-Database-Backup`** is already configured:
+
+- **Schedule**: Daily at 2:00 AM
+- **Databases**: communicator, nid, erp, yaseenecom (PostgreSQL) + communicator.db, desktop-v2.db (SQLite)
+- **Execution**: `powershell.exe -ExecutionPolicy Bypass -File "C:\Users\nommi\Downloads\scraper\communicator\backup-databases.ps1" -Databases communicator,nid,erp,yaseenecom`
+
+To verify or modify the task:
+```powershell
+# View task details
+Get-ScheduledTask -TaskName 'Communicator-Database-Backup' | Format-List *
+Get-ScheduledTaskInfo -TaskName 'Communicator-Database-Backup'
+
+# Run manually for testing
+Start-ScheduledTask -TaskName 'Communicator-Database-Backup'
+
+# Check state
+Get-ScheduledTask -TaskName 'Communicator-Database-Backup' | Select-Object State
+```
 
 ### 3. Retention Policy
 - The scripts keep all backups by default
