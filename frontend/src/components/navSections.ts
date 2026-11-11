@@ -33,6 +33,7 @@ export interface NavChild {
   label: string
   end?: boolean
   channel?: string
+  group?: string // visual group label for sectioned nav
 }
 
 export interface NavSection {
@@ -74,7 +75,6 @@ export const NAV_SECTIONS: NavSection[] = [
     children: [
       { to: '/contacts', label: 'Contacts' },
       { to: '/clients', label: 'Client Profiles' },
-      { to: '/broadcasts', label: 'Broadcasts' },
       { to: '/sequences', label: 'Sequences' },
       { to: '/automation', label: 'Automation' },
     ],
@@ -107,44 +107,52 @@ export const NAV_SECTIONS: NavSection[] = [
     to: '/knowledge-base',
     icon: Sparkles,
     children: [
-      { to: '/knowledge-base', label: 'Knowledge Base' },
-      { to: '/services', label: 'Service Catalog' },
-      { to: '/ai-agent', label: 'AI Agent' },
-      { to: '/simulations', label: 'AI Simulations' },
-      { to: '/self-improving', label: 'Self-Improving AI' },
-      { to: '/topic-categorization', label: 'Topic Categorization' },
-      { to: '/cx-qa', label: 'CX Score & QA' },
-      { to: '/monitoring', label: 'Monitoring & Alerts' },
-      { to: '/suggestions', label: 'AI Suggestions' },
-      { to: '/csat', label: 'CSAT Surveys' },
-      { to: '/operator', label: 'Fin Operator' },
-      { to: '/procedures', label: 'Procedures & Actions' },
-      { to: '/unified-inbox', label: 'Unified Inbox' },
-      { to: '/workflows', label: 'Workflow Builder' },
-       { to: '/fin-vision', label: 'Fin Vision' },
-       { to: '/audience-kb', label: 'Audience KB Scoping' },
-       { to: '/brand-overrides', label: 'Brand Overrides' },
-       { to: '/mcp', label: 'MCP Protocol' },
-       { to: '/autonomous-resolution', label: 'Autonomous Resolution' },
-       { to: '/help-center', label: 'Help Center' },
-      { to: '/crm-sync', label: 'CRM Sync' },
-      { to: '/kb-import', label: 'KB Import' },
-      { to: '/agent-performance', label: 'Agent Performance' },
-      { to: '/notifications', label: 'Notifications' },
-      { to: '/inapp-messaging', label: 'In-App Messaging' },
-      { to: '/tone-of-voice', label: 'Tone of Voice' },
-      { to: '/translation', label: 'Translation' },
-      { to: '/embed-widget', label: 'Embed Widget' },
-      { to: '/unified-analytics', label: 'Unified Analytics' },
-      { to: '/reply-integration', label: 'Reply Integration' },
-      { to: '/ab-testing', label: 'A/B Testing' },
-      { to: '/fulfillment', label: 'Fulfillment' },
-      { to: '/scheduled-tasks', label: 'Scheduled Tasks' },
-      { to: '/compliance', label: 'Compliance & Privacy' },
-      { to: '/conversation-search', label: 'Conversation Search' },
-      { to: '/system-health', label: 'System Health & Onboarding' },
-            { to: '/email-templates', label: 'Email Templates & SMTP' },
-            { to: '/broadcast', label: 'Omni-Channel Broadcast' },
+      // Knowledge & Content
+      { to: '/knowledge-base', label: 'Knowledge Base', group: 'Knowledge' },
+      { to: '/services', label: 'Service Catalog', group: 'Knowledge' },
+      { to: '/help-center', label: 'Help Center', group: 'Knowledge' },
+      { to: '/kb-import', label: 'KB Import', group: 'Knowledge' },
+      { to: '/audience-kb', label: 'Audience KB Scoping', group: 'Knowledge' },
+      // AI Engine
+      { to: '/ai-agent', label: 'AI Agent', group: 'AI Engine' },
+      { to: '/autonomous-resolution', label: 'Autonomous Resolution', group: 'AI Engine' },
+      { to: '/tone-of-voice', label: 'Tone of Voice', group: 'AI Engine' },
+      { to: '/reply-integration', label: 'Reply Integration', group: 'AI Engine' },
+      { to: '/fin-vision', label: 'Fin Vision', group: 'AI Engine' },
+      { to: '/ab-testing', label: 'A/B Testing', group: 'AI Engine' },
+      { to: '/simulations', label: 'AI Simulations', group: 'AI Engine' },
+      // Analytics
+      { to: '/unified-analytics', label: 'Unified Analytics', group: 'Analytics' },
+      { to: '/monitoring', label: 'Monitoring & Alerts', group: 'Analytics' },
+      { to: '/cx-qa', label: 'CX Score & QA', group: 'Analytics' },
+      { to: '/csat', label: 'CSAT Surveys', group: 'Analytics' },
+      { to: '/topic-categorization', label: 'Topic Categorization', group: 'Analytics' },
+      { to: '/agent-performance', label: 'Agent Performance', group: 'Analytics' },
+      // Operations
+      { to: '/operator', label: 'Fin Operator', group: 'Operations' },
+      { to: '/suggestions', label: 'AI Suggestions', group: 'Operations' },
+      { to: '/self-improving', label: 'Self-Improving AI', group: 'Operations' },
+      { to: '/procedures', label: 'Procedures & Actions', group: 'Operations' },
+      { to: '/workflows', label: 'Workflow Builder', group: 'Operations' },
+      { to: '/scheduled-tasks', label: 'Scheduled Tasks', group: 'Operations' },
+      // Inbox
+      { to: '/unified-inbox', label: 'Unified Inbox', group: 'Inbox' },
+      { to: '/conversation-search', label: 'Conversation Search', group: 'Inbox' },
+      // Outreach
+      { to: '/broadcast', label: 'Omni-Channel Broadcast', group: 'Outreach' },
+      { to: '/inapp-messaging', label: 'In-App Messaging', group: 'Outreach' },
+      { to: '/notifications', label: 'Notifications', group: 'Outreach' },
+      { to: '/embed-widget', label: 'Embed Widget', group: 'Outreach' },
+      // Integrations
+      { to: '/crm-sync', label: 'CRM Sync', group: 'Integrations' },
+      { to: '/mcp', label: 'MCP Protocol', group: 'Integrations' },
+      { to: '/brand-overrides', label: 'Brand Overrides', group: 'Integrations' },
+      // System
+      { to: '/translation', label: 'Translation', group: 'System' },
+      { to: '/compliance', label: 'Compliance & Privacy', group: 'System' },
+      { to: '/fulfillment', label: 'Fulfillment', group: 'System' },
+      { to: '/email-templates', label: 'Email Templates & SMTP', group: 'System' },
+      { to: '/system-health', label: 'System Health & Onboarding', group: 'System' },
     ],
   },
   {

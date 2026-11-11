@@ -45,26 +45,48 @@ export function Layout() {
         <aside className="hidden md:flex md:w-56 md:shrink-0 flex-col bg-[var(--color-page)] border-r border-[var(--color-border)] py-5 px-2">
           <p className="px-2 pb-3 text-xs font-bold uppercase tracking-[0.6px] text-[var(--color-ink-faint)]">{activeSection.label}</p>
           <nav className="flex flex-col gap-0.5">
-            {activeSection.children.map((child) => {
-              const ChannelIcon = child.channel ? CHANNEL_ICONS[child.channel] : undefined
-              return (
-                <NavLink
-                  key={child.to}
-                  to={child.to}
-                  end={child.end}
-                  className={({ isActive }) =>
-                    `flex items-center gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-1.5 text-sm transition-colors duration-150 ${
-                      isActive
-                        ? 'bg-[var(--color-surface)] text-[var(--color-ink)] font-semibold shadow-sm border border-[var(--color-border)]'
-                        : 'text-[var(--color-ink-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-ink)]'
-                    }`
-                  }
-                >
-                  {ChannelIcon && <ChannelIcon className="h-4 w-4 shrink-0" />}
-                  {child.label}
-                </NavLink>
-              )
-            })}
+            {(() => {
+              const items = activeSection.children ?? []
+              const groups = new Map<string | undefined, typeof items[number][]>()
+              items.forEach((item) => {
+                const g = item.group
+                if (!groups.has(g)) groups.set(g, [])
+                groups.get(g)!.push(item)
+              })
+              const elements: JSX.Element[] = []
+              let groupIndex = 0
+              groups.forEach((groupItems, groupLabel) => {
+                if (groupLabel) {
+                  elements.push(
+                    <p key={`group-${groupIndex}`} className="px-2 pt-3 pb-1 text-[10px] font-bold uppercase tracking-[0.6px] text-[var(--color-ink-faint)]">
+                      {groupLabel}
+                    </p>
+                  )
+                }
+                groupIndex++
+                groupItems.forEach((child) => {
+                  const ChannelIcon = child.channel ? CHANNEL_ICONS[child.channel] : undefined
+                  elements.push(
+                    <NavLink
+                      key={child.to}
+                      to={child.to}
+                      end={child.end}
+                      className={({ isActive }) =>
+                        `flex items-center gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-1.5 text-sm transition-colors duration-150 ${
+                          isActive
+                            ? 'bg-[var(--color-surface)] text-[var(--color-ink)] font-semibold shadow-sm border border-[var(--color-border)]'
+                            : 'text-[var(--color-ink-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-ink)]'
+                        }`
+                      }
+                    >
+                      {ChannelIcon && <ChannelIcon className="h-4 w-4 shrink-0" />}
+                      {child.label}
+                    </NavLink>
+                  )
+                })
+              })
+              return elements
+            })()}
           </nav>
         </aside>
       )}

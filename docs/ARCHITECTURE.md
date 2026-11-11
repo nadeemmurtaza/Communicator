@@ -1012,6 +1012,18 @@ A scheduled worker (Celery/APScheduler + Redis) scans conversations in
   (shows exactly what tone instructions and guidance rules are injected into the AI
   system prompt).
 
+- **Issue Fixes (Post Phase 46)**: Resolved 15 identified issues across the codebase:
+  (1) Fixed 10 duplicate migration numbers (renamed to 0062–0071), (2) Resolved `/broadcasts`
+  route conflict in main.rs by renaming old WhatsApp-only routes to `/whatsapp-broadcasts`,
+  (3) Consolidated frontend broadcast pages — removed old `/broadcasts` route and Broadcasts.tsx,
+  keeping only `/broadcast` with BroadcastDashboard, (4) Reorganized Intelligence navigation from
+  37 flat items into 9 visual groups (Knowledge, AI Engine, Analytics, Operations, Inbox,
+  Outreach, Integrations, System) using group separators in the nav component, (5) Fixed
+  routes/mod.rs lines 73-74 — replaced `pub use services::` with `pub mod` and created proper
+  route files for nid_organization_sync and nid_brand_sync, (6) Created KNOWN_LIMITATIONS.md
+  documenting all simulated/stub implementations, deferred features, and missing frontend pages.
+  Full details in `docs/KNOWN_LIMITATIONS.md`.
+
 ## 10. Open decisions
 
 Flagging rather than guessing on the items that materially change the

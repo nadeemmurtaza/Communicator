@@ -5,7 +5,6 @@ import { Login } from './pages/Login'
 import { NidCallback } from './pages/NidCallback'
 import { Organizations } from './pages/Organizations'
 import { Automation } from './pages/Automation'
-import { Broadcasts } from './pages/Broadcasts'
 import { ChannelsHub } from './pages/ChannelsHub'
 import { Connections } from './pages/Connections'
 import { Contacts } from './pages/Contacts'
@@ -140,7 +139,6 @@ function App() {
         <Route path="/contacts/:id" element={<ContactProfile />} />
         <Route path="/clients" element={<ClientProfiles />} />
         <Route path="/clients/:id" element={<ContactProfile />} />
-        <Route path="/broadcasts" element={<Broadcasts />} />
         <Route path="/sequences" element={<Sequences />} />
         <Route path="/automation" element={<Automation />} />
 

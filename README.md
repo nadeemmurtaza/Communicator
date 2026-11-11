@@ -52,8 +52,8 @@ for the endpoints Harvester needs to expose.
 
 ## Status
 
-**Phases 0–46, Campaign Pathways, and HTML Auto-Format complete.** See the roadmap in `docs/ARCHITECTURE.md` for
-full phase descriptions.
+**Phases 0–46, Campaign Pathways, HTML Auto-Format, and Issue Fixes complete.** See the roadmap in `docs/ARCHITECTURE.md` for
+full phase descriptions. Known limitations documented in `docs/KNOWN_LIMITATIONS.md`.
 
 ### Phase 46: Omni-Channel Broadcast System
 

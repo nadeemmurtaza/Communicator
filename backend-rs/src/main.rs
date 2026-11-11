@@ -222,15 +222,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/drafts/generate/{conversation_id}", post(routes::drafts::generate_draft))
         .route("/drafts/dispatch-auto-approved", post(routes::drafts::dispatch_auto_approved_drafts))
 
-        // Broadcasts / Campaigns
-        .route("/broadcasts", get(routes::broadcasts::list_broadcasts).post(routes::broadcasts::create_broadcast))
-        .route("/broadcasts/audience-preview", get(routes::broadcasts::get_audience_preview))
-        .route("/broadcasts/{id}/analytics", get(routes::broadcasts::get_campaign_analytics))
-        .route("/broadcasts/{id}/reschedule", post(routes::broadcasts::reschedule_campaign))
-        .route("/broadcasts/{id}/dispatch", post(routes::broadcasts::dispatch_broadcast))
-        .route("/broadcasts/process-scheduled", post(routes::broadcasts::process_scheduled_campaigns))
-        .route("/broadcasts/{id}/recipients", get(routes::broadcasts::list_broadcast_recipients))
-        .route("/broadcasts/pricing-calculator", get(routes::broadcasts::get_whatsapp_pricing))
+        // WhatsApp Broadcasts / Campaigns (legacy — use /broadcasts for omni-channel)
+        .route("/whatsapp-broadcasts", get(routes::broadcasts::list_broadcasts).post(routes::broadcasts::create_broadcast))
+        .route("/whatsapp-broadcasts/audience-preview", get(routes::broadcasts::get_audience_preview))
+        .route("/whatsapp-broadcasts/{id}/analytics", get(routes::broadcasts::get_campaign_analytics))
+        .route("/whatsapp-broadcasts/{id}/reschedule", post(routes::broadcasts::reschedule_campaign))
+        .route("/whatsapp-broadcasts/{id}/dispatch", post(routes::broadcasts::dispatch_broadcast))
+        .route("/whatsapp-broadcasts/process-scheduled", post(routes::broadcasts::process_scheduled_campaigns))
+        .route("/whatsapp-broadcasts/{id}/recipients", get(routes::broadcasts::list_broadcast_recipients))
+        .route("/whatsapp-broadcasts/pricing-calculator", get(routes::broadcasts::get_whatsapp_pricing))
 
         // Commerce Engine
         .route("/commerce/categories", get(routes::commerce::list_categories).post(routes::commerce::create_category))
