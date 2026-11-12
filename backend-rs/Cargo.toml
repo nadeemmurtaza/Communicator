@@ -40,7 +40,7 @@ aes-gcm = "0.10"
 async-trait = "0.1"
 
 # Document processing (Phase 23)
-lopdf = "0.34"
+lopdf = "0.42"
 zip = "2.2"
 
 # Random (A/B testing traffic splits, OTP generation)
