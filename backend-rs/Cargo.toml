@@ -41,7 +41,7 @@ async-trait = "0.1"
 
 # Document processing (Phase 23)
 lopdf = "0.34"
-zip = "2.2"
+zip = "9.0"
 
 # Random (A/B testing traffic splits, OTP generation)
 rand = "0.8"
