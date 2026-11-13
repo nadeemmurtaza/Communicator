@@ -53,7 +53,7 @@ impl CommerceOrdersService {
 
         // Count orders this year
         let count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM commerce_orders WHERE order_number LIKE ?",
+            "SELECT COUNT(*) FROM commerce_orders WHERE order_number LIKE $1",
         )
         .bind(format!("{}-%", prefix))
         .fetch_one(&self.pool)
@@ -77,7 +77,7 @@ impl CommerceOrdersService {
 
         // Load cart
         let cart_row = sqlx::query(
-            "SELECT id, customer_id, brand_id, channel_type, status FROM carts WHERE id = ?",
+            "SELECT id, customer_id, brand_id, channel_type, status FROM carts WHERE id = $1",
         )
         .bind(cart_id)
         .fetch_optional(&mut *tx)
@@ -100,7 +100,7 @@ impl CommerceOrdersService {
              p.name AS product_name, p.sku, p.track_inventory, p.inventory_count \
              FROM cart_items ci \
              JOIN products p ON ci.product_id = p.id \
-             WHERE ci.cart_id = ?",
+             WHERE ci.cart_id = $1",
         )
         .bind(cart_id)
         .fetch_all(&mut *tx)
@@ -176,7 +176,7 @@ impl CommerceOrdersService {
             "INSERT INTO commerce_orders (id, brand_id, customer_id, order_number, channel_type, \
              status, total_amount, subtotal, tax, shipping, currency, items_snapshot, \
              shipping_address, payment_status, payment_method, metadata, source, created_at, updated_at) \
-             VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, 'USD', ?, ?, ?, ?, ?, 'internal', ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, 'USD', $10, $11, 'pending', $12, $13, 'internal', $14, $15)",
         )
         .bind(&order_id)
         .bind(&brand_id)
@@ -213,7 +213,7 @@ impl CommerceOrdersService {
             sqlx::query(
                 "INSERT INTO commerce_order_items (id, order_id, product_id, variant_id, \
                  product_name, sku, quantity, unit_price, total_price) \
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
             )
             .bind(&item_id)
             .bind(&order_id)
@@ -231,7 +231,7 @@ impl CommerceOrdersService {
             // Reduce inventory
             if track_inventory {
                 let _ = sqlx::query(
-                    "UPDATE products SET inventory_count = inventory_count - ? WHERE id = ?",
+                    "UPDATE products SET inventory_count = inventory_count - $1 WHERE id = $2",
                 )
                 .bind(quantity)
                 .bind(&product_id)
@@ -254,7 +254,7 @@ impl CommerceOrdersService {
         }
 
         // Mark cart as converted
-        sqlx::query("UPDATE carts SET status = 'converted', updated_at = ? WHERE id = ?")
+        sqlx::query("UPDATE carts SET status = 'converted', updated_at = $1 WHERE id = $2")
             .bind(&now)
             .bind(cart_id)
             .execute(&mut *tx)
@@ -286,7 +286,7 @@ impl CommerceOrdersService {
              total_amount, subtotal, tax, shipping, currency, items_snapshot, \
              shipping_address, payment_status, payment_method, metadata, source, \
              external_order_id, created_at, updated_at \
-             FROM commerce_orders WHERE brand_id = ? ORDER BY created_at DESC",
+             FROM commerce_orders WHERE brand_id = $1 ORDER BY created_at DESC",
         )
         .bind(brand_id)
         .fetch_all(&self.pool)
@@ -333,7 +333,7 @@ impl CommerceOrdersService {
              total_amount, subtotal, tax, shipping, currency, items_snapshot, \
              shipping_address, payment_status, payment_method, metadata, source, \
              external_order_id, created_at, updated_at \
-             FROM commerce_orders WHERE id = ?",
+             FROM commerce_orders WHERE id = $1",
         )
         .bind(order_id)
         .fetch_one(&self.pool)
@@ -369,7 +369,7 @@ impl CommerceOrdersService {
         let rows = sqlx::query(
             "SELECT id, order_id, product_id, variant_id, product_name, sku, \
              quantity, unit_price, total_price, metadata \
-             FROM commerce_order_items WHERE order_id = ?",
+             FROM commerce_order_items WHERE order_id = $1",
         )
         .bind(order_id)
         .fetch_all(&self.pool)
@@ -412,7 +412,7 @@ impl CommerceOrdersService {
         }
 
         let now = chrono::Utc::now().to_rfc3339();
-        sqlx::query("UPDATE commerce_orders SET status = ?, updated_at = ? WHERE id = ?")
+        sqlx::query("UPDATE commerce_orders SET status = $1, updated_at = $2 WHERE id = $3")
             .bind(new_status.as_str())
             .bind(&now)
             .bind(order_id)
@@ -426,7 +426,7 @@ impl CommerceOrdersService {
     /// Get order statistics for a brand
     pub async fn get_order_stats(&self, brand_id: &str) -> Result<serde_json::Value, String> {
         let total_orders: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM commerce_orders WHERE brand_id = ?",
+            "SELECT COUNT(*) FROM commerce_orders WHERE brand_id = $1",
         )
         .bind(brand_id)
         .fetch_one(&self.pool)
@@ -434,7 +434,7 @@ impl CommerceOrdersService {
         .map_err(|e| format!("Failed to count orders: {e}"))?;
 
         let total_revenue: f64 = sqlx::query_scalar(
-            "SELECT COALESCE(SUM(total_amount), 0) FROM commerce_orders WHERE brand_id = ?",
+            "SELECT COALESCE(SUM(total_amount), 0) FROM commerce_orders WHERE brand_id = $1",
         )
         .bind(brand_id)
         .fetch_one(&self.pool)
@@ -442,7 +442,7 @@ impl CommerceOrdersService {
         .map_err(|e| format!("Failed to sum revenue: {e}"))?;
 
         let pending_orders: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM commerce_orders WHERE brand_id = ? AND status = 'pending'",
+            "SELECT COUNT(*) FROM commerce_orders WHERE brand_id = $1 AND status = 'pending'",
         )
         .bind(brand_id)
         .fetch_one(&self.pool)
@@ -451,7 +451,7 @@ impl CommerceOrdersService {
 
         let today_start = chrono::Utc::now().format("%Y-%m-%dT00:00:00Z").to_string();
         let today_orders: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM commerce_orders WHERE brand_id = ? AND created_at >= ?",
+            "SELECT COUNT(*) FROM commerce_orders WHERE brand_id = $1 AND created_at >= $2",
         )
         .bind(brand_id)
         .bind(&today_start)

@@ -48,7 +48,7 @@ impl CommercePaymentsService {
         let rows = sqlx::query(
             "SELECT id, order_id, amount, currency, method, status, transaction_id, \
              metadata, created_at \
-             FROM commerce_payments WHERE order_id = ? ORDER BY created_at DESC",
+             FROM commerce_payments WHERE order_id = $1 ORDER BY created_at DESC",
         )
         .bind(order_id)
         .fetch_all(&self.pool)
@@ -82,14 +82,17 @@ impl CommercePaymentsService {
              p.transaction_id, p.metadata, p.created_at \
              FROM commerce_payments p \
              JOIN commerce_orders o ON p.order_id = o.id \
-             WHERE o.brand_id = ?",
+             WHERE o.brand_id = $1",
         );
+        let mut n = 1;
 
-        if let Some(s) = status {
-            query.push_str(" AND p.status = ?");
+        if status.is_some() {
+            n += 1;
+            query.push_str(&format!(" AND p.status = ${}", n));
         }
-        if let Some(m) = method {
-            query.push_str(" AND p.method = ?");
+        if method.is_some() {
+            n += 1;
+            query.push_str(&format!(" AND p.method = ${}", n));
         }
         query.push_str(" ORDER BY p.created_at DESC");
 
@@ -99,7 +102,7 @@ impl CommercePaymentsService {
              p.transaction_id, p.metadata, p.created_at \
              FROM commerce_payments p \
              JOIN commerce_orders o ON p.order_id = o.id \
-             WHERE o.brand_id = ? ORDER BY p.created_at DESC",
+             WHERE o.brand_id = $1 ORDER BY p.created_at DESC",
         )
         .bind(brand_id)
         .fetch_all(&self.pool)
@@ -126,7 +129,7 @@ impl CommercePaymentsService {
         let row = sqlx::query(
             "SELECT id, order_id, amount, currency, method, status, transaction_id, \
              metadata, created_at \
-             FROM commerce_payments WHERE id = ?",
+             FROM commerce_payments WHERE id = $1",
         )
         .bind(payment_id)
         .fetch_one(&self.pool)
@@ -161,7 +164,7 @@ impl CommercePaymentsService {
 
         // Verify order exists
         let _ = sqlx::query_scalar::<_, i64>(
-            "SELECT 1 FROM commerce_orders WHERE id = ?",
+            "SELECT 1 FROM commerce_orders WHERE id = $1",
         )
         .bind(&req.order_id)
         .fetch_one(&self.pool)
@@ -171,7 +174,7 @@ impl CommercePaymentsService {
         sqlx::query(
             "INSERT INTO commerce_payments (id, order_id, amount, currency, method, status, \
              transaction_id, metadata, created_at) \
-             VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8)",
         )
         .bind(&id)
         .bind(&req.order_id)
@@ -203,7 +206,7 @@ impl CommercePaymentsService {
         // Get payment to find order_id
         let payment = self.get_payment(payment_id).await?;
 
-        sqlx::query("UPDATE commerce_payments SET status = ? WHERE id = ?")
+        sqlx::query("UPDATE commerce_payments SET status = $1 WHERE id = $2")
             .bind(status.as_str())
             .bind(payment_id)
             .execute(&self.pool)
@@ -225,14 +228,14 @@ impl CommercePaymentsService {
         let now = chrono::Utc::now().to_rfc3339();
 
         let mut query =
-            sqlx::query("UPDATE commerce_payments SET status = 'paid', updated_at = ? WHERE id = ?")
+            sqlx::query("UPDATE commerce_payments SET status = 'paid', updated_at = $1 WHERE id = $2")
                 .bind(&now)
                 .bind(payment_id);
 
         if let Some(tx_id) = transaction_id {
             // Need a different query with transaction_id
             let _ = sqlx::query(
-                "UPDATE commerce_payments SET status = 'paid', transaction_id = ? WHERE id = ?",
+                "UPDATE commerce_payments SET status = 'paid', transaction_id = $1 WHERE id = $2",
             )
             .bind(tx_id)
             .bind(payment_id)
@@ -253,7 +256,7 @@ impl CommercePaymentsService {
     /// Refund a payment
     pub async fn refund_payment(&self, payment_id: &str) -> Result<CommercePayment, String> {
         let now = chrono::Utc::now().to_rfc3339();
-        sqlx::query("UPDATE commerce_payments SET status = 'refunded' WHERE id = ?")
+        sqlx::query("UPDATE commerce_payments SET status = 'refunded' WHERE id = $1")
             .bind(payment_id)
             .execute(&self.pool)
             .await
@@ -267,7 +270,7 @@ impl CommercePaymentsService {
     /// Recalculate and update the order's payment status based on its payments
     async fn update_order_payment_status(&self, order_id: &str) -> Result<(), String> {
         let order_total: f64 = sqlx::query_scalar(
-            "SELECT total_amount FROM commerce_orders WHERE id = ?",
+            "SELECT total_amount FROM commerce_orders WHERE id = $1",
         )
         .bind(order_id)
         .fetch_one(&self.pool)
@@ -276,7 +279,7 @@ impl CommercePaymentsService {
 
         let paid_amount: f64 = sqlx::query_scalar(
             "SELECT COALESCE(SUM(amount), 0) FROM commerce_payments \
-             WHERE order_id = ? AND status = 'paid'",
+             WHERE order_id = $1 AND status = 'paid'",
         )
         .bind(order_id)
         .fetch_one(&self.pool)
@@ -285,7 +288,7 @@ impl CommercePaymentsService {
 
         let has_refund: bool = sqlx::query_scalar::<_, i64>(
             "SELECT COUNT(*) FROM commerce_payments \
-             WHERE order_id = ? AND status = 'refunded'",
+             WHERE order_id = $1 AND status = 'refunded'",
         )
         .bind(order_id)
         .fetch_one(&self.pool)
@@ -305,7 +308,7 @@ impl CommercePaymentsService {
 
         let now = chrono::Utc::now().to_rfc3339();
         sqlx::query(
-            "UPDATE commerce_orders SET payment_status = ?, updated_at = ? WHERE id = ?",
+            "UPDATE commerce_orders SET payment_status = $1, updated_at = $2 WHERE id = $3",
         )
         .bind(new_status)
         .bind(&now)
@@ -322,7 +325,7 @@ impl CommercePaymentsService {
         let total_paid: f64 = sqlx::query_scalar(
             "SELECT COALESCE(SUM(p.amount), 0) FROM commerce_payments p \
              JOIN commerce_orders o ON p.order_id = o.id \
-             WHERE o.brand_id = ? AND p.status = 'paid'",
+             WHERE o.brand_id = $1 AND p.status = 'paid'",
         )
         .bind(brand_id)
         .fetch_one(&self.pool)
@@ -332,7 +335,7 @@ impl CommercePaymentsService {
         let pending_amount: f64 = sqlx::query_scalar(
             "SELECT COALESCE(SUM(p.amount), 0) FROM commerce_payments p \
              JOIN commerce_orders o ON p.order_id = o.id \
-             WHERE o.brand_id = ? AND p.status = 'pending'",
+             WHERE o.brand_id = $1 AND p.status = 'pending'",
         )
         .bind(brand_id)
         .fetch_one(&self.pool)
@@ -342,7 +345,7 @@ impl CommercePaymentsService {
         let total_transactions: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM commerce_payments p \
              JOIN commerce_orders o ON p.order_id = o.id \
-             WHERE o.brand_id = ?",
+             WHERE o.brand_id = $1",
         )
         .bind(brand_id)
         .fetch_one(&self.pool)

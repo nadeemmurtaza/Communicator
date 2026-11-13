@@ -85,7 +85,7 @@ impl CommerceAnalyticsService {
         // Current period
         let current: (f64, i32) = sqlx::query_as(
             "SELECT COALESCE(SUM(total_amount), 0), COUNT(*) FROM commerce_orders \
-             WHERE brand_id = ? AND created_at >= ?"
+             WHERE brand_id = $1 AND created_at >= $2"
         )
         .bind(brand_id)
         .bind(&cutoff)
@@ -96,7 +96,7 @@ impl CommerceAnalyticsService {
         // Previous period for comparison
         let previous: (f64, i32) = sqlx::query_as(
             "SELECT COALESCE(SUM(total_amount), 0), COUNT(*) FROM commerce_orders \
-             WHERE brand_id = ? AND created_at >= ? AND created_at < ?"
+             WHERE brand_id = $1 AND created_at >= $2 AND created_at < $3"
         )
         .bind(brand_id)
         .bind(&cutoff2)
@@ -121,7 +121,7 @@ impl CommerceAnalyticsService {
         };
 
         let total_customers: i32 = sqlx::query_scalar(
-            "SELECT COUNT(DISTINCT customer_id) FROM commerce_orders WHERE brand_id = ?"
+            "SELECT COUNT(DISTINCT customer_id) FROM commerce_orders WHERE brand_id = $1"
         )
         .bind(brand_id)
         .fetch_one(&self.pool)
@@ -129,7 +129,7 @@ impl CommerceAnalyticsService {
         .map_err(|e| e.to_string())?;
 
         let total_products: i32 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM products WHERE brand_id = ? AND is_active = 1"
+            "SELECT COUNT(*) FROM products WHERE brand_id = $1 AND is_active = 1"
         )
         .bind(brand_id)
         .fetch_one(&self.pool)
@@ -151,7 +151,7 @@ impl CommerceAnalyticsService {
         let days = if days > 0 { days } else { 30 };
         let rows = sqlx::query(
             "SELECT DATE(created_at) as date, COALESCE(SUM(total_amount), 0) as revenue, COUNT(*) as orders \
-             FROM commerce_orders WHERE brand_id = ? AND created_at >= CURRENT_DATE - ?::INTEGER \
+             FROM commerce_orders WHERE brand_id = $1 AND created_at >= CURRENT_DATE - $2::INTEGER \
              GROUP BY DATE(created_at) ORDER BY date"
         )
         .bind(brand_id)
@@ -180,10 +180,10 @@ impl CommerceAnalyticsService {
              FROM commerce_order_items oi \
              JOIN commerce_orders o ON oi.order_id = o.id \
              JOIN products p ON oi.product_id = p.id \
-             WHERE o.brand_id = ? \
+             WHERE o.brand_id = $1 \
              GROUP BY p.id \
              ORDER BY revenue DESC \
-             LIMIT ?"
+             LIMIT $2"
         )
         .bind(brand_id)
         .bind(limit)
@@ -212,10 +212,10 @@ impl CommerceAnalyticsService {
              COALESCE(SUM(o.total_amount), 0) as total_spent \
              FROM customers c \
              JOIN commerce_orders o ON c.id = o.customer_id \
-             WHERE o.brand_id = ? \
+             WHERE o.brand_id = $1 \
              GROUP BY c.id \
              ORDER BY total_spent DESC \
-             LIMIT ?"
+             LIMIT $2"
         )
         .bind(brand_id)
         .bind(limit)
@@ -241,7 +241,7 @@ impl CommerceAnalyticsService {
             "SELECT COALESCE(channel_type, 'direct') as channel_type, \
              COUNT(*) as orders_count, \
              COALESCE(SUM(total_amount), 0) as revenue \
-             FROM commerce_orders WHERE brand_id = ? \
+             FROM commerce_orders WHERE brand_id = $1 \
              GROUP BY channel_type ORDER BY revenue DESC"
         )
         .bind(brand_id)
@@ -269,8 +269,8 @@ impl CommerceAnalyticsService {
             "SELECT COUNT(*), COALESCE(SUM(total_amount), 0), \
              COUNT(DISTINCT customer_id), \
              (SELECT COALESCE(SUM(quantity), 0) FROM commerce_order_items \
-              WHERE order_id IN (SELECT id FROM commerce_orders WHERE brand_id = ? AND created_at >= ? AND created_at <= ?)) \
-             FROM commerce_orders WHERE brand_id = ? AND created_at >= ? AND created_at <= ?"
+              WHERE order_id IN (SELECT id FROM commerce_orders WHERE brand_id = $1 AND created_at >= $2 AND created_at <= $3)) \
+             FROM commerce_orders WHERE brand_id = $4 AND created_at >= $5 AND created_at <= $6"
         )
         .bind(brand_id)
         .bind(&start_of_day)
@@ -292,7 +292,7 @@ impl CommerceAnalyticsService {
         sqlx::query(
             "INSERT INTO analytics_daily_stats (id, brand_id, date, orders_count, revenue, \
              avg_order_value, unique_customers, products_sold) \
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
         )
         .bind(&id)
         .bind(brand_id)
@@ -313,7 +313,7 @@ impl CommerceAnalyticsService {
         let properties = req.properties.as_ref().map(|v| serde_json::to_string(v).unwrap_or_default());
         sqlx::query(
             "INSERT INTO analytics_events (id, brand_id, event_type, entity_type, entity_id, properties) \
-             VALUES (?, ?, ?, ?, ?, ?)"
+             VALUES ($1, $2, $3, $4, $5, $6)"
         )
         .bind(&id)
         .bind(&req.brand_id)
@@ -339,7 +339,7 @@ impl CommerceAnalyticsService {
     pub async fn daily_stats(&self, brand_id: &str, days: i32) -> Result<Vec<AnalyticsDailyStat>, String> {
         let days = if days > 0 { days } else { 30 };
         let rows = sqlx::query(
-            "SELECT * FROM analytics_daily_stats WHERE brand_id = ? AND date >= CURRENT_DATE - ?::INTEGER \
+            "SELECT * FROM analytics_daily_stats WHERE brand_id = $1 AND date >= CURRENT_DATE - $2::INTEGER \
              ORDER BY date"
         )
         .bind(brand_id)

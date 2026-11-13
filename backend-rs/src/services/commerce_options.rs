@@ -67,7 +67,7 @@ impl ProductOptionsService {
         let options = sqlx::query(
             "SELECT id, product_id, name, description, price_adjustment, required, \
              max_selections, sort_order, is_active, created_at, updated_at \
-             FROM product_options WHERE product_id = ? AND is_active = 1 ORDER BY sort_order, name",
+             FROM product_options WHERE product_id = $1 AND is_active = 1 ORDER BY sort_order, name",
         )
         .bind(product_id)
         .fetch_all(&self.pool)
@@ -100,7 +100,7 @@ impl ProductOptionsService {
         let row = sqlx::query(
             "SELECT id, product_id, name, description, price_adjustment, required, \
              max_selections, sort_order, is_active, created_at, updated_at \
-             FROM product_options WHERE id = ?",
+             FROM product_options WHERE id = $1",
         )
         .bind(id)
         .fetch_one(&self.pool)
@@ -138,7 +138,7 @@ impl ProductOptionsService {
         sqlx::query(
             "INSERT INTO product_options (id, product_id, name, description, price_adjustment, \
              required, max_selections, sort_order, is_active, created_at, updated_at) \
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1, $9, $10)",
         )
         .bind(&id)
         .bind(&req.product_id)
@@ -162,7 +162,7 @@ impl ProductOptionsService {
                 let val_sort = val.sort_order.unwrap_or(0);
                 let _ = sqlx::query(
                     "INSERT INTO product_option_values (id, option_id, name, price_adjustment, sku, sort_order, is_active, created_at) \
-                     VALUES (?, ?, ?, ?, ?, ?, 1, ?)",
+                     VALUES ($1, $2, $3, $4, $5, $6, 1, $7)",
                 )
                 .bind(&val_id)
                 .bind(&id)
@@ -219,7 +219,7 @@ impl ProductOptionsService {
             return self.get_option(id).await;
         }
 
-        let query = format!("UPDATE product_options SET {} WHERE id = ?", sets.join(", "));
+        let query = format!("UPDATE product_options SET {} WHERE id = $1", sets.join(", "));
         sqlx::query(&query)
             .bind(id)
             .execute(&self.pool)
@@ -230,7 +230,7 @@ impl ProductOptionsService {
     }
 
     pub async fn delete_option(&self, id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM product_options WHERE id = ?")
+        sqlx::query("DELETE FROM product_options WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await
@@ -250,7 +250,7 @@ impl ProductOptionsService {
 
         sqlx::query(
             "INSERT INTO product_option_values (id, option_id, name, price_adjustment, sku, sort_order, is_active, created_at) \
-             VALUES (?, ?, ?, ?, ?, ?, 1, ?)",
+             VALUES ($1, $2, $3, $4, $5, $6, 1, $7)",
         )
         .bind(&id)
         .bind(option_id)
@@ -267,7 +267,7 @@ impl ProductOptionsService {
     }
 
     pub async fn delete_option_value(&self, id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM product_option_values WHERE id = ?")
+        sqlx::query("DELETE FROM product_option_values WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await
@@ -282,7 +282,7 @@ impl ProductOptionsService {
     async fn list_option_values(&self, option_id: &str) -> Result<Vec<ProductOptionValue>, String> {
         let rows = sqlx::query(
             "SELECT id, option_id, name, price_adjustment, sku, sort_order, is_active, created_at \
-             FROM product_option_values WHERE option_id = ? AND is_active = 1 ORDER BY sort_order, name",
+             FROM product_option_values WHERE option_id = $1 AND is_active = 1 ORDER BY sort_order, name",
         )
         .bind(option_id)
         .fetch_all(&self.pool)
@@ -306,7 +306,7 @@ impl ProductOptionsService {
     async fn get_option_value(&self, id: &str) -> Result<ProductOptionValue, String> {
         let row = sqlx::query(
             "SELECT id, option_id, name, price_adjustment, sku, sort_order, is_active, created_at \
-             FROM product_option_values WHERE id = ?",
+             FROM product_option_values WHERE id = $1",
         )
         .bind(id)
         .fetch_one(&self.pool)

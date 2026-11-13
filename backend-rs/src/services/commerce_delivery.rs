@@ -76,7 +76,7 @@ impl CommerceDeliveryService {
     // ---------------------------------------------------------------------------
 
     pub async fn list_shipping_methods(&self, brand_id: &str) -> Result<Vec<ShippingMethod>, String> {
-        let rows = sqlx::query("SELECT * FROM shipping_methods WHERE brand_id = ? ORDER BY name")
+        let rows = sqlx::query("SELECT * FROM shipping_methods WHERE brand_id = $1 ORDER BY name")
             .bind(brand_id)
             .fetch_all(&self.pool)
             .await
@@ -87,7 +87,7 @@ impl CommerceDeliveryService {
     }
 
     pub async fn get_shipping_method(&self, id: &str) -> Result<ShippingMethod, String> {
-        let row = sqlx::query("SELECT * FROM shipping_methods WHERE id = ?")
+        let row = sqlx::query("SELECT * FROM shipping_methods WHERE id = $1")
             .bind(id)
             .fetch_one(&self.pool)
             .await
@@ -101,7 +101,7 @@ impl CommerceDeliveryService {
         let regions = req.regions.as_ref().map(|v| serde_json::to_string(v).unwrap_or_default());
         sqlx::query(
             "INSERT INTO shipping_methods (id, brand_id, name, type, rate, free_shipping_threshold, regions) \
-             VALUES (?, ?, ?, ?, ?, ?, ?)"
+             VALUES ($1, $2, $3, $4, $5, $6, $7)"
         )
         .bind(&id)
         .bind(&req.brand_id)
@@ -117,27 +117,31 @@ impl CommerceDeliveryService {
     }
 
     pub async fn update_shipping_method(&self, id: &str, req: &UpdateShippingMethodRequest) -> Result<ShippingMethod, String> {
-        let mut sets = Vec::new();
-        if let Some(ref name) = req.name { sets.push("name = ?"); }
-        if let Some(ref r#type) = req.r#type { sets.push("r#type = ?"); }
-        if let Some(ref is_active) = req.is_active { sets.push("is_active = ?"); }
-        sets.push("updated_at = NOW()::TEXT");
+        let mut sets: Vec<String> = Vec::new();
+        let mut n = 1;
+        if req.name.is_some() { sets.push(format!("name = ${}", n)); n += 1; }
+        if req.r#type.is_some() { sets.push(format!("type = ${}", n)); n += 1; }
+        if req.is_active.is_some() { sets.push(format!("is_active = ${}", n)); n += 1; }
+        sets.push("updated_at = NOW()::TEXT".to_string());
 
         if sets.len() <= 1 {
             return self.get_shipping_method(id).await;
         }
 
-        let query = format!("UPDATE shipping_methods SET {} WHERE id = ?", sets.join(", "));
-        sqlx::query(&query)
-            .bind(id)
-            .execute(&self.pool)
+        let query = format!("UPDATE shipping_methods SET {} WHERE id = ${}", sets.join(", "), n);
+        let mut q = sqlx::query(&query);
+        if let Some(ref name) = req.name { q = q.bind(name); }
+        if let Some(ref r#type) = req.r#type { q = q.bind(r#type); }
+        if let Some(is_active) = req.is_active { q = q.bind(is_active); }
+        q = q.bind(id);
+        q.execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
         self.get_shipping_method(id).await
     }
 
     pub async fn delete_shipping_method(&self, id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM shipping_methods WHERE id = ?")
+        sqlx::query("DELETE FROM shipping_methods WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await
@@ -151,7 +155,7 @@ impl CommerceDeliveryService {
 
     pub async fn list_shipments(&self, order_id: Option<&str>) -> Result<Vec<Shipment>, String> {
         let (query, rows) = if let Some(oid) = order_id {
-            let q = "SELECT * FROM shipments WHERE order_id = ? ORDER BY created_at DESC";
+            let q = "SELECT * FROM shipments WHERE order_id = $1 ORDER BY created_at DESC";
             (q, sqlx::query(q).bind(oid).fetch_all(&self.pool).await.map_err(|e| e.to_string())?)
         } else {
             let q = "SELECT * FROM shipments ORDER BY created_at DESC LIMIT 100";
@@ -163,7 +167,7 @@ impl CommerceDeliveryService {
     }
 
     pub async fn get_shipment(&self, id: &str) -> Result<Shipment, String> {
-        let row = sqlx::query("SELECT * FROM shipments WHERE id = ?")
+        let row = sqlx::query("SELECT * FROM shipments WHERE id = $1")
             .bind(id)
             .fetch_one(&self.pool)
             .await
@@ -175,7 +179,7 @@ impl CommerceDeliveryService {
         let id = Uuid::new_v4().to_string();
         sqlx::query(
             "INSERT INTO shipments (id, order_id, tracking_number, carrier, estimated_delivery) \
-             VALUES (?, ?, ?, ?, ?)"
+             VALUES ($1, $2, $3, $4, $5)"
         )
         .bind(&id)
         .bind(&req.order_id)
@@ -189,7 +193,7 @@ impl CommerceDeliveryService {
         // Add initial delivery event
         let event_id = Uuid::new_v4().to_string();
         sqlx::query(
-            "INSERT INTO delivery_events (id, shipment_id, event_type, description) VALUES (?, ?, 'created', 'Shipment created')"
+            "INSERT INTO delivery_events (id, shipment_id, event_type, description) VALUES ($1, $2, 'created', 'Shipment created')"
         )
         .bind(&event_id)
         .bind(&id)
@@ -200,7 +204,7 @@ impl CommerceDeliveryService {
         // Update order status to 'processing'
         sqlx::query(
             "UPDATE commerce_orders SET status = 'processing', updated_at = NOW()::TEXT \
-             WHERE id = ? AND status NOT IN ('shipped', 'delivered', 'cancelled')"
+             WHERE id = $1 AND status NOT IN ('shipped', 'delivered', 'cancelled')"
         )
         .bind(&req.order_id)
         .execute(&self.pool)
@@ -211,15 +215,17 @@ impl CommerceDeliveryService {
     }
 
     pub async fn update_shipment(&self, id: &str, req: &UpdateShipmentRequest) -> Result<Shipment, String> {
-        let mut sets = Vec::new();
-        if let Some(ref tracking) = req.tracking_number { sets.push("tracking_number = ?"); }
-        if let Some(ref carrier) = req.carrier { sets.push("carrier = ?"); }
+        let mut sets: Vec<String> = Vec::new();
+        let mut n = 1;
+        if req.tracking_number.is_some() { sets.push(format!("tracking_number = ${}", n)); n += 1; }
+        if req.carrier.is_some() { sets.push(format!("carrier = ${}", n)); n += 1; }
         if let Some(ref status) = req.status {
-            sets.push("status = ?");
+            sets.push(format!("status = ${}", n));
+            n += 1;
             // Add delivery event for status change
             let event_id = Uuid::new_v4().to_string();
             sqlx::query(
-                "INSERT INTO delivery_events (id, shipment_id, event_type, description) VALUES (?, ?, ?, ?)"
+                "INSERT INTO delivery_events (id, shipment_id, event_type, description) VALUES ($1, $2, $3, $4)"
             )
             .bind(&event_id)
             .bind(id)
@@ -233,7 +239,7 @@ impl CommerceDeliveryService {
             if status == "shipped" {
                 sqlx::query(
                     "UPDATE commerce_orders SET status = 'shipped', updated_at = NOW()::TEXT \
-                     WHERE id IN (SELECT order_id FROM shipments WHERE id = ?)"
+                     WHERE id IN (SELECT order_id FROM shipments WHERE id = $1)"
                 )
                 .bind(id)
                 .execute(&self.pool)
@@ -242,7 +248,7 @@ impl CommerceDeliveryService {
             } else if status == "delivered" {
                 sqlx::query(
                     "UPDATE commerce_orders SET status = 'delivered', updated_at = NOW()::TEXT \
-                     WHERE id IN (SELECT order_id FROM shipments WHERE id = ?)"
+                     WHERE id IN (SELECT order_id FROM shipments WHERE id = $1)"
                 )
                 .bind(id)
                 .execute(&self.pool)
@@ -250,17 +256,21 @@ impl CommerceDeliveryService {
                 .ok();
             }
         }
-        if let Some(ref actual) = req.actual_delivery { sets.push("actual_delivery = ?"); }
-        sets.push("updated_at = NOW()::TEXT");
+        if req.actual_delivery.is_some() { sets.push(format!("actual_delivery = ${}", n)); n += 1; }
+        sets.push("updated_at = NOW()::TEXT".to_string());
 
         if sets.len() <= 1 {
             return self.get_shipment(id).await;
         }
 
-        let query = format!("UPDATE shipments SET {} WHERE id = ?", sets.join(", "));
-        sqlx::query(&query)
-            .bind(id)
-            .execute(&self.pool)
+        let query = format!("UPDATE shipments SET {} WHERE id = ${}", sets.join(", "), n);
+        let mut q = sqlx::query(&query);
+        if let Some(ref tracking) = req.tracking_number { q = q.bind(tracking); }
+        if let Some(ref carrier) = req.carrier { q = q.bind(carrier); }
+        if let Some(ref status) = req.status { q = q.bind(status); }
+        if let Some(ref actual) = req.actual_delivery { q = q.bind(actual); }
+        q = q.bind(id);
+        q.execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
         self.get_shipment(id).await
@@ -271,7 +281,7 @@ impl CommerceDeliveryService {
     // ---------------------------------------------------------------------------
 
     pub async fn list_delivery_events(&self, shipment_id: &str) -> Result<Vec<DeliveryEvent>, String> {
-        let rows = sqlx::query("SELECT * FROM delivery_events WHERE shipment_id = ? ORDER BY timestamp DESC")
+        let rows = sqlx::query("SELECT * FROM delivery_events WHERE shipment_id = $1 ORDER BY timestamp DESC")
             .bind(shipment_id)
             .fetch_all(&self.pool)
             .await
@@ -285,7 +295,7 @@ impl CommerceDeliveryService {
         let id = Uuid::new_v4().to_string();
         sqlx::query(
             "INSERT INTO delivery_events (id, shipment_id, event_type, location, description) \
-             VALUES (?, ?, ?, ?, ?)"
+             VALUES ($1, $2, $3, $4, $5)"
         )
         .bind(&id)
         .bind(&req.shipment_id)

@@ -101,10 +101,10 @@ impl CommerceCatalogService {
     ) -> Result<Vec<Category>, String> {
         let query = if active_only {
             "SELECT id, brand_id, name, parent_id, sort_order, is_active, created_at, updated_at \
-             FROM categories WHERE brand_id = ? AND is_active = 1 ORDER BY sort_order, name"
+             FROM categories WHERE brand_id = $1 AND is_active = 1 ORDER BY sort_order, name"
         } else {
             "SELECT id, brand_id, name, parent_id, sort_order, is_active, created_at, updated_at \
-             FROM categories WHERE brand_id = ? ORDER BY sort_order, name"
+             FROM categories WHERE brand_id = $1 ORDER BY sort_order, name"
         };
         let rows = sqlx::query(query)
             .bind(brand_id)
@@ -128,7 +128,7 @@ impl CommerceCatalogService {
     pub async fn get_category(&self, id: &str) -> Result<Category, String> {
         let row = sqlx::query(
             "SELECT id, brand_id, name, parent_id, sort_order, is_active, created_at, updated_at \
-             FROM categories WHERE id = ?",
+             FROM categories WHERE id = $1",
         )
         .bind(id)
         .fetch_one(&self.pool)
@@ -153,7 +153,7 @@ impl CommerceCatalogService {
 
         sqlx::query(
             "INSERT INTO categories (id, brand_id, name, parent_id, sort_order, is_active, created_at, updated_at) \
-             VALUES (?, ?, ?, ?, ?, 1, ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, 1, $6, $7)",
         )
         .bind(&id)
         .bind(&req.brand_id)
@@ -174,29 +174,36 @@ impl CommerceCatalogService {
         id: &str,
         req: &UpdateCategoryRequest,
     ) -> Result<Category, String> {
-        let mut sets = Vec::new();
+        let mut sets: Vec<String> = Vec::new();
+        let mut n = 1;
 
         if req.name.is_some() {
-            sets.push("name = ?");
+            sets.push(format!("name = ${}", n));
+            n += 1;
         }
         if req.parent_id.is_some() {
-            sets.push("parent_id = ?");
+            sets.push(format!("parent_id = ${}", n));
+            n += 1;
         }
         if req.sort_order.is_some() {
-            sets.push("sort_order = ?");
+            sets.push(format!("sort_order = ${}", n));
+            n += 1;
         }
         if req.is_active.is_some() {
-            sets.push("is_active = ?");
+            sets.push(format!("is_active = ${}", n));
+            n += 1;
         }
-        sets.push("updated_at = ?");
+        sets.push(format!("updated_at = ${}", n));
+        n += 1;
 
         if sets.len() <= 1 {
             return self.get_category(id).await;
         }
 
         let query = format!(
-            "UPDATE categories SET {} WHERE id = ?",
-            sets.join(", ")
+            "UPDATE categories SET {} WHERE id = ${}",
+            sets.join(", "),
+            n
         );
 
         let now = chrono::Utc::now().to_rfc3339();
@@ -223,7 +230,7 @@ impl CommerceCatalogService {
     }
 
     pub async fn delete_category(&self, id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM categories WHERE id = ?")
+        sqlx::query("DELETE FROM categories WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await
@@ -247,20 +254,24 @@ impl CommerceCatalogService {
                           p.price, p.compare_at_price, p.currency, p.images, p.variants, \
                           p.inventory_count, p.track_inventory, p.visibility, p.metadata, \
                           p.is_active, p.created_at, p.updated_at \
-                          FROM products p WHERE p.brand_id = ?");
-        let mut params: Vec<String> = vec![brand_id.to_string()];
+                          FROM products p WHERE p.brand_id = $1");
+        let mut n = 1;
 
         if active_only {
             query.push_str(" AND p.is_active = 1");
         }
-        if let Some(cat) = category_id {
-            query.push_str(" AND p.category_id = ?");
-            params.push(cat.to_string());
+        if category_id.is_some() {
+            n += 1;
+            query.push_str(&format!(" AND p.category_id = ${}", n));
         }
 
         query.push_str(" ORDER BY p.name");
 
-        let row = sqlx::query(&query)
+        let mut q = sqlx::query(&query).bind(brand_id);
+        if let Some(cat) = category_id {
+            q = q.bind(cat);
+        }
+        let row = q
             .fetch_all(&self.pool)
             .await
             .map_err(|e| format!("Failed to list products: {e}"))?;
@@ -293,7 +304,7 @@ impl CommerceCatalogService {
         let row = sqlx::query(
             "SELECT id, brand_id, category_id, name, description, sku, price, compare_at_price, \
              currency, images, variants, inventory_count, track_inventory, visibility, metadata, \
-             is_active, created_at, updated_at FROM products WHERE id = ?",
+             is_active, created_at, updated_at FROM products WHERE id = $1",
         )
         .bind(id)
         .fetch_one(&self.pool)
@@ -354,7 +365,7 @@ impl CommerceCatalogService {
             "INSERT INTO products (id, brand_id, category_id, name, description, sku, price, \
              compare_at_price, currency, images, variants, inventory_count, track_inventory, \
              visibility, metadata, is_active, created_at, updated_at) \
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 1, $16, $17)",
         )
         .bind(&id)
         .bind(&req.brand_id)
@@ -385,7 +396,7 @@ impl CommerceCatalogService {
                     let is_visible = visible.as_bool().unwrap_or(true) as bool;
                     let _ = sqlx::query(
                         "INSERT INTO product_channel_visibility (id, product_id, channel_type, is_visible, created_at) \
-                         VALUES (?, ?, ?, ?, ?)",
+                         VALUES ($1, $2, $3, $4, $5)",
                     )
                     .bind(&vis_id)
                     .bind(&id)
@@ -480,7 +491,7 @@ impl CommerceCatalogService {
 
         // Use parameterized query for safety
         let query_str = format!(
-            "UPDATE products SET {} WHERE id = ?",
+            "UPDATE products SET {} WHERE id = $1",
             sets.join(", ")
         );
         sqlx::query(&query_str)
@@ -494,7 +505,7 @@ impl CommerceCatalogService {
     }
 
     pub async fn delete_product(&self, id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM products WHERE id = ?")
+        sqlx::query("DELETE FROM products WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await
@@ -512,7 +523,7 @@ impl CommerceCatalogService {
         req: &UpdateInventoryRequest,
     ) -> Result<Product, String> {
         let now = chrono::Utc::now().to_rfc3339();
-        sqlx::query("UPDATE products SET inventory_count = ?, updated_at = ? WHERE id = ?")
+        sqlx::query("UPDATE products SET inventory_count = $1, updated_at = $2 WHERE id = $3")
             .bind(req.inventory_count as i32)
             .bind(&now)
             .bind(product_id)
@@ -532,7 +543,7 @@ impl CommerceCatalogService {
     ) -> Result<Vec<ProductChannelVisibility>, String> {
         let rows = sqlx::query(
             "SELECT id, product_id, channel_type, is_visible, created_at \
-             FROM product_channel_visibility WHERE product_id = ?",
+             FROM product_channel_visibility WHERE product_id = $1",
         )
         .bind(product_id)
         .fetch_all(&self.pool)
@@ -558,7 +569,7 @@ impl CommerceCatalogService {
 
         // Check if visibility record exists
         let existing = sqlx::query(
-            "SELECT id FROM product_channel_visibility WHERE product_id = ? AND channel_type = ?",
+            "SELECT id FROM product_channel_visibility WHERE product_id = $1 AND channel_type = $2",
         )
         .bind(product_id)
         .bind(&req.channel_type)
@@ -569,7 +580,7 @@ impl CommerceCatalogService {
         if let Some(row) = existing {
             let id: String = row.get("id");
             sqlx::query(
-                "UPDATE product_channel_visibility SET is_visible = ? WHERE id = ?",
+                "UPDATE product_channel_visibility SET is_visible = $1 WHERE id = $2",
             )
             .bind(req.is_visible as bool)
             .bind(&id)
@@ -588,7 +599,7 @@ impl CommerceCatalogService {
             let id = Uuid::new_v4().to_string();
             sqlx::query(
                 "INSERT INTO product_channel_visibility (id, product_id, channel_type, is_visible, created_at) \
-                 VALUES (?, ?, ?, ?, ?)",
+                 VALUES ($1, $2, $3, $4, $5)",
             )
             .bind(&id)
             .bind(product_id)
