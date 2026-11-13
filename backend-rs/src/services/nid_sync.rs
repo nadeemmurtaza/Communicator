@@ -218,7 +218,7 @@ impl NidSyncService {
     // ---- Profile Queries ----
 
     pub async fn get_personal_profile(&self, account_id: &str) -> Result<Option<NidProfile>> {
-        let row = sqlx::query_as::<_, (String, Option<String>, String, String, Option<String>, String, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>, String, bool)>(
+        let row = sqlx::query_as::<_, (String, Option<String>, String, String, Option<String>, String, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>, bool)>(
             "SELECT id, account_id, slug, display_name, headline, category, bio, photo_key, phone, public_email, city, timezone, is_published FROM profile WHERE account_id = $1 AND organization_id IS NULL"
         )
         .bind(account_id)
@@ -240,7 +240,7 @@ impl NidSyncService {
             public_email: r.9,
             city: r.10,
             country_code: None,
-            timezone: r.11,
+            timezone: r.11.unwrap_or_default(),
             is_published: r.12,
             is_personal: true,
         }))
@@ -391,7 +391,7 @@ impl NidSyncService {
             issued_at: r.11,
             paid_at: r.12,
             tenant_id: tenant_id.to_string(),
-            tenant_name: r.13,
+            tenant_name: Some(r.13),
         }).collect())
     }
 
@@ -452,7 +452,7 @@ impl NidSyncService {
             method_type: r.6,
             paid_at: r.7,
             tenant_id: tenant_id.to_string(),
-            tenant_name: r.8,
+            tenant_name: Some(r.8),
         }).collect())
     }
 
