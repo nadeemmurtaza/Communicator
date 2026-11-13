@@ -505,53 +505,25 @@ pub async fn update_message(
     trigger_event: Option<&str>,
     frequency: Option<&str>,
 ) -> Result<MessageResult, sqlx::Error> {
-    let mut sets = Vec::new();
-    let mut title_val = String::new();
-    let mut body_val = String::new();
-    let mut msg_type_val = String::new();
-    let mut status_val = String::new();
-    let mut btn_text_val = String::new();
-    let mut btn_url_val = String::new();
-    let mut trig_type_val = String::new();
-    let mut trig_evt_val = String::new();
-    let mut freq_val = String::new();
-
-    if let Some(t) = title {
-        sets.push("title = $1");
-        title_val = t.to_string();
+    let mut sets: Vec<String> = Vec::new();
+    let mut idx = 1;
+    macro_rules! add_set {
+        ($present:expr, $col:expr) => {
+            if $present {
+                sets.push(format!("{} = ${}", $col, idx));
+                idx += 1;
+            }
+        };
     }
-    if let Some(b) = body {
-        sets.push("body = $2");
-        body_val = b.to_string();
-    }
-    if let Some(mt) = message_type {
-        sets.push("message_type = $3");
-        msg_type_val = mt.to_string();
-    }
-    if let Some(s) = status {
-        sets.push("status = $4");
-        status_val = s.to_string();
-    }
-    if let Some(bt) = button_text {
-        sets.push("button_text = $5");
-        btn_text_val = bt.to_string();
-    }
-    if let Some(bu) = button_url {
-        sets.push("button_url = $6");
-        btn_url_val = bu.to_string();
-    }
-    if let Some(tt) = trigger_type {
-        sets.push("trigger_type = $7");
-        trig_type_val = tt.to_string();
-    }
-    if let Some(te) = trigger_event {
-        sets.push("trigger_event = $8");
-        trig_evt_val = te.to_string();
-    }
-    if let Some(f) = frequency {
-        sets.push("frequency = $9");
-        freq_val = f.to_string();
-    }
+    add_set!(title.is_some(), "title");
+    add_set!(body.is_some(), "body");
+    add_set!(message_type.is_some(), "message_type");
+    add_set!(status.is_some(), "status");
+    add_set!(button_text.is_some(), "button_text");
+    add_set!(button_url.is_some(), "button_url");
+    add_set!(trigger_type.is_some(), "trigger_type");
+    add_set!(trigger_event.is_some(), "trigger_event");
+    add_set!(frequency.is_some(), "frequency");
 
     if sets.is_empty() {
         return Ok(MessageResult {
@@ -560,17 +532,44 @@ pub async fn update_message(
         });
     }
 
-    sets.push("updated_at = NOW()");
+    sets.push("updated_at = NOW()".to_string());
     let set_clause = sets.join(", ");
-
-    sqlx::query_format!(
+    let query = format!(
         "UPDATE inapp_messages SET {} WHERE id = ${}",
-        set_clause,
-        sets.len() + 1
-    )
-    .bind(message_id)
-    .execute(&state.db)
-    .await?;
+        set_clause, idx
+    );
+
+    let mut q = sqlx::query(&query);
+    if let Some(t) = title {
+        q = q.bind(t);
+    }
+    if let Some(b) = body {
+        q = q.bind(b);
+    }
+    if let Some(mt) = message_type {
+        q = q.bind(mt);
+    }
+    if let Some(s) = status {
+        q = q.bind(s);
+    }
+    if let Some(bt) = button_text {
+        q = q.bind(bt);
+    }
+    if let Some(bu) = button_url {
+        q = q.bind(bu);
+    }
+    if let Some(tt) = trigger_type {
+        q = q.bind(tt);
+    }
+    if let Some(te) = trigger_event {
+        q = q.bind(te);
+    }
+    if let Some(f) = frequency {
+        q = q.bind(f);
+    }
+    q = q.bind(message_id);
+
+    q.execute(&state.db).await?;
 
     Ok(MessageResult {
         message_id: message_id.to_string(),
@@ -674,31 +673,21 @@ pub async fn update_trigger(
     enabled: Option<bool>,
     message_id: Option<&str>,
 ) -> Result<TriggerResult, sqlx::Error> {
-    let mut sets = Vec::new();
-    let mut name_val = String::new();
-    let mut trig_type_val = String::new();
-    let mut cond_val = String::new();
-    let mut msg_id_val = String::new();
-
-    if let Some(n) = name {
-        sets.push("name = $1");
-        name_val = n.to_string();
+    let mut sets: Vec<String> = Vec::new();
+    let mut idx = 1;
+    macro_rules! add_set {
+        ($present:expr, $col:expr) => {
+            if $present {
+                sets.push(format!("{} = ${}", $col, idx));
+                idx += 1;
+            }
+        };
     }
-    if let Some(tt) = trigger_type {
-        sets.push("trigger_type = $2");
-        trig_type_val = tt.to_string();
-    }
-    if let Some(c) = condition {
-        sets.push("condition = $3");
-        cond_val = c.to_string();
-    }
-    if let Some(e) = enabled {
-        sets.push("enabled = $4");
-    }
-    if let Some(mid) = message_id {
-        sets.push("message_id = $5");
-        msg_id_val = mid.to_string();
-    }
+    add_set!(name.is_some(), "name");
+    add_set!(trigger_type.is_some(), "trigger_type");
+    add_set!(condition.is_some(), "condition");
+    add_set!(enabled.is_some(), "enabled");
+    add_set!(message_id.is_some(), "message_id");
 
     if sets.is_empty() {
         return Ok(TriggerResult {
@@ -707,17 +696,32 @@ pub async fn update_trigger(
         });
     }
 
-    sets.push("updated_at = NOW()");
+    sets.push("updated_at = NOW()".to_string());
     let set_clause = sets.join(", ");
-
-    sqlx::query_format!(
+    let query = format!(
         "UPDATE proactive_triggers SET {} WHERE id = ${}",
-        set_clause,
-        sets.len() + 1
-    )
-    .bind(trigger_id)
-    .execute(&state.db)
-    .await?;
+        set_clause, idx
+    );
+
+    let mut q = sqlx::query(&query);
+    if let Some(n) = name {
+        q = q.bind(n);
+    }
+    if let Some(tt) = trigger_type {
+        q = q.bind(tt);
+    }
+    if let Some(c) = condition {
+        q = q.bind(c);
+    }
+    if let Some(e) = enabled {
+        q = q.bind(e);
+    }
+    if let Some(mid) = message_id {
+        q = q.bind(mid);
+    }
+    q = q.bind(trigger_id);
+
+    q.execute(&state.db).await?;
 
     Ok(TriggerResult {
         trigger_id: trigger_id.to_string(),
@@ -819,11 +823,13 @@ pub async fn evaluate_triggers(
                 }
             }
             "event" => event_name == trigger.trigger_type || {
-                if let Some(evt) = &trigger.trigger_event {
-                    event_name == *evt
-                } else {
-                    false
-                }
+                trigger
+                    .condition
+                    .as_ref()
+                    .and_then(|c| c.get("event"))
+                    .and_then(|v| v.as_str())
+                    .map(|evt| evt == event_name)
+                    .unwrap_or(false)
             },
             "exit_intent" | "inactivity" => {
                 // These are evaluated client-side; server just acknowledges
@@ -952,23 +958,21 @@ pub async fn update_settings(
     track_behavioral_events: Option<bool>,
     event_retention_days: Option<i32>,
 ) -> Result<SettingsResult, sqlx::Error> {
-    let mut sets = Vec::new();
-
-    if let Some(e) = enabled {
-        sets.push("enabled = $1");
+    let mut sets: Vec<String> = Vec::new();
+    let mut idx = 1;
+    macro_rules! add_set {
+        ($present:expr, $col:expr) => {
+            if $present {
+                sets.push(format!("{} = ${}", $col, idx));
+                idx += 1;
+            }
+        };
     }
-    if let Some(m) = max_concurrent_messages {
-        sets.push("max_concurrent_messages = $2");
-    }
-    if let Some(s) = default_style {
-        sets.push("default_style = $3");
-    }
-    if let Some(t) = track_behavioral_events {
-        sets.push("track_behavioral_events = $4");
-    }
-    if let Some(d) = event_retention_days {
-        sets.push("event_retention_days = $5");
-    }
+    add_set!(enabled.is_some(), "enabled");
+    add_set!(max_concurrent_messages.is_some(), "max_concurrent_messages");
+    add_set!(default_style.is_some(), "default_style");
+    add_set!(track_behavioral_events.is_some(), "track_behavioral_events");
+    add_set!(event_retention_days.is_some(), "event_retention_days");
 
     if sets.is_empty() {
         return Ok(SettingsResult {
@@ -977,15 +981,31 @@ pub async fn update_settings(
         });
     }
 
-    sets.push("updated_at = NOW()");
+    sets.push("updated_at = NOW()".to_string());
     let set_clause = sets.join(", ");
-
-    sqlx::query_format!(
+    let query = format!(
         "UPDATE inapp_settings SET {} WHERE organization_id = 'org-default'",
         set_clause
-    )
-    .execute(&state.db)
-    .await?;
+    );
+
+    let mut q = sqlx::query(&query);
+    if let Some(e) = enabled {
+        q = q.bind(e);
+    }
+    if let Some(m) = max_concurrent_messages {
+        q = q.bind(m);
+    }
+    if let Some(s) = default_style {
+        q = q.bind(s);
+    }
+    if let Some(t) = track_behavioral_events {
+        q = q.bind(t);
+    }
+    if let Some(d) = event_retention_days {
+        q = q.bind(d);
+    }
+
+    q.execute(&state.db).await?;
 
     Ok(SettingsResult {
         settings_id: "inapp-settings-default".to_string(),
