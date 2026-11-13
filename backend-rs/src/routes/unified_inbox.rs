@@ -13,7 +13,7 @@ use crate::services::unified_inbox;
 
 /// Query parameters for unified inbox listing
 #[derive(Deserialize)]
-struct UnifiedInboxQuery {
+pub struct UnifiedInboxQuery {
     limit: Option<i32>,
     offset: Option<i32>,
     channel: Option<String>,

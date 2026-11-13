@@ -124,14 +124,14 @@ pub async fn get_knowledge_sources(
 }
 
 #[derive(serde::Deserialize)]
-struct BuildContextRequest {
+pub struct BuildContextRequest {
     contact_id: Option<String>,
     last_inbound: String,
     tenant_key: String,
 }
 
 #[derive(serde::Deserialize)]
-struct GetSourcesQuery {
+pub struct GetSourcesQuery {
     draft_id: Option<String>,
     conversation_id: Option<String>,
     source_type: Option<String>,

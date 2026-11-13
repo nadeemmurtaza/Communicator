@@ -12,13 +12,13 @@ use crate::services::help_center;
 // ——— Query Params ———
 
 #[derive(Deserialize)]
-struct ListCategoriesQuery {
+pub struct ListCategoriesQuery {
     organization_id: Option<String>,
     visible_only: Option<bool>,
 }
 
 #[derive(Deserialize)]
-struct ListArticlesQuery {
+pub struct ListArticlesQuery {
     category_id: Option<String>,
     status: Option<String>,
     limit: Option<i32>,
@@ -26,7 +26,7 @@ struct ListArticlesQuery {
 }
 
 #[derive(Deserialize)]
-struct SearchQuery {
+pub struct SearchQuery {
     q: String,
     limit: Option<i32>,
 }
@@ -34,7 +34,7 @@ struct SearchQuery {
 // ——— Request Bodies ———
 
 #[derive(Deserialize)]
-struct CreateCategoryBody {
+pub struct CreateCategoryBody {
     organization_id: String,
     name: String,
     slug: String,
@@ -44,7 +44,7 @@ struct CreateCategoryBody {
 }
 
 #[derive(Deserialize)]
-struct CreateArticleBody {
+pub struct CreateArticleBody {
     organization_id: String,
     category_id: String,
     title: String,
@@ -54,7 +54,7 @@ struct CreateArticleBody {
 }
 
 #[derive(Deserialize)]
-struct UpdateArticleBody {
+pub struct UpdateArticleBody {
     title: Option<String>,
     content: Option<String>,
     status: Option<String>,
@@ -64,12 +64,12 @@ struct UpdateArticleBody {
 }
 
 #[derive(Deserialize)]
-struct FeedbackBody {
+pub struct FeedbackBody {
     helpful: bool,
 }
 
 #[derive(Deserialize)]
-struct UpdateSettingsBody {
+pub struct UpdateSettingsBody {
     name: Option<String>,
     tagline: Option<String>,
     primary_color: Option<String>,

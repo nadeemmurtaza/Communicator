@@ -181,7 +181,7 @@ impl ABTestingService {
             }
         }).collect();
 
-        let settings = self.get_settings().await.unwrap_or_else(|| ABSettings {
+        let settings = self.get_settings().await.unwrap_or_else(|_| ABSettings {
             id: "default".to_string(),
             org_id: "org-default".to_string(),
             enabled: true,
@@ -209,28 +209,6 @@ impl ABTestingService {
         status: Option<&str>,
         experiment_type: Option<&str>,
     ) -> Result<Vec<ABExperiment>, anyhow::Error> {
-        let mut query = String::from("SELECT id, name, description, experiment_type, status, traffic_split, \
-            start_at, end_at, winner_variant_id, created_by, org_id, created_at, updated_at \
-            FROM ab_experiments WHERE 1=1");
-        let mut binds: Vec<Box<dyn sqlx::types::Type<sqlx::Postgres> + Send + Sync>> = Vec::new();
-
-        if let Some(s) = status {
-            query.push_str(" AND status = $");
-            query.push_str(&binds.len().to_string());
-            query.push(' ');
-            binds.push(Box::new(s.to_string()));
-        }
-
-        if let Some(t) = experiment_type {
-            query.push_str(" AND experiment_type = $");
-            query.push_str(&binds.len().to_string());
-            query.push(' ');
-            binds.push(Box::new(t.to_string()));
-        }
-
-        query.push_str(" ORDER BY created_at DESC");
-
-        // Simple version without dynamic binds
         let rows = sqlx::query(
             "SELECT id, name, description, experiment_type, status, traffic_split, \
              start_at, end_at, winner_variant_id, created_by, org_id, created_at, updated_at \

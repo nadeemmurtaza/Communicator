@@ -291,7 +291,7 @@ impl ChannelCommerceTemplates {
 
     /// Render catalog navigation for Telegram inline keyboard
     pub fn telegram_catalog_navigation(products: &[Product]) -> serde_json::Value {
-        Self::telegram_catalog_navigation_with_options(products, &[])
+        Self::telegram_catalog_navigation_with_options(products, &std::collections::HashMap::new())
     }
 
     /// Render catalog navigation for Telegram with options indicator

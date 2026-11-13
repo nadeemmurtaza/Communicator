@@ -13,40 +13,40 @@ use crate::services::audience_kb_scoping;
 // ——— Query Params ———
 
 #[derive(Deserialize)]
-struct ListLinksQuery {
+pub struct ListLinksQuery {
     segment_id: Option<String>,
 }
 
 #[derive(Deserialize)]
-struct ListMembershipsQuery {
+pub struct ListMembershipsQuery {
     segment_id: Option<String>,
     contact_id: Option<String>,
     limit: Option<i32>,
 }
 
 #[derive(Deserialize)]
-struct ScopedKBQuery {
+pub struct ScopedKBQuery {
     contact_id: String,
 }
 
 // ——— Request Bodies ———
 
 #[derive(Deserialize)]
-struct LinkKBBody {
+pub struct LinkKBBody {
     segment_id: String,
     kb_entry_id: String,
     priority: Option<i32>,
 }
 
 #[derive(Deserialize)]
-struct AddMembershipBody {
+pub struct AddMembershipBody {
     segment_id: String,
     contact_id: String,
     membership_type: Option<String>,
 }
 
 #[derive(Deserialize)]
-struct UpdateSettingsBody {
+pub struct UpdateSettingsBody {
     enabled: Option<bool>,
     fallback_to_global_kb: Option<bool>,
     merge_segments: Option<bool>,
@@ -54,7 +54,7 @@ struct UpdateSettingsBody {
 }
 
 #[derive(Deserialize)]
-struct LogUsageBody {
+pub struct LogUsageBody {
     conversation_id: String,
     contact_id: String,
     segment_id: String,

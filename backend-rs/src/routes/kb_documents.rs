@@ -17,13 +17,13 @@ fn err(status: StatusCode, detail: impl Into<String>) -> Response {
 // ——— Query Params ———
 
 #[derive(Deserialize)]
-struct ListDocumentsQuery {
+pub struct ListDocumentsQuery {
     organization_id: Option<String>,
     status: Option<String>,
 }
 
 #[derive(Deserialize)]
-struct ListURLSourcesQuery {
+pub struct ListURLSourcesQuery {
     organization_id: Option<String>,
     status: Option<String>,
 }

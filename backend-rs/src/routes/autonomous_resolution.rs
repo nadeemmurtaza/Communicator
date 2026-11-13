@@ -16,17 +16,17 @@ use crate::services::autonomous_resolution;
 // ——— Query Params ———
 
 #[derive(Deserialize)]
-struct EscalationRulesQuery {
+pub struct EscalationRulesQuery {
     is_active: Option<bool>,
 }
 
 #[derive(Deserialize)]
-struct PoliciesQuery {
+pub struct PoliciesQuery {
     is_active: Option<bool>,
 }
 
 #[derive(Deserialize)]
-struct LogsQuery {
+pub struct LogsQuery {
     outcome: Option<String>,
     escalated: Option<bool>,
     limit: Option<i32>,
@@ -34,7 +34,7 @@ struct LogsQuery {
 }
 
 #[derive(Deserialize)]
-struct EvaluateQuery {
+pub struct EvaluateQuery {
     conversation_id: String,
     ai_confidence: f64,
     validation_score: Option<f64>,
@@ -42,7 +42,7 @@ struct EvaluateQuery {
 }
 
 #[derive(Deserialize)]
-struct LogAttemptQuery {
+pub struct LogAttemptQuery {
     conversation_id: String,
     contact_id: String,
     channel: String,
@@ -52,7 +52,7 @@ struct LogAttemptQuery {
 }
 
 #[derive(Deserialize)]
-struct SnapshotQuery {
+pub struct SnapshotQuery {
     days: Option<i32>,
 }
 
