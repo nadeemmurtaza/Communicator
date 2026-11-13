@@ -78,9 +78,12 @@ pub async fn list_images(
 ) -> Json<Value> {
     let status_filter = params.get("status").map(|s| s.as_str());
     let limit: i64 = params.get("limit").and_then(|s| s.parse().ok()).unwrap_or(50);
-    let org_id = params.get("organizationId").unwrap_or(&"org-default".to_string());
+    let org_id = params
+        .get("organizationId")
+        .cloned()
+        .unwrap_or_else(|| "org-default".to_string());
 
-    match fin_vision::list_images(&state, org_id, status_filter, limit).await {
+    match fin_vision::list_images(&state, &org_id, status_filter, limit).await {
         Ok(images) => Json(serde_json::to_value(images).unwrap_or(json!({"error": "serialization failed"}))),
         Err(e) => Json(json!({"error": e})),
     }
@@ -125,9 +128,12 @@ pub async fn get_settings(
     State(state): State<AppState>,
     axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> Json<Value> {
-    let org_id = params.get("organizationId").unwrap_or(&"org-default".to_string());
+    let org_id = params
+        .get("organizationId")
+        .cloned()
+        .unwrap_or_else(|| "org-default".to_string());
 
-    match fin_vision::get_vision_settings(&state, org_id).await {
+    match fin_vision::get_vision_settings(&state, &org_id).await {
         Some(settings) => Json(serde_json::to_value(settings).unwrap_or(json!({"error": "serialization failed"}))),
         None => Json(json!({"error": "Settings not found"})),
     }

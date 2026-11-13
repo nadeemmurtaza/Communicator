@@ -120,19 +120,19 @@ fn analysis_prompt(analysis_type: &str, custom_prompt: Option<&str>) -> String {
         Some(p) if !p.is_empty() => p.to_string(),
         _ => match analysis_type {
             "screenshot" => {
-                "Analyze this screenshot carefully. Identify: 1) What application or website is shown, 2) Any error messages or warnings visible, 3) Key UI elements and their state, 4) Text content visible in the image. Provide a structured JSON response with: summary, objects_detected (array), text_extracted, error_messages (array), and confidence score."
+                "Analyze this screenshot carefully. Identify: 1) What application or website is shown, 2) Any error messages or warnings visible, 3) Key UI elements and their state, 4) Text content visible in the image. Provide a structured JSON response with: summary, objects_detected (array), text_extracted, error_messages (array), and confidence score.".to_string()
             }
             "document" => {
-                "Analyze this document image. Extract all visible text, identify the document type, and summarize the key information. Provide a structured JSON response with: summary, text_extracted, document_type, key_information (array), and confidence score."
+                "Analyze this document image. Extract all visible text, identify the document type, and summarize the key information. Provide a structured JSON response with: summary, text_extracted, document_type, key_information (array), and confidence score.".to_string()
             }
             "error_code" => {
-                "Analyze this image for error codes, error messages, or technical issues. Identify the exact error text, error codes, and provide troubleshooting suggestions. Provide a structured JSON response with: summary, error_messages (array), error_codes (array), text_extracted, suggested_actions (array), and confidence score."
+                "Analyze this image for error codes, error messages, or technical issues. Identify the exact error text, error codes, and provide troubleshooting suggestions. Provide a structured JSON response with: summary, error_messages (array), error_codes (array), text_extracted, suggested_actions (array), and confidence score.".to_string()
             }
             "product" => {
-                "Analyze this product image. Identify the product, its features, color, size indicators, and any visible text or labels. Provide a structured JSON response with: summary, objects_detected (array), product_name, features (array), text_extracted, and confidence score."
+                "Analyze this product image. Identify the product, its features, color, size indicators, and any visible text or labels. Provide a structured JSON response with: summary, objects_detected (array), product_name, features (array), text_extracted, and confidence score.".to_string()
             }
             _ => {
-                "Analyze this image and provide a detailed description. Identify objects, text, colors, and context. Provide a structured JSON response with: summary, objects_detected (array), text_extracted, colors_detected (array), and confidence score."
+                "Analyze this image and provide a detailed description. Identify objects, text, colors, and context. Provide a structured JSON response with: summary, objects_detected (array), text_extracted, colors_detected (array), and confidence score.".to_string()
             }
         },
     }
@@ -646,8 +646,9 @@ pub async fn get_vision_settings(state: &AppState, organization_id: &str) -> Opt
     let row = sqlx::query(
         "SELECT id, organization_id, enabled, auto_analyze, default_analysis_type, claude_model, \
          max_file_size_mb, allowed_mime_types, ocr_enabled, object_detection_enabled, created_at, updated_at \
-         FROM vision_settings WHERE organization_id = ?1 LIMIT 1"
+         FROM vision_settings WHERE organization_id = $1 LIMIT 1"
     )
+    .bind(organization_id)
     .fetch_optional(&state.db)
     .await
     .ok()
@@ -658,10 +659,10 @@ pub async fn get_vision_settings(state: &AppState, organization_id: &str) -> Opt
         organization_id: r.try_get(1).unwrap_or_default(),
         enabled: r.try_get(2).unwrap_or(true),
         auto_analyze: r.try_get(3).unwrap_or(true),
-        default_analysis_type: r.try_get(4).unwrap_or_else(|| "general".to_string()),
-        claude_model: r.try_get(5).unwrap_or_else(|| "claude-sonnet-4-20250514".to_string()),
+        default_analysis_type: r.try_get(4).unwrap_or_else(|_| "general".to_string()),
+        claude_model: r.try_get(5).unwrap_or_else(|_| "claude-sonnet-4-20250514".to_string()),
         max_file_size_mb: r.try_get(6).unwrap_or(10.0),
-        allowed_mime_types: r.try_get(7).unwrap_or_else(|| "[\"image/jpeg\", \"image/png\", \"image/webp\", \"image/gif\"]".to_string()),
+        allowed_mime_types: r.try_get(7).unwrap_or_else(|_| "[\"image/jpeg\", \"image/png\", \"image/webp\", \"image/gif\"]".to_string()),
         ocr_enabled: r.try_get(8).unwrap_or(true),
         object_detection_enabled: r.try_get(9).unwrap_or(true),
         created_at: r.try_get(10).unwrap_or_default(),
@@ -770,7 +771,8 @@ pub async fn list_images(
     .map_err(|e| e.to_string())?;
 
     // Note: image_data is excluded from the list response for performance
-    rows.iter()
+    Ok(rows
+        .iter()
         .map(|row| VisionImage {
             id: row.try_get(0).unwrap_or_default(),
             organization_id: row.try_get(1).unwrap_or_default(),
@@ -785,7 +787,7 @@ pub async fn list_images(
             created_at: row.try_get(10).unwrap_or_default(),
             updated_at: row.try_get(11).unwrap_or_default(),
         })
-        .collect()
+        .collect())
 }
 
 pub async fn get_image_with_analysis(
