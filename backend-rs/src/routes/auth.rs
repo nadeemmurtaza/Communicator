@@ -651,7 +651,7 @@ pub async fn instagram_oauth_callback(
     };
 
     let stored = if had_inbox {
-        sqlx::query("UPDATE inboxes SET credentials = ?, is_active = 1, updated_at = ? WHERE id = ?")
+        sqlx::query("UPDATE inboxes SET credentials = $1, is_active = 1, updated_at = $2 WHERE id = $3")
             .bind(&credentials_json)
             .bind(&now)
             .bind(&inbox_id)
@@ -659,7 +659,7 @@ pub async fn instagram_oauth_callback(
             .await
     } else {
         sqlx::query(
-            "INSERT INTO inboxes (id, name, channel_type, phone_number, is_active, credentials, created_at, updated_at) VALUES (?, 'Instagram Direct', 'instagram', '', 1, ?, ?, ?)",
+            "INSERT INTO inboxes (id, name, channel_type, phone_number, is_active, credentials, created_at, updated_at) VALUES ($1, 'Instagram Direct', 'instagram', '', 1, $2, $3, $4)",
         )
         .bind(&inbox_id)
         .bind(&credentials_json)

@@ -157,7 +157,7 @@ pub async fn create_automation_rule(
     let now = Utc::now().to_rfc3339();
 
     let res = sqlx::query(
-        "INSERT INTO automation_rules (id, name, description, trigger_keyword, match_type, action_type, action_value, priority, is_active, execution_count, created_at, tenant_key, channel) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, '')",
+        "INSERT INTO automation_rules (id, name, description, trigger_keyword, match_type, action_type, action_value, priority, is_active, execution_count, created_at, tenant_key, channel) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0, $10, $11, '')",
     )
     .bind(&id)
     .bind(&payload.name)
@@ -259,7 +259,7 @@ pub async fn update_automation_rule(
     let is_active = payload.is_active.unwrap_or(existing.is_active);
 
     let res = sqlx::query(
-        "UPDATE automation_rules SET name = ?, description = ?, trigger_keyword = ?, match_type = ?, action_type = ?, action_value = ?, priority = ?, is_active = ? WHERE id = ?",
+        "UPDATE automation_rules SET name = $1, description = $2, trigger_keyword = $3, match_type = $4, action_type = $5, action_value = $6, priority = $7, is_active = $8 WHERE id = $9",
     )
     .bind(&name)
     .bind(&description)
@@ -305,7 +305,7 @@ pub async fn delete_automation_rule(
     Tenant(tenant): Tenant,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    let res = sqlx::query("DELETE FROM automation_rules WHERE id = ? AND COALESCE(tenant_key, '') = ?")
+    let res = sqlx::query("DELETE FROM automation_rules WHERE id = $1 AND COALESCE(tenant_key, '') = $2")
         .bind(&id)
         .bind(&tenant)
         .execute(&state.db)
@@ -420,7 +420,7 @@ pub async fn apply_automation_rules(
     Json(payload): Json<ApplyRulePayload>,
 ) -> Response {
     let conv: Option<(String, String, Option<String>)> = match sqlx::query_as(
-        "SELECT id, channel, custom_attributes FROM conversations WHERE id = ? LIMIT 1",
+        "SELECT id, channel, custom_attributes FROM conversations WHERE id = $1 LIMIT 1",
     )
     .bind(&payload.conversation_id)
     .fetch_optional(&state.db)
@@ -502,7 +502,7 @@ pub async fn apply_automation_rules(
             let delivery_state = if dispatched { "sent" } else { "failed" };
 
             let insert = sqlx::query(
-                "INSERT INTO messages (id, conversation_id, sender, sender_name, direction, channel, body, status, delivery_status, sent_at, created_at, provider, intent) VALUES (?, ?, 'bot', ?, 'outbound', ?, ?, ?, ?, ?, ?, 'automation_rule', ?)",
+                "INSERT INTO messages (id, conversation_id, sender, sender_name, direction, channel, body, status, delivery_status, sent_at, created_at, provider, intent) VALUES ($1, $2, 'bot', $3, 'outbound', $4, $5, $6, $7, $8, $9, 'automation_rule', $10)",
             )
             .bind(&msg_id)
             .bind(&conv_id)
@@ -526,7 +526,7 @@ pub async fn apply_automation_rules(
                 // not a clean success, so the failure rides alongside the dispatch.
                 let mut state_errors: Vec<String> = Vec::new();
 
-                let stamp_res = sqlx::query("UPDATE conversations SET last_outbound_at = ?, updated_at = ? WHERE id = ?")
+                let stamp_res = sqlx::query("UPDATE conversations SET last_outbound_at = $1, updated_at = $2 WHERE id = $3")
                     .bind(&now)
                     .bind(&now)
                     .bind(&conv_id)

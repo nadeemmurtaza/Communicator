@@ -471,7 +471,7 @@ async fn persist_customizer(
             let mut creds = serde_json::Map::new();
             creds.insert("websiteToken".to_string(), json!(token));
             let insert = sqlx::query(
-                "INSERT INTO inboxes (id, name, channel_type, credentials, created_at, updated_at) VALUES (?, ?, 'website', ?, ?, ?)",
+                "INSERT INTO inboxes (id, name, channel_type, credentials, created_at, updated_at) VALUES ($1, $2, 'website', $3, $4, $5)",
             )
             .bind(&id)
             .bind("Website Live Chat")
@@ -605,7 +605,7 @@ async fn persist_customizer(
     let creds_str = creds.to_string();
 
     let result = sqlx::query(
-        "UPDATE inboxes SET name = ?, avatar_url = ?, credentials = ?, updated_at = ? WHERE id = ?",
+        "UPDATE inboxes SET name = $1, avatar_url = $2, credentials = $3, updated_at = $4 WHERE id = $5",
     )
     .bind(&name)
     .bind(&avatar)
@@ -1569,7 +1569,7 @@ pub async fn record_audit_event(
     let result = sqlx::query(
         r#"
         INSERT INTO audit_logs (id, entity_type, entity_id, action, actor, actor_email, actor_name, actor_role, severity, compliance_category, description, ip_address, user_agent, details, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
         "#
     )
     .bind(&id)
@@ -1887,7 +1887,7 @@ pub async fn create_role(
     let now = Utc::now().to_rfc3339();
 
     let result = sqlx::query(
-        "INSERT INTO role_definitions (id, name, display_name, description, is_system_role, permissions, created_at, updated_at) VALUES (?, ?, ?, ?, 0, ?, ?, ?)"
+        "INSERT INTO role_definitions (id, name, display_name, description, is_system_role, permissions, created_at, updated_at) VALUES ($1, $2, $3, $4, 0, $5, $6, $7)"
     )
     .bind(&id)
     .bind(name)
@@ -1948,11 +1948,11 @@ pub async fn update_role(
 
     let result = sqlx::query(
         "UPDATE role_definitions \
-         SET display_name = COALESCE(?, display_name), \
-             description = COALESCE(?, description), \
-             permissions = COALESCE(?, permissions), \
-             updated_at = ? \
-         WHERE id = ? OR name = ?"
+         SET display_name = COALESCE($1, display_name), \
+             description = COALESCE($2, description), \
+             permissions = COALESCE($3, permissions), \
+             updated_at = $4 \
+         WHERE id = $5 OR name = $6"
     )
     .bind(display.as_deref())
     .bind(desc.as_deref())
@@ -2008,7 +2008,7 @@ pub async fn delete_role(
         ).into_response();
     }
 
-    let result = sqlx::query("DELETE FROM role_definitions WHERE id = ? OR name = ?")
+    let result = sqlx::query("DELETE FROM role_definitions WHERE id = $1 OR name = $2")
         .bind(&id)
         .bind(&id)
         .execute(&state.db)
@@ -2055,7 +2055,7 @@ pub async fn assign_member_role(
             .into_response();
     };
 
-    let result = sqlx::query("UPDATE team_members SET role = ? WHERE id = ? OR email = ?")
+    let result = sqlx::query("UPDATE team_members SET role = $1 WHERE id = $2 OR email = $3")
         .bind(role)
         .bind(&id)
         .bind(&id)
@@ -2753,7 +2753,7 @@ pub async fn create_custom_attribute(
     let now = Utc::now().to_rfc3339();
 
     let result = sqlx::query(
-        "INSERT INTO custom_attribute_definitions (id, name, display_name, description, attribute_model, attribute_type, default_value, options, is_required, regex_pattern, regex_cue, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO custom_attribute_definitions (id, name, display_name, description, attribute_model, attribute_type, default_value, options, is_required, regex_pattern, regex_cue, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
     )
     .bind(&id)
     .bind(&slug)
@@ -2925,7 +2925,7 @@ pub async fn update_custom_attribute(
     let id = existing.id.clone();
     let now = Utc::now().to_rfc3339();
     let result = sqlx::query(
-        "UPDATE custom_attribute_definitions SET display_name = ?, description = ?, options = ?, default_value = ?, is_required = ?, regex_pattern = ?, regex_cue = ?, updated_at = ? WHERE id = ?"
+        "UPDATE custom_attribute_definitions SET display_name = $1, description = $2, options = $3, default_value = $4, is_required = $5, regex_pattern = $6, regex_cue = $7, updated_at = $8 WHERE id = $9"
     )
     .bind(&display)
     .bind(desc.as_deref())
@@ -2979,7 +2979,7 @@ pub async fn delete_custom_attribute(
 
     let id = existing.id.clone();
     let name = existing.name.clone();
-    let result = sqlx::query("DELETE FROM custom_attribute_definitions WHERE id = ?")
+    let result = sqlx::query("DELETE FROM custom_attribute_definitions WHERE id = $1")
         .bind(&id)
         .execute(&state.db)
         .await;
@@ -3076,7 +3076,7 @@ async fn write_entity_attribute_values(
     }
 
     // Current stored JSON object, if any.
-    let select_sql = format!("SELECT {column} FROM {table} WHERE id = ?");
+    let select_sql = format!("SELECT {column} FROM {table} WHERE id = $1");
     let raw: Option<Option<String>> = match sqlx::query_scalar::<_, Option<String>>(&select_sql)
         .bind(id)
         .fetch_optional(&state.db)
@@ -3133,7 +3133,7 @@ async fn write_entity_attribute_values(
 
     let now = Utc::now().to_rfc3339();
     let merged_str = Value::Object(merged.clone()).to_string();
-    let update_sql = format!("UPDATE {table} SET {column} = ?, updated_at = ? WHERE id = ? AND COALESCE(tenant_key, '') = ?");
+    let update_sql = format!("UPDATE {table} SET {column} = $1, updated_at = $2 WHERE id = $3 AND COALESCE(tenant_key, '') = $4");
     let result = sqlx::query(&update_sql)
         .bind(&merged_str)
         .bind(&now)
@@ -3355,7 +3355,7 @@ pub async fn create_organization(
     let now = Utc::now().to_rfc3339();
 
     let result = sqlx::query(
-        "INSERT INTO tenants (id, tenant_key, name, owner_account_id, created_at) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO tenants (id, tenant_key, name, owner_account_id, created_at) VALUES ($1, $2, $3, $4, $5)",
     )
     .bind(&id)
     .bind(&tenant_key)

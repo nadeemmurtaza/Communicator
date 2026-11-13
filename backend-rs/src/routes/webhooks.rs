@@ -93,7 +93,7 @@ fn form_value(params: &[(String, String)], key: &str) -> String {
 /// to the configured default. With neither set the request is refused rather
 /// than filed under an invented tenant.
 async fn resolve_tenant(state: &AppState, channel: &str) -> Result<String, String> {
-    let from_inbox = match sqlx::query("SELECT tenant_key FROM inboxes WHERE channel_type = ? AND is_active = 1 LIMIT 1")
+    let from_inbox = match sqlx::query("SELECT tenant_key FROM inboxes WHERE channel_type = $1 AND is_active = 1 LIMIT 1")
         .bind(channel)
         .fetch_optional(&state.db)
         .await
@@ -158,7 +158,7 @@ fn meta_handshake(params: HubVerifyParams, expected: String, unset_hint: &str) -
 /// display (`••••1234`) discarded -- they are not secrets, and accepting them
 /// would let a stored display string authenticate a webhook.
 async fn inbox_credentials(state: &AppState, channel: &str) -> Value {
-    let row = sqlx::query("SELECT credentials FROM inboxes WHERE channel_type = ? AND is_active = 1 LIMIT 1")
+    let row = sqlx::query("SELECT credentials FROM inboxes WHERE channel_type = $1 AND is_active = 1 LIMIT 1")
         .bind(channel)
         .fetch_optional(&state.db)
         .await
@@ -418,7 +418,7 @@ async fn apply_meta_status(state: &AppState, status_event: &Value) -> Result<boo
     }
 
     let recipient = sqlx::query(
-        "SELECT id, broadcast_id, status FROM broadcast_recipients WHERE provider_message_id = ? LIMIT 1",
+        "SELECT id, broadcast_id, status FROM broadcast_recipients WHERE provider_message_id = $1 LIMIT 1",
     )
     .bind(provider_message_id)
     .fetch_optional(&state.db)
@@ -436,7 +436,7 @@ async fn apply_meta_status(state: &AppState, status_event: &Value) -> Result<boo
 
     let report = match meta_status {
         "sent" => sqlx::query(
-            "UPDATE broadcast_recipients SET status = ?, sent_at = COALESCE(sent_at, ?) WHERE id = ?",
+            "UPDATE broadcast_recipients SET status = $1, sent_at = COALESCE(sent_at, $2) WHERE id = $3",
         )
         .bind(new_status)
         .bind(&event_at_text)
@@ -444,7 +444,7 @@ async fn apply_meta_status(state: &AppState, status_event: &Value) -> Result<boo
         .execute(&state.db)
         .await?,
         "delivered" => sqlx::query(
-            "UPDATE broadcast_recipients SET status = ?, delivered_at = COALESCE(delivered_at, ?) WHERE id = ?",
+            "UPDATE broadcast_recipients SET status = $1, delivered_at = COALESCE(delivered_at, $2) WHERE id = $3",
         )
         .bind(new_status)
         .bind(&event_at_text)
@@ -452,7 +452,7 @@ async fn apply_meta_status(state: &AppState, status_event: &Value) -> Result<boo
         .execute(&state.db)
         .await?,
         "read" => sqlx::query(
-            "UPDATE broadcast_recipients SET status = ?, read_at = COALESCE(read_at, ?) WHERE id = ?",
+            "UPDATE broadcast_recipients SET status = $1, read_at = COALESCE(read_at, $2) WHERE id = $3",
         )
         .bind(new_status)
         .bind(&event_at_text)
@@ -462,7 +462,7 @@ async fn apply_meta_status(state: &AppState, status_event: &Value) -> Result<boo
         "failed" => {
             let reason = failure_reason.unwrap_or_else(|| "Message delivery failed".to_string());
             sqlx::query(
-                "UPDATE broadcast_recipients SET status = ?, error = ? WHERE id = ?",
+                "UPDATE broadcast_recipients SET status = $1, error = $2 WHERE id = $3",
             )
             .bind(new_status)
             .bind(&reason)
@@ -507,7 +507,7 @@ async fn apply_meta_status(state: &AppState, status_event: &Value) -> Result<boo
             if let Some(column) = counter {
                 // Column name comes from a closed match (delivered_count, read_count, failed_count).
                 let query_str = format!(
-                    "UPDATE broadcasts SET {column} = COALESCE({column}, 0) + 1 WHERE id = ?"
+                    "UPDATE broadcasts SET {column} = COALESCE({column}, 0) + 1 WHERE id = $1"
                 );
                 crate::db::report_write(
                     sqlx::query(&query_str)
@@ -521,7 +521,7 @@ async fn apply_meta_status(state: &AppState, status_event: &Value) -> Result<boo
             if delivered_increment {
                 crate::db::report_write(
                     sqlx::query(
-                        "UPDATE broadcasts SET delivered_count = COALESCE(delivered_count, 0) + 1 WHERE id = ?",
+                        "UPDATE broadcasts SET delivered_count = COALESCE(delivered_count, 0) + 1 WHERE id = $1",
                     )
                     .bind(&broadcast_id)
                     .execute(&state.db)
@@ -611,7 +611,7 @@ async fn resolve_whatsapp_brand(pool: &sqlx::PgPool, from_num: &str) -> Option<S
     let conv = sqlx::query(r#"
         SELECT c.brand_id FROM conversations c
         JOIN contacts ct ON ct.id = c.contact_id
-        WHERE ct.channel = 'whatsapp' AND ct.value = ?
+        WHERE ct.channel = 'whatsapp' AND ct.value = $1
         AND c.brand_id IS NOT NULL AND c.brand_id != ''
         ORDER BY c.updated_at DESC LIMIT 1
     "#)
@@ -663,7 +663,7 @@ async fn sync_whatsapp_customer_profile(
 
     // Check if a profile for this wa_id already exists
     let existing = sqlx::query(
-        "SELECT id FROM whatsapp_customer_profiles WHERE wa_id = ? LIMIT 1",
+        "SELECT id FROM whatsapp_customer_profiles WHERE wa_id = $1 LIMIT 1",
     )
     .bind(wa_id)
     .fetch_optional(pool)
@@ -675,9 +675,9 @@ async fn sync_whatsapp_customer_profile(
             let existing_id: String = row.try_get("id").unwrap_or_default();
             let _ = sqlx::query(
                 "UPDATE whatsapp_customer_profiles \
-                 SET brand_id = ?, profile_name = ?, profile_picture_url = ?, about = ?, \
-                     last_fetched_at = ?, updated_at = ? \
-                 WHERE id = ?",
+                 SET brand_id = $1, profile_name = $2, profile_picture_url = $3, about = $4, \
+                     last_fetched_at = $5, updated_at = $6 \
+                 WHERE id = $7",
             )
             .bind(brand_id)
             .bind(profile_name)
@@ -695,7 +695,7 @@ async fn sync_whatsapp_customer_profile(
             let _ = sqlx::query(
                 "INSERT INTO whatsapp_customer_profiles \
                  (id, wa_id, brand_id, profile_name, profile_picture_url, about, last_fetched_at, created_at, updated_at) \
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
             )
             .bind(&id)
             .bind(wa_id)
@@ -783,7 +783,7 @@ async fn process_whatsapp_automation(
     let msg_id = msg_value.get("id").and_then(|v| v.as_str()).unwrap_or("");
     if !msg_id.is_empty() {
         let auto_read: bool = sqlx::query_scalar(
-            "SELECT COALESCE((SELECT json_extract(credentials, '$.auto_read_receipts') FROM brand_credentials WHERE brand_id = ? AND channel_type = 'whatsapp' AND is_active = 1 LIMIT 1), '0') = '1'"
+            "SELECT COALESCE((SELECT json_extract(credentials, '$.auto_read_receipts') FROM brand_credentials WHERE brand_id = $1 AND channel_type = 'whatsapp' AND is_active = 1 LIMIT 1), '0') = '1'"
         )
         .bind(brand_id)
         .fetch_optional(&state.db)
@@ -799,7 +799,7 @@ async fn process_whatsapp_automation(
     // 9. Brand-specific AI auto-reply via reply engine
     // Only call if no automation already responded and auto-reply is enabled
     let auto_reply_enabled: bool = sqlx::query_scalar(
-        "SELECT COALESCE((SELECT json_extract(credentials, '$.auto_reply_enabled') FROM brand_credentials WHERE brand_id = ? AND channel_type = 'whatsapp' AND is_active = 1 LIMIT 1), '0') = '1'"
+        "SELECT COALESCE((SELECT json_extract(credentials, '$.auto_reply_enabled') FROM brand_credentials WHERE brand_id = $1 AND channel_type = 'whatsapp' AND is_active = 1 LIMIT 1), '0') = '1'"
     )
     .bind(brand_id)
     .fetch_optional(&state.db)
@@ -963,7 +963,7 @@ pub async fn meta_whatsapp_inbound(
                         duplicates += 1;
                         // Even duplicates need session window updates and automation
                         let conversation_id = sqlx::query_scalar::<_, String>(
-                            "SELECT conversation_id FROM messages WHERE id = ? LIMIT 1"
+                            "SELECT conversation_id FROM messages WHERE id = $1 LIMIT 1"
                         )
                         .bind(&message_id)
                         .fetch_optional(&state.db)
@@ -994,7 +994,7 @@ pub async fn meta_whatsapp_inbound(
                         ingested += 1;
                         // Get conversation_id for automation
                         let conversation_id = sqlx::query_scalar::<_, String>(
-                            "SELECT conversation_id FROM messages WHERE id = ? LIMIT 1"
+                            "SELECT conversation_id FROM messages WHERE id = $1 LIMIT 1"
                         )
                         .bind(&message_id)
                         .fetch_optional(&state.db)
@@ -1017,7 +1017,7 @@ pub async fn meta_whatsapp_inbound(
                             // Update conversation with brand_id
                             if !conversation_id.is_empty() {
                                 let _ = sqlx::query(
-                                    "UPDATE conversations SET brand_id = ? WHERE id = ?"
+                                    "UPDATE conversations SET brand_id = $1 WHERE id = $2"
                                 )
                                 .bind(&brand_id)
                                 .bind(&conversation_id)
@@ -2129,7 +2129,7 @@ pub async fn voice_inbound(
 }
 
 async fn inbox_id_for(state: &AppState, channel: &str) -> Option<String> {
-    sqlx::query("SELECT id FROM inboxes WHERE channel_type = ? AND is_active = 1 LIMIT 1")
+    sqlx::query("SELECT id FROM inboxes WHERE channel_type = $1 AND is_active = 1 LIMIT 1")
         .bind(channel)
         .fetch_optional(&state.db)
         .await
@@ -2569,7 +2569,7 @@ pub async fn ecosystem_event_inbound(
     let event_row_id = uuid::Uuid::new_v4().simple().to_string();
     let stored = sqlx::query(
         "INSERT INTO ecosystem_events (id, event_name, source, tenant_id, payload, outcome, received_at) \
-         VALUES (?, ?, ?, ?, ?, ?, ?)",
+         VALUES ($1, $2, $3, $4, $5, $6, $7)",
     )
     .bind(&event_row_id)
     .bind(&event_name)
@@ -2667,8 +2667,8 @@ pub(crate) async fn dispatch_ecosystem_event(
             };
             let now = chrono::Utc::now().to_rfc3339();
             let result = sqlx::query(
-                "UPDATE live_proof_sessions SET status = ?, completed_at = ?, updated_at = ? \
-                 WHERE id = ? AND tenant_id = ?",
+                "UPDATE live_proof_sessions SET status = $1, completed_at = $2, updated_at = $3 \
+                 WHERE id = $4 AND tenant_id = $5",
             )
             .bind(status)
             .bind(&now)
