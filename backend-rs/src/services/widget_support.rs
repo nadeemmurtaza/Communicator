@@ -1261,7 +1261,7 @@ pub async fn record_visitor_message(
     body: &str,
     sender_name: &str,
     metadata: Value,
-) -> WidgetResult<(String, i64, String)> {
+) -> WidgetResult<(String, String, String)> {
     let provider_message_id = format!("in_web_{}", Uuid::new_v4().simple());
     let message_id = inbound::record_raw_inbound_message(
         pool,
@@ -1960,7 +1960,7 @@ pub async fn create_session(
         .bind(website_token)
         .bind(origin)
         .bind(client_ip)
-        .bind(cursor)
+        .bind(&cursor)
         .bind(&now)
         .bind(&now)
         .bind(&now)

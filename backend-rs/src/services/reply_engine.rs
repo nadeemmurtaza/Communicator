@@ -694,17 +694,18 @@ async fn build_user_prompt(
     // We return them as part of the tuple so generate_reply can track them
 
     // Use integration knowledge if available (supersedes legacy knowledge), otherwise fall back
-    let final_knowledge = if integration_knowledge.is_empty() {
+    let integration_knowledge_empty = integration_knowledge.is_empty();
+    let final_knowledge = if integration_knowledge_empty {
         knowledge
     } else {
-        integration_knowledge
+        integration_knowledge.clone()
     };
 
     // Combine for validator grounding check: use integration knowledge if available
-    let final_knowledge_context = if integration_knowledge.is_empty() {
+    let final_knowledge_context = if integration_knowledge_empty {
         knowledge_context
     } else {
-        integration_knowledge.clone()
+        integration_knowledge
     };
 
     let prompt = format!(
