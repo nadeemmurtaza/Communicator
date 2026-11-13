@@ -70,7 +70,7 @@ async fn count_by_status(
         return Ok(json!(0));
     }
     let n = sqlx::query_scalar::<_, i64>(&format!(
-        "SELECT COUNT(*) FROM {table} WHERE status = ? AND COALESCE(tenant_key, '') = ?"
+        "SELECT COUNT(*) FROM {table} WHERE status = $1 AND COALESCE(tenant_key, '') = $2"
     ))
     .bind(status)
     .bind(tenant_key)
@@ -138,7 +138,7 @@ async fn fetch_entry(
     tenant_key: &str,
 ) -> Result<Option<KbRow>, sqlx::Error> {
     sqlx::query_as::<_, KbRow>(&format!(
-        "SELECT {KB_COLUMNS} FROM knowledge_base_entries WHERE id = ? AND tenant_key = ?"
+        "SELECT {KB_COLUMNS} FROM knowledge_base_entries WHERE id = $1 AND tenant_key = $2"
     ))
     .bind(id)
     .bind(tenant_key)
@@ -169,7 +169,7 @@ async fn insert_entry(
             id, tenant_key, title, content, source_type, source_url, file_name, topic,
             target_touchpoints, status, resolution_rate, usage_count, helpful_count,
             unhelpful_count, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 0, 0, 0, ?, ?)"#,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NULL, 0, 0, 0, $11, $12)"#,
     )
     .bind(&id)
     .bind(tenant_key)
@@ -479,16 +479,16 @@ pub async fn list_knowledge_base(
 
     let sql = match (query.topic.as_deref(), query.status.as_deref()) {
         (Some(_), Some(_)) => format!(
-            "SELECT {KB_COLUMNS} FROM knowledge_base_entries WHERE tenant_key = ? AND topic = ? AND status = ? ORDER BY created_at DESC"
+            "SELECT {KB_COLUMNS} FROM knowledge_base_entries WHERE tenant_key = $1 AND topic = $2 AND status = $3 ORDER BY created_at DESC"
         ),
         (Some(_), None) => format!(
-            "SELECT {KB_COLUMNS} FROM knowledge_base_entries WHERE tenant_key = ? AND topic = ? ORDER BY created_at DESC"
+            "SELECT {KB_COLUMNS} FROM knowledge_base_entries WHERE tenant_key = $1 AND topic = $2 ORDER BY created_at DESC"
         ),
         (None, Some(_)) => format!(
-            "SELECT {KB_COLUMNS} FROM knowledge_base_entries WHERE tenant_key = ? AND status = ? ORDER BY created_at DESC"
+            "SELECT {KB_COLUMNS} FROM knowledge_base_entries WHERE tenant_key = $1 AND status = $2 ORDER BY created_at DESC"
         ),
         (None, None) => format!(
-            "SELECT {KB_COLUMNS} FROM knowledge_base_entries WHERE tenant_key = ? ORDER BY created_at DESC"
+            "SELECT {KB_COLUMNS} FROM knowledge_base_entries WHERE tenant_key = $1 ORDER BY created_at DESC"
         ),
     };
 
@@ -585,7 +585,7 @@ pub async fn delete_knowledge_base_entry(
     if let Err(r) = require_table(&state.db, "knowledge_base_entries").await {
         return r;
     }
-    match sqlx::query("DELETE FROM knowledge_base_entries WHERE id = ? AND tenant_key = ?")
+    match sqlx::query("DELETE FROM knowledge_base_entries WHERE id = $1 AND tenant_key = $2")
         .bind(&id)
         .bind(&tenant_key)
         .execute(&state.db)
@@ -692,7 +692,7 @@ pub async fn upload_knowledge_document(
     // A DB failure must NOT be silently treated as "not a duplicate": it
     // would let the same document be ingested twice under a fresh id.
     let dup: Option<String> = match sqlx::query_scalar(
-        "SELECT id FROM knowledge_base_entries WHERE tenant_key = ? AND source_type = 'upload' AND content LIKE ? LIMIT 1",
+        "SELECT id FROM knowledge_base_entries WHERE tenant_key = $1 AND source_type = 'upload' AND content LIKE $2 LIMIT 1",
     )
     .bind(&tenant_key)
     .bind(format!("%{digest}%"))
@@ -1168,7 +1168,7 @@ pub async fn get_knowledge_hub_overview(
     }
 
     let rows = match sqlx::query_as::<_, KbRow>(&format!(
-        "SELECT {KB_COLUMNS} FROM knowledge_base_entries WHERE tenant_key = ? ORDER BY created_at DESC"
+        "SELECT {KB_COLUMNS} FROM knowledge_base_entries WHERE tenant_key = $1 ORDER BY created_at DESC"
     ))
     .bind(&tenant_key)
     .fetch_all(&state.db)
@@ -1339,7 +1339,7 @@ pub async fn list_knowledge_recommendations(
     let status = query.status.unwrap_or_else(|| "open".to_string());
     let rows = match query.gap_type.as_deref() {
         Some(gt) => sqlx::query_as::<_, RecRow>(&format!(
-            "SELECT {REC_COLUMNS} FROM knowledge_recommendations WHERE status = ? AND gap_type = ? AND COALESCE(tenant_key, '') = ? ORDER BY impact_on_resolution DESC"
+            "SELECT {REC_COLUMNS} FROM knowledge_recommendations WHERE status = $1 AND gap_type = $2 AND COALESCE(tenant_key, '') = $3 ORDER BY impact_on_resolution DESC"
         ))
         .bind(&status)
         .bind(gt)
@@ -1347,7 +1347,7 @@ pub async fn list_knowledge_recommendations(
         .fetch_all(&state.db)
         .await,
         None => sqlx::query_as::<_, RecRow>(&format!(
-            "SELECT {REC_COLUMNS} FROM knowledge_recommendations WHERE status = ? AND COALESCE(tenant_key, '') = ? ORDER BY impact_on_resolution DESC"
+            "SELECT {REC_COLUMNS} FROM knowledge_recommendations WHERE status = $1 AND COALESCE(tenant_key, '') = $2 ORDER BY impact_on_resolution DESC"
         ))
         .bind(&status)
         .bind(&tenant_key)
@@ -1401,7 +1401,7 @@ pub async fn apply_knowledge_recommendation(
     }
 
     let rec = sqlx::query_as::<_, RecRow>(&format!(
-        "SELECT {REC_COLUMNS} FROM knowledge_recommendations WHERE id = ? AND COALESCE(tenant_key, '') = ?"
+        "SELECT {REC_COLUMNS} FROM knowledge_recommendations WHERE id = $1 AND COALESCE(tenant_key, '') = $2"
     ))
     .bind(&id)
     .bind(&tenant_key)
@@ -1460,7 +1460,7 @@ pub async fn apply_knowledge_recommendation(
     // exists either way, but "applied" may not have been written. The tenant
     // predicate makes another tenant's row unmatchable even by id guesswork.
     let (rec_rows, rec_err) = match sqlx::query(
-        "UPDATE knowledge_recommendations SET status = 'applied', resolved_at = ? WHERE id = ? AND COALESCE(tenant_key, '') = ?",
+        "UPDATE knowledge_recommendations SET status = 'applied', resolved_at = $1 WHERE id = $2 AND COALESCE(tenant_key, '') = $3",
     )
     .bind(&now)
     .bind(&id)
@@ -1523,7 +1523,7 @@ pub async fn dismiss_knowledge_recommendation(
     }
     let now = Utc::now().to_rfc3339();
     match sqlx::query(
-        "UPDATE knowledge_recommendations SET status = 'dismissed', resolved_at = ? WHERE id = ? AND COALESCE(tenant_key, '') = ?",
+        "UPDATE knowledge_recommendations SET status = 'dismissed', resolved_at = $1 WHERE id = $2 AND COALESCE(tenant_key, '') = $3",
     )
     .bind(&now)
     .bind(&id)
@@ -1593,7 +1593,7 @@ pub async fn list_knowledge_gaps(
     let status = query.status.unwrap_or_else(|| "suggested".to_string());
     let rows = sqlx::query_as::<_, GapRow>(
         "SELECT id, question, suggested_answer, source_query, frequency, status, created_at \
-         FROM knowledge_gaps WHERE status = ? AND COALESCE(tenant_key, '') = ? \
+         FROM knowledge_gaps WHERE status = $1 AND COALESCE(tenant_key, '') = $2 \
          ORDER BY frequency DESC, created_at DESC",
     )
     .bind(&status)
@@ -1620,7 +1620,7 @@ pub async fn scan_knowledge_gaps(
     // The "is this already covered?" corpus is this tenant's published KB only:
     // another tenant's article must not mask a gap in ours (and vice versa).
     let kb_titles: Vec<String> = match sqlx::query_scalar(
-        "SELECT title FROM knowledge_base_entries WHERE status = 'published' AND tenant_key = ?",
+        "SELECT title FROM knowledge_base_entries WHERE status = 'published' AND tenant_key = $1",
     )
     .bind(&tenant_key)
     .fetch_all(&state.db)
@@ -1632,7 +1632,7 @@ pub async fn scan_knowledge_gaps(
         Err(e) => return db_err(e),
     };
     let kb_bodies: Vec<String> = match sqlx::query_scalar(
-        "SELECT content FROM knowledge_base_entries WHERE status = 'published' AND tenant_key = ?",
+        "SELECT content FROM knowledge_base_entries WHERE status = 'published' AND tenant_key = $1",
     )
     .bind(&tenant_key)
     .fetch_all(&state.db)
@@ -1658,7 +1658,7 @@ pub async fn scan_knowledge_gaps(
         JOIN conversations c ON c.id = m.conversation_id
         WHERE (LOWER(m.sender) IN ('customer','user','inbound')
                OR LOWER(COALESCE(m.direction,'')) = 'inbound')
-          AND COALESCE(c.tenant_key, '') = ?
+          AND COALESCE(c.tenant_key, '') = $1
         ORDER BY m.created_at DESC LIMIT 200
         "#,
     )
@@ -1680,7 +1680,7 @@ pub async fn scan_knowledge_gaps(
     };
 
     let existing: Vec<String> = match sqlx::query_scalar(
-        "SELECT LOWER(TRIM(question)) FROM knowledge_gaps WHERE COALESCE(tenant_key, '') = ?",
+        "SELECT LOWER(TRIM(question)) FROM knowledge_gaps WHERE COALESCE(tenant_key, '') = $1",
     )
     .bind(&tenant_key)
     .fetch_all(&state.db)
@@ -1735,7 +1735,7 @@ pub async fn scan_knowledge_gaps(
         let answer: Option<String> = match sqlx::query_scalar(
             r#"
             SELECT body FROM messages
-            WHERE conversation_id = ?
+            WHERE conversation_id = $1
               AND (LOWER(sender) IN ('agent','user','bot') OR LOWER(COALESCE(direction,'')) = 'outbound')
             ORDER BY created_at ASC LIMIT 1
             "#,
@@ -1752,7 +1752,7 @@ pub async fn scan_knowledge_gaps(
         let grounded = answer.unwrap_or_default();
         let id = Uuid::new_v4().to_string();
         let res = sqlx::query(
-            "INSERT INTO knowledge_gaps (id, tenant_key, question, suggested_answer, source_query, frequency, status, created_at) VALUES (?, ?, ?, ?, ?, ?, 'suggested', ?)",
+            "INSERT INTO knowledge_gaps (id, tenant_key, question, suggested_answer, source_query, frequency, status, created_at) VALUES ($1, $2, $3, $4, $5, $6, 'suggested', $7)",
         )
         .bind(&id)
         .bind(&tenant_key)
@@ -1847,7 +1847,7 @@ pub async fn approve_knowledge_gap(
     }
 
     let gap = sqlx::query_as::<_, GapRow>(
-        "SELECT id, question, suggested_answer, source_query, frequency, status, created_at FROM knowledge_gaps WHERE id = ? AND COALESCE(tenant_key, '') = ?",
+        "SELECT id, question, suggested_answer, source_query, frequency, status, created_at FROM knowledge_gaps WHERE id = $1 AND COALESCE(tenant_key, '') = $2",
     )
     .bind(&id)
     .bind(&tenant_key)
@@ -1909,7 +1909,7 @@ pub async fn approve_knowledge_gap(
     // swallowing this error used to leave the gap 'suggested' forever while
     // the response claimed success.
     let (gap_update_rows, gap_update_err) = match sqlx::query(
-        "UPDATE knowledge_gaps SET status = 'approved', suggested_answer = ? WHERE id = ? AND COALESCE(tenant_key, '') = ?",
+        "UPDATE knowledge_gaps SET status = 'approved', suggested_answer = $1 WHERE id = $2 AND COALESCE(tenant_key, '') = $3",
     )
     .bind(&answer)
     .bind(&id)
@@ -1961,7 +1961,7 @@ pub async fn dismiss_knowledge_gap(
         return r;
     }
     match sqlx::query(
-        "UPDATE knowledge_gaps SET status = 'dismissed' WHERE id = ? AND COALESCE(tenant_key, '') = ?",
+        "UPDATE knowledge_gaps SET status = 'dismissed' WHERE id = $1 AND COALESCE(tenant_key, '') = $2",
     )
     .bind(&id)
     .bind(&tenant_key)
