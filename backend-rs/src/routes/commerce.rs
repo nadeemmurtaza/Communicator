@@ -2076,6 +2076,17 @@ pub async fn delete_staff_member(
 // Gap #17: POS Sessions
 // ---------------------------------------------------------------------------
 
+pub async fn list_pos_sessions(
+    State(state): State<AppState>,
+    Query(query): Query<ListCategoriesQuery>,
+) -> Result<Json<Vec<crate::models::PosSession>>, (StatusCode, String)> {
+    let service = CommerceGapsService::new(state.db.clone());
+    match service.list_pos_sessions(&query.brand_id).await {
+        Ok(sessions) => Ok(Json(sessions)),
+        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
+    }
+}
+
 pub async fn create_pos_session(
     State(state): State<AppState>,
     Query(query): Query<ListCategoriesQuery>,
