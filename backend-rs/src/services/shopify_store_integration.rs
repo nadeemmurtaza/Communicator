@@ -12,10 +12,12 @@
 //! 5. Customer enters OTP → widget calls Communicator to verify
 //! 6. On success, customer account is created in Shopify (auto or manual)
 
+use std::collections::HashMap;
+
 use crate::db::DbPool;
 use crate::services::otp_engine::{OtpEngine, GenerateOtpRequest};
 use serde::{Deserialize, Serialize};
-use tracing::{info, warn, error};
+use tracing::{info, warn};
 
 // ---------------------------------------------------------------------------
 // Data types
@@ -44,6 +46,35 @@ pub struct ShopifyStoreConnection {
     pub updated_at: String,
 }
 
+// sqlx's derive/tuple `FromRow` only supports up to 16 columns; this table has
+// 17, so the mapping is implemented by hand.
+impl sqlx::FromRow<'_, sqlx::postgres::PgRow> for ShopifyStoreConnection {
+    fn from_row(row: &sqlx::postgres::PgRow) -> Result<Self, sqlx::Error> {
+        use sqlx::Row;
+        let created_at: chrono::DateTime<chrono::Utc> = row.try_get("created_at")?;
+        let updated_at: chrono::DateTime<chrono::Utc> = row.try_get("updated_at")?;
+        Ok(ShopifyStoreConnection {
+            id: row.try_get("id")?,
+            brand_id: row.try_get("brand_id")?,
+            store_domain: row.try_get("store_domain")?,
+            store_name: row.try_get("store_name")?,
+            shopify_api_key: row.try_get("shopify_api_key")?,
+            shopify_api_secret_hash: row.try_get("shopify_api_secret_hash")?,
+            shopify_api_secret_salt: row.try_get("shopify_api_secret_salt")?,
+            shopify_access_token_hash: row.try_get("shopify_access_token_hash")?,
+            shopify_access_token_salt: row.try_get("shopify_access_token_salt")?,
+            shopify_webhook_secret: row.try_get("shopify_webhook_secret")?,
+            integration_id: row.try_get("integration_id")?,
+            default_purpose: row.try_get("default_purpose")?,
+            auto_create_customer: row.try_get("auto_create_customer")?,
+            customer_tag: row.try_get("customer_tag")?,
+            is_active: row.try_get("is_active")?,
+            created_at: created_at.to_rfc3339(),
+            updated_at: updated_at.to_rfc3339(),
+        })
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateShopifyConnectionRequest {
     pub brand_id: String,
@@ -55,6 +86,7 @@ pub struct CreateShopifyConnectionRequest {
     pub shopify_webhook_secret: Option<String>,
     pub auto_create_customer: Option<bool>,
     pub customer_tag: Option<String>,
+    pub default_purpose: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -202,7 +234,7 @@ impl ShopifyStoreIntegrationService {
         // Generate a public key for the store widget
         let public_key = format!(
             "pk_shop_{}_{}",
-            req.brand_id[..8.min(req.brand_id.len())],
+            &req.brand_id[..8.min(req.brand_id.len())],
             nanoid::nanoid!(8)
         );
 
@@ -231,7 +263,7 @@ impl ShopifyStoreIntegrationService {
         .bind(&access_token_hash)
         .bind(&access_token_salt)
         .bind(req.shopify_webhook_secret.as_deref().unwrap_or(""))
-        .bind(&req.default_purpose)
+        .bind(req.default_purpose.as_deref().unwrap_or("sign_up"))
         .bind(req.auto_create_customer.unwrap_or(true))
         .bind(req.customer_tag.as_deref().unwrap_or("otp_verified"))
         .bind(true)
@@ -269,13 +301,7 @@ impl ShopifyStoreIntegrationService {
         pool: &DbPool,
         store_domain: &str,
     ) -> Result<ShopifyStoreConnection, String> {
-        let conn: Option<(
-            String, String, String, String,
-            String, String, String,
-            String, String, String,
-            Option<String>, String, bool, String,
-            bool, String, String,
-        )> = sqlx::query_as(
+        let conn: Option<ShopifyStoreConnection> = sqlx::query_as(
             r#"SELECT id, brand_id, store_domain, store_name,
                       shopify_api_key, shopify_api_secret_hash, shopify_api_secret_salt,
                       shopify_access_token_hash, shopify_access_token_salt,
@@ -291,28 +317,7 @@ impl ShopifyStoreIntegrationService {
         .await
         .map_err(|e| format!("Failed to fetch connection: {}", e))?;
 
-        match conn {
-            Some(c) => Ok(ShopifyStoreConnection {
-                id: c.0,
-                brand_id: c.1,
-                store_domain: c.2,
-                store_name: c.3,
-                shopify_api_key: c.4,
-                shopify_api_secret_hash: c.5,
-                shopify_api_secret_salt: c.6,
-                shopify_access_token_hash: c.7,
-                shopify_access_token_salt: c.8,
-                shopify_webhook_secret: c.9,
-                integration_id: c.10,
-                default_purpose: c.11,
-                auto_create_customer: c.12,
-                customer_tag: c.13,
-                is_active: c.14,
-                created_at: c.15,
-                updated_at: c.16,
-            }),
-            None => Err("Shopify store connection not found or inactive".to_string()),
-        }
+        conn.ok_or_else(|| "Shopify store connection not found or inactive".to_string())
     }
 
     /// Get store connection by ID.
@@ -320,13 +325,7 @@ impl ShopifyStoreIntegrationService {
         pool: &DbPool,
         connection_id: &str,
     ) -> Result<ShopifyStoreConnection, String> {
-        let conn: Option<(
-            String, String, String, String,
-            String, String, String,
-            String, String, String,
-            Option<String>, String, bool, String,
-            bool, String, String,
-        )> = sqlx::query_as(
+        let conn: Option<ShopifyStoreConnection> = sqlx::query_as(
             r#"SELECT id, brand_id, store_domain, store_name,
                       shopify_api_key, shopify_api_secret_hash, shopify_api_secret_salt,
                       shopify_access_token_hash, shopify_access_token_salt,
@@ -342,28 +341,7 @@ impl ShopifyStoreIntegrationService {
         .await
         .map_err(|e| format!("Failed to fetch connection: {}", e))?;
 
-        match conn {
-            Some(c) => Ok(ShopifyStoreConnection {
-                id: c.0,
-                brand_id: c.1,
-                store_domain: c.2,
-                store_name: c.3,
-                shopify_api_key: c.4,
-                shopify_api_secret_hash: c.5,
-                shopify_api_secret_salt: c.6,
-                shopify_access_token_hash: c.7,
-                shopify_access_token_salt: c.8,
-                shopify_webhook_secret: c.9,
-                integration_id: c.10,
-                default_purpose: c.11,
-                auto_create_customer: c.12,
-                customer_tag: c.13,
-                is_active: c.14,
-                created_at: c.15,
-                updated_at: c.16,
-            }),
-            None => Err("Shopify store connection not found or inactive".to_string()),
-        }
+        conn.ok_or_else(|| "Shopify store connection not found or inactive".to_string())
     }
 
     /// List all store connections for a brand.
@@ -371,13 +349,7 @@ impl ShopifyStoreIntegrationService {
         pool: &DbPool,
         brand_id: &str,
     ) -> Result<Vec<ShopifyStoreConnection>, String> {
-        let conns: Vec<(
-            String, String, String, String,
-            String, String, String,
-            String, String, String,
-            Option<String>, String, bool, String,
-            bool, String, String,
-        )> = sqlx::query_as(
+        let conns: Vec<ShopifyStoreConnection> = sqlx::query_as(
             r#"SELECT id, brand_id, store_domain, store_name,
                       shopify_api_key, shopify_api_secret_hash, shopify_api_secret_salt,
                       shopify_access_token_hash, shopify_access_token_salt,
@@ -393,25 +365,7 @@ impl ShopifyStoreIntegrationService {
         .await
         .map_err(|e| format!("Failed to fetch connections: {}", e))?;
 
-        Ok(conns.into_iter().map(|c| ShopifyStoreConnection {
-            id: c.0,
-            brand_id: c.1,
-            store_domain: c.2,
-            store_name: c.3,
-            shopify_api_key: c.4,
-            shopify_api_secret_hash: c.5,
-            shopify_api_secret_salt: c.6,
-            shopify_access_token_hash: c.7,
-            shopify_access_token_salt: c.8,
-            shopify_webhook_secret: c.9,
-            integration_id: c.10,
-            default_purpose: c.11,
-            auto_create_customer: c.12,
-            customer_tag: c.13,
-            is_active: c.14,
-            created_at: c.15,
-            updated_at: c.16,
-        }).collect())
+        Ok(conns)
     }
 
     // -----------------------------------------------------------------------
@@ -518,12 +472,14 @@ impl ShopifyStoreIntegrationService {
         info!("Initiated Shopify account creation for {} via {} (pending: {})",
               req.email, channel, pending_id);
 
+        let message = format!("OTP sent via {}. Please enter the code to complete your account creation.", channel);
+
         Ok(ShopifyAccountCreationResponse {
             success: true,
             pending_id,
             otp_id: otp_result.otp_id,
             channel,
-            message: format!("OTP sent via {}. Please enter the code to complete your account creation.", channel),
+            message,
             expires_in_seconds: ttl_seconds,
             error: None,
         })
@@ -871,63 +827,30 @@ impl ShopifyStoreIntegrationService {
     ) -> Result<ShopifyChannelPreference, String> {
         let purpose = req.purpose.as_deref().unwrap_or("sign_up");
 
-        // Build dynamic UPDATE query
-        let mut sets = Vec::new();
-        let mut binds: Vec<Box<dyn sqlx::types::Type<sqlx::Postgres> + Send + Sync>> = Vec::new();
-        let mut param_idx = 1u32;
+        // Every field is optional, so each column is only overwritten when a
+        // new value was supplied; COALESCE keeps the existing value otherwise.
+        let query = "UPDATE shopify_channel_preferences SET
+                whatsapp_enabled = COALESCE($1, whatsapp_enabled),
+                email_enabled = COALESCE($2, email_enabled),
+                sms_enabled = COALESCE($3, sms_enabled),
+                in_app_enabled = COALESCE($4, in_app_enabled),
+                default_channel = COALESCE($5, default_channel),
+                priority_order = COALESCE($6, priority_order),
+                updated_at = NOW()
+            WHERE store_connection_id = $7 AND purpose = $8
+            RETURNING id, store_connection_id, purpose, whatsapp_enabled, email_enabled, sms_enabled, in_app_enabled, default_channel, priority_order";
 
-        if let Some(v) = req.whatsapp_enabled {
-            sets.push(format!("whatsapp_enabled = ${}", param_idx));
-            binds.push(Box::new(v));
-            param_idx += 1;
-        }
-        if let Some(v) = req.email_enabled {
-            sets.push(format!("email_enabled = ${}", param_idx));
-            binds.push(Box::new(v));
-            param_idx += 1;
-        }
-        if let Some(v) = req.sms_enabled {
-            sets.push(format!("sms_enabled = ${}", param_idx));
-            binds.push(Box::new(v));
-            param_idx += 1;
-        }
-        if let Some(v) = req.in_app_enabled {
-            sets.push(format!("in_app_enabled = ${}", param_idx));
-            binds.push(Box::new(v));
-            param_idx += 1;
-        }
-        if let Some(v) = &req.default_channel {
-            sets.push(format!("default_channel = ${}", param_idx));
-            binds.push(Box::new(v.clone()));
-            param_idx += 1;
-        }
-        if let Some(v) = &req.priority_order {
-            sets.push(format!("priority_order = ${}", param_idx));
-            binds.push(Box::new(v.clone()));
-            param_idx += 1;
-        }
-
-        sets.push(format!("updated_at = NOW()"));
-
-        let query = format!(
-            "UPDATE shopify_channel_preferences SET {} WHERE store_connection_id = ${} AND purpose = ${} RETURNING id, store_connection_id, purpose, whatsapp_enabled, email_enabled, sms_enabled, in_app_enabled, default_channel, priority_order",
-            sets.join(", "),
-            param_idx,
-            param_idx + 1
-        );
-
-        // Use a simpler approach with explicit binds
         let pref: Option<(
             String, String, String,
             bool, bool, bool, bool,
             String, Vec<String>,
-        )> = sqlx::query_as(&query)
+        )> = sqlx::query_as(query)
             .bind(&req.whatsapp_enabled)
             .bind(&req.email_enabled)
             .bind(&req.sms_enabled)
             .bind(&req.in_app_enabled)
-            .bind(req.default_channel.as_deref().unwrap_or(""))
-            .bind(req.priority_order.as_ref().map(|v| v.as_slice()).unwrap_or(&[] as &[String]))
+            .bind(req.default_channel.as_deref())
+            .bind(req.priority_order.as_ref().map(|v| v.as_slice()))
             .bind(store_connection_id)
             .bind(purpose)
             .fetch_optional(pool)

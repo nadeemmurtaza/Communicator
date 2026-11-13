@@ -5,7 +5,7 @@ use crate::services::workflow_builder;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::{json, Value};
 
 #[derive(Deserialize, Debug)]

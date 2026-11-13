@@ -229,8 +229,8 @@ fn format_for_channel(broadcast: &Broadcast, channel: &str) -> ChannelFormat {
         }
     });
 
-    let source_text = if source_html.is_some() {
-        html_to_plain_text(&source_html.unwrap_or_default())
+    let source_text = if let Some(ref html) = source_html {
+        html_to_plain_text(html)
     } else {
         broadcast.body_text.clone()
     };
@@ -515,10 +515,8 @@ fn html_to_plain_text(html: &str) -> String {
             if tag.trim_end().to_lowercase().ends_with("</a>") {
                 if let Some((start_str, url)) = link_stack.pop() {
                     let start = start_str.parse::<usize>().unwrap_or(0);
-                    let link_text: String = result[start..].drain(..).collect();
-                    result.push_str(&link_text);
+                    let link_text: String = result.drain(start..).collect();
                     // Re-insert as [text](url)
-                    result.truncate(start);
                     result.push_str(&format!("{} ({})", link_text, url));
                 }
             }
@@ -1035,7 +1033,7 @@ impl Broadcast {
         Ok(Self::from_row(&row))
     }
 
-    fn from_row(row: &dyn sqlx::Row) -> Self {
+    fn from_row(row: &sqlx::postgres::PgRow) -> Self {
         Self {
             id: row.try_get(0).unwrap_or_default(),
             organization_id: row.try_get(1).unwrap_or_default(),
@@ -1136,7 +1134,7 @@ impl BroadcastMedia {
         Ok(())
     }
 
-    fn from_row(row: &dyn sqlx::Row) -> Self {
+    fn from_row(row: &sqlx::postgres::PgRow) -> Self {
         Self {
             id: row.try_get(0).unwrap_or_default(),
             broadcast_id: row.try_get(1).unwrap_or_default(),
@@ -1386,7 +1384,7 @@ impl BroadcastChannel {
         Ok(rows.iter().map(Self::from_row).collect())
     }
 
-    fn from_row(row: &dyn sqlx::Row) -> Self {
+    fn from_row(row: &sqlx::postgres::PgRow) -> Self {
         Self {
             id: row.try_get(0).unwrap_or_default(),
             broadcast_id: row.try_get(1).unwrap_or_default(),
@@ -1439,7 +1437,7 @@ impl BroadcastRecipient {
         Ok(rows.iter().map(Self::from_row).collect())
     }
 
-    fn from_row(row: &dyn sqlx::Row) -> Self {
+    fn from_row(row: &sqlx::postgres::PgRow) -> Self {
         Self {
             id: row.try_get(0).unwrap_or_default(),
             broadcast_id: row.try_get(1).unwrap_or_default(),
@@ -1481,7 +1479,7 @@ impl BroadcastLog {
         Ok(rows.iter().map(Self::from_row).collect())
     }
 
-    fn from_row(row: &dyn sqlx::Row) -> Self {
+    fn from_row(row: &sqlx::postgres::PgRow) -> Self {
         Self {
             id: row.try_get(0).unwrap_or_default(),
             broadcast_id: row.try_get(1).unwrap_or_default(),
@@ -1548,7 +1546,7 @@ impl BroadcastSettings {
         Ok(Self::from_row(&row))
     }
 
-    fn from_row(row: &dyn sqlx::Row) -> Self {
+    fn from_row(row: &sqlx::postgres::PgRow) -> Self {
         Self {
             id: row.try_get(0).unwrap_or_default(),
             organization_id: row.try_get(1).unwrap_or_default(),

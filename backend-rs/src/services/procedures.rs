@@ -292,7 +292,7 @@ pub async fn update_procedure(
     }
 
     if sets.is_empty() {
-        return get_procedure(state, id);
+        return get_procedure(state, id).await;
     }
 
     sets.push("updated_at = ?");
@@ -419,9 +419,11 @@ pub async fn get_procedure_execution(state: &AppState, id: &str) -> Result<Proce
         state: row.try_get("state").unwrap_or_default(),
         context_data: row.try_get::<Option<String>, _>("context_data")
             .ok()
+            .flatten()
             .and_then(|s| serde_json::from_str(&s).ok()),
         result_data: row.try_get::<Option<String>, _>("result_data")
             .ok()
+            .flatten()
             .and_then(|s| serde_json::from_str(&s).ok()),
         error_message: row.try_get("error_message").ok(),
         started_at: row.try_get("started_at").unwrap_or_default(),
@@ -450,9 +452,11 @@ pub async fn get_running_execution(
             state: row.try_get("state").unwrap_or_default(),
             context_data: row.try_get::<Option<String>, _>("context_data")
                 .ok()
+                .flatten()
                 .and_then(|s| serde_json::from_str(&s).ok()),
             result_data: row.try_get::<Option<String>, _>("result_data")
                 .ok()
+                .flatten()
                 .and_then(|s| serde_json::from_str(&s).ok()),
             error_message: row.try_get("error_message").ok(),
             started_at: row.try_get("started_at").unwrap_or_default(),
@@ -470,6 +474,7 @@ pub async fn execute_current_step(
 ) -> Result<StepExecutionResult, (String, String)> {
     // Get execution
     let execution = get_procedure_execution(state, execution_id)
+        .await
         .map_err(|e| ("not_found".to_string(), e.to_string()))?;
 
     if execution.state != "running" {
@@ -478,6 +483,7 @@ pub async fn execute_current_step(
 
     // Get procedure
     let procedure = get_procedure(state, &execution.procedure_id)
+        .await
         .map_err(|e| ("not_found".to_string(), e.to_string()))?;
 
     // Get steps
@@ -697,6 +703,7 @@ pub async fn list_actions(
             body_template: row.try_get("body_template").ok(),
             auth_config: row.try_get::<Option<String>, _>("auth_config")
                 .ok()
+                .flatten()
                 .and_then(|s| serde_json::from_str(&s).ok()),
             timeout_seconds: row.try_get("timeout_seconds").unwrap_or(30),
             retry_count: row.try_get("retry_count").unwrap_or(0),
@@ -773,6 +780,7 @@ pub async fn get_action(state: &AppState, id: &str) -> Result<Action, sqlx::Erro
         body_template: row.try_get("body_template").ok(),
         auth_config: row.try_get::<Option<String>, _>("auth_config")
             .ok()
+            .flatten()
             .and_then(|s| serde_json::from_str(&s).ok()),
         timeout_seconds: row.try_get("timeout_seconds").unwrap_or(30),
         retry_count: row.try_get("retry_count").unwrap_or(0),
@@ -819,7 +827,7 @@ pub async fn update_action(
     }
 
     if sets.is_empty() {
-        return get_action(state, id);
+        return get_action(state, id).await;
     }
 
     sets.push("updated_at = ?");
@@ -859,7 +867,7 @@ async fn execute_action(
     procedure_execution_id: Option<&str>,
     params: &Value,
 ) -> Result<Value, String> {
-    let action = get_action(state, action_id).map_err(|e| e.to_string())?;
+    let action = get_action(state, action_id).await.map_err(|e| e.to_string())?;
 
     if !action.enabled {
         return Err("Action is disabled".to_string());
@@ -1115,9 +1123,11 @@ pub async fn get_procedure_summary(state: &AppState) -> Result<ProcedureSummary,
             state: row.try_get("state").unwrap_or_default(),
             context_data: row.try_get::<Option<String>, _>("context_data")
                 .ok()
+                .flatten()
                 .and_then(|s| serde_json::from_str(&s).ok()),
             result_data: row.try_get::<Option<String>, _>("result_data")
                 .ok()
+                .flatten()
                 .and_then(|s| serde_json::from_str(&s).ok()),
             error_message: row.try_get("error_message").ok(),
             started_at: row.try_get("started_at").unwrap_or_default(),

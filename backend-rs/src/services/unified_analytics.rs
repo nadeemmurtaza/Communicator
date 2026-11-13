@@ -327,25 +327,24 @@ impl UnifiedAnalyticsService {
     }
 
     async fn get_cx_score(&self) -> Result<f64, anyhow::Error> {
-        let row: (sqlx::types::Json<serde_json::Value>,) = sqlx::query_as(
+        let row: Option<(sqlx::types::Json<serde_json::Value>,)> = sqlx::query_as(
             "SELECT data FROM analytics_snapshots WHERE snapshot_type = 'daily' ORDER BY created_at DESC LIMIT 1"
-        ).fetch_optional(&self.pool).await?
-        .map(|r| r.0)
-        .unwrap_or(serde_json::json!({}));
+        ).fetch_optional(&self.pool).await?;
+        let data: serde_json::Value = row.map(|r| r.0.0).unwrap_or(serde_json::json!({}));
 
         // Try to get CX score from snapshot data
-        if let Some(cx) = row.get("cx_score").and_then(|v| v.as_f64()) {
+        if let Some(cx) = data.get("cx_score").and_then(|v| v.as_f64()) {
             return Ok(cx);
         }
 
         // Fallback: calculate from qa_scores
-        let avg: (sqlx::types::Json<serde_json::Value>,) = sqlx::query_as(
+        let avg: (Option<f64>,) = sqlx::query_as(
             "SELECT AVG(overall_score) as avg_score FROM qa_scores"
-        ).fetch_optional(&self.pool).await?
-        .unwrap_or(serde_json::json!(null));
+        ).fetch_one(&self.pool).await?;
 
-        if let Some(avg_score) = avg.0.as_f64() {
-            return Ok(avg_score * 100.0);
+        if let Some(avg_score) = avg.0 {
+            // overall_score is already stored on a 0-100 scale
+            return Ok(avg_score);
         }
 
         Ok(0.0)

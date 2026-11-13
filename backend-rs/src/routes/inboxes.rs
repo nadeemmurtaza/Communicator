@@ -529,6 +529,24 @@ async fn http_get_json(state: &AppState, url: &str, bearer: Option<&str>) -> Res
     serde_json::from_str::<Value>(&text).map_err(|e| format!("non-JSON response: {e} - {}", truncate(&text)))
 }
 
+/// Like `http_get_json`, but for providers (Discord) whose Authorization
+/// header isn't the `Bearer <token>` scheme `bearer_auth` sends.
+async fn http_get_json_auth(state: &AppState, url: &str, authorization: &str) -> Result<Value, String> {
+    let resp = state
+        .http_client
+        .get(url)
+        .header("Authorization", authorization)
+        .send()
+        .await
+        .map_err(|e| format!("transport failure: {e}"))?;
+    let status = resp.status();
+    let text = resp.text().await.map_err(|e| format!("could not read response body: {e}"))?;
+    if !status.is_success() {
+        return Err(format!("HTTP {} - {}", status.as_u16(), truncate(&text)));
+    }
+    serde_json::from_str::<Value>(&text).map_err(|e| format!("non-JSON response: {e} - {}", truncate(&text)))
+}
+
 async fn http_get_json_basic(
     state: &AppState,
     url: &str,
@@ -4401,23 +4419,11 @@ pub async fn get_discord_channel(State(state): State<AppState>) -> Json<Value> {
 
     // Fetch bot profile from Discord API
     let live = match &token {
-        Some(t) => Some(
-            reqwest::Client::new()
-                .get("https://discord.com/api/v10/@me")
-                .header("Authorization", format!("Bot {t}"))
-                .send()
-                .await,
-        ),
+        Some(t) => Some(http_get_json_auth(&state, "https://discord.com/api/v10/@me", &format!("Bot {t}")).await),
         None => None,
     };
-    let bot_profile = live
-        .as_ref()
-        .and_then(|r| r.as_ref().ok())
-        .and_then(|r| r.json::<serde_json::Value>().await.ok());
-    let live_error = live
-        .as_ref()
-        .and_then(|r| r.as_ref().err())
-        .map(|e| e.to_string());
+    let bot_profile = live.as_ref().and_then(|r| r.as_ref().ok()).cloned();
+    let live_error = live.as_ref().and_then(|r| r.as_ref().err()).cloned();
 
     let bot_username = bot_profile
         .as_ref()
@@ -4507,12 +4513,12 @@ pub async fn get_discord_channel(State(state): State<AppState>) -> Json<Value> {
             "interactionSecret": value_or_null(cred(&creds, &["interactionSecret", "interaction_secret"])),
         },
         "botProfile": {
-            "botToken": if token.is_some() { "————" } else { null },
+            "botToken": if token.is_some() { Value::String("————".to_string()) } else { Value::Null },
             "clientId": value_or_null(client_id.clone()),
             "botUsername": value_or_null(bot_username),
             "botDiscriminator": value_or_null(bot_discriminator),
             "botAvatar": value_or_null(bot_avatar),
-            "botId": value_or_null(bot_id),
+            "botId": value_or_null(bot_id.clone()),
             "source": if bot_profile.is_some() { "live /@me" } else { "stored credentials only" }
         },
         "commands": commands_json,
@@ -4594,9 +4600,10 @@ pub async fn update_discord_channel(
 pub async fn verify_discord_connection(State(state): State<AppState>) -> impl IntoResponse {
     let inbox = match inbox_row_checked(&state.db, &["discord"]).await {
         Ok(v) => v,
-        Err(err) => return err_response(StatusCode::BAD_REQUEST, &err),
+        Err(resp) => return resp,
     };
-    let creds = parse_json_obj(&inbox.credentials);
+    let mut warnings: Vec<String> = Vec::new();
+    let creds = inbox_credentials(inbox.as_ref(), &mut warnings);
     let token = match cred(&creds, &["botToken", "bot_token"]) {
         Some(t) => t,
         None => {
@@ -4645,9 +4652,10 @@ pub async fn send_discord_test_message(
 ) -> impl IntoResponse {
     let inbox = match inbox_row_checked(&state.db, &["discord"]).await {
         Ok(v) => v,
-        Err(err) => return err_response(StatusCode::BAD_REQUEST, &err),
+        Err(resp) => return resp,
     };
-    let creds = parse_json_obj(&inbox.credentials);
+    let mut warnings: Vec<String> = Vec::new();
+    let creds = inbox_credentials(inbox.as_ref(), &mut warnings);
     let token = match cred(&creds, &["botToken", "bot_token"]) {
         Some(t) => t,
         None => {
@@ -4730,19 +4738,10 @@ pub async fn get_slack_channel(State(state): State<AppState>) -> Json<Value> {
 
     // Fetch bot info from Slack API
     let live = match &bot_token {
-        Some(t) => Some(
-            reqwest::Client::new()
-                .get("https://slack.com/api/api.test")
-                .header("Authorization", format!("Bearer {t}"))
-                .send()
-                .await,
-        ),
+        Some(t) => Some(http_get_json(&state, "https://slack.com/api/api.test", Some(t)).await),
         None => None,
     };
-    let api_test = live
-        .as_ref()
-        .and_then(|r| r.as_ref().ok())
-        .and_then(|r| r.json::<serde_json::Value>().await.ok());
+    let api_test = live.as_ref().and_then(|r| r.as_ref().ok()).cloned();
     let live_error = live
         .as_ref()
         .and_then(|r| r.as_ref().err())
@@ -4825,10 +4824,10 @@ pub async fn get_slack_channel(State(state): State<AppState>) -> Json<Value> {
             "signingSecret": value_or_null(signing_secret.clone()),
         },
         "botProfile": {
-            "botToken": if bot_token.is_some() { "••••" } else { null },
+            "botToken": if bot_token.is_some() { Value::String("••••".to_string()) } else { Value::Null },
             "appToken": value_or_null(app_token.clone()),
             "appId": value_or_null(app_id.clone()),
-            "botUserId": value_or_null(bot_user_id),
+            "botUserId": value_or_null(bot_user_id.clone()),
             "source": if bot_connected { "live api.test" } else { "stored credentials only" }
         },
         "commands": commands_json,
@@ -4910,9 +4909,10 @@ pub async fn update_slack_channel(
 pub async fn verify_slack_connection(State(state): State<AppState>) -> impl IntoResponse {
     let inbox = match inbox_row_checked(&state.db, &["slack"]).await {
         Ok(v) => v,
-        Err(err) => return err_response(StatusCode::BAD_REQUEST, &err),
+        Err(resp) => return resp,
     };
-    let creds = parse_json_obj(&inbox.credentials);
+    let mut warnings: Vec<String> = Vec::new();
+    let creds = inbox_credentials(inbox.as_ref(), &mut warnings);
     let bot_token = match cred(&creds, &["botToken", "bot_token", "xoxb_token"]) {
         Some(t) => t,
         None => {
@@ -4966,9 +4966,10 @@ pub async fn send_slack_test_message(
 ) -> impl IntoResponse {
     let inbox = match inbox_row_checked(&state.db, &["slack"]).await {
         Ok(v) => v,
-        Err(err) => return err_response(StatusCode::BAD_REQUEST, &err),
+        Err(resp) => return resp,
     };
-    let creds = parse_json_obj(&inbox.credentials);
+    let mut warnings: Vec<String> = Vec::new();
+    let creds = inbox_credentials(inbox.as_ref(), &mut warnings);
     let bot_token = match cred(&creds, &["botToken", "bot_token", "xoxb_token"]) {
         Some(t) => t,
         None => {
