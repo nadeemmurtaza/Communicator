@@ -63,32 +63,56 @@ impl ErpCatalogService {
     }
 
     pub async fn update_category(pool: &PgPool, id: &str, req: &UpdateCategoryRequest) -> Result<ErpCategory, String> {
-        let mut sets = Vec::new();
-        let mut slug = None;
-        let mut code = None;
-        let mut parent_id = None;
-        let mut image_url = None;
-        let mut sort_order = None;
-        let mut is_active = None;
-
-        if let Some(ref s) = req.slug { sets.push("slug = $1".to_string()); slug = Some(s.clone()); }
-        if let Some(ref c) = req.code { sets.push("code = $2".to_string()); code = Some(c.clone()); }
-        if let Some(ref p) = req.parent_id { sets.push("parent_id = $3".to_string()); parent_id = Some(p.clone()); }
-        if let Some(ref i) = req.image_url { sets.push("image_url = $4".to_string()); image_url = Some(i.clone()); }
-        if let Some(s) = req.sort_order { sets.push("sort_order = $5".to_string()); sort_order = Some(s); }
-        if let Some(a) = req.is_active { sets.push("is_active = $6".to_string()); is_active = Some(a); }
+        let mut sets: Vec<String> = Vec::new();
+        let mut idx = 1;
+        macro_rules! add_set {
+            ($present:expr, $col:expr) => {
+                if $present {
+                    sets.push(format!("{} = ${}", $col, idx));
+                    idx += 1;
+                }
+            };
+        }
+        add_set!(req.slug.is_some(), "slug");
+        add_set!(req.code.is_some(), "code");
+        add_set!(req.parent_id.is_some(), "parent_id");
+        add_set!(req.image_url.is_some(), "image_url");
+        add_set!(req.sort_order.is_some(), "sort_order");
+        add_set!(req.is_active.is_some(), "is_active");
 
         if sets.is_empty() {
             return Self::get_category(pool, id).await;
         }
 
-        let set_clause = sets.join(", ");
-        let now = chrono::Utc::now().to_rfc3339();
-        sets.push(format!("updated_at = '{}' ", now));
+        sets.push("updated_at = NOW()".to_string());
+        let query = format!(
+            "UPDATE erp_categories SET {} WHERE id = ${} RETURNING *",
+            sets.join(", "),
+            idx
+        );
 
-        let query = format!("UPDATE erp_categories SET {} WHERE id = '${}' RETURNING *", sets.join(", "), id);
-        sqlx::query_as(&query)
-            .fetch_one(pool)
+        let mut q = sqlx::query_as(&query);
+        if let Some(ref s) = req.slug {
+            q = q.bind(s);
+        }
+        if let Some(ref c) = req.code {
+            q = q.bind(c);
+        }
+        if let Some(ref p) = req.parent_id {
+            q = q.bind(p);
+        }
+        if let Some(ref i) = req.image_url {
+            q = q.bind(i);
+        }
+        if let Some(s) = req.sort_order {
+            q = q.bind(s);
+        }
+        if let Some(a) = req.is_active {
+            q = q.bind(a);
+        }
+        q = q.bind(id);
+
+        q.fetch_one(pool)
             .await
             .map_err(|e| e.to_string())
     }
@@ -114,7 +138,7 @@ impl ErpCatalogService {
 
     pub async fn upsert_category_translation(pool: &PgPool, category_id: &str, locale: &str, name: &str, description: Option<&str>) -> Result<ErpCategoryTranslation, String> {
         let id = Uuid::new_v4().to_string();
-        sqlx::query(
+        sqlx::query_as(
             "INSERT INTO erp_category_translations (id, category_id, locale, name, description) \
              VALUES ($1, $2, $3, $4, $5) \
              ON CONFLICT (category_id, locale) DO UPDATE SET name = $4, description = $5 \
@@ -134,40 +158,32 @@ impl ErpCatalogService {
 
     pub async fn list_products(pool: &PgPool, status: Option<&str>, kind: Option<&str>, limit: i64, offset: i64) -> Result<Vec<ErpProduct>, String> {
         let mut query = String::from("SELECT * FROM erp_products WHERE 1=1");
-        let mut binds: Vec<Box<dyn sqlx::encode::Encode<'_, sqlx::Postgres> + Send + Sync>> = Vec::new();
-        let mut bind_idx = 1;
+        let mut idx = 1;
 
+        if status.is_some() {
+            query.push_str(&format!(" AND status = ${}", idx));
+            idx += 1;
+        }
+        if kind.is_some() {
+            query.push_str(&format!(" AND kind = ${}", idx));
+            idx += 1;
+        }
+        query.push_str(&format!(
+            " ORDER BY featured_rank DESC, created_at DESC LIMIT ${} OFFSET ${}",
+            idx,
+            idx + 1
+        ));
+
+        let mut q = sqlx::query_as(&query);
         if let Some(s) = status {
-            query.push_str(&format!(" AND status = ${}", bind_idx));
-            binds.push(Box::new(s.to_string()));
-            bind_idx += 1;
+            q = q.bind(s);
         }
         if let Some(k) = kind {
-            query.push_str(&format!(" AND kind = ${}", bind_idx));
-            binds.push(Box::new(k.to_string()));
-            bind_idx += 1;
+            q = q.bind(k);
         }
-        query.push_str(&format!(" ORDER BY featured_rank DESC, created_at DESC LIMIT ${} OFFSET ${}", bind_idx, bind_idx + 1));
-        binds.push(Box::new(limit.max(1).min(100)));
-        binds.push(Box::new(offset.max(0)));
+        q = q.bind(limit.max(1).min(100)).bind(offset.max(0));
 
-        // Build the query string and execute
-        let query_str = query;
-        let rows = if binds.is_empty() {
-            sqlx::query_as("SELECT * FROM erp_products ORDER BY featured_rank DESC, created_at DESC LIMIT $1 OFFSET $2")
-                .bind(limit.max(1).min(100))
-                .bind(offset.max(0))
-                .fetch_all(pool)
-                .await
-                .map_err(|e| e.to_string())?
-        } else {
-            // For simplicity, use the basic query
-            sqlx::query_as(&format!("SELECT * FROM erp_products ORDER BY featured_rank DESC, created_at DESC LIMIT {} OFFSET {}", limit.max(1).min(100), offset.max(0)))
-                .fetch_all(pool)
-                .await
-                .map_err(|e| e.to_string())?
-        };
-        Ok(rows)
+        q.fetch_all(pool).await.map_err(|e| e.to_string())
     }
 
     pub async fn get_product(pool: &PgPool, id: &str) -> Result<ErpProduct, String> {
@@ -315,7 +331,7 @@ impl ErpCatalogService {
 
     pub async fn upsert_product_translation(pool: &PgPool, product_id: &str, locale: &str, name: &str, description: Option<&str>, care_instructions: Option<&str>) -> Result<ErpProductTranslation, String> {
         let id = Uuid::new_v4().to_string();
-        sqlx::query(
+        sqlx::query_as(
             "INSERT INTO erp_product_translations (id, product_id, locale, name, description, care_instructions) \
              VALUES ($1, $2, $3, $4, $5, $6) \
              ON CONFLICT (product_id, locale) DO UPDATE SET name = $4, description = $5, care_instructions = $6 \

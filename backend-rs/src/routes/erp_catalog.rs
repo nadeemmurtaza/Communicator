@@ -341,7 +341,7 @@ pub async fn add_product_to_collection(
     let product_id = body.get("productId").and_then(|v| v.as_str())
         .ok_or_else(|| (StatusCode::BAD_REQUEST, "productId required".to_string()))?;
     let sort_order = body.get("sortOrder").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
-    match ErpCatalogService::add_product_to_collection(&state.db, collection_id, product_id, sort_order).await {
+    match ErpCatalogService::add_product_to_collection(&state.db, &collection_id, product_id, sort_order).await {
         Ok(()) => Ok(StatusCode::OK),
         Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
     }
