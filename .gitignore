@@ -20,3 +20,4 @@ target/
 backend-rs/*.log
 backend-rs/check_*.txt
 backend-rs/scripts/
+.claude/worktrees/
