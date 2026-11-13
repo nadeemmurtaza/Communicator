@@ -971,11 +971,12 @@ pub async fn resolve_widget_contact(
 
     let placeholders = CONTACT_CHANNELS
         .iter()
-        .map(|_| "?")
+        .enumerate()
+        .map(|(i, _)| format!("${}", i + 2))
         .collect::<Vec<_>>()
         .join(",");
     let lookup_sql = format!(
-        "SELECT id, person_name FROM contacts WHERE value = ? AND channel IN ({placeholders}) \
+        "SELECT id, person_name FROM contacts WHERE value = $1 AND channel IN ({placeholders}) \
          ORDER BY updated_at DESC LIMIT 1"
     );
     let mut query = sqlx::query(&lookup_sql);
@@ -999,7 +1000,7 @@ pub async fn resolve_widget_contact(
             // has to be reported -- otherwise the visitor believes they gave a
             // name and the CRM keeps showing the import placeholder. The name
             // itself is not logged; the contact id identifies the row.
-            match sqlx::query("UPDATE contacts SET person_name = ?, updated_at = ? WHERE id = ?")
+            match sqlx::query("UPDATE contacts SET person_name = $1, updated_at = $2 WHERE id = $3")
                 .bind(provided)
                 .bind(chrono::Utc::now().to_rfc3339())
                 .bind(&id)
@@ -1032,7 +1033,7 @@ pub async fn resolve_widget_contact(
     // Load-bearing: `get_or_create_contact` files the identity in `contacts.value`
     // only, so this statement is the single writer of `contacts.email`. A silent
     // failure would leave the CRM listing the visitor with no email at all.
-    match sqlx::query("UPDATE contacts SET email = ? WHERE id = ?")
+    match sqlx::query("UPDATE contacts SET email = $1 WHERE id = $2")
         .bind(&email)
         .bind(&contact_id)
         .execute(pool)
@@ -1080,7 +1081,7 @@ pub async fn contact_profile(
     contact_id: &str,
 ) -> WidgetResult<Option<(String, String)>> {
     let row = need(
-        sqlx::query("SELECT person_name, value FROM contacts WHERE id = ?")
+        sqlx::query("SELECT person_name, value FROM contacts WHERE id = $1")
             .bind(contact_id)
             .fetch_optional(pool)
             .await,
@@ -1096,7 +1097,7 @@ pub async fn contact_profile(
 
 /// Reads a conversation's stored `custom_attributes` as JSON.
 pub async fn conversation_attributes(pool: &DbPool, conversation_id: &str) -> Value {
-    sqlx::query("SELECT custom_attributes FROM conversations WHERE id = ?")
+    sqlx::query("SELECT custom_attributes FROM conversations WHERE id = $1")
         .bind(conversation_id)
         .fetch_optional(pool)
         .await
@@ -1123,7 +1124,7 @@ pub async fn merge_conversation_attributes(
     }
     let raw = serde_json::to_string(&Value::Object(merged)).unwrap_or_else(|_| "{}".to_string());
     need(
-        sqlx::query("UPDATE conversations SET custom_attributes = ?, updated_at = ? WHERE id = ?")
+        sqlx::query("UPDATE conversations SET custom_attributes = $1, updated_at = $2 WHERE id = $3")
             .bind(&raw)
             .bind(chrono::Utc::now().to_rfc3339())
             .bind(conversation_id)
@@ -1146,8 +1147,8 @@ pub async fn open_widget_conversation(
 ) -> WidgetResult<(String, bool)> {
     let existing = need(
         sqlx::query(
-            "SELECT id, state FROM conversations WHERE contact_id = ? AND \
-             (inbox_id = ? OR inbox_id IS NULL) ORDER BY created_at DESC LIMIT 1",
+            "SELECT id, state FROM conversations WHERE contact_id = $1 AND \
+             (inbox_id = $2 OR inbox_id IS NULL) ORDER BY created_at DESC LIMIT 1",
         )
         .bind(contact_id)
         .bind(inbox_id)
@@ -1176,7 +1177,7 @@ pub async fn open_widget_conversation(
     if is_new {
         need(
             sqlx::query(
-                "UPDATE conversations SET priority = ?, custom_attributes = ?, updated_at = ? WHERE id = ?",
+                "UPDATE conversations SET priority = $1, custom_attributes = $2, updated_at = $3 WHERE id = $4",
             )
             .bind(priority)
             .bind(attributes.to_string())
@@ -1217,7 +1218,7 @@ pub async fn inject_greeting(
         sqlx::query(
             "INSERT INTO messages (id, conversation_id, direction, channel, body, status, provider, \
              provider_message_id, sender_type, sender_name, sender, is_private, created_at, sent_at) \
-             VALUES (?, ?, 'outbound', ?, ?, 'delivered', ?, ?, 'agent', ?, 'agent', 0, ?, ?)",
+             VALUES ($1, $2, 'outbound', $3, $4, 'delivered', $5, $6, 'agent', $7, 'agent', 0, $8, $9)",
         )
         .bind(&id)
         .bind(conversation_id)
@@ -1236,7 +1237,7 @@ pub async fn inject_greeting(
     // the route already returned its id. This bump only orders the agent inbox,
     // so a miss is logged through the shared sink instead of failing the boot.
     crate::db::report_write(
-        sqlx::query("UPDATE conversations SET last_outbound_at = ?, updated_at = ? WHERE id = ?")
+        sqlx::query("UPDATE conversations SET last_outbound_at = $1, updated_at = $2 WHERE id = $3")
             .bind(&now)
             .bind(&now)
             .bind(conversation_id)
@@ -1277,7 +1278,7 @@ pub async fn record_visitor_message(
     .await?;
 
     let row = need(
-        sqlx::query("SELECT id, sent_at, created_at FROM messages WHERE id = ?")
+        sqlx::query("SELECT id, sent_at, created_at FROM messages WHERE id = $1")
             .bind(&message_id)
             .fetch_optional(pool)
             .await,
@@ -1425,7 +1426,7 @@ pub async fn request_auto_reply(
     //    if it cannot be read the reply is withheld rather than risk talking
     //    over a human who is already in the conversation.
     let thread = sqlx::query(
-        "SELECT COALESCE(state, '') AS state, human_takeover FROM conversations WHERE id = ? \
+        "SELECT COALESCE(state, '') AS state, human_takeover FROM conversations WHERE id = $1 \
          LIMIT 1",
     )
     .bind(conversation_id)
@@ -1577,7 +1578,7 @@ pub async fn request_auto_reply(
     // The read-back is the proof of `stored`: what the database holds, not what
     // the send call claimed.
     match sqlx::query(&format!(
-        "SELECT conversation_id, {MESSAGE_COLUMNS} FROM messages WHERE id = ? LIMIT 1"
+        "SELECT conversation_id, {MESSAGE_COLUMNS} FROM messages WHERE id = $1 LIMIT 1"
     ))
     .bind(&stored_id)
     .fetch_optional(&state.db)
@@ -1677,7 +1678,7 @@ pub async fn request_auto_reply(
 pub async fn max_message_cursor(pool: &DbPool, conversation_id: &str) -> WidgetResult<String> {
     let row = need(
         sqlx::query(
-            "SELECT COALESCE(MAX(created_at), '') AS cursor FROM messages WHERE conversation_id = ?",
+            "SELECT COALESCE(MAX(created_at), '') AS cursor FROM messages WHERE conversation_id = $1",
         )
         .bind(conversation_id)
         .fetch_optional(pool)
@@ -1735,8 +1736,8 @@ pub async fn visible_messages(
     let rows = need(
         sqlx::query(&format!(
             "SELECT {MESSAGE_COLUMNS} FROM messages \
-             WHERE conversation_id = ? AND created_at > ? AND COALESCE(is_private, 0) = 0 \
-             ORDER BY created_at ASC LIMIT ?"
+             WHERE conversation_id = $1 AND created_at > $2 AND COALESCE(is_private, 0) = 0 \
+             ORDER BY created_at ASC LIMIT $3"
         ))
         .bind(conversation_id)
         .bind(&after_cursor)
@@ -1753,7 +1754,7 @@ pub async fn build_transcript(pool: &DbPool, conversation_id: &str) -> WidgetRes
     let rows = need(
         sqlx::query(&format!(
             "SELECT {MESSAGE_COLUMNS} FROM messages \
-             WHERE conversation_id = ? AND COALESCE(is_private, 0) = 0 ORDER BY created_at ASC"
+             WHERE conversation_id = $1 AND COALESCE(is_private, 0) = 0 ORDER BY created_at ASC"
         ))
         .bind(conversation_id)
         .fetch_all(pool)
@@ -1789,7 +1790,7 @@ pub async fn mark_messages_read(
     let result = need(
         sqlx::query(
             "UPDATE messages SET status = 'read', delivery_status = 'read' \
-             WHERE conversation_id = ? AND created_at <= ? AND direction = 'outbound' \
+             WHERE conversation_id = $1 AND created_at <= $2 AND direction = 'outbound' \
                AND COALESCE(is_private, 0) = 0 \
                AND (status IS NULL OR status != 'read')",
         )
@@ -1809,7 +1810,7 @@ pub async fn unread_outbound_count(
 ) -> WidgetResult<i64> {
     let row = need(
         sqlx::query(
-            "SELECT COUNT(*) AS total FROM messages WHERE conversation_id = ? AND created_at > ? \
+            "SELECT COUNT(*) AS total FROM messages WHERE conversation_id = $1 AND created_at > $2 \
              AND direction = 'outbound' AND COALESCE(is_private, 0) = 0",
         )
         .bind(conversation_id)
@@ -1825,7 +1826,7 @@ pub async fn unread_outbound_count(
 
 pub async fn conversation_state(pool: &DbPool, conversation_id: &str) -> WidgetResult<Option<String>> {
     let row = need(
-        sqlx::query("SELECT state FROM conversations WHERE id = ?")
+        sqlx::query("SELECT state FROM conversations WHERE id = $1")
             .bind(conversation_id)
             .fetch_optional(pool)
             .await,
@@ -1839,7 +1840,7 @@ pub async fn conversation_contact(
     conversation_id: &str,
 ) -> WidgetResult<Option<String>> {
     let row = need(
-        sqlx::query("SELECT contact_id FROM conversations WHERE id = ?")
+        sqlx::query("SELECT contact_id FROM conversations WHERE id = $1")
             .bind(conversation_id)
             .fetch_optional(pool)
             .await,
@@ -1852,7 +1853,7 @@ pub async fn conversation_summary(pool: &DbPool, conversation_id: &str) -> Widge
     let row = need(
         sqlx::query(
             "SELECT id, contact_id, state, inbox_id, priority, csat_score, last_inbound_at, \
-             updated_at FROM conversations WHERE id = ?",
+             updated_at FROM conversations WHERE id = $1",
         )
         .bind(conversation_id)
         .fetch_optional(pool)
@@ -1950,7 +1951,7 @@ pub async fn create_session(
             "INSERT INTO widget_sessions (id, token_hash, conversation_id, contact_id, inbox_id, \
              website_token, origin, client_ip, state, last_cursor, visitor_presence, \
              last_presence_at, created_at, updated_at) \
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, 'online', ?, ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'open', $9, 'online', $10, $11, $12)",
         )
         .bind(&id)
         .bind(&token_hash)
@@ -2000,7 +2001,7 @@ pub async fn load_session_by_token(
     let token_hash = sha256_hex(token.trim());
     let row = need(
         sqlx::query(&format!(
-            "SELECT {SESSION_COLUMNS} FROM widget_sessions WHERE token_hash = ? LIMIT 1"
+            "SELECT {SESSION_COLUMNS} FROM widget_sessions WHERE token_hash = $1 LIMIT 1"
         ))
         .bind(&token_hash)
         .fetch_optional(pool)
@@ -2016,7 +2017,7 @@ pub async fn load_open_session_for_conversation(
 ) -> WidgetResult<Option<WidgetSession>> {
     let row = need(
         sqlx::query(&format!(
-            "SELECT {SESSION_COLUMNS} FROM widget_sessions WHERE conversation_id = ? \
+            "SELECT {SESSION_COLUMNS} FROM widget_sessions WHERE conversation_id = $1 \
              AND state = 'open' ORDER BY updated_at DESC LIMIT 1"
         ))
         .bind(conversation_id)
@@ -2044,7 +2045,7 @@ pub async fn advance_session_cursor(
 ) -> WidgetResult<()> {
     need(
         sqlx::query(
-            "UPDATE widget_sessions SET last_cursor = GREATEST(last_cursor, ?), updated_at = ? WHERE id = ?",
+            "UPDATE widget_sessions SET last_cursor = GREATEST(last_cursor, $1), updated_at = $2 WHERE id = $3",
         )
         .bind(cursor)
         .bind(chrono::Utc::now().to_rfc3339())
@@ -2075,7 +2076,7 @@ pub async fn record_visitor_presence(
 
     need(
         sqlx::query(&format!(
-            "UPDATE widget_sessions SET visitor_presence = ?, {column} = ?, updated_at = ? WHERE id = ?"
+            "UPDATE widget_sessions SET visitor_presence = $1, {column} = $2, updated_at = $3 WHERE id = $4"
         ))
         .bind(presence)
         .bind(&now)
@@ -2110,8 +2111,8 @@ pub async fn record_typing(
     let now = chrono::Utc::now().to_rfc3339();
     let result = need(
         sqlx::query(
-            "UPDATE widget_sessions SET last_typing_at = ?, visitor_presence = ?, updated_at = ? \
-             WHERE id = ?",
+            "UPDATE widget_sessions SET last_typing_at = $1, visitor_presence = $2, updated_at = $3 \
+             WHERE id = $4",
         )
         .bind(is_typing.then_some(now.clone()))
         .bind(if is_typing { "typing" } else { "online" })
@@ -2131,8 +2132,8 @@ pub async fn close_session(pool: &DbPool, session_id: &str, reason: &str) -> Wid
     let now = chrono::Utc::now().to_rfc3339();
     let result = need(
         sqlx::query(
-            "UPDATE widget_sessions SET state = 'closed', closed_at = ?, close_reason = ?, \
-             visitor_presence = 'left', updated_at = ? WHERE id = ? AND state != 'closed'",
+            "UPDATE widget_sessions SET state = 'closed', closed_at = $1, close_reason = $2, \
+             visitor_presence = 'left', updated_at = $3 WHERE id = $4 AND state != 'closed'",
         )
         .bind(&now)
         .bind(reason)
@@ -2223,14 +2224,14 @@ async fn active_heartbeats(pool: &DbPool, conversation_id: Option<&str>) -> Widg
     let result = match conversation_id {
         Some(id) => sqlx::query(
             "SELECT agent_name, action, last_seen_at FROM agent_presence \
-             WHERE conversation_id = ? AND last_seen_at > ? ORDER BY last_seen_at DESC",
+             WHERE conversation_id = $1 AND last_seen_at > $2 ORDER BY last_seen_at DESC",
         )
         .bind(id)
         .bind(&cutoff)
         .fetch_all(pool)
         .await,
         None => sqlx::query(
-            "SELECT agent_name, action, last_seen_at FROM agent_presence WHERE last_seen_at > ? \
+            "SELECT agent_name, action, last_seen_at FROM agent_presence WHERE last_seen_at > $1 \
              ORDER BY last_seen_at DESC",
         )
         .bind(&cutoff)
@@ -2268,7 +2269,7 @@ pub async fn record_agent_presence(
     let now = chrono::Utc::now().to_rfc3339();
     if action == "left" {
         need(
-            sqlx::query("DELETE FROM agent_presence WHERE conversation_id = ? AND agent_name = ?")
+            sqlx::query("DELETE FROM agent_presence WHERE conversation_id = $1 AND agent_name = $2")
                 .bind(conversation_id)
                 .bind(agent_name)
                 .execute(pool)
@@ -2281,7 +2282,7 @@ pub async fn record_agent_presence(
     need(
         sqlx::query(
             "INSERT INTO agent_presence (id, conversation_id, agent_id, agent_name, agent_avatar, \
-             action, last_seen_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) \
+             action, last_seen_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) \
              ON CONFLICT(conversation_id, agent_name) DO UPDATE SET \
              action = excluded.action, last_seen_at = excluded.last_seen_at, updated_at = excluded.updated_at",
         )
@@ -2501,7 +2502,7 @@ pub async fn compute_human_presence(
 pub async fn last_seen_in_thread(pool: &DbPool, conversation_id: &str) -> WidgetResult<Option<String>> {
     let row = need(
         sqlx::query(
-            "SELECT MAX(COALESCE(last_inbound_at, updated_at)) AS last_at FROM conversations WHERE id = ?",
+            "SELECT MAX(COALESCE(last_inbound_at, updated_at)) AS last_at FROM conversations WHERE id = $1",
         )
         .bind(conversation_id)
         .fetch_optional(pool)
@@ -2529,7 +2530,7 @@ pub async fn record_csat(
     let now = chrono::Utc::now().to_rfc3339();
     need(
         sqlx::query(
-            "UPDATE conversations SET csat_score = ?, csat_comment = ?, updated_at = ? WHERE id = ?",
+            "UPDATE conversations SET csat_score = $1, csat_comment = $2, updated_at = $3 WHERE id = $4",
         )
         .bind(rating)
         .bind((!comment.is_empty()).then_some(comment))

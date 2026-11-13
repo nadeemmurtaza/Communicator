@@ -172,7 +172,7 @@ async fn fetch_draft_info(state: &AppState, draft_id: &str) -> Result<DraftInfo,
     }
 
     let row: DraftRow = sqlx::query_as(
-        "SELECT conversation_id, body FROM drafts WHERE id = ?",
+        "SELECT conversation_id, body FROM drafts WHERE id = $1",
     )
     .bind(draft_id)
     .fetch_one(&state.db)
@@ -181,7 +181,7 @@ async fn fetch_draft_info(state: &AppState, draft_id: &str) -> Result<DraftInfo,
 
     // Get contact_id from conversation
     let contact_id: String = sqlx::query_scalar(
-        "SELECT contact_id FROM conversations WHERE id = ?",
+        "SELECT contact_id FROM conversations WHERE id = $1",
     )
     .bind(&row.conversation_id)
     .fetch_one(&state.db)
@@ -270,7 +270,7 @@ async fn cache_context(state: &AppState, ctx: &CopilotContext) -> Result<(), Str
         "INSERT INTO copilot_context (id, draft_id, conversation_id, contact_id,
          conversation_summary, customer_profile, suggested_edits, key_topics,
          customer_sentiment, generated, generated_at, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
     )
     .bind(&ctx.id)
     .bind(&ctx.draft_id)
@@ -343,7 +343,7 @@ async fn fetch_conversation_messages(state: &AppState, conversation_id: &str) ->
 
     let rows: Vec<MessageRow> = sqlx::query_as(
         "SELECT sender, direction, body FROM messages
-         WHERE conversation_id = ? ORDER BY created_at DESC LIMIT 30",
+         WHERE conversation_id = $1 ORDER BY created_at DESC LIMIT 30",
     )
     .bind(conversation_id)
     .fetch_all(&state.db)
@@ -519,7 +519,7 @@ async fn build_customer_profile(
     }
 
     let contact: ContactRow = sqlx::query_as(
-        "SELECT person_name, value, channel, role, language FROM contacts WHERE id = ?",
+        "SELECT person_name, value, channel, role, language FROM contacts WHERE id = $1",
     )
     .bind(contact_id)
     .fetch_optional(&state.db)
@@ -535,7 +535,7 @@ async fn build_customer_profile(
 
     // Lead info
     let lead_name: Option<String> = sqlx::query_scalar(
-        "SELECT name FROM leads WHERE id = (SELECT lead_id FROM contacts WHERE id = ?)",
+        "SELECT name FROM leads WHERE id = (SELECT lead_id FROM contacts WHERE id = $1)",
     )
     .bind(contact_id)
     .fetch_optional(&state.db)
@@ -543,7 +543,7 @@ async fn build_customer_profile(
     .unwrap_or(None);
 
     let lead_institution_type: Option<String> = sqlx::query_scalar(
-        "SELECT institution_type FROM leads WHERE id = (SELECT lead_id FROM contacts WHERE id = ?)",
+        "SELECT institution_type FROM leads WHERE id = (SELECT lead_id FROM contacts WHERE id = $1)",
     )
     .bind(contact_id)
     .fetch_optional(&state.db)
@@ -551,7 +551,7 @@ async fn build_customer_profile(
     .unwrap_or(None);
 
     let lead_city: Option<String> = sqlx::query_scalar(
-        "SELECT city FROM leads WHERE id = (SELECT lead_id FROM contacts WHERE id = ?)",
+        "SELECT city FROM leads WHERE id = (SELECT lead_id FROM contacts WHERE id = $1)",
     )
     .bind(contact_id)
     .fetch_optional(&state.db)
@@ -559,7 +559,7 @@ async fn build_customer_profile(
     .unwrap_or(None);
 
     let lead_qualification: Option<String> = sqlx::query_scalar(
-        "SELECT qualification_rationale FROM leads WHERE id = (SELECT lead_id FROM contacts WHERE id = ?)",
+        "SELECT qualification_rationale FROM leads WHERE id = (SELECT lead_id FROM contacts WHERE id = $1)",
     )
     .bind(contact_id)
     .fetch_optional(&state.db)
@@ -568,7 +568,7 @@ async fn build_customer_profile(
 
     // Conversation stats
     let conversation_count: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM conversations WHERE contact_id = ?",
+        "SELECT COUNT(*) FROM conversations WHERE contact_id = $1",
     )
     .bind(contact_id)
     .fetch_one(&state.db)
@@ -576,7 +576,7 @@ async fn build_customer_profile(
     .unwrap_or(0);
 
     let message_count: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM messages WHERE conversation_id = ?",
+        "SELECT COUNT(*) FROM messages WHERE conversation_id = $1",
     )
     .bind(conversation_id)
     .fetch_one(&state.db)
@@ -584,7 +584,7 @@ async fn build_customer_profile(
     .unwrap_or(0);
 
     let first_contact_at: Option<String> = sqlx::query_scalar(
-        "SELECT MIN(created_at) FROM messages WHERE conversation_id = ?",
+        "SELECT MIN(created_at) FROM messages WHERE conversation_id = $1",
     )
     .bind(conversation_id)
     .fetch_optional(&state.db)
@@ -592,7 +592,7 @@ async fn build_customer_profile(
     .unwrap_or(None);
 
     let last_message_at: Option<String> = sqlx::query_scalar(
-        "SELECT MAX(created_at) FROM messages WHERE conversation_id = ?",
+        "SELECT MAX(created_at) FROM messages WHERE conversation_id = $1",
     )
     .bind(conversation_id)
     .fetch_optional(&state.db)
@@ -600,7 +600,7 @@ async fn build_customer_profile(
     .unwrap_or(None);
 
     let conversation_state: Option<String> = sqlx::query_scalar(
-        "SELECT state FROM conversations WHERE id = ?",
+        "SELECT state FROM conversations WHERE id = $1",
     )
     .bind(conversation_id)
     .fetch_optional(&state.db)
@@ -608,7 +608,7 @@ async fn build_customer_profile(
     .unwrap_or(None);
 
     let consent_status: Option<String> = sqlx::query_scalar(
-        "SELECT status FROM consent_records WHERE contact_id = ? ORDER BY recorded_at DESC LIMIT 1",
+        "SELECT status FROM consent_records WHERE contact_id = $1 ORDER BY recorded_at DESC LIMIT 1",
     )
     .bind(contact_id)
     .fetch_optional(&state.db)

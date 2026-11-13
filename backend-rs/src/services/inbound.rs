@@ -50,7 +50,7 @@ async fn find_contact(
     channel: &str,
     value: &str,
     sender_name: &str,
-) -> Result<ResolvedContact, InboundError> {    let row = sqlx::query("SELECT id, person_name, tenant_key FROM contacts WHERE channel = ? AND value = ? LIMIT 1")
+) -> Result<ResolvedContact, InboundError> {    let row = sqlx::query("SELECT id, person_name, tenant_key FROM contacts WHERE channel = $1 AND value = $2 LIMIT 1")
         .bind(channel)
         .bind(value)
         .fetch_optional(pool)
@@ -68,7 +68,7 @@ async fn find_contact(
 
     let trimmed = sender_name.trim();
     if !trimmed.is_empty() && person_name.as_deref().map(is_placeholder_name).unwrap_or(true) {
-        sqlx::query("UPDATE contacts SET person_name = ?, updated_at = ? WHERE id = ?")
+        sqlx::query("UPDATE contacts SET person_name = $1, updated_at = $2 WHERE id = $3")
             .bind(trimmed)
             .bind(chrono::Utc::now().to_rfc3339())
             .bind(&id)
@@ -85,7 +85,7 @@ async fn get_or_create_conversation(
     channel: &str,
 ) -> Result<(String, String), InboundError> {
     let existing = sqlx::query(
-        "SELECT id, state FROM conversations WHERE contact_id = ? \
+        "SELECT id, state FROM conversations WHERE contact_id = $1 \
          AND state NOT IN ('opted_out', 'closed_won', 'closed_lost') \
          ORDER BY created_at DESC LIMIT 1",
     )
@@ -104,7 +104,7 @@ async fn get_or_create_conversation(
     let now = chrono::Utc::now().to_rfc3339();
     sqlx::query(
         "INSERT INTO conversations (id, contact_id, channel, state, priority, human_takeover, created_at, updated_at) \
-         VALUES (?, ?, ?, 'engaged', 'medium', 0, ?, ?)",
+         VALUES ($1, $2, $3, 'engaged', 'medium', 0, $4, $5)",
     )
     .bind(&id)
     .bind(&contact.id)
@@ -126,7 +126,7 @@ pub async fn process_inbound_message(
     inbound: &InboundMessage<'_>,
 ) -> Result<(String, bool), InboundError> {
     if !inbound.provider_message_id.is_empty() {
-        let existing = sqlx::query("SELECT id FROM messages WHERE provider_message_id = ? LIMIT 1")
+        let existing = sqlx::query("SELECT id FROM messages WHERE provider_message_id = $1 LIMIT 1")
             .bind(inbound.provider_message_id)
             .fetch_optional(pool)
             .await?;
@@ -149,7 +149,7 @@ pub async fn process_inbound_message(
     sqlx::query(
         "INSERT INTO messages (id, conversation_id, direction, channel, body, status, provider, \
          provider_message_id, sender_type, sender_name, sender, is_private, created_at, sent_at) \
-         VALUES (?, ?, 'inbound', ?, ?, 'received', ?, ?, 'customer', ?, 'customer', 0, ?, ?)",
+         VALUES ($1, $2, 'inbound', $3, $4, 'received', $5, $6, 'customer', $7, 'customer', 0, $8, $9)",
     )
     .bind(&message_id)
     .bind(&conversation_id)
@@ -170,7 +170,7 @@ pub async fn process_inbound_message(
     };
     if let Some(state) = new_state {
         sqlx::query(
-            "UPDATE conversations SET state = ?, last_inbound_at = ?, updated_at = ? WHERE id = ?",
+            "UPDATE conversations SET state = $1, last_inbound_at = $2, updated_at = $3 WHERE id = $4",
         )
         .bind(state)
         .bind(&now)
@@ -179,7 +179,7 @@ pub async fn process_inbound_message(
         .execute(pool)
         .await?;
     } else {
-        sqlx::query("UPDATE conversations SET last_inbound_at = ?, updated_at = ? WHERE id = ?")
+        sqlx::query("UPDATE conversations SET last_inbound_at = $1, updated_at = $2 WHERE id = $3")
             .bind(&now)
             .bind(&now)
             .bind(&conversation_id)
@@ -209,7 +209,7 @@ pub async fn get_or_create_contact(
         )));
     }
 
-    if let Some(row) = sqlx::query("SELECT id, person_name FROM contacts WHERE channel = ? AND value = ? LIMIT 1")
+    if let Some(row) = sqlx::query("SELECT id, person_name FROM contacts WHERE channel = $1 AND value = $2 LIMIT 1")
         .bind(channel)
         .bind(value)
         .fetch_optional(pool)
@@ -219,7 +219,7 @@ pub async fn get_or_create_contact(
         let person_name: Option<String> = row.try_get("person_name").ok().flatten();
         let trimmed = sender_name.trim();
         if !trimmed.is_empty() && person_name.as_deref().map(is_placeholder_name).unwrap_or(true) {
-            sqlx::query("UPDATE contacts SET person_name = ?, updated_at = ? WHERE id = ?")
+            sqlx::query("UPDATE contacts SET person_name = $1, updated_at = $2 WHERE id = $3")
                 .bind(trimmed)
                 .bind(chrono::Utc::now().to_rfc3339())
                 .bind(&id)
@@ -243,7 +243,7 @@ pub async fn get_or_create_contact(
     sqlx::query(
         "INSERT INTO leads (id, tenant_key, harvester_institution_id, name, institution_type, \
          city, qualification_rationale, synced_at, created_at, updated_at) \
-         VALUES (?, ?, ?, ?, ?, '', '', ?, ?, ?)",
+         VALUES ($1, $2, $3, $4, $5, '', '', $6, $7, $8)",
     )
     .bind(&lead_id)
     .bind(tenant_key)
@@ -259,7 +259,7 @@ pub async fn get_or_create_contact(
     let contact_id = uuid::Uuid::new_v4().simple().to_string();
     sqlx::query(
         "INSERT INTO contacts (id, value, channel, person_name, lead_id, tenant_key, created_at, updated_at) \
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
     )
     .bind(&contact_id)
     .bind(value)
@@ -303,8 +303,8 @@ pub async fn get_or_create_inbox_conversation(
     subject: Option<&str>,
 ) -> Result<String, InboundError> {
     let existing = sqlx::query(
-        "SELECT id, state FROM conversations WHERE contact_id = ? AND \
-         (inbox_id IS ? OR inbox_id = ?) ORDER BY created_at DESC LIMIT 1",
+        "SELECT id, state FROM conversations WHERE contact_id = $1 AND \
+         (inbox_id IS $2 OR inbox_id = $3) ORDER BY created_at DESC LIMIT 1",
     )
     .bind(contact_id)
     .bind(inbox_id)
@@ -327,7 +327,7 @@ pub async fn get_or_create_inbox_conversation(
     sqlx::query(
         "INSERT INTO conversations (id, contact_id, channel, state, priority, human_takeover, \
          inbox_id, custom_attributes, created_at, updated_at) \
-         VALUES (?, ?, ?, 'engaged', 'medium', 0, ?, ?, ?, ?)",
+         VALUES ($1, $2, $3, 'engaged', 'medium', 0, $4, $5, $6, $7)",
     )
     .bind(&id)
     .bind(contact_id)
@@ -358,7 +358,7 @@ pub async fn record_raw_inbound_message(
     attachments: Option<serde_json::Value>,
 ) -> Result<String, InboundError> {
     if !provider_message_id.is_empty() {
-        if let Some(row) = sqlx::query("SELECT id FROM messages WHERE provider_message_id = ? LIMIT 1")
+        if let Some(row) = sqlx::query("SELECT id FROM messages WHERE provider_message_id = $1 LIMIT 1")
             .bind(provider_message_id)
             .fetch_optional(pool)
             .await?
@@ -373,7 +373,7 @@ pub async fn record_raw_inbound_message(
         "INSERT INTO messages (id, conversation_id, direction, channel, body, status, provider, \
          provider_message_id, sender_type, sender_name, sender, is_private, provider_metadata, \
          attachments, created_at, sent_at) \
-         VALUES (?, ?, 'inbound', ?, ?, 'received', ?, ?, 'customer', ?, 'customer', 0, ?, ?, ?, ?)",
+         VALUES ($1, $2, 'inbound', $3, $4, 'received', $5, $6, 'customer', $7, 'customer', 0, $8, $9, $10, $11)",
     )
     .bind(&id)
     .bind(conversation_id)
@@ -389,7 +389,7 @@ pub async fn record_raw_inbound_message(
     .execute(pool)
     .await?;
 
-    sqlx::query("UPDATE conversations SET last_inbound_at = ?, updated_at = ? WHERE id = ?")
+    sqlx::query("UPDATE conversations SET last_inbound_at = $1, updated_at = $2 WHERE id = $3")
         .bind(&now)
         .bind(&now)
         .bind(conversation_id)
@@ -410,7 +410,7 @@ pub async fn amend_message_metadata(
     if provider_message_id.is_empty() {
         return Ok(false);
     }
-    let Some(row) = sqlx::query("SELECT id, body, provider_metadata FROM messages WHERE provider_message_id = ? LIMIT 1")
+    let Some(row) = sqlx::query("SELECT id, body, provider_metadata FROM messages WHERE provider_message_id = $1 LIMIT 1")
         .bind(provider_message_id)
         .fetch_optional(pool)
         .await?
@@ -443,7 +443,7 @@ pub async fn amend_message_metadata(
         format!("{existing_body}{body_suffix}")
     };
 
-    sqlx::query("UPDATE messages SET body = ?, provider_metadata = ? WHERE id = ?")
+    sqlx::query("UPDATE messages SET body = $1, provider_metadata = $2 WHERE id = $3")
         .bind(&body)
         .bind(serde_json::Value::Object(merged).to_string())
         .bind(&id)
@@ -465,7 +465,7 @@ pub async fn apply_delivery_status(
         return Ok(false);
     }
     let row = sqlx::query(
-        "SELECT id, status FROM messages WHERE provider_message_id = ? AND direction = 'outbound' LIMIT 1",
+        "SELECT id, status FROM messages WHERE provider_message_id = $1 AND direction = 'outbound' LIMIT 1",
     )
     .bind(provider_message_id)
     .fetch_optional(pool)
@@ -481,8 +481,8 @@ pub async fn apply_delivery_status(
     let id: String = row.try_get("id")?;
     let metadata_text = metadata.map(|v| v.to_string());
     sqlx::query(
-        "UPDATE messages SET status = ?, delivery_status = ?, provider_metadata = COALESCE(?, provider_metadata) \
-         WHERE id = ?",
+        "UPDATE messages SET status = $1, delivery_status = $2, provider_metadata = COALESCE($3, provider_metadata) \
+         WHERE id = $4",
     )
     .bind(status)
     .bind(status)

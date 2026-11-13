@@ -292,7 +292,7 @@ pub async fn send_outbound(
     sqlx::query(
         "INSERT INTO messages (id, conversation_id, direction, channel, body, status, \
          delivery_status, sender_type, sender_name, sender, is_private, created_at, sent_at) \
-         VALUES (?, ?, 'outbound', ?, ?, 'queued', 'queued', ?, ?, ?, ?, ?, NULL)",
+         VALUES ($1, $2, 'outbound', $3, $4, 'queued', 'queued', $5, $6, $7, $8, $9, NULL)",
     )
     .bind(&message_id)
     .bind(request.conversation_id)
@@ -318,7 +318,7 @@ pub async fn send_outbound(
             simulated: false,
             raw: serde_json::json!({ "privateNote": true }),
         };
-        sqlx::query("UPDATE messages SET status = 'internal_note', delivery_status = 'internal' WHERE id = ?")
+        sqlx::query("UPDATE messages SET status = 'internal_note', delivery_status = 'internal' WHERE id = $1")
             .bind(&message_id)
             .execute(pool)
             .await?;
@@ -390,7 +390,7 @@ pub async fn send_outbound(
     if accepted {
         sqlx::query(
             "UPDATE conversations SET state = CASE WHEN state IN ('opted_out','closed_won','closed_lost') \
-             THEN state ELSE 'awaiting_reply' END, last_outbound_at = ?, updated_at = ? WHERE id = ?",
+             THEN state ELSE 'awaiting_reply' END, last_outbound_at = $1, updated_at = $2 WHERE id = $3",
         )
         .bind(&now)
         .bind(&now)
@@ -462,8 +462,8 @@ pub async fn apply_send_result(
     }
 
     sqlx::query(
-        "UPDATE messages SET status = ?, delivery_status = ?, provider = ?, provider_message_id = ?, \
-         provider_metadata = ?, sent_at = COALESCE(sent_at, ?) WHERE id = ?",
+        "UPDATE messages SET status = $1, delivery_status = $2, provider = $3, provider_message_id = $4, \
+         provider_metadata = $5, sent_at = COALESCE(sent_at, $6) WHERE id = $7",
     )
     .bind(status)
     .bind(status)
@@ -487,7 +487,7 @@ pub async fn send_to_contact(
     sender_name: &str,
     sender_type: &str,
 ) -> Result<SendOutcome, MessagingError> {
-    let row = sqlx::query("SELECT id, value, channel, tenant_key FROM contacts WHERE id = ? LIMIT 1")
+    let row = sqlx::query("SELECT id, value, channel, tenant_key FROM contacts WHERE id = $1 LIMIT 1")
         .bind(contact_id)
         .fetch_optional(&state.db)
         .await?;
@@ -517,7 +517,7 @@ pub async fn open_conversation_for(
     channel: &str,
 ) -> Result<String, MessagingError> {
     let existing = sqlx::query(
-        "SELECT id FROM conversations WHERE contact_id = ? \
+        "SELECT id FROM conversations WHERE contact_id = $1 \
          AND state NOT IN ('opted_out','closed_won','closed_lost') \
          ORDER BY created_at DESC LIMIT 1",
     )
@@ -532,7 +532,7 @@ pub async fn open_conversation_for(
     let now = chrono::Utc::now().to_rfc3339();
     sqlx::query(
         "INSERT INTO conversations (id, contact_id, channel, state, priority, human_takeover, \
-         created_at, updated_at) VALUES (?, ?, ?, 'engaged', 'medium', 0, ?, ?)",
+         created_at, updated_at) VALUES ($1, $2, $3, 'engaged', 'medium', 0, $4, $5)",
     )
     .bind(&id)
     .bind(contact_id)
@@ -552,7 +552,7 @@ pub async fn conversation_send_context(
 ) -> Result<Option<(String, String, String, Option<String>, Option<String>)>, MessagingError> {
     let row = sqlx::query(
         "SELECT c.contact_id, c.inbox_id, c.tenant_key, ct.value, ct.channel \
-         FROM conversations c LEFT JOIN contacts ct ON ct.id = c.contact_id WHERE c.id = ? LIMIT 1",
+         FROM conversations c LEFT JOIN contacts ct ON ct.id = c.contact_id WHERE c.id = $1 LIMIT 1",
     )
     .bind(conversation_id)
     .fetch_optional(pool)
@@ -627,7 +627,7 @@ pub async fn list_unaccepted_outbound(
     let rows = sqlx::query(
         "SELECT id, conversation_id, channel, COALESCE(body, '') FROM messages \
          WHERE direction = 'outbound' AND is_private = 0 AND status IN ('queued','not_sent','failed') \
-         ORDER BY created_at DESC LIMIT ?",
+         ORDER BY created_at DESC LIMIT $1",
     )
     .bind(limit)
     .fetch_all(pool)

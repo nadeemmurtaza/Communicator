@@ -124,7 +124,7 @@ pub async fn log_action(
 
     sqlx::query(
         "INSERT INTO operator_performance_log (id, action_type, action_detail, target, result, output_data, duration_ms)
-         VALUES (?, ?, ?, ?, ?, ?, ?)"
+         VALUES ($1, $2, $3, $4, $5, $6, $7)"
     )
     .bind(&id)
     .bind(action_type)
@@ -178,39 +178,39 @@ pub async fn update_config(
     state: &AppState,
     updates: &Value,
 ) -> Result<OperatorConfig, (axum::http::StatusCode, String)> {
-    let mut sets = Vec::new();
+    let mut sets: Vec<String> = Vec::new();
     let mut binds: Vec<Value> = Vec::new();
 
     if let Some(v) = updates.get("scan_interval_minutes").and_then(|v| v.as_i64()) {
-        sets.push("scan_interval_minutes = ?");
+        sets.push("scan_interval_minutes = ?".to_string());
         binds.push(json!(v));
     }
     if let Some(v) = updates.get("auto_deploy_enabled").and_then(|v| v.as_bool()) {
-        sets.push("auto_deploy_enabled = ?");
+        sets.push("auto_deploy_enabled = ?".to_string());
         binds.push(json!(v));
     }
     if let Some(v) = updates.get("auto_deploy_max_risk").and_then(|v| v.as_str()) {
-        sets.push("auto_deploy_max_risk = ?");
+        sets.push("auto_deploy_max_risk = ?".to_string());
         binds.push(json!(v));
     }
     if let Some(v) = updates.get("max_proposals_per_scan").and_then(|v| v.as_i64()) {
-        sets.push("max_proposals_per_scan = ?");
+        sets.push("max_proposals_per_scan = ?".to_string());
         binds.push(json!(v));
     }
     if let Some(v) = updates.get("min_confidence_threshold").and_then(|v| v.as_f64()) {
-        sets.push("min_confidence_threshold = ?");
+        sets.push("min_confidence_threshold = ?".to_string());
         binds.push(json!(v));
     }
     if let Some(v) = updates.get("metrics_to_monitor") {
-        sets.push("metrics_to_monitor = ?");
+        sets.push("metrics_to_monitor = ?".to_string());
         binds.push(json!(v.to_string()));
     }
     if let Some(v) = updates.get("alert_on_failure").and_then(|v| v.as_bool()) {
-        sets.push("alert_on_failure = ?");
+        sets.push("alert_on_failure = ?".to_string());
         binds.push(json!(v));
     }
     if let Some(v) = updates.get("enabled").and_then(|v| v.as_bool()) {
-        sets.push("enabled = ?");
+        sets.push("enabled = ?".to_string());
         binds.push(json!(v));
     }
 
@@ -218,11 +218,23 @@ pub async fn update_config(
         return get_config(state).await.map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()));
     }
 
-    sets.push("updated_at = ?");
+    sets.push("updated_at = ?".to_string());
     binds.push(json!(chrono::Utc::now().format("%Y-%m-%dT%H:%M:%fZ").to_string()));
     binds.push(json!("default"));
 
-    let sql = format!("UPDATE operator_config SET {} WHERE id = ?", sets.join(", "));
+    // Number placeholders by position: `sets` and `binds` are built in lockstep
+    // above (one bind per set clause), plus the trailing WHERE-clause bind.
+    let numbered_sets: Vec<String> = sets
+        .iter()
+        .enumerate()
+        .map(|(i, s)| s.replace('?', &format!("${}", i + 1)))
+        .collect();
+    let where_placeholder = sets.len() + 1;
+
+    let sql = format!(
+        "UPDATE operator_config SET {} WHERE id = ${where_placeholder}",
+        numbered_sets.join(", ")
+    );
     let mut qb = sqlx::query(&sql);
     for b in &binds {
         if let Value::String(s) = b {
@@ -371,7 +383,7 @@ pub async fn collect_metrics_snapshot(state: &AppState) -> Result<OperatorMetric
 
     sqlx::query(
         "INSERT INTO operator_metrics_snapshot (id, snapshot_time, metrics_data, anomalies, trend_data)
-         VALUES (?, ?, ?, ?, ?)"
+         VALUES ($1, $2, $3, $4, $5)"
     )
     .bind(&id)
     .bind(&now)
@@ -463,9 +475,13 @@ Return a JSON array of proposals. If no improvements are needed, return an empty
                     let priority = item.get("priority").and_then(|v| v.as_str()).unwrap_or("medium").to_string();
 
                     sqlx::query(
+                        // Bind order below is (..., confidence, priority, source_data) while the
+                        // column list is (..., priority, confidence, source, source_data) -- the
+                        // 8th/9th placeholders are intentionally numbered $9/$8 to match the
+                        // actual bind-call order rather than their left-to-right text position.
                         "INSERT INTO operator_proposals (id, proposal_type, title, description, rationale,
                          expected_impact, implementation_plan, status, priority, confidence, source, source_data)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, 'proposed', ?, ?, 'auto', ?)"
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, 'proposed', $9, $8, 'auto', $10)"
                     )
                     .bind(&id)
                     .bind(&proposal_type)
@@ -523,7 +539,7 @@ Return a JSON array of proposals. If no improvements are needed, return an empty
     });
 
     sqlx::query(
-        "UPDATE operator_config SET last_scan_at = ?, last_scan_result = ?, updated_at = ? WHERE id = 'default'"
+        "UPDATE operator_config SET last_scan_at = $1, last_scan_result = $2, updated_at = $3 WHERE id = 'default'"
     )
     .bind(&snapshot.snapshot_time)
     .bind(&scan_summary.to_string())
@@ -685,13 +701,17 @@ pub async fn list_proposals(
          FROM operator_proposals WHERE 1=1"
     );
 
-    if let Some(s) = status {
-        query.push_str(" AND status = ?");
+    let mut placeholder = 0;
+    if let Some(_s) = status {
+        placeholder += 1;
+        query.push_str(&format!(" AND status = ${placeholder}"));
     }
-    if let Some(t) = proposal_type {
-        query.push_str(" AND proposal_type = ?");
+    if let Some(_t) = proposal_type {
+        placeholder += 1;
+        query.push_str(&format!(" AND proposal_type = ${placeholder}"));
     }
-    query.push_str(" ORDER BY created_at DESC LIMIT ?");
+    placeholder += 1;
+    query.push_str(&format!(" ORDER BY created_at DESC LIMIT ${placeholder}"));
 
     let mut qb = sqlx::query(&query);
     if let Some(s) = status {
@@ -748,9 +768,9 @@ pub async fn approve_proposal(
     let new_status = if config.auto_deploy_enabled { "deployed" } else { "testing" };
 
     sqlx::query(
-        "UPDATE operator_proposals SET status = ?, reviewed_by = ?, reviewed_at = ?,
-         deployed_at = CASE WHEN ? = 'deployed' THEN ? ELSE NULL END,
-         updated_at = ? WHERE id = ?"
+        "UPDATE operator_proposals SET status = $1, reviewed_by = $2, reviewed_at = $3,
+         deployed_at = CASE WHEN $4 = 'deployed' THEN $5 ELSE NULL END,
+         updated_at = $6 WHERE id = $7"
     )
     .bind(new_status)
     .bind(reviewer)
@@ -783,7 +803,7 @@ pub async fn dismiss_proposal(
     let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%fZ").to_string();
 
     sqlx::query(
-        "UPDATE operator_proposals SET status = 'dismissed', reviewed_by = ?, reviewed_at = ?, updated_at = ? WHERE id = ?"
+        "UPDATE operator_proposals SET status = 'dismissed', reviewed_by = $1, reviewed_at = $2, updated_at = $3 WHERE id = $4"
     )
     .bind(reviewer)
     .bind(&now)
@@ -821,10 +841,13 @@ pub async fn list_logs(
          FROM operator_performance_log WHERE 1=1"
     );
 
-    if let Some(at) = action_type {
-        query.push_str(" AND action_type = ?");
+    let mut placeholder = 0;
+    if let Some(_at) = action_type {
+        placeholder += 1;
+        query.push_str(&format!(" AND action_type = ${placeholder}"));
     }
-    query.push_str(" ORDER BY created_at DESC LIMIT ?");
+    placeholder += 1;
+    query.push_str(&format!(" ORDER BY created_at DESC LIMIT ${placeholder}"));
 
     let mut qb = sqlx::query(&query);
     if let Some(at) = action_type {
@@ -857,7 +880,7 @@ pub async fn list_snapshots(
 ) -> Result<Vec<OperatorMetricsSnapshot>, sqlx::Error> {
     let rows = sqlx::query(
         "SELECT id, snapshot_time, metrics_data, anomalies, trend_data, created_at
-         FROM operator_metrics_snapshot ORDER BY snapshot_time DESC LIMIT ?"
+         FROM operator_metrics_snapshot ORDER BY snapshot_time DESC LIMIT $1"
     )
     .bind(limit)
     .fetch_all(&state.db)

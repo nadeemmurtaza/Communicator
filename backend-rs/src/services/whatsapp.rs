@@ -52,7 +52,7 @@ impl WhatsAppService {
     async fn resolve_credentials(&self, brand_id: &str) -> Result<WhatsAppCredentials, String> {
         // Try brand_credentials table first
         let row: Option<(String, String)> = sqlx::query_as(
-            "SELECT credentials, channel_type FROM brand_credentials WHERE brand_id = ?1 AND channel_type = 'whatsapp' AND is_active = 1 LIMIT 1"
+            "SELECT credentials, channel_type FROM brand_credentials WHERE brand_id = $1 AND channel_type = 'whatsapp' AND is_active = 1 LIMIT 1"
         )
         .bind(brand_id)
         .fetch_optional(&self.pool)
@@ -747,7 +747,7 @@ impl WhatsAppService {
         let msg_id = Self::extract_message_id(&response);
         let log_id = uuid::Uuid::new_v4().to_string();
         let _ = sqlx::query(
-            "INSERT OR IGNORE INTO whatsapp_template_log (id, brand_id, template_name, message_id, status, created_at) VALUES (?1, ?2, ?3, ?4, 'sent', NOW()::TEXT)"
+            "INSERT OR IGNORE INTO whatsapp_template_log (id, brand_id, template_name, message_id, status, created_at) VALUES ($1, $2, $3, $4, 'sent', NOW()::TEXT)"
         )
         .bind(&log_id)
         .bind(brand_id)
@@ -778,7 +778,7 @@ impl WhatsAppService {
 
         let _ = sqlx::query(
             "INSERT INTO whatsapp_session_windows (id, brand_id, contact_id, started_at, expires_at, is_active, message_count, created_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, 1, 1, ?6)"
+             VALUES ($1, $2, $3, $4, $5, 1, 1, $6)"
         )
         .bind(uuid::Uuid::new_v4().to_string())
         .bind(brand_id)
@@ -792,7 +792,7 @@ impl WhatsAppService {
 
         // Deactivate old sessions
         let _ = sqlx::query(
-            "UPDATE whatsapp_session_windows SET is_active = 0 WHERE brand_id = ?1 AND contact_id = ?2 AND id != ?3"
+            "UPDATE whatsapp_session_windows SET is_active = 0 WHERE brand_id = $1 AND contact_id = $2 AND id != $3"
         )
         .bind(brand_id)
         .bind(contact_id)
@@ -810,7 +810,7 @@ impl WhatsAppService {
     ) -> Result<bool, String> {
         let now = chrono::Utc::now().to_rfc3339();
         let row: Option<(i64,)> = sqlx::query_as(
-            "SELECT is_active FROM whatsapp_session_windows WHERE brand_id = ?1 AND contact_id = ?2 AND is_active = 1 AND expires_at > ?3 LIMIT 1"
+            "SELECT is_active FROM whatsapp_session_windows WHERE brand_id = $1 AND contact_id = $2 AND is_active = 1 AND expires_at > $3 LIMIT 1"
         )
         .bind(brand_id)
         .bind(contact_id)
@@ -833,7 +833,7 @@ impl WhatsAppService {
     ) -> Result<Option<(String, bool, bool, Option<String>, Option<String>, Option<String>)>, String> {
         let row: Option<(String, bool, bool, Option<String>, Option<String>, Option<String>)> =
             sqlx::query_as(
-                "SELECT id, greeting_sent, csat_sent, last_menu, current_flow, metadata FROM whatsapp_automation_state WHERE brand_id = ?1 AND conversation_id = ?2 LIMIT 1"
+                "SELECT id, greeting_sent, csat_sent, last_menu, current_flow, metadata FROM whatsapp_automation_state WHERE brand_id = $1 AND conversation_id = $2 LIMIT 1"
             )
             .bind(brand_id)
             .bind(conversation_id)
@@ -855,9 +855,9 @@ impl WhatsAppService {
     ) -> Result<(), String> {
         let _ = sqlx::query(
             "INSERT INTO whatsapp_automation_state (id, brand_id, conversation_id, greeting_sent, csat_sent, last_menu, current_flow, metadata, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NOW()::TEXT, NOW()::TEXT)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()::TEXT, NOW()::TEXT)
              ON CONFLICT(brand_id, conversation_id) DO UPDATE SET
-             greeting_sent = ?4, csat_sent = ?5, last_menu = ?6, current_flow = ?7, metadata = ?8, updated_at = NOW()::TEXT"
+             greeting_sent = $4, csat_sent = $5, last_menu = $6, current_flow = $7, metadata = $8, updated_at = NOW()::TEXT"
         )
         .bind(uuid::Uuid::new_v4().to_string())
         .bind(brand_id)

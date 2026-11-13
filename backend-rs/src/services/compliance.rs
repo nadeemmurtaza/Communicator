@@ -54,7 +54,7 @@ pub fn is_opt_in_message(body: &str) -> bool {
 
 pub async fn get_consent_status(pool: &DbPool, contact_id: &str) -> Result<ConsentStatus, sqlx::Error> {
     let row = sqlx::query(
-        "SELECT status FROM consent_records WHERE contact_id = ? ORDER BY recorded_at DESC LIMIT 1",
+        "SELECT status FROM consent_records WHERE contact_id = $1 ORDER BY recorded_at DESC LIMIT 1",
     )
     .bind(contact_id)
     .fetch_optional(pool)
@@ -74,7 +74,7 @@ pub async fn record_consent(
 ) -> Result<(), sqlx::Error> {
     sqlx::query(
         "INSERT INTO consent_records (id, contact_id, status, source, note, recorded_at) \
-         VALUES (?, ?, ?, ?, ?, ?)",
+         VALUES ($1, $2, $3, $4, $5, $6)",
     )
     .bind(uuid::Uuid::new_v4().simple().to_string())
     .bind(contact_id)

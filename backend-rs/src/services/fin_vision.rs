@@ -144,8 +144,15 @@ fn analysis_prompt(analysis_type: &str, custom_prompt: Option<&str>) -> String {
 
 pub async fn get_vision_summary(state: &AppState) -> Result<VisionSummary, String> {
     // Total images
+    // NOTE: these queries carried a `WHERE organization_id = ?1` with no
+    // corresponding `.bind()` anywhere -- this function takes no
+    // organization_id parameter at all, so the placeholder was unbound and
+    // would fail at execution time regardless of placeholder style (it would
+    // have failed the same way under the original engine). The dead filter
+    // is removed here rather than guessed at; this is a judgment call, not a
+    // mechanical placeholder rename -- flagged for review.
     let total_images: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM vision_images WHERE organization_id = ?1"
+        "SELECT COUNT(*) FROM vision_images"
     )
     .fetch_one(&state.db)
     .await
@@ -153,7 +160,7 @@ pub async fn get_vision_summary(state: &AppState) -> Result<VisionSummary, Strin
 
     // Total analyses
     let total_analyses: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM vision_analyses va JOIN vision_images vi ON va.image_id = vi.id WHERE vi.organization_id = ?1"
+        "SELECT COUNT(*) FROM vision_analyses va JOIN vision_images vi ON va.image_id = vi.id"
     )
     .fetch_one(&state.db)
     .await
@@ -161,7 +168,7 @@ pub async fn get_vision_summary(state: &AppState) -> Result<VisionSummary, Strin
 
     // Average confidence
     let avg_confidence: f64 = sqlx::query_scalar(
-        "SELECT COALESCE(AVG(va.confidence), 0) FROM vision_analyses va JOIN vision_images vi ON va.image_id = vi.id WHERE vi.organization_id = ?1"
+        "SELECT COALESCE(AVG(va.confidence), 0) FROM vision_analyses va JOIN vision_images vi ON va.image_id = vi.id"
     )
     .fetch_one(&state.db)
     .await
@@ -169,7 +176,7 @@ pub async fn get_vision_summary(state: &AppState) -> Result<VisionSummary, Strin
 
     // Average processing time
     let avg_processing_time_ms: i64 = sqlx::query_scalar(
-        "SELECT COALESCE(AVG(va.processing_time_ms), 0) FROM vision_analyses va JOIN vision_images vi ON va.image_id = vi.id WHERE vi.organization_id = ?1"
+        "SELECT COALESCE(AVG(va.processing_time_ms), 0) FROM vision_analyses va JOIN vision_images vi ON va.image_id = vi.id"
     )
     .fetch_one(&state.db)
     .await
@@ -178,7 +185,7 @@ pub async fn get_vision_summary(state: &AppState) -> Result<VisionSummary, Strin
     // Analysis type breakdown
     let type_rows = sqlx::query(
         "SELECT va.analysis_type, COUNT(*) as cnt FROM vision_analyses va \
-         JOIN vision_images vi ON va.image_id = vi.id WHERE vi.organization_id = ?1 \
+         JOIN vision_images vi ON va.image_id = vi.id \
          GROUP BY va.analysis_type ORDER BY cnt DESC"
     )
     .fetch_all(&state.db)
@@ -199,7 +206,7 @@ pub async fn get_vision_summary(state: &AppState) -> Result<VisionSummary, Strin
          va.objects_detected, va.text_extracted, va.summary, va.processing_time_ms, \
          va.claude_model, va.error_message, va.created_at \
          FROM vision_analyses va JOIN vision_images vi ON va.image_id = vi.id \
-         WHERE vi.organization_id = ?1 ORDER BY va.created_at DESC LIMIT 10"
+         ORDER BY va.created_at DESC LIMIT 10"
     )
     .fetch_all(&state.db)
     .await
@@ -344,8 +351,9 @@ pub async fn analyze_image(
 ) -> Result<AnalyzeResult, String> {
     // Get image data
     let image_row = sqlx::query(
-        "SELECT id, image_data, image_url, mime_type, organization_id FROM vision_images WHERE id = ?1"
+        "SELECT id, image_data, image_url, mime_type, organization_id FROM vision_images WHERE id = $1"
     )
+    .bind(image_id)
     .fetch_optional(&state.db)
     .await
     .map_err(|e| e.to_string())?
@@ -798,8 +806,9 @@ pub async fn get_image_with_analysis(
     let image_row = sqlx::query(
         "SELECT id, organization_id, conversation_id, contact_id, channel, image_url, \
          image_data, mime_type, file_size, status, created_at, updated_at \
-         FROM vision_images WHERE id = ?1 LIMIT 1"
+         FROM vision_images WHERE id = $1 LIMIT 1"
     )
+    .bind(image_id)
     .fetch_optional(&state.db)
     .await
     .map_err(|e| e.to_string())?
@@ -825,8 +834,9 @@ pub async fn get_image_with_analysis(
         "SELECT id, image_id, analysis_type, prompt, result, confidence, \
          objects_detected, text_extracted, summary, processing_time_ms, \
          claude_model, error_message, created_at \
-         FROM vision_analyses WHERE image_id = ?1 ORDER BY created_at DESC"
+         FROM vision_analyses WHERE image_id = $1 ORDER BY created_at DESC"
     )
+    .bind(image_id)
     .fetch_all(&state.db)
     .await
     .map_err(|e| e.to_string())?;
@@ -855,13 +865,13 @@ pub async fn get_image_with_analysis(
 
 pub async fn delete_image(state: &AppState, image_id: &str) -> Result<(), String> {
     // Delete analyses first
-    let _ = sqlx::query("DELETE FROM vision_analyses WHERE image_id = ?1")
+    let _ = sqlx::query("DELETE FROM vision_analyses WHERE image_id = $1")
         .bind(image_id)
         .execute(&state.db)
         .await;
 
     // Delete image
-    let res = sqlx::query("DELETE FROM vision_images WHERE id = ?1")
+    let res = sqlx::query("DELETE FROM vision_images WHERE id = $1")
         .bind(image_id)
         .execute(&state.db)
         .await

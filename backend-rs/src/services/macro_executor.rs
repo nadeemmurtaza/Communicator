@@ -137,7 +137,7 @@ pub async fn list_macros(state: &AppState) -> Result<Vec<Value>, MacroError> {
 }
 
 async fn load_macro(state: &AppState, macro_id: &str) -> Result<(String, Vec<Value>), MacroError> {
-    let row = sqlx::query("SELECT id, name, actions FROM macros WHERE id = ? LIMIT 1")
+    let row = sqlx::query("SELECT id, name, actions FROM macros WHERE id = $1 LIMIT 1")
         .bind(macro_id)
         .fetch_optional(&state.db)
         .await?;
@@ -185,7 +185,7 @@ pub async fn execute_macro(
     let row = sqlx::query(
         "SELECT id, state, priority, team_id, assigned_to_id, contact_id, inbox_id, tenant_key, \
          channel, resolution_type, snoozed_until, custom_attributes, last_outbound_at \
-         FROM conversations WHERE id = ? LIMIT 1",
+         FROM conversations WHERE id = $1 LIMIT 1",
     )
     .bind(conversation_id)
     .fetch_optional(&state.db)
@@ -486,9 +486,9 @@ pub async fn execute_macro(
     // owns, and the values are either what the row already held or what an
     // action changed -- NULLs stay NULL.
     sqlx::query(
-        "UPDATE conversations SET state = ?, priority = ?, resolution_type = ?, team_id = ?, \
-         assigned_to_id = ?, snoozed_until = ?, custom_attributes = ?, last_outbound_at = ?, \
-         updated_at = ? WHERE id = ?",
+        "UPDATE conversations SET state = $1, priority = $2, resolution_type = $3, team_id = $4, \
+         assigned_to_id = $5, snoozed_until = $6, custom_attributes = $7, last_outbound_at = $8, \
+         updated_at = $9 WHERE id = $10",
     )
     .bind(&state_value)
     .bind(&priority)
@@ -625,7 +625,7 @@ async fn resolve_team_id(state: &AppState, name: &str) -> Result<Option<(String,
     if name.is_empty() {
         return Ok(None);
     }
-    let row = sqlx::query("SELECT id, name FROM teams WHERE name LIKE ? LIMIT 1")
+    let row = sqlx::query("SELECT id, name FROM teams WHERE name LIKE $1 LIMIT 1")
         .bind(format!("%{name}%"))
         .fetch_optional(&state.db)
         .await
@@ -638,7 +638,7 @@ async fn resolve_agent_id(state: &AppState, name: &str) -> Result<Option<(String
     if name.is_empty() {
         return Ok(None);
     }
-    let row = sqlx::query("SELECT id, name FROM team_members WHERE name LIKE ? LIMIT 1")
+    let row = sqlx::query("SELECT id, name FROM team_members WHERE name LIKE $1 LIMIT 1")
         .bind(format!("%{name}%"))
         .fetch_optional(&state.db)
         .await
@@ -656,7 +656,7 @@ async fn record_contact_note(
     let id = uuid::Uuid::new_v4().simple().to_string();
     let now = chrono::Utc::now().to_rfc3339();
     sqlx::query(
-        "INSERT INTO contact_notes (id, contact_id, author_name, body, created_at) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO contact_notes (id, contact_id, author_name, body, created_at) VALUES ($1, $2, $3, $4, $5)",
     )
     .bind(&id)
     .bind(contact_id)

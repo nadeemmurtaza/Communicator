@@ -85,7 +85,7 @@ impl TemplateSyncService {
     /// Resolve WhatsApp credentials for a brand (same pattern as whatsapp.rs)
     async fn resolve_credentials(&self, brand_id: &str) -> Result<WhatsAppCredentials, String> {
         let row: Option<(String, String)> = sqlx::query_as(
-            "SELECT credentials, channel_type FROM brand_credentials WHERE brand_id = ?1 AND channel_type = 'whatsapp' AND is_active = 1 LIMIT 1"
+            "SELECT credentials, channel_type FROM brand_credentials WHERE brand_id = $1 AND channel_type = 'whatsapp' AND is_active = 1 LIMIT 1"
         )
         .bind(brand_id)
         .fetch_optional(&self.pool)
@@ -235,7 +235,7 @@ impl TemplateSyncService {
                 }
 
                 let existing: Option<(String,)> = sqlx::query_as(
-                    "SELECT id FROM whatsapp_templates WHERE brand_id = ?1 AND name = ?2 LIMIT 1"
+                    "SELECT id FROM whatsapp_templates WHERE brand_id = $1 AND name = $2 LIMIT 1"
                 )
                 .bind(brand_id)
                 .bind(name)
@@ -245,7 +245,7 @@ impl TemplateSyncService {
 
                 if existing.is_some() {
                     match sqlx::query(
-                        "UPDATE whatsapp_templates SET status = ?, category = ?, language = ?, body = ?, components = ?, last_synced_at = ?, updated_at = ? WHERE brand_id = ? AND name = ?"
+                        "UPDATE whatsapp_templates SET status = $1, category = $2, language = $3, body = $4, components = $5, last_synced_at = $6, updated_at = $7 WHERE brand_id = $8 AND name = $9"
                     )
                     .bind(status)
                     .bind(category)
@@ -265,7 +265,7 @@ impl TemplateSyncService {
                 } else {
                     let id = uuid::Uuid::new_v4().to_string();
                     match sqlx::query(
-                        "INSERT INTO whatsapp_templates (id, brand_id, name, category, language, status, body, components, created_at, updated_at, last_synced_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                        "INSERT INTO whatsapp_templates (id, brand_id, name, category, language, status, body, components, created_at, updated_at, last_synced_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"
                     )
                     .bind(&id)
                     .bind(brand_id)
@@ -394,7 +394,7 @@ impl TemplateSyncService {
                 COALESCE(SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END), 0),
                 COALESCE(SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END), 0)
             FROM whatsapp_template_log
-            WHERE brand_id = ?1 AND created_at >= ?2 AND created_at < ?3
+            WHERE brand_id = $1 AND created_at >= $2 AND created_at < $3
             "#
         )
         .bind(brand_id)
@@ -410,7 +410,7 @@ impl TemplateSyncService {
 
         let _ = sqlx::query(
             "INSERT INTO message_limits (id, brand_id, period_start, period_end, utility_count, marketing_count, authentication_count, customer_service_count, total_limit, remaining, quality_rating, messaging_tier, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
              ON CONFLICT(brand_id, period_start) DO UPDATE SET
              utility_count = excluded.utility_count, marketing_count = excluded.marketing_count,
              authentication_count = excluded.authentication_count, customer_service_count = excluded.customer_service_count,
@@ -458,7 +458,7 @@ impl TemplateSyncService {
     pub async fn check_message_limit(&self, brand_id: &str) -> Result<bool, String> {
         let now = chrono::Utc::now().to_rfc3339();
         let row: Option<(i64, i64)> = sqlx::query_as(
-            "SELECT total_limit, remaining FROM message_limits WHERE brand_id = ?1 AND period_start <= ?2 AND period_end > ?2 ORDER BY period_start DESC LIMIT 1"
+            "SELECT total_limit, remaining FROM message_limits WHERE brand_id = $1 AND period_start <= $2 AND period_end > $2 ORDER BY period_start DESC LIMIT 1"
         )
         .bind(brand_id)
         .bind(&now)
@@ -477,7 +477,7 @@ impl TemplateSyncService {
         let row: Option<(String, String, i64, i64, i64, i64, i64, i64, String, String)> =
             sqlx::query_as(
                 "SELECT quality_rating, messaging_tier, total_limit, remaining, utility_count, marketing_count, authentication_count, customer_service_count, period_start, period_end
-                 FROM message_limits WHERE brand_id = ?1 AND period_start <= ?2 AND period_end > ?2
+                 FROM message_limits WHERE brand_id = $1 AND period_start <= $2 AND period_end > $2
                  ORDER BY period_start DESC LIMIT 1"
             )
             .bind(brand_id)
@@ -526,7 +526,7 @@ impl TemplateSyncService {
     ) -> Result<Vec<serde_json::Value>, String> {
         let rows: Vec<(String, String, Option<String>, Option<String>, String, String, Option<String>)> =
             sqlx::query_as(
-                "SELECT id, name, category, language, status, body, last_synced_at FROM whatsapp_templates WHERE brand_id = ?1 ORDER BY name LIMIT 500"
+                "SELECT id, name, category, language, status, body, last_synced_at FROM whatsapp_templates WHERE brand_id = $1 ORDER BY name LIMIT 500"
             )
             .bind(brand_id)
             .fetch_all(&self.pool)

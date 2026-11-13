@@ -144,13 +144,16 @@ pub async fn list_procedures(
 ) -> Result<Vec<Procedure>, sqlx::Error> {
     let mut query = "SELECT id, name, description, category, trigger_keywords, steps, max_iterations, timeout_seconds, status, brand_id, created_by, created_at, updated_at FROM procedures WHERE 1=1".to_string();
     let mut binds = Vec::new();
+    let mut placeholder = 0;
 
     if let Some(s) = status {
-        query.push_str(" AND status = ?");
+        placeholder += 1;
+        query.push_str(&format!(" AND status = ${placeholder}"));
         binds.push(s.to_string());
     }
     if let Some(c) = category {
-        query.push_str(" AND category = ?");
+        placeholder += 1;
+        query.push_str(&format!(" AND category = ${placeholder}"));
         binds.push(c.to_string());
     }
     query.push_str(" ORDER BY created_at DESC");
@@ -189,7 +192,7 @@ pub async fn list_procedures(
 /// Get a single procedure by ID.
 pub async fn get_procedure(state: &AppState, id: &str) -> Result<Procedure, sqlx::Error> {
     let row = sqlx::query(
-        "SELECT id, name, description, category, trigger_keywords, steps, max_iterations, timeout_seconds, status, brand_id, created_by, created_at, updated_at FROM procedures WHERE id = ?"
+        "SELECT id, name, description, category, trigger_keywords, steps, max_iterations, timeout_seconds, status, brand_id, created_by, created_at, updated_at FROM procedures WHERE id = $1"
     )
     .bind(id)
     .fetch_one(&state.db)
@@ -231,7 +234,7 @@ pub async fn create_procedure(
 
     sqlx::query(
         "INSERT INTO procedures (id, name, description, category, trigger_keywords, steps, max_iterations, timeout_seconds, status, brand_id, created_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)"
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'active', $9, $10)"
     )
     .bind(&id)
     .bind(name)
@@ -255,39 +258,39 @@ pub async fn update_procedure(
     id: &str,
     updates: &Value,
 ) -> Result<Procedure, sqlx::Error> {
-    let mut sets = Vec::new();
+    let mut sets: Vec<String> = Vec::new();
     let mut binds: Vec<Value> = Vec::new();
 
     if let Some(v) = updates.get("name").and_then(|v| v.as_str()) {
-        sets.push("name = ?");
+        sets.push("name = ?".to_string());
         binds.push(json!(v.to_string()));
     }
     if let Some(v) = updates.get("description").and_then(|v| v.as_str()) {
-        sets.push("description = ?");
+        sets.push("description = ?".to_string());
         binds.push(json!(v.to_string()));
     }
     if let Some(v) = updates.get("category").and_then(|v| v.as_str()) {
-        sets.push("category = ?");
+        sets.push("category = ?".to_string());
         binds.push(json!(v.to_string()));
     }
     if let Some(v) = updates.get("trigger_keywords") {
-        sets.push("trigger_keywords = ?");
+        sets.push("trigger_keywords = ?".to_string());
         binds.push(json!(v.to_string()));
     }
     if let Some(v) = updates.get("steps") {
-        sets.push("steps = ?");
+        sets.push("steps = ?".to_string());
         binds.push(json!(v.to_string()));
     }
     if let Some(v) = updates.get("max_iterations").and_then(|v| v.as_i64()) {
-        sets.push("max_iterations = ?");
+        sets.push("max_iterations = ?".to_string());
         binds.push(json!(v.to_string()));
     }
     if let Some(v) = updates.get("timeout_seconds").and_then(|v| v.as_i64()) {
-        sets.push("timeout_seconds = ?");
+        sets.push("timeout_seconds = ?".to_string());
         binds.push(json!(v.to_string()));
     }
     if let Some(v) = updates.get("status").and_then(|v| v.as_str()) {
-        sets.push("status = ?");
+        sets.push("status = ?".to_string());
         binds.push(json!(v.to_string()));
     }
 
@@ -295,12 +298,21 @@ pub async fn update_procedure(
         return get_procedure(state, id).await;
     }
 
-    sets.push("updated_at = ?");
+    sets.push("updated_at = ?".to_string());
     let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%fZ").to_string();
     binds.push(json!(now));
     binds.push(json!(id.to_string()));
 
-    let sql = format!("UPDATE procedures SET {} WHERE id = ?", sets.join(", "));
+    // `sets` and `binds` are built in lockstep above (one bind per set
+    // clause), plus the trailing WHERE-clause bind, so numbering by position
+    // keeps every placeholder aligned with the value bound for it below.
+    let numbered_sets: Vec<String> = sets
+        .iter()
+        .enumerate()
+        .map(|(i, s)| s.replace('?', &format!("${}", i + 1)))
+        .collect();
+    let where_placeholder = sets.len() + 1;
+    let sql = format!("UPDATE procedures SET {} WHERE id = ${where_placeholder}", numbered_sets.join(", "));
     let mut qb = sqlx::query(&sql);
     for b in &binds {
         if let Value::String(s) = b {
@@ -318,7 +330,7 @@ pub async fn update_procedure(
 
 /// Delete a procedure.
 pub async fn delete_procedure(state: &AppState, id: &str) -> Result<(), sqlx::Error> {
-    sqlx::query("DELETE FROM procedures WHERE id = ?")
+    sqlx::query("DELETE FROM procedures WHERE id = $1")
         .bind(id)
         .execute(&state.db)
         .await?;
@@ -333,7 +345,7 @@ pub async fn match_procedures(
 ) -> Result<Vec<MatchedProcedure>, sqlx::Error> {
     // Check if there's already a running procedure for this conversation
     let running = sqlx::query_scalar::<_, String>(
-        "SELECT procedure_id FROM procedure_executions WHERE conversation_id = ? AND state = 'running'"
+        "SELECT procedure_id FROM procedure_executions WHERE conversation_id = $1 AND state = 'running'"
     )
     .bind(conversation_id)
     .fetch_optional(&state.db)
@@ -391,7 +403,7 @@ pub async fn start_procedure_execution(
 
     sqlx::query(
         "INSERT INTO procedure_executions (id, procedure_id, conversation_id, current_step, state)
-         VALUES (?, ?, ?, 0, 'running')"
+         VALUES ($1, $2, $3, 0, 'running')"
     )
     .bind(&id)
     .bind(procedure_id)
@@ -405,7 +417,7 @@ pub async fn start_procedure_execution(
 /// Get a procedure execution by ID.
 pub async fn get_procedure_execution(state: &AppState, id: &str) -> Result<ProcedureExecution, sqlx::Error> {
     let row = sqlx::query(
-        "SELECT id, procedure_id, conversation_id, current_step, state, context_data, result_data, error_message, started_at, completed_at FROM procedure_executions WHERE id = ?"
+        "SELECT id, procedure_id, conversation_id, current_step, state, context_data, result_data, error_message, started_at, completed_at FROM procedure_executions WHERE id = $1"
     )
     .bind(id)
     .fetch_one(&state.db)
@@ -437,7 +449,7 @@ pub async fn get_running_execution(
     conversation_id: &str,
 ) -> Result<Option<ProcedureExecution>, sqlx::Error> {
     let row = sqlx::query(
-        "SELECT id, procedure_id, conversation_id, current_step, state, context_data, result_data, error_message, started_at, completed_at FROM procedure_executions WHERE conversation_id = ? AND state = 'running' LIMIT 1"
+        "SELECT id, procedure_id, conversation_id, current_step, state, context_data, result_data, error_message, started_at, completed_at FROM procedure_executions WHERE conversation_id = $1 AND state = 'running' LIMIT 1"
     )
     .bind(conversation_id)
     .fetch_optional(&state.db)
@@ -494,7 +506,7 @@ pub async fn execute_current_step(
         // All steps completed
         let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%fZ").to_string();
         sqlx::query(
-            "UPDATE procedure_executions SET state = 'completed', completed_at = ? WHERE id = ?"
+            "UPDATE procedure_executions SET state = 'completed', completed_at = $1 WHERE id = $2"
         )
         .bind(&now)
         .bind(execution_id)
@@ -560,7 +572,7 @@ pub async fn execute_current_step(
 
                     let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%fZ").to_string();
                     sqlx::query(
-                        "UPDATE procedure_executions SET current_step = current_step + 1, context_data = ?, updated_at = ? WHERE id = ?"
+                        "UPDATE procedure_executions SET current_step = current_step + 1, context_data = $1, updated_at = $2 WHERE id = $3"
                     )
                     .bind(&context.to_string())
                     .bind(&now)
@@ -606,7 +618,7 @@ pub async fn execute_current_step(
 
             let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%fZ").to_string();
             sqlx::query(
-                "UPDATE procedure_executions SET current_step = current_step + 1, context_data = ?, updated_at = ? WHERE id = ?"
+                "UPDATE procedure_executions SET current_step = current_step + 1, context_data = $1, updated_at = $2 WHERE id = $3"
             )
             .bind(&context.to_string())
             .bind(&now)
@@ -638,7 +650,7 @@ pub async fn complete_procedure_execution(
 ) -> Result<(), sqlx::Error> {
     let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%fZ").to_string();
     sqlx::query(
-        "UPDATE procedure_executions SET state = 'completed', result_data = ?, completed_at = ? WHERE id = ?"
+        "UPDATE procedure_executions SET state = 'completed', result_data = $1, completed_at = $2 WHERE id = $3"
     )
     .bind(result)
     .bind(&now)
@@ -656,7 +668,7 @@ pub async fn fail_procedure_execution(
 ) -> Result<(), sqlx::Error> {
     let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%fZ").to_string();
     sqlx::query(
-        "UPDATE procedure_executions SET state = 'failed', error_message = ?, completed_at = ? WHERE id = ?"
+        "UPDATE procedure_executions SET state = 'failed', error_message = $1, completed_at = $2 WHERE id = $3"
     )
     .bind(error)
     .bind(&now)
@@ -677,7 +689,7 @@ pub async fn list_actions(
     let mut binds = Vec::new();
 
     if let Some(t) = action_type {
-        query.push_str(" AND action_type = ?");
+        query.push_str(" AND action_type = $1");
         binds.push(t.to_string());
     }
     query.push_str(" ORDER BY created_at DESC");
@@ -738,7 +750,7 @@ pub async fn create_action(
 
     sqlx::query(
         "INSERT INTO actions (id, name, description, action_type, endpoint, method, headers, body_template, auth_config, timeout_seconds, retry_count, enabled, brand_id, created_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)"
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 1, $12, $13)"
     )
     .bind(&id)
     .bind(name)
@@ -762,7 +774,7 @@ pub async fn create_action(
 /// Get a single action by ID.
 pub async fn get_action(state: &AppState, id: &str) -> Result<Action, sqlx::Error> {
     let row = sqlx::query(
-        "SELECT id, name, description, action_type, endpoint, method, headers, body_template, auth_config, timeout_seconds, retry_count, enabled, brand_id, created_by, created_at, updated_at FROM actions WHERE id = ?"
+        "SELECT id, name, description, action_type, endpoint, method, headers, body_template, auth_config, timeout_seconds, retry_count, enabled, brand_id, created_by, created_at, updated_at FROM actions WHERE id = $1"
     )
     .bind(id)
     .fetch_one(&state.db)
@@ -798,31 +810,31 @@ pub async fn update_action(
     id: &str,
     updates: &Value,
 ) -> Result<Action, sqlx::Error> {
-    let mut sets = Vec::new();
+    let mut sets: Vec<String> = Vec::new();
     let mut binds: Vec<Value> = Vec::new();
 
     if let Some(v) = updates.get("name").and_then(|v| v.as_str()) {
-        sets.push("name = ?");
+        sets.push("name = ?".to_string());
         binds.push(json!(v.to_string()));
     }
     if let Some(v) = updates.get("endpoint").and_then(|v| v.as_str()) {
-        sets.push("endpoint = ?");
+        sets.push("endpoint = ?".to_string());
         binds.push(json!(v.to_string()));
     }
     if let Some(v) = updates.get("method").and_then(|v| v.as_str()) {
-        sets.push("method = ?");
+        sets.push("method = ?".to_string());
         binds.push(json!(v.to_string()));
     }
     if let Some(v) = updates.get("headers") {
-        sets.push("headers = ?");
+        sets.push("headers = ?".to_string());
         binds.push(json!(v.to_string()));
     }
     if let Some(v) = updates.get("body_template").and_then(|v| v.as_str()) {
-        sets.push("body_template = ?");
+        sets.push("body_template = ?".to_string());
         binds.push(json!(v.to_string()));
     }
     if let Some(v) = updates.get("enabled").and_then(|v| v.as_bool()) {
-        sets.push("enabled = ?");
+        sets.push("enabled = ?".to_string());
         binds.push(json!(v.to_string()));
     }
 
@@ -830,12 +842,21 @@ pub async fn update_action(
         return get_action(state, id).await;
     }
 
-    sets.push("updated_at = ?");
+    sets.push("updated_at = ?".to_string());
     let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%fZ").to_string();
     binds.push(json!(now));
     binds.push(json!(id.to_string()));
 
-    let sql = format!("UPDATE actions SET {} WHERE id = ?", sets.join(", "));
+    // `sets` and `binds` are built in lockstep above (one bind per set
+    // clause), plus the trailing WHERE-clause bind, so numbering by position
+    // keeps every placeholder aligned with the value bound for it below.
+    let numbered_sets: Vec<String> = sets
+        .iter()
+        .enumerate()
+        .map(|(i, s)| s.replace('?', &format!("${}", i + 1)))
+        .collect();
+    let where_placeholder = sets.len() + 1;
+    let sql = format!("UPDATE actions SET {} WHERE id = ${where_placeholder}", numbered_sets.join(", "));
     let mut qb = sqlx::query(&sql);
     for b in &binds {
         if let Value::String(s) = b {
@@ -853,7 +874,7 @@ pub async fn update_action(
 
 /// Delete an action.
 pub async fn delete_action(state: &AppState, id: &str) -> Result<(), sqlx::Error> {
-    sqlx::query("DELETE FROM actions WHERE id = ?")
+    sqlx::query("DELETE FROM actions WHERE id = $1")
         .bind(id)
         .execute(&state.db)
         .await?;
@@ -880,7 +901,7 @@ async fn execute_action(
     // Record action execution start
     sqlx::query(
         "INSERT INTO action_executions (id, action_id, procedure_execution_id, input_params, status)
-         VALUES (?, ?, ?, ?, 'running')"
+         VALUES ($1, $2, $3, $4, 'running')"
     )
     .bind(&exec_id)
     .bind(action_id)
@@ -909,7 +930,7 @@ async fn execute_action(
     match &result {
         Ok(output) => {
             sqlx::query(
-                "UPDATE action_executions SET status = 'completed', output_data = ?, duration_ms = ? WHERE id = ?"
+                "UPDATE action_executions SET status = 'completed', output_data = $1, duration_ms = $2 WHERE id = $3"
             )
             .bind(&output.to_string())
             .bind(duration)
@@ -920,7 +941,7 @@ async fn execute_action(
         }
         Err(err) => {
             sqlx::query(
-                "UPDATE action_executions SET status = 'failed', error_message = ?, duration_ms = ? WHERE id = ?"
+                "UPDATE action_executions SET status = 'failed', error_message = $1, duration_ms = $2 WHERE id = $3"
             )
             .bind(err)
             .bind(duration)
