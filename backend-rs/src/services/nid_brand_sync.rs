@@ -14,7 +14,7 @@
 use crate::db::DbPool;
 use crate::services::signatures::secrets_match;
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 use tracing::{error, info, warn};
 use uuid::Uuid;
 
@@ -79,9 +79,7 @@ pub struct NidBrandSyncService {
 
 impl NidBrandSyncService {
     pub fn new(pool: &DbPool) -> Self {
-        Self {
-            pool: pool.get_pg_pool().clone(),
-        }
+        Self { pool: pool.clone() }
     }
 
     // -----------------------------------------------------------------------
@@ -97,7 +95,7 @@ impl NidBrandSyncService {
         // Verify webhook signature
         let settings = self.get_connection_settings().await;
         if let Some(ref secret) = settings.webhook_secret {
-            if !secrets_match(signature, secret) {
+            if !secrets_match(signature, Some(secret.as_str())) {
                 return Err("Invalid webhook signature".to_string());
             }
         }
@@ -138,7 +136,7 @@ impl NidBrandSyncService {
 
         // Deduplication: check if already exists
         let existing = sqlx::query_scalar::<_, String>(
-            "SELECT nid_brand_id FROM nid_brands WHERE nid_brand_id = ?",
+            "SELECT nid_brand_id FROM nid_brands WHERE nid_brand_id = $1",
         )
         .bind(brand_id)
         .fetch_optional(&self.pool)
@@ -162,7 +160,7 @@ impl NidBrandSyncService {
         sqlx::query(
             "INSERT INTO nid_brands (id, nid_brand_id, nid_org_id, nid_tenant_id, name, slug, \
              description, bio, website, email, phone, primary_color, secondary_color, active, synced_at) \
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())",
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())",
         )
         .bind(&id)
         .bind(brand_id)
@@ -202,11 +200,11 @@ impl NidBrandSyncService {
 
         let rows = sqlx::query(
             "UPDATE nid_brands SET \
-             name = COALESCE(?, name), \
-             slug = COALESCE(?, slug), \
-             description = ?, bio = ?, website = ?, email = ?, phone = ?, \
-             primary_color = ?, secondary_color = ?, active = ?, synced_at = NOW() \
-             WHERE nid_brand_id = ?",
+             name = COALESCE($1, name), \
+             slug = COALESCE($2, slug), \
+             description = $3, bio = $4, website = $5, email = $6, phone = $7, \
+             primary_color = $8, secondary_color = $9, active = $10, synced_at = NOW() \
+             WHERE nid_brand_id = $11",
         )
         .bind(name)
         .bind(slug)
@@ -234,7 +232,7 @@ impl NidBrandSyncService {
     async fn handle_brand_deleted(&self, data: &serde_json::Value) -> Result<NidBrand, String> {
         let brand_id = data["id"].as_str().ok_or("Missing brand id")?;
 
-        sqlx::query("UPDATE nid_brands SET active = false, synced_at = NOW() WHERE nid_brand_id = ?")
+        sqlx::query("UPDATE nid_brands SET active = false, synced_at = NOW() WHERE nid_brand_id = $1")
             .bind(brand_id)
             .execute(&self.pool)
             .await
@@ -252,7 +250,7 @@ impl NidBrandSyncService {
         let row = sqlx::query_as::<_, NidBrandRow>(
             "SELECT id, nid_brand_id, nid_org_id, nid_tenant_id, name, slug, \
              description, bio, website, email, phone, primary_color, secondary_color, \
-             active, synced_at, created_at FROM nid_brands WHERE id = ?",
+             active, synced_at, created_at FROM nid_brands WHERE id = $1",
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -267,7 +265,7 @@ impl NidBrandSyncService {
         let row = sqlx::query_as::<_, NidBrandRow>(
             "SELECT id, nid_brand_id, nid_org_id, nid_tenant_id, name, slug, \
              description, bio, website, email, phone, primary_color, secondary_color, \
-             active, synced_at, created_at FROM nid_brands WHERE nid_brand_id = ?",
+             active, synced_at, created_at FROM nid_brands WHERE nid_brand_id = $1",
         )
         .bind(nid_brand_id)
         .fetch_optional(&self.pool)
@@ -283,7 +281,7 @@ impl NidBrandSyncService {
             sqlx::query_as::<_, NidBrandRow>(
                 "SELECT id, nid_brand_id, nid_org_id, nid_tenant_id, name, slug, \
                  description, bio, website, email, phone, primary_color, secondary_color, \
-                 active, synced_at, created_at FROM nid_brands WHERE nid_tenant_id = ? ORDER BY created_at DESC",
+                 active, synced_at, created_at FROM nid_brands WHERE nid_tenant_id = $1 ORDER BY created_at DESC",
             )
             .bind(tid)
             .fetch_all(&self.pool)
@@ -318,13 +316,16 @@ impl NidBrandSyncService {
             .unwrap()
             .to_rfc3339();
 
-        // Get connection settings for nID base URL
-        let settings = self.get_connection_settings();
+        // The nID brand connection must be enabled to hand out a redirect
+        let settings = self.get_connection_settings().await;
+        if !settings.enabled {
+            return Err("nID brand connection is disabled".to_string());
+        }
 
         sqlx::query(
             "INSERT INTO brand_redirect_sessions (id, state_token, nid_tenant_id, nid_org_id, \
              redirect_uri, max_attempts, attempts, expires_at) \
-             VALUES (?, ?, 'default', ?, ?, 1, 0, ?)",
+             VALUES ($1, $2, 'default', $3, $4, 1, 0, $5)",
         )
         .bind(&id)
         .bind(&state_token)
@@ -358,7 +359,7 @@ impl NidBrandSyncService {
     ) -> Result<serde_json::Value, String> {
         let session = sqlx::query(
             "SELECT id, nid_org_id, redirect_uri, attempts, max_attempts, expires_at \
-             FROM brand_redirect_sessions WHERE state_token = ?",
+             FROM brand_redirect_sessions WHERE state_token = $1",
         )
         .bind(state_token)
         .fetch_optional(&self.pool)
@@ -367,13 +368,12 @@ impl NidBrandSyncService {
         .ok_or_else(|| "Redirect session not found".to_string())?;
 
         // Check expiry
-        let expires_at: chrono::DateTime<chrono::Utc> =
-            session.try_get::<String, _>("expires_at")
-                .parse()
-                .map_err(|_| "Invalid expiry date".to_string())?;
+        let expires_at: chrono::DateTime<chrono::Utc> = session
+            .try_get("expires_at")
+            .map_err(|_| "Invalid expiry date".to_string())?;
 
         if chrono::Utc::now() > expires_at {
-            sqlx::query("UPDATE brand_redirect_sessions SET error_code = 'EXPIRED' WHERE state_token = ?")
+            sqlx::query("UPDATE brand_redirect_sessions SET error_code = 'EXPIRED' WHERE state_token = $1")
                 .bind(state_token)
                 .execute(&self.pool)
                 .await
@@ -382,7 +382,7 @@ impl NidBrandSyncService {
         }
 
         // Increment attempts
-        sqlx::query("UPDATE brand_redirect_sessions SET attempts = attempts + 1 WHERE state_token = ?")
+        sqlx::query("UPDATE brand_redirect_sessions SET attempts = attempts + 1 WHERE state_token = $1")
             .bind(state_token)
             .execute(&self.pool)
             .await
@@ -422,10 +422,10 @@ impl NidBrandSyncService {
         &self,
         req: &UpdateBrandConnectionRequest,
     ) -> Result<BrandConnectionSettings, String> {
-        // Upsert connection settings
+        // Upsert the single connection-settings row (fixed id = 1)
         sqlx::query(
-            "INSERT INTO nid_brand_connection (webhook_url, webhook_secret, polling_interval_sec, enabled, updated_at) \
-             VALUES (?, ?, ?, ?, NOW()) \
+            "INSERT INTO nid_brand_connection (id, webhook_url, webhook_secret, polling_interval_sec, enabled, updated_at) \
+             VALUES (1, $1, $2, $3, $4, NOW()) \
              ON CONFLICT (id) DO UPDATE SET \
              webhook_url = EXCLUDED.webhook_url, \
              webhook_secret = EXCLUDED.webhook_secret, \
@@ -457,7 +457,7 @@ impl NidBrandSyncService {
         let status = if settings.enabled { "healthy" } else { "disabled" };
 
         sqlx::query(
-            "UPDATE nid_brand_connection SET health_status = ?, last_health_check = NOW(), updated_at = NOW()",
+            "UPDATE nid_brand_connection SET health_status = $1, last_health_check = NOW(), updated_at = NOW()",
         )
         .bind(status)
         .execute(&self.pool)
@@ -484,7 +484,7 @@ impl NidBrandSyncService {
     ) {
         sqlx::query(
             "INSERT INTO brand_sync_log (nid_brand_id, event_type, status, error_msg) \
-             VALUES (?, ?, ?, ?)",
+             VALUES ($1, $2, $3, $4)",
         )
         .bind(nid_brand_id)
         .bind(event_type)
@@ -498,7 +498,7 @@ impl NidBrandSyncService {
     pub async fn get_sync_log(&self, limit: i64) -> Result<Vec<serde_json::Value>, String> {
         let rows = sqlx::query(
             "SELECT id, nid_brand_id, event_type, status, error_msg, created_at \
-             FROM brand_sync_log ORDER BY created_at DESC LIMIT ?",
+             FROM brand_sync_log ORDER BY created_at DESC LIMIT $1",
         )
         .bind(limit)
         .fetch_all(&self.pool)
@@ -513,7 +513,7 @@ impl NidBrandSyncService {
                     "nid_brand_id": r.try_get::<String, _>("nid_brand_id").unwrap_or_default(),
                     "event_type": r.try_get::<String, _>("event_type").unwrap_or_default(),
                     "status": r.try_get::<String, _>("status").unwrap_or_default(),
-                    "error_msg": r.try_get::<Option<String>, _>("error_msg"),
+                    "error_msg": r.try_get::<Option<String>, _>("error_msg").unwrap_or(None),
                     "created_at": r.try_get::<String, _>("created_at").unwrap_or_default(),
                 })
             })
