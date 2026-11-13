@@ -41,6 +41,10 @@ class Draft(Base):
     confidence: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     # Which Service/FAQ entries the draft drew on, for reviewer sanity-checking.
     citations: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
+    # Twilio Content API SID to send this draft as, if it's a WhatsApp
+    # message that may need to go out as a pre-approved template rather
+    # than freeform text -- see communicator.services.followup_scheduler.
+    content_sid: Mapped[str] = mapped_column(String(255), default="", nullable=False)
 
     status: Mapped[DraftStatus] = mapped_column(
         Enum(DraftStatus), default=DraftStatus.PENDING_REVIEW, nullable=False

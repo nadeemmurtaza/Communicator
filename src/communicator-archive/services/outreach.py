@@ -12,8 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from communicator.channels import get_provider
 from communicator.harvester_client import HarvesterClient
 from communicator.models.contact import Contact
+from communicator.models.conversation import Conversation
 from communicator.models.lead import Lead
 from communicator.models.message import Message
+from communicator.models.sequence import FollowUpSequence
+from communicator.services.followup_scheduler import enroll_in_sequence
 from communicator.services.messaging import send_outbound_message
 
 
@@ -24,9 +27,22 @@ async def send_first_touch(
     body: str,
     harvester_client: HarvesterClient,
     subject: str | None = None,
+    sequence: FollowUpSequence | None = None,
+    content_sid: str | None = None,
 ) -> Message:
-    provider = await get_provider(contact.channel, session)
-    message = await send_outbound_message(session, contact, provider, body, subject=subject)
+    """
+    ``content_sid`` (a Twilio Content API template SID) is required for a
+    WhatsApp first touch -- there's never an open 24h session before the
+    lead has messaged us first. See communicator.services.messaging.
+    """
+    provider = get_provider(contact.channel)
+    message = await send_outbound_message(
+        session, contact, provider, body, subject=subject, content_sid=content_sid
+    )
+
+    if sequence is not None:
+        conversation = await session.get(Conversation, message.conversation_id)
+        await enroll_in_sequence(session, conversation, sequence)
 
     await harvester_client.push_outreach_outcome(
         institution_id=lead.harvester_institution_id,

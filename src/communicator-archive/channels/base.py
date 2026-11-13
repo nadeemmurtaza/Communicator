@@ -22,4 +22,17 @@ class ChannelProvider(abc.ABC):
     """
 
     @abc.abstractmethod
-    async def send(self, contact: Contact, body: str, subject: str | None = None) -> SendResult: ...
+    async def send(
+        self,
+        contact: Contact,
+        body: str,
+        subject: str | None = None,
+        content_sid: str | None = None,
+    ) -> SendResult:
+        """
+        ``content_sid`` is a pre-approved template reference (e.g. a Twilio
+        Content API SID). Only WhatsApp acts on it -- see
+        communicator.channels.whatsapp -- other providers accept and ignore
+        it so callers don't need to branch by channel.
+        """
+        ...

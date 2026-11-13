@@ -1,15 +1,18 @@
 """
 Phase 4 follow-up scheduler -- see docs/ARCHITECTURE.md section 8.
 
-Advances Conversations through their FollowUpSequence on a cadence. Not
-wired to a task queue yet (no Celery/APScheduler dependency in this repo);
-``run_followup_scheduler`` is a plain async function meant to be invoked by
-an external cron hitting POST /api/v1/scheduler/run-followups, or a queue
-worker later, without callers needing to change.
+Advances Conversations enrolled in a FollowUpSequence once their
+next_followup_at has passed.
+
+Generated copy goes through the same Draft/approval gate as reactive
+replies (communicator.services.reply_engine): this module only ever
+creates PENDING_REVIEW drafts, the existing /drafts/{id}/approve endpoint
+is what actually sends.
 """
 
 from __future__ import annotations
 
+import logging
 import random
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -20,16 +23,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from communicator.channels import get_provider
 from communicator.channels.whatsapp import MetaWhatsAppProvider
+from communicator.compliance.optout import is_sendable
 from communicator.config import settings
 from communicator.harvester_client import HarvesterClient
 from communicator.models.audit import AuditLog
 from communicator.models.contact import ChannelType, Contact
 from communicator.models.conversation import Conversation, ConversationState
+from communicator.models.draft import Draft, DraftStatus
 from communicator.models.lead import Lead
 from communicator.models.message import Message, MessageDirection, MessageStatus
 from communicator.models.sequence import FollowUpSequence, SequenceStep
-from communicator.services.messaging import send_outbound_message
+from communicator.services.messaging import send_outbound_message, whatsapp_session_open
 from communicator.services.translation import translate_text
+
+logger = logging.getLogger(__name__)
 
 _ELIGIBLE_STATES = (ConversationState.NEW, ConversationState.AWAITING_REPLY)
 
@@ -44,6 +51,15 @@ def within_working_hours(now: datetime | None = None) -> bool:
     if now.weekday() >= 5:
         return False
     return settings.follow_up_quiet_hours_start <= now.hour < settings.follow_up_quiet_hours_end
+
+
+async def _ordered_steps(session: AsyncSession, sequence_id: uuid.UUID) -> list[SequenceStep]:
+    stmt = (
+        select(SequenceStep)
+        .where(SequenceStep.sequence_id == sequence_id)
+        .order_by(SequenceStep.step_number)
+    )
+    return list((await session.execute(stmt)).scalars().all())
 
 
 def enroll_conversation(
@@ -142,9 +158,6 @@ async def _advance_conversation(
         last_inbound = await _last_inbound_at(session, conversation.id)
         window = timedelta(hours=settings.whatsapp_session_window_hours)
         if last_inbound is None or now - last_inbound > window:
-            # Outside Meta's 24h session window.
-            # If the step defines a template name (e.g. starts with "template:"),
-            # send via MetaWhatsAppProvider.send_template to legally re-engage.
             provider = await get_provider(step.channel, session)
             if isinstance(provider, MetaWhatsAppProvider) and step.template.startswith("template:"):
                 template_name = step.template.removeprefix("template:").strip()
@@ -189,7 +202,6 @@ async def _advance_conversation(
                 except Exception:  # noqa: BLE001, S110
                     pass
 
-            # Otherwise defer and retry rather than attempting a doomed freeform send
             session.add(
                 AuditLog(
                     entity_type="conversation",
@@ -249,3 +261,120 @@ async def run_followup_scheduler(
             sent.append(message)
     await session.flush()
     return sent
+
+
+def _render(template: str, lead: Lead, contact: Contact) -> str:
+    return template.format(
+        lead_name=lead.name,
+        city=lead.city,
+        contact_name=contact.person_name or lead.name,
+    )
+
+
+async def enroll_in_sequence(
+    session: AsyncSession, conversation: Conversation, sequence: FollowUpSequence
+) -> None:
+    """
+    Call right after a first-touch send. Step 1 (index 0) is the message
+    just sent, so this schedules step 2 (index 1), if the sequence has one.
+    """
+    steps = await _ordered_steps(session, sequence.id)
+    conversation.sequence_id = sequence.id
+    conversation.sequence_step = 1
+    conversation.next_followup_at = (
+        datetime.now(UTC) + timedelta(days=steps[1].delay_days) if len(steps) > 1 else None
+    )
+
+
+async def run_due_followups(session: AsyncSession, now: datetime | None = None) -> list[Draft]:
+    """
+    Scans conversations whose next_followup_at has passed and drafts the
+    next SequenceStep for each. Stops (clears next_followup_at, drafts
+    nothing) the moment a conversation is no longer eligible -- opted out,
+    replied, or sequence exhausted -- checked here at run time rather than
+    only when it was first scheduled, per docs/ARCHITECTURE.md section 8.
+    """
+    now = now or datetime.now(UTC)
+
+    stmt = select(Conversation).where(
+        Conversation.state == ConversationState.AWAITING_REPLY,
+        Conversation.sequence_id.is_not(None),
+        Conversation.next_followup_at <= now,
+    )
+    due = (await session.execute(stmt)).scalars().all()
+
+    drafts: list[Draft] = []
+    for conversation in due:
+        if conversation.state != ConversationState.AWAITING_REPLY:
+            continue
+
+        contact = await session.get(Contact, conversation.contact_id)
+        if not await is_sendable(session, contact.id):
+            conversation.next_followup_at = None
+            continue
+
+        steps = await _ordered_steps(session, conversation.sequence_id)
+        step_index = conversation.sequence_step
+        if step_index >= len(steps):
+            conversation.next_followup_at = None
+            continue
+
+        step = steps[step_index]
+
+        if (
+            step.channel == ChannelType.WHATSAPP
+            and not step.template_sid
+            and not await whatsapp_session_open(session, conversation.id)
+        ):
+            logger.warning(
+                "conversation %s step %d is a WhatsApp send outside the 24h session window "
+                "with no template_sid configured on the sequence step; skipping until one is "
+                "attached or the contact replies",
+                conversation.id,
+                step.step_number,
+            )
+            continue
+
+        try:
+            lead = await session.get(Lead, contact.lead_id)
+            body = _render(step.template, lead, contact)
+        except Exception:
+            logger.exception(
+                "follow-up render failed for conversation %s step %d; will retry next tick",
+                conversation.id,
+                step.step_number,
+            )
+            continue
+
+        draft = Draft(
+            conversation_id=conversation.id,
+            body=body,
+            confidence=0.0,
+            citations=[],
+            status=DraftStatus.PENDING_REVIEW,
+            content_sid=step.template_sid,
+        )
+        session.add(draft)
+        drafts.append(draft)
+
+        conversation.sequence_step = step_index + 1
+        next_step = steps[step_index + 1] if step_index + 1 < len(steps) else None
+        conversation.next_followup_at = (
+            now + timedelta(days=next_step.delay_days) if next_step else None
+        )
+
+        session.add(
+            AuditLog(
+                entity_type="conversation",
+                entity_id=conversation.id,
+                action="followup_step_drafted",
+                actor="scheduler",
+                details={
+                    "step_number": step.step_number,
+                    "sequence_id": str(conversation.sequence_id),
+                },
+            )
+        )
+
+    await session.flush()
+    return drafts

@@ -29,6 +29,7 @@ async def list_drafts(
             "body": d.body,
             "confidence": d.confidence,
             "citations": d.citations,
+            "contentSid": d.content_sid,
             "status": d.status.value,
             "createdAt": d.created_at.isoformat(),
         }
@@ -106,9 +107,11 @@ async def edit_draft(
 
 @router.post("/generate/{conversation_id}")
 async def generate_draft(
-    conversation_id: uuid.UUID, session: AsyncSession = Depends(get_db_session)
+    conversation_id: uuid.UUID,
+    session: AsyncSession = Depends(get_db_session),
+    harvester_client: HarvesterClient = Depends(get_harvester_client),
 ):
-    draft = await generate_reply(session, conversation_id)
+    draft = await generate_reply(session, conversation_id, harvester_client)
     if draft is None:
         raise HTTPException(status_code=400, detail="Conversation not eligible for a reply")
     return {"id": str(draft.id), "status": draft.status.value, "body": draft.body}

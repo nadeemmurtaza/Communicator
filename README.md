@@ -167,9 +167,11 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 cp .env.example .env
 
-alembic upgrade head
-uvicorn communicator.api.app:app --reload
-pytest
+alembic upgrade head        # create schema
+uvicorn communicator.api.app:app --reload  # http://localhost:8000/docs
+python -m communicator.worker              # follow-up scheduler poll loop (optional)
+
+pytest                      # runs without a live DB (compliance-gate + health tests)
 ```
 
 A local PostgreSQL connection is currently required through `DATABASE_URL`. The broader connection and credential framework is planned work.
@@ -183,3 +185,31 @@ A local PostgreSQL connection is currently required through `DATABASE_URL`. The 
 ## Locked rule
 
 > Communicator owns communication profiles, groups, audiences, conversations, consent, engagement, and response context. Harvester and NEWAX Core may enrich it through optional adapters, but neither is required for Communicator to operate.
+
+## Status
+
+**Phases 0-3 merged.** In place: project scaffold, the full data model
+(leads/contacts/consent/conversations/messages/services/follow-up
+sequences/drafts/audit log), Alembic migrations, a Harvester API client,
+the opt-out/consent compliance gate, channel adapters (email/SMS/
+WhatsApp) with outbound send, inbound webhooks and a unified conversation
+timeline for all three channels, and a Claude-backed reply engine (intent
+classification, service-catalog grounding, confidence-scored drafts) with
+a human approval queue.
+
+**Phase 4 in progress:** a follow-up scheduler now exists
+(`communicator.services.followup_scheduler`, `POST /sequences` to define
+cadences, `communicator.worker` as a poll-loop process, `POST
+/followups/run` to fire a tick manually). It advances `Conversation`s
+enrolled in a `FollowUpSequence` past their `next_followup_at`, drafting
+(not sending) the next templated step through the same `Draft`/approval
+queue as reactive replies, and re-checks opt-out/reply state at run time
+so an in-flight reply always wins the race.
+
+Not yet built: drafts marked `AUTO_APPROVED` still require a human to hit
+`/drafts/{id}/approve` — nothing actually auto-sends yet; no quiet-hours,
+working-hours, or per-lead rate caps on the scheduler; no WhatsApp 24h
+session/template-window enforcement; the outcome push to Harvester is a
+hardcoded stub, and the Harvester endpoints it targets (`qualified`
+filter, `/outreach-outcomes`) don't exist yet on that side. See the
+roadmap in `docs/ARCHITECTURE.md` for what's next.

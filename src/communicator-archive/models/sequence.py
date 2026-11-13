@@ -53,5 +53,9 @@ class SequenceStep(Base):
     # assigned one variant at enrollment (see Conversation.sequence_variant)
     # and only ever sees that variant's steps.
     variant: Mapped[str] = mapped_column(String(50), default="control", nullable=False)
+    # Twilio Content API SID -- required for WHATSAPP steps that may fire
+    # outside the contact's 24h session window (nearly all follow-up steps
+    # do). See communicator.services.messaging.whatsapp_session_open.
+    template_sid: Mapped[str] = mapped_column(String(255), default="", nullable=False)
 
     sequence: Mapped["FollowUpSequence"] = relationship("FollowUpSequence", back_populates="steps")
