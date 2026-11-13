@@ -99,7 +99,7 @@ pub async fn analyze_negative_feedback(
 
     let feedback: FeedbackRow = sqlx::query_as(
         "SELECT id, message_id, conversation_id, rating, comment, author_type, created_at
-         FROM message_feedback WHERE id = ?",
+         FROM message_feedback WHERE id = $1",
     )
     .bind(feedback_id)
     .fetch_one(&state.db)
@@ -116,10 +116,10 @@ pub async fn analyze_negative_feedback(
 
     // Check for existing suggestions from this feedback
     let existing: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM suggestions WHERE source_feedback_id = ?",
+        "SELECT COUNT(*) FROM suggestions WHERE source_feedback_id = $1",
     )
     .bind(feedback_id)
-    .fetch_optional(&state.db)
+    .fetch_one(&state.db)
     .await
     .unwrap_or(0);
 
@@ -439,59 +439,31 @@ pub async fn list_suggestions(
     limit: i64,
 ) -> Result<Vec<Suggestion>, String> {
     let mut query = String::from("SELECT id, suggestion_type, title, description, suggested_content, source_feedback_id, source_conversation_id, source_message_body, confidence, category, status, approved_by, approved_at, created_at, updated_at FROM suggestions WHERE 1=1");
-    let mut params: Vec<Box<dyn sqlx::types::Type<sqlx::Postgres> + Send + Sync>> = Vec::new();
+    let mut idx = 1;
 
+    if status.is_some() {
+        query.push_str(&format!(" AND status = ${}", idx));
+        idx += 1;
+    }
+    if suggestion_type.is_some() {
+        query.push_str(&format!(" AND suggestion_type = ${}", idx));
+        idx += 1;
+    }
+    query.push_str(&format!(" ORDER BY created_at DESC LIMIT ${}", idx));
+
+    let mut q = sqlx::query(&query);
     if let Some(s) = status {
-        query.push_str(" AND status = ?");
-        params.push(Box::new(s.to_string()));
+        q = q.bind(s);
     }
-
     if let Some(t) = suggestion_type {
-        query.push_str(" AND suggestion_type = ?");
-        params.push(Box::new(t.to_string()));
+        q = q.bind(t);
     }
+    q = q.bind(limit);
 
-    query.push_str(" ORDER BY created_at DESC LIMIT ?");
-    params.push(Box::new(limit.to_string()));
-
-    // Use a simpler approach without dynamic params
-    let rows = if status.is_some() && suggestion_type.is_some() {
-        let s = status.unwrap();
-        let t = suggestion_type.unwrap();
-        sqlx::query(
-            "SELECT id, suggestion_type, title, description, suggested_content, source_feedback_id, source_conversation_id, source_message_body, confidence, category, status, approved_by, approved_at, created_at, updated_at FROM suggestions WHERE status = ? AND suggestion_type = ? ORDER BY created_at DESC LIMIT ?",
-        )
-        .bind(s)
-        .bind(t)
-        .bind(limit)
+    let rows = q
         .fetch_all(&state.db)
-        .await?
-    } else if status.is_some() {
-        let s = status.unwrap();
-        sqlx::query(
-            "SELECT id, suggestion_type, title, description, suggested_content, source_feedback_id, source_conversation_id, source_message_body, confidence, category, status, approved_by, approved_at, created_at, updated_at FROM suggestions WHERE status = ? ORDER BY created_at DESC LIMIT ?",
-        )
-        .bind(s)
-        .bind(limit)
-        .fetch_all(&state.db)
-        .await?
-    } else if suggestion_type.is_some() {
-        let t = suggestion_type.unwrap();
-        sqlx::query(
-            "SELECT id, suggestion_type, title, description, suggested_content, source_feedback_id, source_conversation_id, source_message_body, confidence, category, status, approved_by, approved_at, created_at, updated_at FROM suggestions WHERE suggestion_type = ? ORDER BY created_at DESC LIMIT ?",
-        )
-        .bind(t)
-        .bind(limit)
-        .fetch_all(&state.db)
-        .await?
-    } else {
-        sqlx::query(
-            "SELECT id, suggestion_type, title, description, suggested_content, source_feedback_id, source_conversation_id, source_message_body, confidence, category, status, approved_by, approved_at, created_at, updated_at FROM suggestions ORDER BY created_at DESC LIMIT ?",
-        )
-        .bind(limit)
-        .fetch_all(&state.db)
-        .await?
-    };
+        .await
+        .map_err(|e| format!("Failed to list suggestions: {}", e))?;
 
     let mut suggestions = Vec::new();
     for row in rows {
