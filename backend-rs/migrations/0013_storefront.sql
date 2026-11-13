@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS storefront_sections (
     id TEXT PRIMARY KEY,
     storefront_id TEXT NOT NULL,
     section_type TEXT NOT NULL,
-    sort_order BOOLEAN DEFAULT false,
+    sort_order INTEGER DEFAULT 0,
     content TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     FOREIGN KEY (storefront_id) REFERENCES storefronts(id) ON DELETE CASCADE

@@ -85,8 +85,7 @@ CREATE TABLE IF NOT EXISTS contact_memories (
     source_message_id TEXT,
     noted_at TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    FOREIGN KEY (contact_id) REFERENCES contacts(id),
-    FOREIGN KEY (source_message_id) REFERENCES messages(id)
+    FOREIGN KEY (contact_id) REFERENCES contacts(id)
 );
 CREATE INDEX IF NOT EXISTS idx_contact_memories_contact_id ON contact_memories(contact_id);
 
@@ -168,15 +167,14 @@ CREATE TABLE IF NOT EXISTS conversations (
     snoozed_until TEXT,
     language TEXT,
     sequence_id TEXT,
-    sequence_step BOOLEAN NOT NULL DEFAULT false,
+    sequence_step BIGINT NOT NULL DEFAULT 0,
     sequence_variant TEXT DEFAULT 'control',
     next_followup_at TEXT,
     custom_attributes TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (contact_id) REFERENCES contacts(id),
-    FOREIGN KEY (inbox_id) REFERENCES inboxes(id),
-    FOREIGN KEY (sequence_id) REFERENCES follow_up_sequences(id)
+    FOREIGN KEY (inbox_id) REFERENCES inboxes(id)
 );
 CREATE INDEX IF NOT EXISTS idx_conversations_tenant_key ON conversations(tenant_key);
 CREATE INDEX IF NOT EXISTS idx_conversations_contact_id ON conversations(contact_id);
@@ -203,6 +201,11 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_messages_provider_msg_id ON messages(provider_message_id);
+
+-- contact_memories.source_message_id references messages, defined above this point.
+ALTER TABLE contact_memories
+    ADD CONSTRAINT contact_memories_source_message_id_fkey
+    FOREIGN KEY (source_message_id) REFERENCES messages(id);
 
 -- Drafts
 CREATE TABLE IF NOT EXISTS drafts (
@@ -268,6 +271,12 @@ CREATE TABLE IF NOT EXISTS sequence_steps (
 );
 CREATE INDEX IF NOT EXISTS idx_sequence_steps_seq_id ON sequence_steps(sequence_id);
 
+-- conversations.sequence_id references follow_up_sequences, which is defined
+-- above this point in the file, so the FK is added here rather than inline.
+ALTER TABLE conversations
+    ADD CONSTRAINT conversations_sequence_id_fkey
+    FOREIGN KEY (sequence_id) REFERENCES follow_up_sequences(id);
+
 -- Automation Rules
 CREATE TABLE IF NOT EXISTS automation_rules (
     id TEXT PRIMARY KEY,
@@ -277,7 +286,7 @@ CREATE TABLE IF NOT EXISTS automation_rules (
     match_type TEXT NOT NULL,
     action_type TEXT NOT NULL,
     action_value TEXT NOT NULL,
-    priority BOOLEAN NOT NULL DEFAULT false,
+    priority INTEGER NOT NULL DEFAULT 0,
     is_active BOOLEAN NOT NULL DEFAULT true,
     execution_count INTEGER,
     last_triggered_at TEXT,
@@ -400,9 +409,9 @@ CREATE TABLE IF NOT EXISTS knowledge_base_entries (
     target_touchpoints TEXT NOT NULL DEFAULT '["agent","copilot","help_center"]',
     status TEXT NOT NULL DEFAULT 'published',
     resolution_rate REAL NOT NULL DEFAULT 85.0,
-    usage_count BOOLEAN NOT NULL DEFAULT false,
-    helpful_count BOOLEAN NOT NULL DEFAULT false,
-    unhelpful_count BOOLEAN NOT NULL DEFAULT false,
+    usage_count BIGINT NOT NULL DEFAULT 0,
+    helpful_count BIGINT NOT NULL DEFAULT 0,
+    unhelpful_count BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -445,8 +454,8 @@ CREATE TABLE IF NOT EXISTS broadcasts (
     objective TEXT NOT NULL DEFAULT '',
     campaign_template_id TEXT,
     parent_campaign_id TEXT,
-    step_index BOOLEAN NOT NULL DEFAULT false,
-    step_delay_days BOOLEAN NOT NULL DEFAULT false,
+    step_index INTEGER NOT NULL DEFAULT 0,
+    step_delay_days INTEGER NOT NULL DEFAULT 0,
     stop_on_reply BOOLEAN NOT NULL DEFAULT true,
     template_name TEXT NOT NULL,
     template_language TEXT NOT NULL DEFAULT 'en_US',
@@ -455,14 +464,13 @@ CREATE TABLE IF NOT EXISTS broadcasts (
     tag_name TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'draft',
     scheduled_at TEXT,
-    audience_count BOOLEAN NOT NULL DEFAULT false,
-    sent_count BOOLEAN NOT NULL DEFAULT false,
-    delivered_count BOOLEAN NOT NULL DEFAULT false,
-    read_count BOOLEAN NOT NULL DEFAULT false,
-    failed_count BOOLEAN NOT NULL DEFAULT false,
-    skipped_count BOOLEAN NOT NULL DEFAULT false,
+    audience_count INTEGER NOT NULL DEFAULT 0,
+    sent_count INTEGER NOT NULL DEFAULT 0,
+    delivered_count INTEGER NOT NULL DEFAULT 0,
+    read_count INTEGER NOT NULL DEFAULT 0,
+    failed_count INTEGER NOT NULL DEFAULT 0,
+    skipped_count INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    FOREIGN KEY (campaign_template_id) REFERENCES campaign_templates(id),
     FOREIGN KEY (parent_campaign_id) REFERENCES broadcasts(id)
 );
 CREATE INDEX IF NOT EXISTS idx_broadcasts_tenant_key ON broadcasts(tenant_key);
@@ -502,6 +510,11 @@ CREATE TABLE IF NOT EXISTS campaign_templates (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_campaign_templates_tenant_key ON campaign_templates(tenant_key);
+
+-- broadcasts.campaign_template_id references campaign_templates, defined above this point.
+ALTER TABLE broadcasts
+    ADD CONSTRAINT broadcasts_campaign_template_id_fkey
+    FOREIGN KEY (campaign_template_id) REFERENCES campaign_templates(id);
 
 -- Integration Settings (singleton)
 CREATE TABLE IF NOT EXISTS integration_settings (
@@ -1085,7 +1098,7 @@ CREATE TABLE IF NOT EXISTS ecosystem_egress_outbox (
     correlation_id TEXT NOT NULL DEFAULT '',
     envelope TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending',
-    attempts BOOLEAN NOT NULL DEFAULT false,
+    attempts INTEGER NOT NULL DEFAULT 0,
     last_error TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     sent_at TEXT

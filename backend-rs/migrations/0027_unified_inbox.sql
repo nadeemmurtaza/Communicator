@@ -38,7 +38,7 @@ CREATE INDEX IF NOT EXISTS idx_unified_settings_org ON unified_inbox_settings(or
 
 -- Default settings for organizations
 INSERT INTO unified_inbox_settings (id, organization_id, enabled, group_by, merge_timeline, show_channel_badges, auto_resolve)
-SELECT 'unified-settings-' || substr(id, 1, 24), id, 1, 'customer', 1, 1, 1
+SELECT 'unified-settings-' || substr(id, 1, 24), id, true, 'customer', true, true, true
 FROM organizations
 WHERE id NOT IN (SELECT organization_id FROM unified_inbox_settings);
 

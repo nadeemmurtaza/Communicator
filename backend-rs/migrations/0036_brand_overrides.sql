@@ -39,8 +39,8 @@ CREATE INDEX IF NOT EXISTS idx_brand_override_active ON brand_override_rules(is_
 -- Tracks every brand switch event for auditing and analytics.
 CREATE TABLE IF NOT EXISTS brand_switch_log (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
-    conversation_id UUID NOT NULL,
-    contact_id UUID NOT NULL,
+    conversation_id TEXT NOT NULL,
+    contact_id TEXT NOT NULL,
     from_brand_id TEXT NOT NULL,
     to_brand_id TEXT NOT NULL,
     trigger_type TEXT NOT NULL DEFAULT 'manual',

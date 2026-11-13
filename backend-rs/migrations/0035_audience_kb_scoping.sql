@@ -10,9 +10,9 @@
 -- to a segment, the AI only draws from the linked KB entries for that segment.
 CREATE TABLE IF NOT EXISTS audience_kb_links (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
-    segment_id UUID NOT NULL,
-    kb_entry_id UUID NOT NULL,
-    priority BOOLEAN NOT NULL DEFAULT false,
+    segment_id TEXT NOT NULL,
+    kb_entry_id TEXT NOT NULL,
+    priority INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (segment_id) REFERENCES contact_segments(id) ON DELETE CASCADE,
     FOREIGN KEY (kb_entry_id) REFERENCES knowledge_base_entries(id) ON DELETE CASCADE
@@ -49,10 +49,10 @@ ON CONFLICT (id) DO NOTHING;
 -- measure the impact of audience-based scoping.
 CREATE TABLE IF NOT EXISTS audience_kb_usage_log (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
-    conversation_id UUID NOT NULL,
-    contact_id UUID NOT NULL,
-    segment_id UUID NOT NULL,
-    kb_entry_id UUID NOT NULL,
+    conversation_id TEXT NOT NULL,
+    contact_id TEXT NOT NULL,
+    segment_id TEXT NOT NULL,
+    kb_entry_id TEXT NOT NULL,
     query_text TEXT NOT NULL DEFAULT '',
     relevance_score REAL NOT NULL DEFAULT 0.5,
     used_in_response BOOLEAN NOT NULL DEFAULT false,
@@ -73,8 +73,8 @@ CREATE INDEX IF NOT EXISTS idx_audience_kb_usage_created ON audience_kb_usage_lo
 -- dynamic (evaluated via filters) or static (explicit membership).
 CREATE TABLE IF NOT EXISTS segment_contact_memberships (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
-    segment_id UUID NOT NULL,
-    contact_id UUID NOT NULL,
+    segment_id TEXT NOT NULL,
+    contact_id TEXT NOT NULL,
     membership_type TEXT NOT NULL DEFAULT 'dynamic',
     matched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

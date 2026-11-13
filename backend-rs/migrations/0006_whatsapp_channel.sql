@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS whatsapp_session_windows (
     started_at TEXT NOT NULL,
     expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     is_active BOOLEAN DEFAULT true,
-    message_count BOOLEAN DEFAULT false,
+    message_count BIGINT DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE
 );
@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS whatsapp_automation_rules (
     action_type TEXT NOT NULL,
     action_config TEXT,
     is_active BOOLEAN DEFAULT true,
-    priority BOOLEAN DEFAULT false,
+    priority INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE

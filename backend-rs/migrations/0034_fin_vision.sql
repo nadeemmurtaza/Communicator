@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS vision_images (
     image_url TEXT NOT NULL DEFAULT '',
     image_data TEXT, -- base64 encoded image data (optional, for storage)
     mime_type TEXT NOT NULL DEFAULT 'image/jpeg',
-    file_size BOOLEAN NOT NULL DEFAULT false,
+    file_size INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'uploaded', -- 'uploaded', 'analyzing', 'completed', 'failed'
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

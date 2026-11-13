@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS erp_categories (
     image_url TEXT,
     sort_order INTEGER NOT NULL DEFAULT 0,
     is_active BOOLEAN NOT NULL DEFAULT true,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (NOW()),
+    updated_at TEXT NOT NULL DEFAULT (NOW())
 );
 CREATE INDEX IF NOT EXISTS idx_erp_categories_parent ON erp_categories(parent_id);
 CREATE INDEX IF NOT EXISTS idx_erp_categories_active ON erp_categories(is_active);
@@ -47,8 +47,8 @@ CREATE TABLE IF NOT EXISTS erp_brands (
     logo_url TEXT,
     sort_order INTEGER NOT NULL DEFAULT 0,
     is_active BOOLEAN NOT NULL DEFAULT true,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (NOW()),
+    updated_at TEXT NOT NULL DEFAULT (NOW())
 );
 CREATE INDEX IF NOT EXISTS idx_erp_brands_active ON erp_brands(is_active);
 
@@ -86,8 +86,8 @@ CREATE TABLE IF NOT EXISTS erp_products (
     shipping_class_id TEXT,
     featured_rank INTEGER NOT NULL DEFAULT 0,
     published_at TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (NOW()),
+    updated_at TEXT NOT NULL DEFAULT (NOW())
 );
 CREATE INDEX IF NOT EXISTS idx_erp_products_status_kind ON erp_products(status, kind);
 CREATE INDEX IF NOT EXISTS idx_erp_products_category ON erp_products(category_id);
@@ -134,8 +134,8 @@ CREATE TABLE IF NOT EXISTS erp_product_variants (
     warranty_months INTEGER,
     tax_class_id TEXT,
     sort_order INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (NOW()),
+    updated_at TEXT NOT NULL DEFAULT (NOW())
 );
 CREATE INDEX IF NOT EXISTS idx_erp_variants_product ON erp_product_variants(product_id);
 CREATE INDEX IF NOT EXISTS idx_erp_variants_stock ON erp_product_variants(stock);
@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS erp_product_images (
     alt TEXT,
     sort_order INTEGER NOT NULL DEFAULT 0,
     is_primary BOOLEAN NOT NULL DEFAULT false,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (NOW())
 );
 CREATE INDEX IF NOT EXISTS idx_erp_images_product ON erp_product_images(product_id, sort_order);
 
@@ -169,7 +169,7 @@ CREATE TABLE IF NOT EXISTS erp_product_options (
     key TEXT NOT NULL,
     display TEXT NOT NULL DEFAULT 'button',
     sort_order INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    created_at TEXT NOT NULL DEFAULT (NOW()),
     UNIQUE(product_id, key)
 );
 CREATE INDEX IF NOT EXISTS idx_erp_options_product ON erp_product_options(product_id, sort_order);
@@ -219,7 +219,7 @@ CREATE TABLE IF NOT EXISTS erp_option_templates (
     key TEXT NOT NULL UNIQUE,
     display TEXT NOT NULL DEFAULT 'button',
     sort_order INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (NOW())
 );
 CREATE INDEX IF NOT EXISTS idx_erp_option_templates_order ON erp_option_templates(sort_order);
 
@@ -261,8 +261,8 @@ CREATE TABLE IF NOT EXISTS erp_collections (
     sort_strategy TEXT NOT NULL DEFAULT 'manual',
     image_url TEXT,
     is_active BOOLEAN NOT NULL DEFAULT true,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (NOW()),
+    updated_at TEXT NOT NULL DEFAULT (NOW())
 );
 CREATE INDEX IF NOT EXISTS idx_erp_collections_active ON erp_collections(is_active);
 
@@ -295,7 +295,7 @@ CREATE TABLE IF NOT EXISTS erp_redirects (
     status_code INTEGER NOT NULL DEFAULT 301,
     is_automatic BOOLEAN NOT NULL DEFAULT false,
     hit_count INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (NOW())
 );
 CREATE INDEX IF NOT EXISTS idx_erp_redirects_automatic ON erp_redirects(is_automatic);
 
@@ -308,7 +308,7 @@ CREATE TABLE IF NOT EXISTS erp_stock_adjustments (
     reason TEXT NOT NULL,
     note TEXT,
     actor_id TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (NOW())
 );
 CREATE INDEX IF NOT EXISTS idx_erp_stock_adjustments_variant ON erp_stock_adjustments(variant_id, created_at);
 
@@ -320,7 +320,7 @@ CREATE TABLE IF NOT EXISTS erp_product_size_bias (
     too_large_pct REAL NOT NULL DEFAULT 0,
     sample_size INTEGER NOT NULL DEFAULT 0,
     shift INTEGER NOT NULL DEFAULT 0,
-    computed_at TEXT NOT NULL DEFAULT (datetime('now'))
+    computed_at TEXT NOT NULL DEFAULT (NOW())
 );
 
 -- Product cross-sells (also-bought / complete-the-look)
@@ -340,7 +340,7 @@ CREATE TABLE IF NOT EXISTS erp_product_ai_suggestions (
     locale TEXT NOT NULL,
     suggested_text TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending',
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    created_at TEXT NOT NULL DEFAULT (NOW()),
     reviewed_at TEXT,
     reviewed_by_id TEXT
 );

@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS client_learning_insights (
     category TEXT NOT NULL,  -- 'communication', 'product', 'service', 'pricing', 'support'
     insight TEXT NOT NULL,
     confidence REAL NOT NULL DEFAULT 0.5,
-    evidence_count BOOLEAN NOT NULL DEFAULT true,
+    evidence_count BIGINT NOT NULL DEFAULT 0,
     source_conversation_id TEXT,
     source_message_id TEXT,
     extracted_at TEXT NOT NULL,
@@ -117,7 +117,7 @@ CREATE TABLE IF NOT EXISTS client_learning_patterns (
     pattern_type TEXT NOT NULL,  -- 'communication_style', 'response_time', 'channel_preference', 'time_preference'
     pattern_data TEXT NOT NULL,  -- JSON with pattern details
     confidence REAL NOT NULL DEFAULT 0.5,
-    sample_size BOOLEAN NOT NULL DEFAULT false,
+    sample_size BIGINT NOT NULL DEFAULT 0,
     last_updated TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -277,7 +277,7 @@ CREATE TABLE IF NOT EXISTS client_task_items (
     completed_by TEXT DEFAULT '',
     due_date TEXT,
     priority TEXT NOT NULL DEFAULT 'medium',  -- 'low', 'medium', 'high', 'urgent'
-    display_order BOOLEAN NOT NULL DEFAULT false,
+    display_order BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -317,7 +317,7 @@ CREATE TABLE IF NOT EXISTS client_custom_sections (
     section_name TEXT NOT NULL,
     section_type TEXT NOT NULL,  -- 'table', 'list', 'paragraph', 'key_value', 'rich_text', 'timeline'
     section_source TEXT NOT NULL DEFAULT 'user',  -- 'user', 'ai_learning', 'system'
-    display_order BOOLEAN NOT NULL DEFAULT false,
+    display_order BIGINT NOT NULL DEFAULT 0,
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_by TEXT DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -333,7 +333,7 @@ CREATE TABLE IF NOT EXISTS client_custom_section_data (
     field_key TEXT NOT NULL,
     field_value TEXT NOT NULL,
     field_type TEXT NOT NULL DEFAULT 'text',
-    display_order BOOLEAN NOT NULL DEFAULT false,
+    display_order BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

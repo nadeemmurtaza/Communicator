@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS procedure_executions (
     id TEXT PRIMARY KEY,
     procedure_id TEXT NOT NULL,
     conversation_id TEXT NOT NULL,
-    current_step BOOLEAN NOT NULL DEFAULT false,
+    current_step INTEGER NOT NULL DEFAULT 0,
     state TEXT NOT NULL DEFAULT 'running' CHECK (state IN ('running', 'completed', 'failed', 'timed_out', 'abandoned')),
     context_data TEXT, -- JSON: accumulated context across steps
     result_data TEXT, -- JSON: final result when completed

@@ -28,9 +28,9 @@ CREATE TABLE IF NOT EXISTS crm_sync_logs (
     connection_id TEXT NOT NULL,
     direction TEXT NOT NULL, -- 'inbound' | 'outbound'
     object_type TEXT NOT NULL, -- 'lead' | 'contact' | 'account' | 'deal'
-    record_count BOOLEAN NOT NULL DEFAULT false,
-    success_count BOOLEAN NOT NULL DEFAULT false,
-    error_count BOOLEAN NOT NULL DEFAULT false,
+    record_count INTEGER NOT NULL DEFAULT 0,
+    success_count INTEGER NOT NULL DEFAULT 0,
+    error_count INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'running', -- 'running' | 'completed' | 'partial' | 'failed'
     error_message TEXT,
     started_at TEXT NOT NULL DEFAULT (NOW()),
@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS crm_external_refs (
 CREATE INDEX IF NOT EXISTS idx_crm_external_refs_connection ON crm_external_refs(connection_id);
 CREATE INDEX IF NOT EXISTS idx_crm_external_refs_local ON crm_external_refs(local_type, local_id);
 CREATE INDEX IF NOT EXISTS idx_crm_external_refs_crm ON crm_external_refs(crm_object_type, crm_record_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_crm_external_refs_unique ON crm_external_refs(connection_id, local_type, local_id);
 
 -- Default field mappings for Salesforce
 INSERT INTO crm_field_mappings (id, connection_id, object_type, local_field, crm_field, direction)

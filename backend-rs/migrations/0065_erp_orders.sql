@@ -33,12 +33,12 @@ CREATE TABLE IF NOT EXISTS erp_orders (
     customer_note TEXT,
     staff_note TEXT,
     cancel_reason TEXT,
-    placed_at TEXT NOT NULL DEFAULT (datetime('now')),
+    placed_at TEXT NOT NULL DEFAULT (NOW()),
     confirmed_at TEXT,
     delivered_at TEXT,
     cancelled_at TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    created_at TEXT NOT NULL DEFAULT (NOW()),
+    updated_at TEXT NOT NULL DEFAULT (NOW()),
     review_request_sent_at TEXT,
     cod_risk_score INTEGER,
     cod_risk_action TEXT,
@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS erp_order_items (
     replenishment_reminder_sent_at TEXT,
     fulfillment_status TEXT NOT NULL DEFAULT 'READY',
     awaiting_since TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (NOW())
 );
 CREATE INDEX IF NOT EXISTS idx_erp_order_items_order ON erp_order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_erp_order_items_product ON erp_order_items(product_id);
@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS erp_order_status_events (
     to_status TEXT NOT NULL,
     note TEXT,
     actor_id TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (NOW())
 );
 CREATE INDEX IF NOT EXISTS idx_erp_order_events_order ON erp_order_status_events(order_id, created_at);
 
@@ -116,8 +116,8 @@ CREATE TABLE IF NOT EXISTS erp_carts (
     guest_phone TEXT,
     status TEXT NOT NULL DEFAULT 'active',
     metadata JSONB NOT NULL DEFAULT '{}',
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (NOW()),
+    updated_at TEXT NOT NULL DEFAULT (NOW())
 );
 CREATE INDEX IF NOT EXISTS idx_erp_carts_user ON erp_carts(user_id);
 CREATE INDEX IF NOT EXISTS idx_erp_carts_status ON erp_carts(status);
@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS erp_cart_items (
     variant_id TEXT,
     quantity INTEGER NOT NULL DEFAULT 1,
     metadata JSONB NOT NULL DEFAULT '{}',
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (NOW())
 );
 CREATE INDEX IF NOT EXISTS idx_erp_cart_items_cart ON erp_cart_items(cart_id);
 
@@ -145,8 +145,8 @@ CREATE TABLE IF NOT EXISTS erp_shipments (
     cost INTEGER,
     dispatched_at TEXT,
     delivered_at TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    created_at TEXT NOT NULL DEFAULT (NOW()),
+    updated_at TEXT NOT NULL DEFAULT (NOW()),
     method_id TEXT,
     weight_grams INTEGER,
     package_count INTEGER NOT NULL DEFAULT 1,
@@ -169,7 +169,7 @@ CREATE TABLE IF NOT EXISTS erp_shipment_items (
     shipment_id TEXT NOT NULL REFERENCES erp_shipments(id) ON DELETE CASCADE,
     order_item_id TEXT NOT NULL REFERENCES erp_order_items(id) ON DELETE CASCADE,
     quantity INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (NOW())
 );
 CREATE INDEX IF NOT EXISTS idx_erp_shipment_items_shipment ON erp_shipment_items(shipment_id);
 
@@ -180,7 +180,7 @@ CREATE TABLE IF NOT EXISTS erp_shipment_events (
     event_type TEXT NOT NULL,
     location TEXT,
     description TEXT,
-    timestamp TEXT NOT NULL DEFAULT (datetime('now'))
+    timestamp TEXT NOT NULL DEFAULT (NOW())
 );
 CREATE INDEX IF NOT EXISTS idx_erp_shipment_events_shipment ON erp_shipment_events(shipment_id, timestamp);
 
@@ -190,7 +190,7 @@ CREATE TABLE IF NOT EXISTS erp_city_cod_risk_stats (
     total_shipments INTEGER NOT NULL DEFAULT 0,
     rto_shipments INTEGER NOT NULL DEFAULT 0,
     avg_order_value INTEGER NOT NULL DEFAULT 0,
-    computed_at TEXT NOT NULL DEFAULT (datetime('now'))
+    computed_at TEXT NOT NULL DEFAULT (NOW())
 );
 
 -- Order number counter (sequential per-year order numbers)
@@ -210,7 +210,7 @@ CREATE TABLE IF NOT EXISTS erp_back_in_stock_requests (
     customer_email TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending',
     notified_at TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (NOW())
 );
 CREATE INDEX IF NOT EXISTS idx_erp_back_in_stock_product ON erp_back_in_stock_requests(product_id);
 CREATE INDEX IF NOT EXISTS idx_erp_back_in_stock_status ON erp_back_in_stock_requests(status);

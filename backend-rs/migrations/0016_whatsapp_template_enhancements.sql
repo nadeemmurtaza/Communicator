@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS whatsapp_template_usage (
     brand_id TEXT NOT NULL,
     template_name TEXT NOT NULL,
     template_id TEXT,
-    sent_count BOOLEAN DEFAULT false,
+    sent_count BIGINT DEFAULT 0,
     last_sent_at TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),

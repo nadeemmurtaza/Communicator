@@ -7,8 +7,8 @@
 
 CREATE TABLE IF NOT EXISTS message_feedback (
     id TEXT PRIMARY KEY,
-    message_id UUID NOT NULL,
-    conversation_id UUID NOT NULL,
+    message_id TEXT NOT NULL,
+    conversation_id TEXT NOT NULL,
     rating INTEGER NOT NULL,              -- 1 = thumbs up, -1 = thumbs down
     comment TEXT,                         -- optional free-text reason
     author_type TEXT NOT NULL DEFAULT 'customer',  -- 'customer' | 'agent'

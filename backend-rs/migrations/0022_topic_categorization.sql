@@ -4,7 +4,7 @@
 
 CREATE TABLE IF NOT EXISTS conversation_topics (
     id TEXT PRIMARY KEY,
-    conversation_id UUID NOT NULL,
+    conversation_id TEXT NOT NULL,
     
     -- Primary topic assigned to the conversation
     topic TEXT NOT NULL,

@@ -75,8 +75,8 @@ ON CONFLICT (id) DO NOTHING;
 CREATE TABLE IF NOT EXISTS resolution_logs (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
     organization_id TEXT NOT NULL,
-    conversation_id UUID NOT NULL,
-    contact_id UUID NOT NULL,
+    conversation_id TEXT NOT NULL,
+    contact_id TEXT NOT NULL,
     channel TEXT NOT NULL,
     attempt_number INTEGER NOT NULL DEFAULT 1,
     ai_confidence FLOAT NOT NULL,
@@ -136,7 +136,7 @@ CREATE INDEX IF NOT EXISTS idx_resolution_analytics_window ON resolution_analyti
 -- 5. AUTONOMOUS AGENT POLICIES
 -- ============================================================================
 -- Fine-grained policies controlling AI behavior during autonomous resolution.
-CREATE TABLE IF NOT EXISTS agent_policies (
+CREATE TABLE IF NOT EXISTS resolution_agent_policies (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
     organization_id TEXT NOT NULL,
     name TEXT NOT NULL,
@@ -151,12 +151,12 @@ CREATE TABLE IF NOT EXISTS agent_policies (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
 );
-CREATE INDEX IF NOT EXISTS idx_agent_policies_org ON agent_policies(organization_id);
-CREATE INDEX IF NOT EXISTS idx_agent_policies_active ON agent_policies(is_active);
-CREATE INDEX IF NOT EXISTS idx_agent_policies_priority ON agent_policies(priority DESC);
+CREATE INDEX IF NOT EXISTS idx_resolution_agent_policies_org ON resolution_agent_policies(organization_id);
+CREATE INDEX IF NOT EXISTS idx_resolution_agent_policies_active ON resolution_agent_policies(is_active);
+CREATE INDEX IF NOT EXISTS idx_resolution_agent_policies_priority ON resolution_agent_policies(priority DESC);
 
 -- Seed default agent policies
-INSERT INTO agent_policies (id, organization_id, name, description, policy_type, condition, action, priority)
+INSERT INTO resolution_agent_policies (id, organization_id, name, description, policy_type, condition, action, priority)
 VALUES
     ('policy-no-hallucination', 'org-default', 'No Hallucination', 'Block responses with low grounding scores', 'response_guardrail', 'grounding_score < 0.5', 'block_and_escalate', 1),
     ('policy-sensitive-topics', 'org-default', 'Sensitive Topics', 'Escalate sensitive topics to human', 'topic_guardrail', 'topic IN (complaint, refund, legal, billing)', 'escalate', 2),

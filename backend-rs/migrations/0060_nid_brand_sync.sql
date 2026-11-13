@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS brand_redirect_sessions (
     state_token     TEXT NOT NULL UNIQUE,
     nid_tenant_id   TEXT NOT NULL,
     nid_org_id      TEXT,
-    communicator_brand_id UUID,
+    communicator_brand_id TEXT,
     redirect_uri    TEXT NOT NULL,
     max_attempts    INT NOT NULL DEFAULT 1,
     attempts        INT NOT NULL DEFAULT 0,

@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS coupon_usage (
     id TEXT PRIMARY KEY,
     coupon_id TEXT NOT NULL,
     order_id TEXT NOT NULL,
-    customer_id UUID NOT NULL,
+    customer_id TEXT NOT NULL,
     discount_amount REAL NOT NULL,
     
     used_at TEXT DEFAULT (NOW()),
@@ -70,7 +70,7 @@ CREATE INDEX IF NOT EXISTS idx_membership_tiers_brand ON membership_tiers(brand_
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS customer_memberships (
     id TEXT PRIMARY KEY,
-    customer_id UUID NOT NULL,
+    customer_id TEXT NOT NULL,
     membership_tier_id TEXT NOT NULL,
     started_at TIMESTAMPTZ DEFAULT (NOW()),
     ends_at TEXT,

@@ -15,7 +15,7 @@
 -- ---------------------------------------------------------------------------
 -- 1. Tenants: synced from nID, primary source of truth is nID
 -- ---------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS tenants (
+CREATE TABLE IF NOT EXISTS nid_tenants (
     id TEXT PRIMARY KEY,                          -- nID tenant ID (cuid)
     nid_tenant_id TEXT NOT NULL UNIQUE,           -- same as id, explicit reference
     name TEXT NOT NULL,
@@ -24,28 +24,34 @@ CREATE TABLE IF NOT EXISTS tenants (
     
     -- Webhook configuration (set in nID, synced here)
     webhook_url TEXT,                             -- nID sends events to this URL
-    webhook_secret TEXT,                          -- HMAC secret for verifying nID webhooks
-    
+    webhook_secret_hash TEXT,                     -- HMAC hash of the webhook signing secret
+    webhook_secret_salt TEXT,
+    billing_webhook_url TEXT,
+
     -- Sync status
     sync_status TEXT NOT NULL DEFAULT 'pending',  -- 'pending', 'synced', 'out_of_sync', 'error'
-    last_synced_at TIMESTAMPTZ,
-    last_error TEXT DEFAULT '',
-    
+    last_synced_at TEXT,
+    last_sync_error TEXT NOT NULL DEFAULT '',
+
+    -- Linking / provenance
+    linked_brand_id TEXT,
+    nID_created_at TEXT,
+
     -- Connection status
     is_active BOOLEAN NOT NULL DEFAULT true,
     connected_at TIMESTAMPTZ,
-    
+
     -- Metadata
     metadata JSONB DEFAULT '{}',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TEXT NOT NULL DEFAULT (NOW()),
+    updated_at TEXT NOT NULL DEFAULT (NOW())
 );
 
-CREATE INDEX IF NOT EXISTS idx_tenants_slug ON tenants(slug);
-CREATE INDEX IF NOT EXISTS idx_tenants_sync_status ON tenants(sync_status);
-CREATE INDEX IF NOT EXISTS idx_tenants_active ON tenants(is_active);
+CREATE INDEX IF NOT EXISTS idx_nid_tenants_slug ON nid_tenants(slug);
+CREATE INDEX IF NOT EXISTS idx_nid_tenants_sync_status ON nid_tenants(sync_status);
+CREATE INDEX IF NOT EXISTS idx_nid_tenants_active ON nid_tenants(is_active);
 
-COMMENT ON TABLE tenants IS 'Synced from nID. Primary source of truth is nID. This table tracks the connection status and sync state for each tenant.';
+COMMENT ON TABLE nid_tenants IS 'Synced from nID. Primary source of truth is nID. This table tracks the connection status and sync state for each tenant.';
 
 -- ---------------------------------------------------------------------------
 -- 2. Tenant sync log: audit trail of all sync events

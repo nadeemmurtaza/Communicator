@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS kb_documents (
     organization_id TEXT NOT NULL,
     file_name TEXT NOT NULL,
     file_type TEXT NOT NULL, -- 'pdf' | 'docx' | 'txt' | 'html' | 'md'
-    file_size BOOLEAN NOT NULL DEFAULT false,
+    file_size INTEGER NOT NULL DEFAULT 0,
     file_hash TEXT, -- SHA256 hash for duplicate detection
     storage_path TEXT, -- path to stored file
     status TEXT NOT NULL DEFAULT 'processing', -- 'processing' | 'ready' | 'error' | 'deleted'

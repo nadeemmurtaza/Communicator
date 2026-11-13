@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS help_center_searches (
     id TEXT PRIMARY KEY,
     organization_id TEXT NOT NULL,
     query TEXT NOT NULL,
-    result_count BOOLEAN NOT NULL DEFAULT false,
+    result_count BIGINT NOT NULL DEFAULT 0,
     clicked_article_id TEXT,
     session_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

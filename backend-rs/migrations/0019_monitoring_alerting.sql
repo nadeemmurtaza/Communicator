@@ -85,24 +85,24 @@ VALUES
     ('rule-validation-score-low', 'Low Validation Score',
      'Average validation score dropped below threshold — AI replies may be hallucinating.',
      'validation_score', 'below', 0.7, 60, 'warning', 30,
-     datetime('now'), datetime('now')),
+     NOW(), NOW()),
 
     ('rule-error-rate-high', 'High Error Rate',
      'Error rate exceeded 5% — system may be experiencing issues.',
      'error_rate', 'above', 0.05, 30, 'critical', 15,
-     datetime('now'), datetime('now')),
+     NOW(), NOW()),
 
     ('rule-response-time-slow', 'Slow Response Time',
      'Average response time exceeded 5 seconds — users may experience delays.',
      'response_time_ms', 'above', 5000.0, 30, 'warning', 30,
-     datetime('now'), datetime('now')),
+     NOW(), NOW()),
 
     ('rule-negative-feedback-spike', 'Negative Feedback Spike',
      'Negative feedback rate exceeded 20% — AI quality may be degrading.',
      'negative_feedback_rate', 'above', 0.2, 60, 'warning', 30,
-     datetime('now'), datetime('now')),
+     NOW(), NOW()),
 
     ('rule-draft-latency-high', 'High Draft Generation Latency',
      'Draft generation taking longer than 10 seconds — Claude API may be slow.',
      'draft_generation_latency', 'above', 10000.0, 30, 'warning', 30,
-     datetime('now'), datetime('now'));
+     NOW(), NOW());

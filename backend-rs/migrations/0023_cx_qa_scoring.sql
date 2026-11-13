@@ -5,7 +5,7 @@
 
 CREATE TABLE IF NOT EXISTS qa_scores (
     id TEXT PRIMARY KEY,
-    conversation_id UUID NOT NULL,
+    conversation_id TEXT NOT NULL,
     
     -- Overall QA score (0-100)
     overall_score REAL NOT NULL,

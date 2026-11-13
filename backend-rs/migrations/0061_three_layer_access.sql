@@ -6,13 +6,13 @@
 -- 1. Access Grants: Entity-level access linking team members to tenants/orgs/brands
 CREATE TABLE IF NOT EXISTS access_grants (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    team_member_id UUID NOT NULL REFERENCES team_members(id) ON DELETE CASCADE,
+    team_member_id TEXT NOT NULL REFERENCES team_members(id) ON DELETE CASCADE,
     tenant_id TEXT NOT NULL REFERENCES nid_tenants(id) ON DELETE CASCADE,
     org_id UUID REFERENCES nid_organizations(id) ON DELETE CASCADE,
     brand_id UUID REFERENCES nid_brands(id) ON DELETE CASCADE,
     access_type VARCHAR(20) NOT NULL CHECK (access_type IN ('owner', 'partner', 'admin', 'member')),
     partnership_percentage NUMERIC(5,2),
-    granted_by UUID NOT NULL REFERENCES team_members(id),
+    granted_by TEXT NOT NULL REFERENCES team_members(id),
     status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'revoked', 'pending')),
     granted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (team_member_id, tenant_id, org_id, brand_id)
@@ -44,7 +44,7 @@ CREATE INDEX IF NOT EXISTS idx_departments_tenant ON departments(tenant_id);
 -- 3. Department Assignments: Links members to departments at specific scopes
 CREATE TABLE IF NOT EXISTS department_assignments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    team_member_id UUID NOT NULL REFERENCES team_members(id) ON DELETE CASCADE,
+    team_member_id TEXT NOT NULL REFERENCES team_members(id) ON DELETE CASCADE,
     department_id UUID NOT NULL REFERENCES departments(id) ON DELETE CASCADE,
     tenant_id TEXT NOT NULL REFERENCES nid_tenants(id) ON DELETE CASCADE,
     org_id UUID REFERENCES nid_organizations(id) ON DELETE CASCADE,
@@ -61,8 +61,8 @@ CREATE INDEX IF NOT EXISTS idx_dept_assignments_tenant ON department_assignments
 -- 4. Role Assignments: Links members to roles at specific entity levels
 CREATE TABLE IF NOT EXISTS role_assignments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    team_member_id UUID NOT NULL REFERENCES team_members(id) ON DELETE CASCADE,
-    role_definition_id UUID NOT NULL REFERENCES role_definitions(id) ON DELETE CASCADE,
+    team_member_id TEXT NOT NULL REFERENCES team_members(id) ON DELETE CASCADE,
+    role_definition_id TEXT NOT NULL REFERENCES role_definitions(id) ON DELETE CASCADE,
     tenant_id TEXT NOT NULL REFERENCES nid_tenants(id) ON DELETE CASCADE,
     org_id UUID REFERENCES nid_organizations(id) ON DELETE CASCADE,
     brand_id UUID REFERENCES nid_brands(id) ON DELETE CASCADE,
@@ -97,16 +97,16 @@ CREATE TABLE IF NOT EXISTS invitations (
     tenant_id TEXT NOT NULL REFERENCES nid_tenants(id) ON DELETE CASCADE,
     email VARCHAR(500),
     username VARCHAR(500),
-    invited_by UUID NOT NULL REFERENCES team_members(id),
+    invited_by TEXT NOT NULL REFERENCES team_members(id),
     org_id UUID REFERENCES nid_organizations(id) ON DELETE CASCADE,
     brand_id UUID REFERENCES nid_brands(id) ON DELETE CASCADE,
     scope VARCHAR(20) NOT NULL CHECK (scope IN ('tenant', 'organization', 'brand')),
-    role_definition_id UUID REFERENCES role_definitions(id) ON DELETE SET NULL,
+    role_definition_id TEXT REFERENCES role_definitions(id) ON DELETE SET NULL,
     department_id UUID REFERENCES departments(id) ON DELETE SET NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined', 'expired', 'revoked')),
     expires_at TIMESTAMPTZ NOT NULL,
     accepted_at TIMESTAMPTZ,
-    accepted_by UUID REFERENCES team_members(id),
+    accepted_by TEXT REFERENCES team_members(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

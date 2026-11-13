@@ -141,7 +141,7 @@ CREATE TABLE IF NOT EXISTS profile_custom_sections (
     entity_id TEXT NOT NULL,
     section_name TEXT NOT NULL,
     section_type TEXT NOT NULL,  -- 'table', 'list', 'paragraph', 'key_value', 'rich_text'
-    display_order BOOLEAN NOT NULL DEFAULT false,
+    display_order BIGINT NOT NULL DEFAULT 0,
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_by TEXT DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -158,7 +158,7 @@ CREATE TABLE IF NOT EXISTS profile_custom_section_data (
     field_key TEXT NOT NULL,
     field_value TEXT NOT NULL,
     field_type TEXT NOT NULL DEFAULT 'text',  -- 'text', 'number', 'date', 'url', 'boolean', 'json'
-    display_order BOOLEAN NOT NULL DEFAULT false,
+    display_order BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -181,7 +181,7 @@ CREATE TABLE IF NOT EXISTS brand_packages (
     duration_value BOOLEAN DEFAULT true,
     features TEXT DEFAULT '[]',  -- JSON array of feature strings
     is_active BOOLEAN NOT NULL DEFAULT true,
-    display_order BOOLEAN NOT NULL DEFAULT false,
+    display_order BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -200,8 +200,8 @@ CREATE TABLE IF NOT EXISTS brand_promotions (
     end_date TEXT NOT NULL,
     applicable_packages TEXT DEFAULT '[]',  -- JSON array of package IDs
     is_active BOOLEAN NOT NULL DEFAULT true,
-    usage_limit BOOLEAN DEFAULT false,  -- 0 = unlimited
-    usage_count BOOLEAN NOT NULL DEFAULT false,
+    usage_limit BIGINT DEFAULT 0,  -- 0 = unlimited
+    usage_count BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

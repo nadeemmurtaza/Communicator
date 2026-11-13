@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS csat_survey_templates (
     include_comment BOOLEAN NOT NULL DEFAULT true,
     comment_prompt TEXT DEFAULT 'Please tell us how we can improve:',
     trigger_type TEXT NOT NULL DEFAULT 'manual' CHECK (trigger_type IN ('manual', 'auto_on_close', 'auto_on_send', 'scheduled')),
-    trigger_delay_minutes BOOLEAN DEFAULT false,
+    trigger_delay_minutes INTEGER DEFAULT 0,
     channel_filter TEXT, -- JSON array of channels, null means all
     enabled BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

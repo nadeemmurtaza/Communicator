@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS workflows (
     trigger_type TEXT NOT NULL, -- 'event' | 'schedule' | 'manual' | 'webhook'
     trigger_config TEXT, -- JSON: event type, schedule cron, webhook path, etc.
     steps_json TEXT, -- JSON: ordered list of step definitions (visual editor state)
-    execution_count BOOLEAN NOT NULL DEFAULT false,
+    execution_count INTEGER NOT NULL DEFAULT 0,
     last_executed_at TEXT,
     created_by TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

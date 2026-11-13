@@ -8,7 +8,7 @@
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS nid_account_links (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
-    team_member_id UUID NOT NULL UNIQUE,
+    team_member_id TEXT NOT NULL UNIQUE,
     nid_account_id TEXT NOT NULL UNIQUE,
     nid_phone TEXT NOT NULL UNIQUE,
     nid_email TEXT,
@@ -66,7 +66,7 @@ CREATE INDEX IF NOT EXISTS idx_nid_org_mapping_tenant ON nid_organization_mappin
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS nid_organization_memberships (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
-    team_member_id UUID NOT NULL,
+    team_member_id TEXT NOT NULL,
     nid_org_id TEXT NOT NULL,
     nid_membership_id TEXT NOT NULL,
     role TEXT,

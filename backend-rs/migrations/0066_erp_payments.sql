@@ -19,8 +19,8 @@ CREATE TABLE IF NOT EXISTS erp_payments (
     paid_at TEXT,
     refunded_at TEXT,
     refund_amount INTEGER,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (NOW()),
+    updated_at TEXT NOT NULL DEFAULT (NOW())
 );
 CREATE INDEX IF NOT EXISTS idx_erp_payments_order ON erp_payments(order_id);
 CREATE INDEX IF NOT EXISTS idx_erp_payments_status ON erp_payments(status);
@@ -34,8 +34,8 @@ CREATE TABLE IF NOT EXISTS erp_payment_methods (
     code TEXT NOT NULL UNIQUE,
     config JSONB NOT NULL DEFAULT '{}',
     is_active BOOLEAN NOT NULL DEFAULT true,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (NOW()),
+    updated_at TEXT NOT NULL DEFAULT (NOW())
 );
 -- Seed default payment methods
 INSERT INTO erp_payment_methods (id, name, code, config) VALUES

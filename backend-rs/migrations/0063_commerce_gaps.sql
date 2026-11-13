@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS product_options (
     price_adjustment REAL NOT NULL DEFAULT 0,
     required BOOLEAN DEFAULT false,
     max_selections BOOLEAN DEFAULT true,
-    sort_order BOOLEAN DEFAULT false,
+    sort_order INTEGER DEFAULT 0,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS product_option_values (
     name TEXT NOT NULL,
     price_adjustment REAL NOT NULL DEFAULT 0,
     sku TEXT,
-    sort_order BOOLEAN DEFAULT false,
+    sort_order INTEGER DEFAULT 0,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     FOREIGN KEY (option_id) REFERENCES product_options(id) ON DELETE CASCADE
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS delivery_fee_rules (
     postal_codes TEXT,
     regions TEXT,
     is_active BOOLEAN DEFAULT true,
-    sort_order BOOLEAN DEFAULT false,
+    sort_order INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE
@@ -56,7 +56,7 @@ CREATE INDEX IF NOT EXISTS idx_delivery_fee_rules_brand ON delivery_fee_rules(br
 CREATE TABLE IF NOT EXISTS payment_proofs (
     id TEXT PRIMARY KEY,
     order_id TEXT NOT NULL,
-    customer_id UUID NOT NULL,
+    customer_id TEXT NOT NULL,
     file_url TEXT NOT NULL,
     file_name TEXT,
     file_size INTEGER,
@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS order_notification_templates (
 CREATE TABLE IF NOT EXISTS order_notification_log (
     id TEXT PRIMARY KEY,
     order_id TEXT NOT NULL,
-    customer_id UUID NOT NULL,
+    customer_id TEXT NOT NULL,
     channel_type TEXT NOT NULL,
     trigger_event TEXT NOT NULL,
     message_id TEXT,
@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS payment_gateways (
     credentials TEXT,
     currency TEXT DEFAULT 'USD',
     is_active BOOLEAN DEFAULT true,
-    sort_order BOOLEAN DEFAULT false,
+    sort_order INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE
@@ -129,7 +129,7 @@ CREATE TABLE IF NOT EXISTS service_types (
     type TEXT NOT NULL,
     description TEXT,
     is_active BOOLEAN DEFAULT true,
-    sort_order BOOLEAN DEFAULT false,
+    sort_order INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE
@@ -193,7 +193,7 @@ CREATE TABLE IF NOT EXISTS csv_import_jobs (
     status TEXT DEFAULT 'processing',
     total_rows BOOLEAN DEFAULT false,
     processed_rows BOOLEAN DEFAULT false,
-    error_count BOOLEAN DEFAULT false,
+    error_count INTEGER DEFAULT 0,
     errors TEXT,
     completed_at TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -205,7 +205,7 @@ CREATE INDEX IF NOT EXISTS idx_csv_import_jobs_brand ON csv_import_jobs(brand_id
 -- Gap #11: Customer Login
 CREATE TABLE IF NOT EXISTS customer_accounts (
     id TEXT PRIMARY KEY,
-    customer_id UUID NOT NULL UNIQUE,
+    customer_id TEXT NOT NULL UNIQUE,
     email TEXT,
     phone TEXT,
     password_hash TEXT,
@@ -223,7 +223,7 @@ CREATE INDEX IF NOT EXISTS idx_customer_accounts_phone ON customer_accounts(phon
 CREATE TABLE IF NOT EXISTS customer_reviews (
     id TEXT PRIMARY KEY,
     order_id TEXT NOT NULL,
-    customer_id UUID NOT NULL,
+    customer_id TEXT NOT NULL,
     product_id TEXT,
     rating INTEGER NOT NULL,
     comment TEXT,
@@ -255,7 +255,7 @@ CREATE TABLE IF NOT EXISTS loyalty_programs (
 
 CREATE TABLE IF NOT EXISTS customer_points (
     id TEXT PRIMARY KEY,
-    customer_id UUID NOT NULL,
+    customer_id TEXT NOT NULL,
     brand_id TEXT NOT NULL,
     points_balance BOOLEAN NOT NULL DEFAULT false,
     points_earned BOOLEAN NOT NULL DEFAULT false,
@@ -268,7 +268,7 @@ CREATE TABLE IF NOT EXISTS customer_points (
 
 CREATE TABLE IF NOT EXISTS points_transactions (
     id TEXT PRIMARY KEY,
-    customer_id UUID NOT NULL,
+    customer_id TEXT NOT NULL,
     brand_id TEXT NOT NULL,
     points INTEGER NOT NULL,
     transaction_type TEXT NOT NULL,
@@ -287,7 +287,7 @@ CREATE INDEX IF NOT EXISTS idx_points_transactions_customer ON points_transactio
 CREATE TABLE IF NOT EXISTS payment_reminders (
     id TEXT PRIMARY KEY,
     order_id TEXT NOT NULL,
-    customer_id UUID NOT NULL,
+    customer_id TEXT NOT NULL,
     channel_type TEXT NOT NULL,
     reminder_type TEXT NOT NULL,
     scheduled_at TEXT,
@@ -303,7 +303,7 @@ CREATE INDEX IF NOT EXISTS idx_payment_reminders_order ON payment_reminders(orde
 CREATE TABLE IF NOT EXISTS delivery_reminders (
     id TEXT PRIMARY KEY,
     order_id TEXT NOT NULL,
-    customer_id UUID NOT NULL,
+    customer_id TEXT NOT NULL,
     channel_type TEXT NOT NULL,
     reminder_type TEXT NOT NULL,
     scheduled_at TEXT,
@@ -368,10 +368,10 @@ CREATE INDEX IF NOT EXISTS idx_receipts_order ON receipts(order_id);
 CREATE TABLE IF NOT EXISTS commerce_inbox_threads (
     id TEXT PRIMARY KEY,
     brand_id TEXT NOT NULL,
-    customer_id UUID NOT NULL,
+    customer_id TEXT NOT NULL,
     channel_type TEXT NOT NULL,
     last_message_at TEXT,
-    unread_count BOOLEAN DEFAULT false,
+    unread_count INTEGER DEFAULT 0,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -388,7 +388,7 @@ CREATE TABLE IF NOT EXISTS wholesale_pricing (
     product_id TEXT NOT NULL,
     customer_group TEXT NOT NULL,
     price REAL NOT NULL,
-    min_quantity BOOLEAN DEFAULT true,
+    min_quantity INTEGER DEFAULT 1,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -415,9 +415,9 @@ CREATE INDEX IF NOT EXISTS idx_payment_fees_order ON payment_fees(order_id);
 CREATE TABLE IF NOT EXISTS payment_recovery (
     id TEXT PRIMARY KEY,
     order_id TEXT NOT NULL,
-    customer_id UUID NOT NULL,
+    customer_id TEXT NOT NULL,
     channel_type TEXT NOT NULL,
-    attempt_count BOOLEAN DEFAULT false,
+    attempt_count INTEGER DEFAULT 0,
     last_attempt_at TEXT,
     status TEXT DEFAULT 'pending',
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -432,7 +432,7 @@ CREATE TABLE IF NOT EXISTS automated_followups (
     brand_id TEXT NOT NULL,
     name TEXT NOT NULL,
     trigger_type TEXT NOT NULL,
-    trigger_days BOOLEAN DEFAULT false,
+    trigger_days INTEGER DEFAULT 0,
     channel_type TEXT NOT NULL,
     template_body TEXT NOT NULL,
     is_active BOOLEAN DEFAULT true,
@@ -444,7 +444,7 @@ CREATE TABLE IF NOT EXISTS automated_followups (
 CREATE TABLE IF NOT EXISTS followup_log (
     id TEXT PRIMARY KEY,
     followup_id TEXT NOT NULL,
-    customer_id UUID NOT NULL,
+    customer_id TEXT NOT NULL,
     channel_type TEXT NOT NULL,
     sent_at TEXT,
     status TEXT DEFAULT 'pending',
@@ -480,7 +480,7 @@ CREATE TABLE IF NOT EXISTS storefront_pages (
     slug TEXT NOT NULL,
     title TEXT NOT NULL,
     content TEXT,
-    sort_order BOOLEAN DEFAULT false,
+    sort_order INTEGER DEFAULT 0,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -519,7 +519,7 @@ CREATE TABLE IF NOT EXISTS checkout_questions (
     question_type TEXT NOT NULL DEFAULT 'text',
     options TEXT,
     is_required BOOLEAN DEFAULT false,
-    sort_order BOOLEAN DEFAULT false,
+    sort_order INTEGER DEFAULT 0,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
