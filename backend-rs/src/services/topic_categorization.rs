@@ -392,11 +392,12 @@ async fn fetch_existing_topic(state: &AppState, conversation_id: &str) -> Option
     let row = sqlx::query(
         "SELECT id, conversation_id, topic, subtopic, confidence, keywords,
          is_overridden, overridden_by, categorized_at, created_at, updated_at
-         FROM conversation_topics WHERE conversation_id = ? ORDER BY created_at DESC LIMIT 1",
+         FROM conversation_topics WHERE conversation_id = $1 ORDER BY created_at DESC LIMIT 1",
     )
     .bind(conversation_id)
     .fetch_optional(&state.db)
-    .await?;
+    .await
+    .ok()?;
 
     let row = row?;
 

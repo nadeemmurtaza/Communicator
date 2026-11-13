@@ -201,11 +201,12 @@ async fn fetch_cached_context(state: &AppState, draft_id: &str) -> Option<Copilo
         "SELECT id, draft_id, conversation_id, contact_id, conversation_summary,
          customer_profile, suggested_edits, key_topics, customer_sentiment,
          generated, generated_at, created_at, updated_at
-         FROM copilot_context WHERE draft_id = ? ORDER BY created_at DESC LIMIT 1",
+         FROM copilot_context WHERE draft_id = $1 ORDER BY created_at DESC LIMIT 1",
     )
     .bind(draft_id)
     .fetch_optional(&state.db)
-    .await?;
+    .await
+    .ok()?;
 
     let row = row?;
 
