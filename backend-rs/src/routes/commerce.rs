@@ -808,14 +808,16 @@ pub async fn webhook_woocommerce(
     body: String,
 ) -> Result<StatusCode, (StatusCode, String)> {
     // Parse event type from WooCommerce webhook topic
-    let event_type = serde_json::from_str::<serde_json::Value>(&body)
-        .ok()
-        .and_then(|v| v.get("topic").and_then(|t| t.as_str()))
+    let parsed_body: Option<serde_json::Value> = serde_json::from_str(&body).ok();
+    let event_type = parsed_body
+        .as_ref()
+        .and_then(|v| v.get("topic"))
+        .and_then(|t| t.as_str())
         .unwrap_or("unknown");
     let now = chrono::Utc::now().to_rfc3339();
     let _ = sqlx::query(
         "INSERT INTO webhook_events (platform, event_type, payload, processed, created_at) \
-         VALUES ('woocommerce', ?, ?, 0, ?)",
+         VALUES ('woocommerce', $1, $2, 0, $3)",
     )
     .bind(event_type)
     .bind(&body)

@@ -5935,8 +5935,7 @@ pub async fn whatsapp_costs(
         let category: Option<String> = r.try_get("conversation_category").ok().flatten();
         let rate: Option<f64> = r.try_get("rate_per_conversation").ok().flatten();
         if let (Some(cat), Some(rate_val)) = (category, rate) {
-            rates_by_category.entry(cat).or_insert(0.0);
-            *rates_by_category.get_mut(&cat).unwrap() = rate_val;
+            rates_by_category.insert(cat, rate_val);
         }
     }
 

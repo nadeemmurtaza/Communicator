@@ -21,7 +21,7 @@ pub async fn health_check(State(state): State<AppState>) -> impl IntoResponse {
         .await
     {
         Ok(Some(row)) => {
-            let version: String = row.try_get("version").unwrap_or_default();
+            let version: String = row;
             let checked = sqlx::query("SELECT COUNT(*) AS inboxes FROM inboxes")
                 .fetch_optional(&state.db)
                 .await
