@@ -12,8 +12,8 @@
 //! - Full audit logging for all OTP events
 
 use crate::db::DbPool;
+use chrono::Datelike;
 use serde::{Deserialize, Serialize};
-use sqlx::PgRow;
 use std::collections::HashMap;
 use tracing::{error, info, warn};
 
@@ -21,7 +21,7 @@ use tracing::{error, info, warn};
 // Data types
 // ---------------------------------------------------------------------------
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct OtpRecord {
     pub id: String,
     pub brand_id: String,
@@ -44,7 +44,7 @@ pub struct OtpRecord {
     pub created_at: String,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct OtpChannelConfig {
     pub id: String,
     pub brand_id: String,
@@ -240,8 +240,20 @@ fn hash_otp(code: &str, salt: &str) -> String {
 fn verify_otp_hash(code: &str, stored_hash: &str, salt: &str) -> bool {
     let computed = hash_otp(code, salt);
     // Constant-time comparison to prevent timing attacks
-    use hmac::Compare;
-    computed.as_bytes().ct_eq(stored_hash.as_bytes()).into()
+    constant_time_eq(computed.as_bytes(), stored_hash.as_bytes())
+}
+
+/// Constant-time byte comparison (no early return on mismatch), to avoid
+/// leaking how many leading bytes matched via response timing.
+fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    let mut diff: u8 = 0;
+    for (x, y) in a.iter().zip(b.iter()) {
+        diff |= x ^ y;
+    }
+    diff == 0
 }
 
 /// Mask an OTP code for safe display/storage.
@@ -354,7 +366,7 @@ struct RateLimitCheck {
 
 async fn check_rate_limit(pool: &DbPool, brand_id: &str, recipient: &str, config: &OtpChannelConfig) -> RateLimitCheck {
     // Check lockout first
-    let locked: Option<(String,)> = sqlx::query_as(
+    let locked: Result<Option<(String,)>, sqlx::Error> = sqlx::query_as(
         "SELECT locked_until FROM otp_rate_limit WHERE brand_id = $1 AND recipient = $2 AND window_type = 'hour' AND locked_until > NOW() LIMIT 1"
     )
     .bind(brand_id)
@@ -370,7 +382,7 @@ async fn check_rate_limit(pool: &DbPool, brand_id: &str, recipient: &str, config
     }
 
     // Check per-minute rate limit
-    let minute_count: Option<(i64,)> = sqlx::query_as(
+    let minute_count: Result<Option<(i64,)>, sqlx::Error> = sqlx::query_as(
         "SELECT request_count FROM otp_rate_limit WHERE brand_id = $1 AND recipient = $2 AND window_type = 'minute' AND window_start > NOW() - INTERVAL '1 minute' LIMIT 1"
     )
     .bind(brand_id)
@@ -388,7 +400,7 @@ async fn check_rate_limit(pool: &DbPool, brand_id: &str, recipient: &str, config
     }
 
     // Check per-hour rate limit
-    let hour_count: Option<(i64,)> = sqlx::query_as(
+    let hour_count: Result<Option<(i64,)>, sqlx::Error> = sqlx::query_as(
         "SELECT request_count FROM otp_rate_limit WHERE brand_id = $1 AND recipient = $2 AND window_type = 'hour' AND window_start > NOW() - INTERVAL '1 hour' LIMIT 1"
     )
     .bind(brand_id)
@@ -406,7 +418,7 @@ async fn check_rate_limit(pool: &DbPool, brand_id: &str, recipient: &str, config
     }
 
     // Check cooldown
-    let last_sent: Option<(String,)> = sqlx::query_as(
+    let last_sent: Result<Option<(String,)>, sqlx::Error> = sqlx::query_as(
         "SELECT sent_at FROM otp_records WHERE brand_id = $1 AND recipient = $2 AND sent_at IS NOT NULL ORDER BY sent_at DESC LIMIT 1"
     )
     .bind(brand_id)
@@ -474,7 +486,7 @@ async fn check_ip_rate_limit(
     config: &OtpChannelConfig,
 ) -> RateLimitCheck {
     // Check per-minute rate limit for this IP
-    let minute_count: Option<(i64,)> = sqlx::query_as(
+    let minute_count: Result<Option<(i64,)>, sqlx::Error> = sqlx::query_as(
         "SELECT request_count FROM otp_rate_limit
          WHERE brand_id = $1 AND recipient = $2 AND window_type = 'minute'
          AND window_start > NOW() - INTERVAL '1 minute' LIMIT 1"
@@ -494,7 +506,7 @@ async fn check_ip_rate_limit(
     }
 
     // Check per-hour rate limit for this IP
-    let hour_count: Option<(i64,)> = sqlx::query_as(
+    let hour_count: Result<Option<(i64,)>, sqlx::Error> = sqlx::query_as(
         "SELECT request_count FROM otp_rate_limit
          WHERE brand_id = $1 AND recipient = $2 AND window_type = 'hour'
          AND window_start > NOW() - INTERVAL '1 hour' LIMIT 1"
@@ -622,16 +634,16 @@ impl OtpEngine {
     /// Get or create the channel configuration for a brand.
     pub async fn get_channel_config(pool: &DbPool, brand_id: &str) -> Result<OtpChannelConfig, String> {
         // Try to fetch existing config
-        let existing: Option<(
-            String, String, bool, bool, bool, bool, String, i64, String,
-            i64, i64, i64, i64, i64, i64, i64, i64,
-            Option<String>, Option<String>, Option<String>, String, String,
-        )> = sqlx::query_as(
+        let existing: Option<OtpChannelConfig> = sqlx::query_as(
             "SELECT id, brand_id, whatsapp_enabled, email_enabled, sms_enabled, in_app_enabled,
-                    default_channel, code_length, code_charset, ttl_seconds, max_attempts,
-                    rate_limit_per_minute, rate_limit_per_hour, cooldown_seconds, lockout_seconds,
+                    default_channel, code_length::BIGINT AS code_length, code_charset,
+                    ttl_seconds::BIGINT AS ttl_seconds, max_attempts::BIGINT AS max_attempts,
+                    rate_limit_per_minute::BIGINT AS rate_limit_per_minute,
+                    rate_limit_per_hour::BIGINT AS rate_limit_per_hour,
+                    cooldown_seconds::BIGINT AS cooldown_seconds,
+                    lockout_seconds::BIGINT AS lockout_seconds,
                     template_name, whatsapp_message_template, sms_message_template,
-                    created_at, updated_at
+                    created_at::TEXT AS created_at, updated_at::TEXT AS updated_at
              FROM otp_channel_config WHERE brand_id = $1 LIMIT 1"
         )
         .bind(brand_id)
@@ -640,28 +652,7 @@ impl OtpEngine {
         .map_err(|e| format!("DB error: {}", e))?;
 
         if let Some(row) = existing {
-            Ok(OtpChannelConfig {
-                id: row.0,
-                brand_id: row.1,
-                whatsapp_enabled: row.2,
-                email_enabled: row.3,
-                sms_enabled: row.4,
-                in_app_enabled: row.5,
-                default_channel: row.6,
-                code_length: row.7,
-                code_charset: row.8,
-                ttl_seconds: row.9,
-                max_attempts: row.10,
-                rate_limit_per_minute: row.11,
-                rate_limit_per_hour: row.12,
-                cooldown_seconds: row.13,
-                lockout_seconds: row.14,
-                template_name: row.15,
-                whatsapp_message_template: row.16,
-                sms_message_template: row.17,
-                created_at: row.18,
-                updated_at: row.19,
-            })
+            Ok(row)
         } else {
             // Create default config for this brand
             let id = format!("otp-config-{}", uuid::Uuid::new_v4().simple());
@@ -675,7 +666,7 @@ impl OtpEngine {
             .map_err(|e| format!("DB error: {}", e))?;
 
             // Fetch the newly created config
-            Self::get_channel_config(pool, brand_id).await
+            Box::pin(Self::get_channel_config(pool, brand_id)).await
         }
     }
 
@@ -923,7 +914,7 @@ impl OtpEngine {
                     channel: channel.clone(),
                     message: format!("OTP generated but failed to send via {}: {}", channel, e),
                     expires_in_seconds: ttl,
-                    error: Some(e),
+                    error: Some(e.clone()),
                 });
             }
         }
@@ -931,8 +922,8 @@ impl OtpEngine {
         Ok(GenerateOtpResponse {
             success: true,
             otp_id,
-            channel,
             message: format!("OTP sent via {} to {}", channel, req.recipient),
+            channel,
             expires_in_seconds: ttl,
             error: None,
         })
@@ -1139,9 +1130,9 @@ impl OtpEngine {
         let resp = client.post(&url)
             .basic_auth(&twilio_account_id, Some(&twilio_auth_token))
             .form(&[
-                ("From", &twilio_from),
+                ("From", twilio_from.as_str()),
                 ("To", recipient),
-                ("Body", &formatted),
+                ("Body", formatted.as_str()),
             ])
             .send()
             .await;
@@ -1211,7 +1202,7 @@ impl OtpEngine {
     ) -> Result<VerifyOtpResponse, String> {
         // Fetch the OTP record including metadata for IP binding
         let record: Option<(
-            String, String, String, String, String, i64, i64, String, i64,
+            String, String, String, String, i64, i64, i64, String, String,
             serde_json::Value,
         )> = sqlx::query_as(
             "SELECT id, otp_hash, otp_salt, status, attempts, max_attempts, ttl_seconds, expires_at, brand_id::text, metadata
@@ -1274,7 +1265,7 @@ impl OtpEngine {
                     // Log IP mismatch as security event
                     let _ = log_audit_event(
                         pool, &record.8, Some(&req.otp_id), "failed_attempt", None,
-                        None, req_ip.as_deref(), req.user_agent.as_deref(),
+                        None, Some(req_ip.as_str()), req.user_agent.as_deref(),
                         &serde_json::json!({ "reason": "ip_mismatch", "stored_ip": stored_ip, "request_ip": req_ip }),
                     ).await;
 
@@ -1425,14 +1416,14 @@ impl OtpEngine {
         brand_id: &str,
         limit: i64,
     ) -> Result<Vec<OtpRecord>, String> {
-        let rows: Vec<(
-            String, String, String, String, String, String, String,
-            String, String, String, i64, i64, i64, String, String,
-            Option<String>, Option<String>, serde_json::Value, String,
-        )> = sqlx::query_as(
-            "SELECT id, brand_id, otp_code, otp_hash, otp_salt, purpose, channel,
-                    recipient, recipient_type, status, attempts, max_attempts, ttl_seconds,
-                    generated_at, expires_at, sent_at, verified_at, metadata, created_at
+        let rows: Vec<OtpRecord> = sqlx::query_as(
+            "SELECT id, brand_id, '••••••' AS otp_code, otp_hash, otp_salt, purpose, channel,
+                    recipient, recipient_type, status,
+                    attempts::BIGINT AS attempts, max_attempts::BIGINT AS max_attempts,
+                    ttl_seconds::BIGINT AS ttl_seconds,
+                    generated_at::TEXT AS generated_at, expires_at::TEXT AS expires_at,
+                    sent_at::TEXT AS sent_at, verified_at::TEXT AS verified_at,
+                    metadata, created_at::TEXT AS created_at
              FROM otp_records WHERE brand_id = $1
              ORDER BY created_at DESC LIMIT $2"
         )
@@ -1442,27 +1433,7 @@ impl OtpEngine {
         .await
         .map_err(|e| format!("DB error: {}", e))?;
 
-        Ok(rows.into_iter().map(|r| OtpRecord {
-            id: r.0,
-            brand_id: r.1,
-            otp_code: "••••••".to_string(), // Mask the code for security
-            otp_hash: r.3,
-            otp_salt: r.4,
-            purpose: r.5,
-            channel: r.6,
-            recipient: r.7,
-            recipient_type: r.8,
-            status: r.9,
-            attempts: r.10,
-            max_attempts: r.11,
-            ttl_seconds: r.12,
-            generated_at: r.13,
-            expires_at: r.14,
-            sent_at: r.15,
-            verified_at: r.16,
-            metadata: r.17,
-            created_at: r.18,
-        }).collect())
+        Ok(rows)
     }
 
     /// Get audit log for a brand.
