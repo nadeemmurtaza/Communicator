@@ -74,6 +74,14 @@ impl SyncService {
                     http_client: self.http_client.clone(),
                 },
             )),
+            "square" => Ok(Box::new(crate::services::sync_square::SquareSyncAdapter {
+                connection: Some(conn.clone()),
+                http_client: self.http_client.clone(),
+            })),
+            "wix" => Ok(Box::new(crate::services::sync_wix::WixSyncAdapter {
+                connection: Some(conn.clone()),
+                http_client: self.http_client.clone(),
+            })),
             other => Err(format!("Unsupported sync platform: {other}")),
         }
     }
@@ -218,6 +226,56 @@ impl SyncService {
             ),
             errors,
         })
+    }
+
+    /// Enqueue an outbound sync of a single entity across every sync
+    /// connection configured for the brand. Rather than syncing inline on
+    /// the request path, this drops a row per connection into `sync_queue`
+    /// so `process_sync_queue` (POST /commerce/sync/queue/process) can drain
+    /// it — the same queue/worker path the sync connections UI already
+    /// uses for retries. Returns the number of connections queued.
+    async fn enqueue_entity_sync(
+        &self,
+        brand_id: &str,
+        entity_type: &str,
+        entity_id: &str,
+    ) -> Result<i64, String> {
+        let connections = self.list_connections(brand_id).await?;
+        let mut queued = 0i64;
+        for conn in &connections {
+            let id = format!("syncq_{}", Uuid::new_v4().as_hyphenated());
+            sqlx::query(
+                "INSERT INTO sync_queue (id, connection_id, entity_type, entity_id, direction, status, created_at) \
+                 VALUES ($1, $2, $3, $4, 'outbound', 'pending', NOW())",
+            )
+            .bind(&id)
+            .bind(&conn.id)
+            .bind(entity_type)
+            .bind(entity_id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| format!("Failed to queue {entity_type} sync for connection {}: {e}", conn.id))?;
+            queued += 1;
+        }
+        Ok(queued)
+    }
+
+    /// Queue a product (create/update) for outbound sync to every platform
+    /// connected for this brand.
+    pub async fn queue_product_sync(&self, product_id: &str, brand_id: &str) -> Result<i64, String> {
+        self.enqueue_entity_sync(brand_id, "product", product_id).await
+    }
+
+    /// Queue an inventory-count change for outbound sync to every platform
+    /// connected for this brand.
+    pub async fn queue_inventory_sync(&self, product_id: &str, brand_id: &str) -> Result<i64, String> {
+        self.enqueue_entity_sync(brand_id, "inventory", product_id).await
+    }
+
+    /// Queue an order (creation/status change) for outbound sync to every
+    /// platform connected for this brand.
+    pub async fn queue_order_sync(&self, order_id: &str, brand_id: &str) -> Result<i64, String> {
+        self.enqueue_entity_sync(brand_id, "order", order_id).await
     }
 
     pub async fn sync_all_platforms(&self, brand_id: &str) -> Result<Vec<SyncResult>, String> {
