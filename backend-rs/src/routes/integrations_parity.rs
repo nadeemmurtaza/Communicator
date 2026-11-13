@@ -340,7 +340,7 @@ struct TrackerRow {
     updated_at: Option<String>,
 }
 
-const SELECT_TRACKER: &str = "SELECT id, provider, account_name, is_enabled, test_mode, credentials, config, last_tested_at, last_test_status, created_at, updated_at FROM issue_tracker_configs WHERE provider = ?";
+const SELECT_TRACKER: &str = "SELECT id, provider, account_name, is_enabled, test_mode, credentials, config, last_tested_at, last_test_status, created_at, updated_at FROM issue_tracker_configs WHERE provider = $1";
 
 impl TrackerRow {
     fn creds(&self) -> Value {
