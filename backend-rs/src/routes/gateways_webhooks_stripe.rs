@@ -2310,7 +2310,7 @@ pub async fn test_gateway_connection(
 
     let mut warnings: Vec<String> = Vec::new();
     match sqlx::query(
-        "UPDATE channel_gateway_connections SET test_status = ?, latency_ms = ?, last_tested_at = ?, updated_at = ? WHERE id = ?",
+        "UPDATE channel_gateway_connections SET test_status = $1, latency_ms = $2, last_tested_at = $3, updated_at = $4 WHERE id = $5",
     )
     .bind(&gw.test_status)
     .bind(gw.latency_ms)
@@ -2377,7 +2377,7 @@ pub async fn set_default_gateway(
     let mut warnings: Vec<String> = Vec::new();
 
     // Unset default on others of same gateway_type
-    match sqlx::query("UPDATE channel_gateway_connections SET is_default = 0, updated_at = ? WHERE gateway_type = ?")
+    match sqlx::query("UPDATE channel_gateway_connections SET is_default = 0, updated_at = $1 WHERE gateway_type = $2")
         .bind(&now)
         .bind(&gw.gateway_type)
         .execute(&state.db)
@@ -2395,7 +2395,7 @@ pub async fn set_default_gateway(
     gw.is_default = true;
     gw.updated_at = now.clone();
 
-    match sqlx::query("UPDATE channel_gateway_connections SET is_default = 1, updated_at = ? WHERE id = ?")
+    match sqlx::query("UPDATE channel_gateway_connections SET is_default = 1, updated_at = $1 WHERE id = $2")
         .bind(&gw.updated_at)
         .bind(&id)
         .execute(&state.db)
@@ -2491,7 +2491,7 @@ pub async fn send_gateway_ping(
     }
     let mut warnings: Vec<String> = Vec::new();
     match sqlx::query(
-        "UPDATE channel_gateway_connections SET last_tested_at = ?, latency_ms = ?, test_status = ?, updated_at = ? WHERE id = ?",
+        "UPDATE channel_gateway_connections SET last_tested_at = $1, latency_ms = $2, test_status = $3, updated_at = $4 WHERE id = $5",
     )
     .bind(&now)
     .bind(gw.latency_ms)
@@ -2561,7 +2561,7 @@ pub async fn get_single_webhook_endpoint(
 ) -> impl IntoResponse {
 
     let row = match sqlx::query_as::<_, WebhookEndpointDbRow>(
-        "SELECT id, name, url, secret, events, headers, is_active, retry_count, timeout_seconds, total_delivered, total_failed, last_status_code, last_delivered_at, created_at, updated_at FROM webhook_endpoints WHERE id = ?",
+        "SELECT id, name, url, secret, events, headers, is_active, retry_count, timeout_seconds, total_delivered, total_failed, last_status_code, last_delivered_at, created_at, updated_at FROM webhook_endpoints WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -2643,7 +2643,7 @@ pub async fn get_webhook_deliveries(
     let limit = query.limit.unwrap_or(50).clamp(1, 200);
 
     let rows = match sqlx::query_as::<_, WebhookDeliveryLogDbRow>(
-        "SELECT id, endpoint_id, event, payload, status_code, response_headers, response_body, duration_ms, attempt, success, error_message, created_at FROM webhook_delivery_logs ORDER BY created_at DESC LIMIT ?",
+        "SELECT id, endpoint_id, event, payload, status_code, response_headers, response_body, duration_ms, attempt, success, error_message, created_at FROM webhook_delivery_logs ORDER BY created_at DESC LIMIT $1",
     )
     .bind(limit)
     .fetch_all(&state.db)
@@ -2669,7 +2669,7 @@ pub async fn get_endpoint_deliveries(
     let limit = query.limit.unwrap_or(50).clamp(1, 200);
 
     let rows = match sqlx::query_as::<_, WebhookDeliveryLogDbRow>(
-        "SELECT id, endpoint_id, event, payload, status_code, response_headers, response_body, duration_ms, attempt, success, error_message, created_at FROM webhook_delivery_logs WHERE endpoint_id = ? ORDER BY created_at DESC LIMIT ?",
+        "SELECT id, endpoint_id, event, payload, status_code, response_headers, response_body, duration_ms, attempt, success, error_message, created_at FROM webhook_delivery_logs WHERE endpoint_id = $1 ORDER BY created_at DESC LIMIT $2",
     )
     .bind(&id)
     .bind(limit)
@@ -2806,7 +2806,7 @@ pub async fn create_webhook_endpoint(
     match sqlx::query(
         r#"
         INSERT INTO webhook_endpoints (id, name, url, secret, events, headers, is_active, retry_count, timeout_seconds, total_delivered, total_failed, last_status_code, last_delivered_at, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, NULL, NULL, ?, ?)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0, 0, NULL, NULL, $10, $11)
         "#,
     )
     .bind(&id)
@@ -2829,7 +2829,7 @@ pub async fn create_webhook_endpoint(
     }
 
     let created = sqlx::query_as::<_, WebhookEndpointDbRow>(
-        "SELECT id, name, url, secret, events, headers, is_active, retry_count, timeout_seconds, total_delivered, total_failed, last_status_code, last_delivered_at, created_at, updated_at FROM webhook_endpoints WHERE id = ?",
+        "SELECT id, name, url, secret, events, headers, is_active, retry_count, timeout_seconds, total_delivered, total_failed, last_status_code, last_delivered_at, created_at, updated_at FROM webhook_endpoints WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -2872,7 +2872,7 @@ pub async fn update_webhook_endpoint(
     Json(payload): Json<serde_json::Value>,
 ) -> impl IntoResponse {
     let existing = match sqlx::query_as::<_, WebhookEndpointDbRow>(
-        "SELECT id, name, url, secret, events, headers, is_active, retry_count, timeout_seconds, total_delivered, total_failed, last_status_code, last_delivered_at, created_at, updated_at FROM webhook_endpoints WHERE id = ?",
+        "SELECT id, name, url, secret, events, headers, is_active, retry_count, timeout_seconds, total_delivered, total_failed, last_status_code, last_delivered_at, created_at, updated_at FROM webhook_endpoints WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -2966,7 +2966,7 @@ pub async fn update_webhook_endpoint(
     }
 
     match sqlx::query(
-        "UPDATE webhook_endpoints SET name = ?, url = ?, secret = ?, events = ?, headers = ?, is_active = ?, retry_count = ?, timeout_seconds = ?, updated_at = ? WHERE id = ?",
+        "UPDATE webhook_endpoints SET name = $1, url = $2, secret = $3, events = $4, headers = $5, is_active = $6, retry_count = $7, timeout_seconds = $8, updated_at = $9 WHERE id = $10",
     )
     .bind(&ep.name)
     .bind(&ep.url)
@@ -3013,7 +3013,7 @@ pub async fn delete_webhook_endpoint(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    let logs = match sqlx::query("DELETE FROM webhook_delivery_logs WHERE endpoint_id = ?")
+    let logs = match sqlx::query("DELETE FROM webhook_delivery_logs WHERE endpoint_id = $1")
         .bind(&id)
         .execute(&state.db)
         .await
@@ -3022,7 +3022,7 @@ pub async fn delete_webhook_endpoint(
         Ok(res) => res.rows_affected(),
     };
 
-    match sqlx::query("DELETE FROM webhook_endpoints WHERE id = ?")
+    match sqlx::query("DELETE FROM webhook_endpoints WHERE id = $1")
         .bind(&id)
         .execute(&state.db)
         .await
@@ -3055,7 +3055,7 @@ pub async fn test_webhook_ping(
     Path(id): Path<String>,
 ) -> impl IntoResponse {
     let existing = match sqlx::query_as::<_, WebhookEndpointDbRow>(
-        "SELECT id, name, url, secret, events, headers, is_active, retry_count, timeout_seconds, total_delivered, total_failed, last_status_code, last_delivered_at, created_at, updated_at FROM webhook_endpoints WHERE id = ?",
+        "SELECT id, name, url, secret, events, headers, is_active, retry_count, timeout_seconds, total_delivered, total_failed, last_status_code, last_delivered_at, created_at, updated_at FROM webhook_endpoints WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -3174,7 +3174,7 @@ pub async fn test_webhook_ping(
     match sqlx::query(
         r#"
         INSERT INTO webhook_delivery_logs (id, endpoint_id, event, payload, status_code, response_headers, response_body, duration_ms, attempt, success, error_message, created_at)
-        VALUES (?, ?, 'ping.test', ?, ?, ?, ?, ?, 1, ?, ?, ?)
+        VALUES ($1, $2, 'ping.test', $3, $4, $5, $6, $7, 1, $8, $9, $10)
         "#,
     )
     .bind(&delivery_id)
@@ -3208,7 +3208,7 @@ pub async fn test_webhook_ping(
     ep.updated_at = now_str.clone();
 
     match sqlx::query(
-        "UPDATE webhook_endpoints SET total_delivered = ?, total_failed = ?, last_status_code = ?, last_delivered_at = ?, updated_at = ? WHERE id = ?",
+        "UPDATE webhook_endpoints SET total_delivered = $1, total_failed = $2, last_status_code = $3, last_delivered_at = $4, updated_at = $5 WHERE id = $6",
     )
     .bind(ep.total_delivered)
     .bind(ep.total_failed)
@@ -3249,7 +3249,7 @@ pub async fn resend_webhook_delivery(
 ) -> impl IntoResponse {
     let log_row =
         match sqlx::query_as::<_, WebhookDeliveryLogDbRow>(
-            "SELECT id, endpoint_id, event, payload, status_code, response_headers, response_body, duration_ms, attempt, success, error_message, created_at FROM webhook_delivery_logs WHERE id = ?",
+            "SELECT id, endpoint_id, event, payload, status_code, response_headers, response_body, duration_ms, attempt, success, error_message, created_at FROM webhook_delivery_logs WHERE id = $1",
         )
         .bind(&id)
         .fetch_optional(&state.db)
@@ -3269,7 +3269,7 @@ pub async fn resend_webhook_delivery(
 
     let ep_row =
         match sqlx::query_as::<_, WebhookEndpointDbRow>(
-            "SELECT id, name, url, secret, events, headers, is_active, retry_count, timeout_seconds, total_delivered, total_failed, last_status_code, last_delivered_at, created_at, updated_at FROM webhook_endpoints WHERE id = ?",
+            "SELECT id, name, url, secret, events, headers, is_active, retry_count, timeout_seconds, total_delivered, total_failed, last_status_code, last_delivered_at, created_at, updated_at FROM webhook_endpoints WHERE id = $1",
         )
         .bind(&orig_log.endpoint_id)
         .fetch_optional(&state.db)
@@ -3360,7 +3360,7 @@ pub async fn resend_webhook_delivery(
     match sqlx::query(
         r#"
         INSERT INTO webhook_delivery_logs (id, endpoint_id, event, payload, status_code, response_headers, response_body, duration_ms, attempt, success, error_message, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         "#,
     )
     .bind(&new_delivery_id)
@@ -3395,7 +3395,7 @@ pub async fn resend_webhook_delivery(
     ep.updated_at = now_str.clone();
 
     match sqlx::query(
-        "UPDATE webhook_endpoints SET total_delivered = ?, total_failed = ?, last_status_code = ?, last_delivered_at = ?, updated_at = ? WHERE id = ?",
+        "UPDATE webhook_endpoints SET total_delivered = $1, total_failed = $2, last_status_code = $3, last_delivered_at = $4, updated_at = $5 WHERE id = $6",
     )
     .bind(ep.total_delivered)
     .bind(ep.total_failed)
@@ -3613,7 +3613,7 @@ async fn resolve_stripe_customer(state: &AppState, identifier: &str) -> Result<S
     if !email.contains('@') {
         // Treat it as a local contact id and use that contact's real address.
         let row: Option<(Option<String>, Option<String>)> = match sqlx::query_as(
-            "SELECT value, person_name FROM contacts WHERE id = ? OR value = ? LIMIT 1",
+            "SELECT value, person_name FROM contacts WHERE id = $1 OR value = $2 LIMIT 1",
         )
         .bind(identifier)
         .bind(identifier)
@@ -4044,7 +4044,7 @@ pub async fn process_stripe_refund(
             let written = sqlx::query(
                 r#"
                 INSERT INTO stripe_billing_action_logs (id, contact_id, customer_identifier, action_type, amount_cents, currency, status, stripe_id, actor_email, reason, details, created_at)
-                VALUES (?, ?, ?, 'refund', ?, ?, 'failed', '', ?, ?, ?, ?)
+                VALUES ($1, $2, $3, 'refund', $4, $5, 'failed', '', $6, $7, $8, $9)
                 "#,
             )
             .bind(&log_id)
@@ -4166,7 +4166,7 @@ pub async fn process_stripe_refund(
     let written = sqlx::query(
         r#"
         INSERT INTO stripe_billing_action_logs (id, contact_id, customer_identifier, action_type, amount_cents, currency, status, stripe_id, actor_email, reason, details, created_at)
-        VALUES (?, ?, ?, 'refund', ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES ($1, $2, $3, 'refund', $4, $5, $6, $7, $8, $9, $10, $11)
         "#,
     )
     .bind(&log_id)
@@ -4310,7 +4310,7 @@ pub async fn create_stripe_portal_session(
             let written = sqlx::query(
                 r#"
                 INSERT INTO stripe_billing_action_logs (id, contact_id, customer_identifier, action_type, amount_cents, currency, status, stripe_id, actor_email, reason, details, created_at)
-                VALUES (?, NULL, ?, 'portal_session', 0, ?, 'failed', '', ?, 'agent_generated_portal_link', ?, ?)
+                VALUES ($1, NULL, $2, 'portal_session', 0, $3, 'failed', '', $4, 'agent_generated_portal_link', $5, $6)
                 "#,
             )
             .bind(&log_id)
@@ -4392,7 +4392,7 @@ pub async fn create_stripe_portal_session(
     let written = sqlx::query(
         r#"
         INSERT INTO stripe_billing_action_logs (id, contact_id, customer_identifier, action_type, amount_cents, currency, status, stripe_id, actor_email, reason, details, created_at)
-        VALUES (?, NULL, ?, 'portal_session', 0, ?, ?, ?, 'agent_generated_portal_link', ?, ?)
+        VALUES ($1, NULL, $2, 'portal_session', 0, $3, $4, $5, $6, 'agent_generated_portal_link', $7, $8)
         "#,
     )
     .bind(&log_id)
@@ -4443,9 +4443,9 @@ pub async fn get_stripe_billing_logs(
         r#"
         SELECT id, contact_id, customer_identifier, action_type, amount_cents, currency, status, stripe_id, actor_email, reason, details, created_at
         FROM stripe_billing_action_logs
-        WHERE customer_identifier = ? OR contact_id = ?
+        WHERE customer_identifier = $1 OR contact_id = $2
         ORDER BY created_at DESC
-        LIMIT ?
+        LIMIT $3
         "#,
     )
     .bind(&identifier)
@@ -4619,8 +4619,8 @@ pub async fn update_stripe_config(
             sqlx::query(
                 r#"
                 UPDATE stripe_configs
-                SET account_name = ?, api_key = ?, publishable_key = ?, webhook_secret = ?, is_enabled = ?, test_mode = ?, default_currency = ?, updated_at = ?
-                WHERE id = ?
+                SET account_name = $1, api_key = $2, publishable_key = $3, webhook_secret = $4, is_enabled = $5, test_mode = $6, default_currency = $7, updated_at = $8
+                WHERE id = $9
                 "#,
             )
             .bind(&account_name)
@@ -4639,7 +4639,7 @@ pub async fn update_stripe_config(
             sqlx::query(
                 r#"
                 INSERT INTO stripe_configs (id, account_name, api_key, publishable_key, webhook_secret, is_enabled, test_mode, default_currency, last_tested_at, last_test_status, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 'untested', ?, ?)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULL, 'untested', $9, $10)
                 "#,
             )
             .bind(&row_id)
@@ -4663,7 +4663,7 @@ pub async fn update_stripe_config(
         Ok(_) => {
             // Read back what is actually stored rather than echoing the request.
             match sqlx::query_as::<_, StripeConfigDbRow>(
-                "SELECT id, account_name, api_key, publishable_key, webhook_secret, is_enabled, test_mode, default_currency, last_tested_at, last_test_status, created_at, updated_at FROM stripe_configs WHERE id = ?",
+                "SELECT id, account_name, api_key, publishable_key, webhook_secret, is_enabled, test_mode, default_currency, last_tested_at, last_test_status, created_at, updated_at FROM stripe_configs WHERE id = $1",
             )
             .bind(&row_id)
             .fetch_optional(&state.db)
@@ -4713,7 +4713,7 @@ async fn record_stripe_test_state(
     tested_at: &str,
     status: &str,
 ) -> Option<String> {
-    match sqlx::query("UPDATE stripe_configs SET last_tested_at = ?, last_test_status = ? WHERE id = ?")
+    match sqlx::query("UPDATE stripe_configs SET last_tested_at = $1, last_test_status = $2 WHERE id = $3")
         .bind(tested_at)
         .bind(status)
         .bind(row_id)
