@@ -315,31 +315,39 @@ impl ErpFulfilmentService {
         let mut query = String::from("UPDATE erp_shipping_zones SET updated_at = NOW()");
         let mut bind_count = 1;
 
-        if let Some(cities) = &req.cities {
-            let cities_json = serde_json::to_string(cities).unwrap_or_else(|_| "[]".to_string());
+        let cities_json = req
+            .cities
+            .as_ref()
+            .map(|cities| serde_json::to_string(cities).unwrap_or_else(|_| "[]".to_string()));
+        if cities_json.is_some() {
             query.push_str(&format!(", cities = ${}", bind_count));
             bind_count += 1;
         }
-        if let Some(is_active) = req.is_active {
+        if req.is_active.is_some() {
             query.push_str(&format!(", is_active = ${}", bind_count));
             bind_count += 1;
         }
-        if let Some(is_catch_all) = req.is_catch_all {
+        if req.is_catch_all.is_some() {
             query.push_str(&format!(", is_catch_all = ${}", bind_count));
             bind_count += 1;
         }
         query.push_str(&format!(" WHERE id = ${}", bind_count));
 
-        // Use positional binds
-        let mut builder = sqlx::query_builder(&query);
-        // Simplified: just use direct query with all possible binds
-        sqlx::query(
-            "UPDATE erp_shipping_zones SET updated_at = NOW() WHERE id = $1",
-        )
-        .bind(zone_id)
-        .execute(&self.pool)
-        .await
-        .map_err(|e| format!("Failed to update shipping zone: {e}"))?;
+        let mut q = sqlx::query(&query);
+        if let Some(ref cities) = cities_json {
+            q = q.bind(cities);
+        }
+        if let Some(is_active) = req.is_active {
+            q = q.bind(is_active);
+        }
+        if let Some(is_catch_all) = req.is_catch_all {
+            q = q.bind(is_catch_all);
+        }
+        q = q.bind(zone_id);
+
+        q.execute(&self.pool)
+            .await
+            .map_err(|e| format!("Failed to update shipping zone: {e}"))?;
 
         self.get_shipping_zone(zone_id).await
     }

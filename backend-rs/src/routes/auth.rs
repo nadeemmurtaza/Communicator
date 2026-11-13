@@ -2,6 +2,7 @@
 
 use crate::db::AppState;
 use crate::services::nid_client::{NidError, SessionClaims, SignUpResult};
+use async_trait::async_trait;
 use axum::extract::{FromRequestParts, Query, State};
 use axum::http::{header::AUTHORIZATION, request::Parts, HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
@@ -77,6 +78,7 @@ pub struct CurrentAccount {
     pub claims: SessionClaims,
 }
 
+#[async_trait]
 impl FromRequestParts<AppState> for CurrentAccount {
     type Rejection = AuthError;
 
@@ -113,6 +115,7 @@ impl FromRequestParts<AppState> for CurrentAccount {
 /// falls back to DEFAULT_TENANT_KEY and refuses the request if that is unset.
 pub struct Tenant(pub String);
 
+#[async_trait]
 impl FromRequestParts<AppState> for Tenant {
     type Rejection = AuthError;
 
