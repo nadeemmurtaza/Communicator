@@ -45,7 +45,7 @@ pub struct CleanupQuery {
 
 /// GET /scheduled-tasks/summary
 pub async fn get_summary(State(state): State<AppState>) -> Result<Json<SchedulerSummary>, (StatusCode, String)> {
-    let service = ScheduledTasksService::new(&state.db);
+    let service = ScheduledTasksService::new(state.db.clone());
     match service.get_summary().await {
         Ok(summary) => Ok(Json(summary)),
         Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
@@ -57,7 +57,7 @@ pub async fn list_tasks(
     State(state): State<AppState>,
     Query(params): Query<ListTasksQuery>,
 ) -> Result<Json<Vec<ScheduledTask>>, (StatusCode, String)> {
-    let service = ScheduledTasksService::new(&state.db);
+    let service = ScheduledTasksService::new(state.db.clone());
     match service.list_tasks(params.active_only.unwrap_or(false), params.task_type.as_deref()).await {
         Ok(tasks) => Ok(Json(tasks)),
         Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
@@ -69,7 +69,7 @@ pub async fn get_task(
     State(state): State<AppState>,
     Path(task_id): Path<String>,
 ) -> Result<Json<ScheduledTask>, (StatusCode, String)> {
-    let service = ScheduledTasksService::new(&state.db);
+    let service = ScheduledTasksService::new(state.db.clone());
     match service.get_task(&task_id).await {
         Ok(task) => Ok(Json(task)),
         Err(e) => Err((StatusCode::NOT_FOUND, e)),
@@ -81,7 +81,7 @@ pub async fn create_task(
     State(state): State<AppState>,
     Json(req): Json<CreateTaskRequest>,
 ) -> Result<Json<ScheduledTask>, (StatusCode, String)> {
-    let service = ScheduledTasksService::new(&state.db);
+    let service = ScheduledTasksService::new(state.db.clone());
     match service.create_task(&req).await {
         Ok(task) => Ok(Json(task)),
         Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
@@ -94,7 +94,7 @@ pub async fn update_task(
     Path(task_id): Path<String>,
     Json(req): Json<UpdateTaskRequest>,
 ) -> Result<Json<ScheduledTask>, (StatusCode, String)> {
-    let service = ScheduledTasksService::new(&state.db);
+    let service = ScheduledTasksService::new(state.db.clone());
     match service.update_task(&task_id, &req).await {
         Ok(task) => Ok(Json(task)),
         Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
@@ -106,7 +106,7 @@ pub async fn delete_task(
     State(state): State<AppState>,
     Path(task_id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    let service = ScheduledTasksService::new(&state.db);
+    let service = ScheduledTasksService::new(state.db.clone());
     match service.delete_task(&task_id).await {
         Ok(()) => Ok(StatusCode::NO_CONTENT),
         Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
@@ -118,7 +118,7 @@ pub async fn trigger_task(
     State(state): State<AppState>,
     Path(task_id): Path<String>,
 ) -> Result<Json<TriggerResult>, (StatusCode, String)> {
-    let service = ScheduledTasksService::new(&state.db);
+    let service = ScheduledTasksService::new(state.db.clone());
     match service.trigger_task(&task_id, "api").await {
         Ok(result) => Ok(Json(result)),
         Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
@@ -127,7 +127,7 @@ pub async fn trigger_task(
 
 /// POST /scheduled-tasks/process-queue
 pub async fn process_queue(State(state): State<AppState>) -> Result<Json<Vec<String>>, (StatusCode, String)> {
-    let service = ScheduledTasksService::new(&state.db);
+    let service = ScheduledTasksService::new(state.db.clone());
     match service.process_queue().await {
         Ok(result) => Ok(Json(result)),
         Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
@@ -139,7 +139,7 @@ pub async fn list_runs(
     State(state): State<AppState>,
     Query(params): Query<ListRunsQuery>,
 ) -> Result<Json<Vec<TaskRun>>, (StatusCode, String)> {
-    let service = ScheduledTasksService::new(&state.db);
+    let service = ScheduledTasksService::new(state.db.clone());
     match service.list_runs(params.task_id.as_deref(), params.status.as_deref(), params.limit.unwrap_or(50)).await {
         Ok(runs) => Ok(Json(runs)),
         Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
@@ -151,7 +151,7 @@ pub async fn list_queue(
     State(state): State<AppState>,
     Query(params): Query<ListQueueQuery>,
 ) -> Result<Json<Vec<TaskQueueEntry>>, (StatusCode, String)> {
-    let service = ScheduledTasksService::new(&state.db);
+    let service = ScheduledTasksService::new(state.db.clone());
     match service.list_queue(params.status.as_deref()).await {
         Ok(queue) => Ok(Json(queue)),
         Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
@@ -160,7 +160,7 @@ pub async fn list_queue(
 
 /// GET /scheduled-tasks/settings
 pub async fn get_settings(State(state): State<AppState>) -> Result<Json<SchedulerSettings>, (StatusCode, String)> {
-    let service = ScheduledTasksService::new(&state.db);
+    let service = ScheduledTasksService::new(state.db.clone());
     match service.get_settings().await {
         Ok(settings) => Ok(Json(settings)),
         Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
@@ -172,7 +172,7 @@ pub async fn update_settings(
     State(state): State<AppState>,
     Json(settings): Json<SchedulerSettings>,
 ) -> Result<Json<SchedulerSettings>, (StatusCode, String)> {
-    let service = ScheduledTasksService::new(&state.db);
+    let service = ScheduledTasksService::new(state.db.clone());
     match service.update_settings(&settings).await {
         Ok(settings) => Ok(Json(settings)),
         Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
@@ -184,7 +184,7 @@ pub async fn cleanup_old_logs(
     State(state): State<AppState>,
     Query(params): Query<CleanupQuery>,
 ) -> Result<Json<CleanupResult>, (StatusCode, String)> {
-    let service = ScheduledTasksService::new(&state.db);
+    let service = ScheduledTasksService::new(state.db.clone());
     let retention = params.retention_days.unwrap_or(30);
     match service.cleanup_old_logs(retention).await {
         Ok(result) => Ok(Json(result)),

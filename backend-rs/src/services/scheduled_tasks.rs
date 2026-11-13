@@ -185,27 +185,26 @@ impl ScheduledTasksService {
 
     pub async fn list_tasks(&self, active_only: bool, task_type: Option<&str>) -> Result<Vec<ScheduledTask>, String> {
         let mut query = String::from("SELECT id, name, description, task_type, cron_schedule, next_run_at, is_active, config, created_at, updated_at FROM scheduled_tasks WHERE 1=1");
-        let mut binds: Vec<Box<dyn sqlx::types::Type<sqlx::Postgres> + Send + Sync>> = Vec::new();
 
         if active_only {
             query.push_str(" AND is_active = true");
         }
 
-        if let Some(tt) = task_type {
+        if task_type.is_some() {
             query.push_str(" AND task_type = $1");
-            binds.push(Box::new(tt.to_string()));
         }
 
         query.push_str(" ORDER BY name");
 
-        // Build query with binds
-        let rows = if binds.is_empty() {
-            sqlx::query(&query).fetch_all(&self.pool).await
-        } else {
-            // For simplicity, use a single bind approach
-            sqlx::query(&query).bind(&*binds[0]).fetch_all(&self.pool).await
+        let mut q = sqlx::query(&query);
+        if let Some(tt) = task_type {
+            q = q.bind(tt);
         }
-        .map_err(|e| format!("Failed to list tasks: {e}"))?;
+
+        let rows = q
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| format!("Failed to list tasks: {e}"))?;
 
         rows.iter().map(|r| Ok(ScheduledTask {
             id: r.get("id"),
@@ -349,10 +348,11 @@ impl ScheduledTasksService {
         .await
         .map_err(|e| format!("Failed to queue task: {e}"))?;
 
+        let message = format!("Task '{}' queued for execution", task.name);
         Ok(TriggerResult {
             queue_id,
             task_name: task.name,
-            message: format!("Task '{}' queued for execution", task.name),
+            message,
         })
     }
 
@@ -592,23 +592,23 @@ impl ScheduledTasksService {
 
     /// Clean up old task logs
     pub async fn cleanup_old_logs(&self, retention_days: i32) -> Result<CleanupResult, String> {
-        let deleted_runs: i64 = sqlx::query_scalar(
-            "DELETE FROM scheduled_task_runs WHERE started_at < NOW() - INTERVAL '${1} days'",
+        let deleted_runs: i64 = sqlx::query(
+            "DELETE FROM scheduled_task_runs WHERE started_at < NOW() - ($1 * INTERVAL '1 day')",
         )
-        .bind(retention_days.to_string())
+        .bind(retention_days)
         .execute(&self.pool)
         .await
         .map_err(|e| format!("Failed to clean up runs: {e}"))?
-        .rows_affected();
+        .rows_affected() as i64;
 
-        let deleted_queue: i64 = sqlx::query_scalar(
-            "DELETE FROM scheduled_task_queue WHERE triggered_at < NOW() - INTERVAL '${1} days'",
+        let deleted_queue: i64 = sqlx::query(
+            "DELETE FROM scheduled_task_queue WHERE triggered_at < NOW() - ($1 * INTERVAL '1 day')",
         )
-        .bind(retention_days.to_string())
+        .bind(retention_days)
         .execute(&self.pool)
         .await
         .map_err(|e| format!("Failed to clean up queue: {e}"))?
-        .rows_affected();
+        .rows_affected() as i64;
 
         Ok(CleanupResult {
             deleted_runs,
