@@ -5,6 +5,7 @@ use axum::http::StatusCode;
 use axum::Json;
 use serde::Deserialize;
 use serde_json::json;
+use sqlx::Row;
 
 use crate::db::AppState;
 use crate::services::audience_kb_scoping;

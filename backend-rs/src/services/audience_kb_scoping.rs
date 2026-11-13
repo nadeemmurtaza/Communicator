@@ -318,12 +318,13 @@ pub async fn get_scoped_kb_for_contact(
             .iter()
             .map(|r| r.try_get(0).unwrap_or_default())
             .collect();
+        let total_entries = kb_entry_ids.len() as i32;
 
         return Ok(ScopedKBResult {
             kb_entry_ids,
             segment_ids: vec![],
             fallback_included: true,
-            total_entries: kb_entry_ids.len() as i32,
+            total_entries,
         });
     }
 
@@ -354,12 +355,13 @@ pub async fn get_scoped_kb_for_contact(
                 .iter()
                 .map(|r| r.try_get(0).unwrap_or_default())
                 .collect();
+            let total_entries = kb_entry_ids.len() as i32;
 
             return Ok(ScopedKBResult {
                 kb_entry_ids,
                 segment_ids: vec![],
                 fallback_included: true,
-                total_entries: kb_entry_ids.len() as i32,
+                total_entries,
             });
         } else {
             return Ok(ScopedKBResult {
@@ -436,11 +438,13 @@ pub async fn get_scoped_kb_for_contact(
             .collect();
     }
 
+    let total_entries = kb_entry_ids.len() as i32;
+
     Ok(ScopedKBResult {
         kb_entry_ids,
         segment_ids,
         fallback_included,
-        total_entries: kb_entry_ids.len() as i32,
+        total_entries,
     })
 }
 
@@ -623,7 +627,7 @@ pub async fn get_audience_kb_settings(
     )
     .fetch_optional(&state.db)
     .await
-    .ok()?;
+    .ok()??;
 
     Some(AudienceKBSettings {
         id: row.try_get(0).unwrap_or_default(),
