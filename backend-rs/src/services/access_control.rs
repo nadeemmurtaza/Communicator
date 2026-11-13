@@ -653,7 +653,7 @@ impl AccessControlService {
                WHERE ra.team_member_id = $1 AND ra.tenant_id = $2
                  AND (ra.org_id IS NULL OR ra.org_id = $3)
                  AND (ra.brand_id IS NULL OR ra.brand_id = $4)
-                 AND rd.permissions::TEXT LIKE '%' || $5 || '%'"#,
+                 AND jsonb_exists(rd.permissions, $5)"#,
             team_member_id,
             tenant_id,
             org_id,

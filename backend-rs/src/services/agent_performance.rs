@@ -465,11 +465,13 @@ pub async fn list_insights(
     addressed: Option<bool>,
 ) -> Result<Vec<CoachingInsight>, sqlx::Error> {
     let mut conditions = vec![];
-    if let Some(id) = agent_id {
-        conditions.push(format!("agent_id = '{}'", id));
+    let mut param_idx = 1;
+    if agent_id.is_some() {
+        conditions.push(format!("agent_id = ${}", param_idx));
+        param_idx += 1;
     }
-    if let Some(addr) = addressed {
-        conditions.push(format!("is_addressed = {}", addr));
+    if addressed.is_some() {
+        conditions.push(format!("is_addressed = ${}", param_idx));
     }
 
     let where_clause = if conditions.is_empty() {
@@ -478,17 +480,21 @@ pub async fn list_insights(
         format!("WHERE {}", conditions.join(" AND "))
     };
 
-    let rows = sqlx::query(
-        &format!(
-            "SELECT id, organization_id, agent_id, agent_name, insight_type, title, description, \
-             category, severity, recommendation, related_conversation_ids, related_metrics, \
-             is_addressed, addressed_at, addressed_by, created_at \
-             FROM agent_coaching_insights {} ORDER BY created_at DESC LIMIT 50",
-            where_clause
-        )
-    )
-    .fetch_all(&state.db)
-    .await?;
+    let sql = format!(
+        "SELECT id, organization_id, agent_id, agent_name, insight_type, title, description, \
+         category, severity, recommendation, related_conversation_ids, related_metrics, \
+         is_addressed, addressed_at, addressed_by, created_at \
+         FROM agent_coaching_insights {} ORDER BY created_at DESC LIMIT 50",
+        where_clause
+    );
+    let mut query = sqlx::query(&sql);
+    if let Some(id) = agent_id {
+        query = query.bind(id);
+    }
+    if let Some(addr) = addressed {
+        query = query.bind(addr);
+    }
+    let rows = query.fetch_all(&state.db).await?;
 
     let insights: Vec<CoachingInsight> = rows
         .iter()
