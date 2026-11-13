@@ -80,7 +80,7 @@ impl ReplyIntegrationService {
         last_inbound: &str,
         tenant_key: &str,
     ) -> Result<ReplyContextPackage, anyhow::Error> {
-        let settings = self.get_settings().await.unwrap_or_else(|| ReplyIntegrationSettings {
+        let settings = self.get_settings().await.unwrap_or_else(|_| ReplyIntegrationSettings {
             id: "default".to_string(),
             org_id: "default".to_string(),
             use_tone_of_voice: true,
@@ -239,7 +239,7 @@ impl ReplyIntegrationService {
         }
 
         // Get KB entries linked to these segments
-        let mut entries = Vec::new();
+        let mut entries: Vec<KBEntry> = Vec::new();
         for segment_id in &segment_ids {
             let rows = sqlx::query(
                 "SELECT kbe.id, kbe.title, kbe.content FROM knowledge_base_entries kbe \
@@ -523,7 +523,7 @@ impl ReplyIntegrationService {
         // Audience scoping enabled
         let audience_enabled: Option<bool> = sqlx::query_scalar(
             "SELECT enabled FROM audience_kb_settings WHERE organization_id = 'org-default' LIMIT 1"
-        ).fetch_optional(&self.pool).await.unwrap_or(false);
+        ).fetch_optional(&self.pool).await.unwrap_or(Some(false));
 
         // Help center enabled (check if articles exist)
         let help_center_count: i32 = sqlx::query_scalar(

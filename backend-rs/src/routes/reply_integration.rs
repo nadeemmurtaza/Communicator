@@ -1,5 +1,6 @@
 use axum::extract::{Path, Query, State};
 use axum::Json;
+use sqlx::Row;
 use crate::db::AppState;
 use crate::services::reply_integration::{ReplyIntegrationService, ReplyIntegrationSettings};
 
@@ -66,43 +67,39 @@ pub async fn get_knowledge_sources(
     State(state): State<AppState>,
     Query(params): Query<GetSourcesQuery>,
 ) -> Result<Json<serde_json::Value>, (axum::http::StatusCode, Json<serde_json::Value>)> {
-    let service = ReplyIntegrationService::new(&state.db);
-    
+    let _service = ReplyIntegrationService::new(&state.db);
+
     let mut query = String::from(
         "SELECT id, draft_id, conversation_id, source_type, source_id, source_title, relevance_score, used_in_reply, created_at \
          FROM reply_knowledge_sources WHERE 1=1"
     );
-    let mut binds: Vec<Box<dyn sqlx::types::Type<sqlx::postgres::Postgres> + Send + Sync>> = Vec::new();
-    let mut bind_values: Vec<Box<dyn sqlx::encode::Encode<'_, sqlx::postgres::Postgres> + Send + Sync>> = Vec::new();
-    
-    if let Some(ref draft_id) = params.draft_id {
-        query.push_str(" AND draft_id = $");
-        let idx = binds.len() + 1;
-        binds.push(Box::new(draft_id.clone()));
-        query.push_str(&idx.to_string());
+    let mut idx = 1;
+    if params.draft_id.is_some() {
+        query.push_str(&format!(" AND draft_id = ${}", idx));
+        idx += 1;
     }
-    
-    if let Some(ref conversation_id) = params.conversation_id {
-        query.push_str(" AND conversation_id = $");
-        let idx = binds.len() + 1;
-        binds.push(Box::new(conversation_id.clone()));
-        query.push_str(&idx.to_string());
+    if params.conversation_id.is_some() {
+        query.push_str(&format!(" AND conversation_id = ${}", idx));
+        idx += 1;
     }
-    
-    if let Some(ref source_type) = params.source_type {
-        query.push_str(" AND source_type = $");
-        let idx = binds.len() + 1;
-        binds.push(Box::new(source_type.clone()));
-        query.push_str(&idx.to_string());
+    if params.source_type.is_some() {
+        query.push_str(&format!(" AND source_type = ${}", idx));
+        idx += 1;
     }
-    
     query.push_str(" ORDER BY created_at DESC LIMIT 100");
-    
-    // Use a simpler approach with direct query
-    let rows = sqlx::query(
-        "SELECT id, draft_id, conversation_id, source_type, source_id, source_title, relevance_score, used_in_reply, created_at \
-         FROM reply_knowledge_sources ORDER BY created_at DESC LIMIT 100"
-    ).fetch_all(&state.db).await.map_err(|e| (
+
+    let mut q = sqlx::query(&query);
+    if let Some(ref draft_id) = params.draft_id {
+        q = q.bind(draft_id);
+    }
+    if let Some(ref conversation_id) = params.conversation_id {
+        q = q.bind(conversation_id);
+    }
+    if let Some(ref source_type) = params.source_type {
+        q = q.bind(source_type);
+    }
+
+    let rows = q.fetch_all(&state.db).await.map_err(|e| (
         axum::http::StatusCode::INTERNAL_SERVER_ERROR,
         Json(serde_json::json!({ "error": e.to_string() })),
     ))?;
