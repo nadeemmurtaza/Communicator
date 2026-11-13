@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE organization_redirect_sessions SET status = 'completed',\n               attempt_count = attempt_count + 1, completed_at = $1\n           WHERE state_token = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8da4f280f0c1cfcf2412c1c15cea97312328646f644980099fd6afdf42ce840a"
+}

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE organization_redirect_sessions SET status = 'max_attempts_reached',\n                   error_code = 'MAX_ATTEMPTS', error_message = 'Maximum redirect attempts reached'\n               WHERE state_token = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "aa5684e86def6dba6d05570b6f2d331cfde2ae8fc9443ff6b4e68c56fecf39ab"
+}

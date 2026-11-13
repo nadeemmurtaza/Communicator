@@ -1,0 +1,79 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO access_grants (team_member_id, tenant_id, org_id, brand_id, access_type, granted_by, status)\n               SELECT $1, $2, $3, $4, 'owner', $1, 'active'\n               WHERE NOT EXISTS (\n                   SELECT 1 FROM access_grants\n                   WHERE team_member_id = $1 AND tenant_id = $2 AND access_type = 'owner' AND status = 'active'\n               )\n               RETURNING id, team_member_id, tenant_id, org_id, brand_id, access_type, partnership_percentage, granted_by, status, granted_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "team_member_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "tenant_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "org_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "brand_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "access_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "partnership_percentage",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 7,
+        "name": "granted_by",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "status",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 9,
+        "name": "granted_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "4d55553b7b4da8f6a4093461b591fdfaf460e0a50a6ab3300ebc179f3dcfdb4b"
+}

@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO organization_sync_log (id, nid_organization_id, event_type, payload, status, error_message)\n           VALUES ($1, $2, $3, $4, 'success', '')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "53d9414b5110b5f16c78b86dee4746ed22250593ca234203c8f450e9fbe8d22e"
+}

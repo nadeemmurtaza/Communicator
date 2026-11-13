@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE organization_redirect_sessions SET status = 'expired',\n                   error_code = 'EXPIRED', error_message = 'Session expired'\n               WHERE state_token = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "999778b832751c8b8476a1633766290db622276a29e9399c9b8ddd6c2753f7a5"
+}

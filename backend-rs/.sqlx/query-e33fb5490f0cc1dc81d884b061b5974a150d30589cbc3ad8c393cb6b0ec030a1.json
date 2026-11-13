@@ -1,0 +1,118 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id::TEXT as \"id!\", nid_organization_id, nid_tenant_id, tenant_slug,\n                  legal_name, registration_number, country_code, subject_id,\n                  is_verified as \"is_verified!\", verified_level, webhook_url, sync_status,\n                  last_synced_at::TEXT as last_synced_at, last_sync_error,\n                  linked_brand_id::TEXT as linked_brand_id,\n                  created_at::TEXT as \"created_at!\", updated_at::TEXT as \"updated_at!\"\n           FROM nid_organizations WHERE nid_organization_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "nid_organization_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "nid_tenant_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "tenant_slug",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "legal_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "registration_number",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "country_code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "subject_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "is_verified!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
+        "name": "verified_level",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "webhook_url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "sync_status",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "last_synced_at",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 13,
+        "name": "last_sync_error",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
+        "name": "linked_brand_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 15,
+        "name": "created_at!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 16,
+        "name": "updated_at!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      false,
+      null,
+      false,
+      true,
+      null,
+      null
+    ]
+  },
+  "hash": "e33fb5490f0cc1dc81d884b061b5974a150d30589cbc3ad8c393cb6b0ec030a1"
+}

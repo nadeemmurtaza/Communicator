@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(COUNT(*), 0) AS \"count!\" FROM department_assignments da\n               JOIN departments d ON da.department_id = d.id\n               WHERE da.team_member_id = $1 AND d.tenant_id = $2 AND d.slug = $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "218d7a43390a4e1f6947b84fbcd9668f46e92e04bd1f3b8c6cb843425c4afcc2"
+}

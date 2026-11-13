@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(COUNT(*), 0) AS \"count!\" FROM access_grants\n               WHERE team_member_id = $1 AND tenant_id = $2 AND status = 'active'\n                 AND access_type IN ('owner', 'partner')\n                 AND (org_id IS NULL OR org_id = $3)\n                 AND (brand_id IS NULL OR brand_id = $4)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "64c2cbafd8047fce673e4f976239a2988baa4bd9e1ddf8cee0eeb2f3a1a69cba"
+}

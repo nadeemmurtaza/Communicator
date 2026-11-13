@@ -1,0 +1,56 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, group_name, service_name, permission_key, label, description, created_at\n               FROM permission_catalog\n               ORDER BY group_name, service_name, permission_key",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "group_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "service_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "permission_key",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "label",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "764fe860b408cb7674a1896535c4eb2d478df2f89d589040455d528f910fb4f2"
+}

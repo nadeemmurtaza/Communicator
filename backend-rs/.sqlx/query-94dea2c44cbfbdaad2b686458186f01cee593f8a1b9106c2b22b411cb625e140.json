@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT permission_key FROM permission_catalog ORDER BY permission_key",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "permission_key",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "94dea2c44cbfbdaad2b686458186f01cee593f8a1b9106c2b22b411cb625e140"
+}

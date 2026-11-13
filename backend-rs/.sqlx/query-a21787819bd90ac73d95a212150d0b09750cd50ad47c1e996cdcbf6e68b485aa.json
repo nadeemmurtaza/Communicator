@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT d.name\n               FROM department_assignments da\n               JOIN departments d ON da.department_id = d.id\n               WHERE da.team_member_id = $1 AND d.tenant_id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "a21787819bd90ac73d95a212150d0b09750cd50ad47c1e996cdcbf6e68b485aa"
+}

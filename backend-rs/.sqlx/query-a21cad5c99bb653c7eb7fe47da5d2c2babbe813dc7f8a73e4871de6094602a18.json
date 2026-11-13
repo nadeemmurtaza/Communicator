@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT rd.name\n               FROM role_assignments ra\n               JOIN tenant_role_definitions rd ON ra.role_definition_id = rd.id\n               WHERE ra.team_member_id = $1 AND ra.tenant_id = $2\n                 AND (ra.org_id IS NULL OR ra.org_id = $3)\n                 AND (ra.brand_id IS NULL OR ra.brand_id = $4)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "a21cad5c99bb653c7eb7fe47da5d2c2babbe813dc7f8a73e4871de6094602a18"
+}

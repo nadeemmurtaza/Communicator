@@ -1,0 +1,69 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO department_assignments (team_member_id, department_id, tenant_id, org_id, brand_id, scope)\n               VALUES ($1, $2, $3, $4, $5, $6)\n               RETURNING id, team_member_id, department_id, tenant_id, org_id, brand_id, scope, created_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "team_member_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "department_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "tenant_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "org_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "brand_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "scope",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Uuid",
+        "Varchar"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "ecd3ee9b845ff5a0319bb58f7b1c87e404b97f622b15a0aaa009cb63240738df"
+}

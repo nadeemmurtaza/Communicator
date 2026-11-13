@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO organization_redirect_sessions (id, state_token, redirect_type, return_url,\n                   nid_tenant_id, expires_at)\n           VALUES ($1, $2, $3, $4, $5, $6)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "71b59a6bed23488c12ca371d38401ca389ad3e577fcb0cfac5a1a417cfd5b860"
+}

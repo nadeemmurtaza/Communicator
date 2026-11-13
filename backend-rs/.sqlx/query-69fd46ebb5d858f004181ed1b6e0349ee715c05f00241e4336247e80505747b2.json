@@ -1,0 +1,68 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id::TEXT as \"id!\", nid_base_url as \"nID_base_url\", webhook_secret, auto_sync_enabled,\n                  auto_link_new_organizations, sync_interval_seconds, connection_status,\n                  last_error, last_health_check_at::TEXT as last_health_check_at\n           FROM nid_organization_connection LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "nID_base_url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "webhook_secret",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "auto_sync_enabled",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "auto_link_new_organizations",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "sync_interval_seconds",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "connection_status",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "last_error",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "last_health_check_at",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "69fd46ebb5d858f004181ed1b6e0349ee715c05f00241e4336247e80505747b2"
+}

@@ -1,0 +1,107 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE invitations SET status = 'accepted', accepted_at = NOW(), accepted_by = $2\n               WHERE id = $1 AND status = 'pending' AND expires_at > NOW()\n               RETURNING id, tenant_id, email, username, invited_by, org_id, brand_id, scope, role_definition_id, department_id, status, expires_at, accepted_at, accepted_by, created_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "tenant_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "email",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "username",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "invited_by",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "org_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "brand_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 7,
+        "name": "scope",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "role_definition_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 9,
+        "name": "department_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 10,
+        "name": "status",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 11,
+        "name": "expires_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 12,
+        "name": "accepted_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 13,
+        "name": "accepted_by",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "a98391ae4b7fe61cf97a4efa8936200bed1e0dae442f3b685e72660eee869ce4"
+}
