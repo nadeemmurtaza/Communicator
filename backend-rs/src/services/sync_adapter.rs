@@ -74,6 +74,14 @@ impl SyncService {
                     http_client: self.http_client.clone(),
                 },
             )),
+            "square" => Ok(Box::new(crate::services::sync_square::SquareSyncAdapter {
+                connection: Some(conn.clone()),
+                http_client: self.http_client.clone(),
+            })),
+            "wix" => Ok(Box::new(crate::services::sync_wix::WixSyncAdapter {
+                connection: Some(conn.clone()),
+                http_client: self.http_client.clone(),
+            })),
             other => Err(format!("Unsupported sync platform: {other}")),
         }
     }
