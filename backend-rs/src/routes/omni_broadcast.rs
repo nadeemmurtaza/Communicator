@@ -114,8 +114,8 @@ pub async fn create_broadcast(
     let link_description = body.get("link_description").and_then(|v| v.as_str()).map(String::from);
     let link_image_url = body.get("link_image_url").and_then(|v| v.as_str()).map(String::from);
     let target_type = body.get("target_type").and_then(|v| v.as_str()).unwrap_or("contacts").to_string();
-    let target_ids = body.get("target_ids").and_then(|v| v.to_string().as_str()).unwrap_or("[]").to_string();
-    let channels = body.get("channels").and_then(|v| v.to_string().as_str()).unwrap_or("[]").to_string();
+    let target_ids = body.get("target_ids").map(|v| v.to_string()).unwrap_or_else(|| "[]".to_string());
+    let channels = body.get("channels").map(|v| v.to_string()).unwrap_or_else(|| "[]".to_string());
     let scheduled_at = body.get("scheduled_at").and_then(|v| v.as_str()).map(String::from);
 
     if title.is_empty() {

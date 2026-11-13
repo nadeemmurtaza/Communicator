@@ -2208,7 +2208,7 @@ pub struct CampaignRetryQueue {
 // Commerce Engine - Enums
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum OrderStatus {
     Draft,
@@ -2220,13 +2220,59 @@ pub enum OrderStatus {
     Cancelled,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+impl OrderStatus {
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "pending" => OrderStatus::Pending,
+            "confirmed" => OrderStatus::Confirmed,
+            "processing" => OrderStatus::Processing,
+            "shipped" => OrderStatus::Shipped,
+            "delivered" => OrderStatus::Delivered,
+            "cancelled" => OrderStatus::Cancelled,
+            _ => OrderStatus::Draft,
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            OrderStatus::Draft => "draft",
+            OrderStatus::Pending => "pending",
+            OrderStatus::Confirmed => "confirmed",
+            OrderStatus::Processing => "processing",
+            OrderStatus::Shipped => "shipped",
+            OrderStatus::Delivered => "delivered",
+            OrderStatus::Cancelled => "cancelled",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PaymentStatus {
     Pending,
     Paid,
     PartiallyPaid,
     Refunded,
+}
+
+impl PaymentStatus {
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "paid" => PaymentStatus::Paid,
+            "partially_paid" => PaymentStatus::PartiallyPaid,
+            "refunded" => PaymentStatus::Refunded,
+            _ => PaymentStatus::Pending,
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            PaymentStatus::Pending => "pending",
+            PaymentStatus::Paid => "paid",
+            PaymentStatus::PartiallyPaid => "partially_paid",
+            PaymentStatus::Refunded => "refunded",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
