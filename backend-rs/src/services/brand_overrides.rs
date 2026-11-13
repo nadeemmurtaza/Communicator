@@ -402,7 +402,7 @@ pub async fn switch_brand(
     switched_by: &str,
 ) -> Result<SwitchBrandResult, String> {
     // Check settings
-    let settings = get_brand_override_settings(state).await;
+    let settings = get_brand_override_settings(state).await.unwrap_or(None);
     if !settings.as_ref().map(|s| s.enabled).unwrap_or(true) {
         return Err("Brand overrides are disabled".to_string());
     }

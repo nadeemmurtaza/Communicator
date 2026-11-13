@@ -246,6 +246,7 @@ pub async fn find_matching_rules(
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
     let from_brand = params
         .organization_id
+        .clone()
         .unwrap_or_default();
     let org_id = params.organization_id.unwrap_or_else(|| "org-default".to_string());
 
