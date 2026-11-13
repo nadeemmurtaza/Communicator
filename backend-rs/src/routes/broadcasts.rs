@@ -356,12 +356,12 @@ async fn load_audience(
         FROM contacts ct
         JOIN contact_tags ctags ON ct.id = ctags.contact_id
         JOIN tags t ON ctags.tag_id = t.id
-        WHERE t.name IN (SELECT value FROM json_each(?))
+        WHERE t.name IN (SELECT value FROM json_each($1))
         {}
         ORDER BY ct.id
         "#,
         if scoped {
-            "AND COALESCE(ct.tenant_key, '') = ?"
+            "AND COALESCE(ct.tenant_key, '') = $2"
         } else {
             ""
         }
@@ -384,7 +384,7 @@ fn tags_payload(tags: &[String]) -> String {
 
 pub async fn list_broadcasts(State(state): State<AppState>, Tenant(tenant_key): Tenant) -> Response {
     let rows = match sqlx::query_as::<_, BroadcastRow>(&format!(
-        "SELECT {BROADCAST_FIELDS} FROM broadcasts WHERE COALESCE(tenant_key, '') = ? ORDER BY created_at DESC"
+        "SELECT {BROADCAST_FIELDS} FROM broadcasts WHERE COALESCE(tenant_key, '') = $1 ORDER BY created_at DESC"
     ))
     .bind(&tenant_key)
     .fetch_all(&state.db)
@@ -541,7 +541,7 @@ pub async fn create_broadcast(
             scheduled_at, created_at, audience_count, total_recipients,
             sent_count, delivered_count, read_count, failed_count, skipped_count,
             template_params, tenant_key
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 0, ?, ?)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 0, 0, 0, 0, 0, $12, $13)
         "#,
     )
     .bind(&id)
@@ -775,7 +775,7 @@ const RECIPIENT_SELECT: &str = r#"
         br.read_at
     FROM broadcast_recipients br
     LEFT JOIN contacts ct ON br.contact_id = ct.id
-    WHERE br.broadcast_id = ?
+    WHERE br.broadcast_id = $1
     ORDER BY br.sent_at DESC
 "#;
 
@@ -785,7 +785,7 @@ pub async fn get_campaign_analytics(
     Path(id): Path<String>,
 ) -> Response {
     let campaign = match sqlx::query_as::<_, BroadcastRow>(&format!(
-        "SELECT {BROADCAST_FIELDS} FROM broadcasts WHERE id = ? AND COALESCE(tenant_key, '') = ?"
+        "SELECT {BROADCAST_FIELDS} FROM broadcasts WHERE id = $1 AND COALESCE(tenant_key, '') = $2"
     ))
     .bind(&id)
     .bind(&tenant_key)
@@ -906,7 +906,7 @@ pub async fn reschedule_campaign(
         },
     };
 
-    let existing = match sqlx::query("SELECT status FROM broadcasts WHERE id = ? AND COALESCE(tenant_key, '') = ?")
+    let existing = match sqlx::query("SELECT status FROM broadcasts WHERE id = $1 AND COALESCE(tenant_key, '') = $2")
         .bind(&id)
         .bind(&tenant_key)
         .fetch_optional(&state.db)
@@ -934,7 +934,7 @@ pub async fn reschedule_campaign(
     }
 
     let status = if scheduled_at.is_some() { "scheduled" } else { "draft" };
-    let updated = match sqlx::query("UPDATE broadcasts SET scheduled_at = ?, status = ? WHERE id = ?")
+    let updated = match sqlx::query("UPDATE broadcasts SET scheduled_at = $1, status = $2 WHERE id = $3")
         .bind(scheduled_at.as_deref())
         .bind(status)
         .bind(&id)
@@ -971,7 +971,7 @@ pub(crate) async fn run_dispatch(
     id: &str,
 ) -> Result<Value, (StatusCode, Value)> {
     let campaign = sqlx::query_as::<_, BroadcastRow>(&format!(
-        "SELECT {BROADCAST_FIELDS} FROM broadcasts WHERE id = ? AND COALESCE(tenant_key, '') = ?"
+        "SELECT {BROADCAST_FIELDS} FROM broadcasts WHERE id = $1 AND COALESCE(tenant_key, '') = $2"
     ))
     .bind(id)
     .bind(tenant_key)
@@ -1094,7 +1094,7 @@ pub(crate) async fn run_dispatch(
         ));
     }
 
-    let mark_sending = sqlx::query("UPDATE broadcasts SET status = 'sending' WHERE id = ?")
+    let mark_sending = sqlx::query("UPDATE broadcasts SET status = 'sending' WHERE id = $1")
         .bind(id)
         .execute(&state.db)
         .await
@@ -1244,13 +1244,13 @@ pub(crate) async fn run_dispatch(
     // Delivered and read are whatever the ledger already holds; only a webhook
     // receipt can move them, never this function.
     let delivered = sqlx::query_scalar::<_, i64>(
-        "SELECT count(*) FROM broadcast_recipients WHERE broadcast_id = ? AND delivered_at IS NOT NULL",
+        "SELECT count(*) FROM broadcast_recipients WHERE broadcast_id = $1 AND delivered_at IS NOT NULL",
     )
     .bind(id)
     .fetch_one(&state.db)
     .await;
     let read = sqlx::query_scalar::<_, i64>(
-        "SELECT count(*) FROM broadcast_recipients WHERE broadcast_id = ? AND read_at IS NOT NULL",
+        "SELECT count(*) FROM broadcast_recipients WHERE broadcast_id = $1 AND read_at IS NOT NULL",
     )
     .bind(id)
     .fetch_one(&state.db)
@@ -1277,9 +1277,9 @@ pub(crate) async fn run_dispatch(
 
     let update = match counters {
         Some((delivered, read)) => sqlx::query(
-            "UPDATE broadcasts SET status = ?, audience_count = ?, total_recipients = ?, \
-             sent_count = ?, delivered_count = ?, read_count = ?, failed_count = ?, skipped_count = ? \
-             WHERE id = ?",
+            "UPDATE broadcasts SET status = $1, audience_count = $2, total_recipients = $3, \
+             sent_count = $4, delivered_count = $5, read_count = $6, failed_count = $7, skipped_count = $8 \
+             WHERE id = $9",
         )
         .bind(final_status)
         .bind(audience_count)
@@ -1294,8 +1294,8 @@ pub(crate) async fn run_dispatch(
         .await
         .map(|report| (report.rows_affected(), Some(delivered), Some(read))),
         None => sqlx::query(
-            "UPDATE broadcasts SET status = ?, audience_count = ?, total_recipients = ?, \
-             sent_count = ?, failed_count = ?, skipped_count = ? WHERE id = ?",
+            "UPDATE broadcasts SET status = $1, audience_count = $2, total_recipients = $3, \
+             sent_count = $4, failed_count = $5, skipped_count = $6 WHERE id = $7",
         )
         .bind(final_status)
         .bind(audience_count)
@@ -1368,7 +1368,7 @@ async fn record_recipient(
     let result = sqlx::query(
         "INSERT INTO broadcast_recipients (id, broadcast_id, contact_id, status, \
          provider_message_id, error, sent_at, delivered_at, read_at, message_id) \
-         VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?)",
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NULL, NULL, $8)",
     )
     .bind(recipient_id)
     .bind(broadcast_id)
@@ -1398,7 +1398,7 @@ async fn ensure_conversation(
     channel: &str,
 ) -> Result<String, String> {
     let now = Utc::now().to_rfc3339();
-    let existing = sqlx::query("SELECT id FROM conversations WHERE contact_id = ? ORDER BY updated_at DESC LIMIT 1")
+    let existing = sqlx::query("SELECT id FROM conversations WHERE contact_id = $1 ORDER BY updated_at DESC LIMIT 1")
         .bind(&contact.id)
         .fetch_optional(&state.db)
         .await
@@ -1408,7 +1408,7 @@ async fn ensure_conversation(
         let conversation_id: String = row
             .try_get("id")
             .map_err(|err| format!("the conversation id for contact {} is unreadable: {err}", contact.id))?;
-        let updated = sqlx::query("UPDATE conversations SET broadcast_id = ?, updated_at = ? WHERE id = ?")
+        let updated = sqlx::query("UPDATE conversations SET broadcast_id = $1, updated_at = $2 WHERE id = $3")
             .bind(broadcast_id)
             .bind(&now)
             .bind(&conversation_id)
@@ -1427,7 +1427,7 @@ async fn ensure_conversation(
     let conversation_id = Uuid::new_v4().simple().to_string();
     let inserted = sqlx::query(
         "INSERT INTO conversations (id, contact_id, contact_name, channel, state, broadcast_id, \
-         human_takeover, created_at, updated_at) VALUES (?, ?, ?, ?, 'ENGAGED', ?, 0, ?, ?)",
+         human_takeover, created_at, updated_at) VALUES ($1, $2, $3, $4, 'ENGAGED', $5, 0, $6, $7)",
     )
     .bind(&conversation_id)
     .bind(&contact.id)
@@ -1479,8 +1479,8 @@ pub async fn process_scheduled_campaigns(State(state): State<AppState>) -> Respo
     let now = Utc::now().to_rfc3339();
     let due = match sqlx::query_as::<_, BroadcastRow>(&format!(
         "SELECT {BROADCAST_FIELDS} FROM broadcasts \
-         WHERE status = 'scheduled' AND COALESCE(tenant_key, '') = ? \
-         AND scheduled_at IS NOT NULL AND scheduled_at <> '' AND scheduled_at <= ?"
+         WHERE status = 'scheduled' AND COALESCE(tenant_key, '') = $1 \
+         AND scheduled_at IS NOT NULL AND scheduled_at <> '' AND scheduled_at <= $2"
     ))
     .bind(&tenant_key)
     .bind(&now)
@@ -1522,7 +1522,7 @@ pub async fn list_broadcast_recipients(
     Tenant(tenant_key): Tenant,
     Path(id): Path<String>,
 ) -> Response {
-    let owned = sqlx::query("SELECT 1 FROM broadcasts WHERE id = ? AND COALESCE(tenant_key, '') = ?")
+    let owned = sqlx::query("SELECT 1 FROM broadcasts WHERE id = $1 AND COALESCE(tenant_key, '') = $2")
         .bind(&id)
         .bind(&tenant_key)
         .fetch_optional(&state.db)
@@ -1609,7 +1609,7 @@ pub async fn get_whatsapp_pricing(State(state): State<AppState>, Query(query): Q
 
     let rate = sqlx::query(
         "SELECT rate_per_conversation, currency, source, updated_at FROM whatsapp_pricing_rates \
-         WHERE region = ? AND category = ?",
+         WHERE region = $1 AND category = $2",
     )
     .bind(&region)
     .bind(&category)
