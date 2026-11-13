@@ -30,6 +30,8 @@ pub struct ShopifyStoreConnection {
     pub shopify_api_key: String,
     pub shopify_api_secret_hash: String,
     pub shopify_api_secret_salt: String,
+    /// The Shopify Admin API access token, stored as-is (not hashed) so it can
+    /// be used to call the Admin API; unused, kept for the column's shape.
     pub shopify_access_token_hash: String,
     pub shopify_access_token_salt: String,
     pub shopify_webhook_secret: String,
@@ -177,7 +179,8 @@ impl ShopifyStoreIntegrationService {
 
         // Hash the API secret if provided
         let (api_secret_hash, api_secret_salt) = if let Some(ref secret) = req.shopify_api_secret {
-            let salt = rand::RngCore::next_bytes(&mut rand::thread_rng(), &mut [0u8; 32]);
+            let mut salt = [0u8; 32];
+            rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut salt);
             let salt_hex = hex::encode(&salt);
             let mut mac = HmacSha256::new_from_slice(&salt)
                 .map_err(|e| format!("Failed to create HMAC: {}", e))?;
@@ -187,17 +190,14 @@ impl ShopifyStoreIntegrationService {
             ("".to_string(), "".to_string())
         };
 
-        // Hash the access token if provided
-        let (access_token_hash, access_token_salt) = if let Some(ref token) = req.shopify_access_token {
-            let salt = rand::RngCore::next_bytes(&mut rand::thread_rng(), &mut [0u8; 32]);
-            let salt_hex = hex::encode(&salt);
-            let mut mac = HmacSha256::new_from_slice(&salt)
-                .map_err(|e| format!("Failed to create HMAC: {}", e))?;
-            mac.update(token.as_bytes());
-            (hex::encode(mac.finalize().into_bytes()), salt_hex)
-        } else {
-            ("".to_string(), "".to_string())
-        };
+        // The Admin API access token must be usable (not just verifiable) so the
+        // customer auto-create flow can call Shopify with it later, so it is
+        // stored as-is rather than one-way hashed like the API secret above.
+        // (`_salt` column is kept empty; it predates this field being usable.)
+        let (access_token_hash, access_token_salt) = (
+            req.shopify_access_token.clone().unwrap_or_default(),
+            "".to_string(),
+        );
 
         // Generate a public key for the store widget
         let public_key = format!(
@@ -649,7 +649,7 @@ impl ShopifyStoreIntegrationService {
             if conn.auto_create_customer {
                 // 5. Auto-create customer in Shopify via Admin API
                 match Self::create_shopify_customer(
-                    pool, conn, &pending_data.4, &pending_data.5,
+                    pool, conn, &pending_data.0, &pending_data.4, &pending_data.5,
                     &pending_data.6, &pending_data.7, &conn.customer_tag,
                 ).await {
                     Ok(customer_id) => (true, Some(customer_id)),
@@ -691,38 +691,66 @@ impl ShopifyStoreIntegrationService {
     async fn create_shopify_customer(
         pool: &DbPool,
         connection: &ShopifyStoreConnection,
+        pending_id: &str,
         email: &str,
         phone: &str,
         first_name: &str,
         last_name: &str,
         tag: &str,
     ) -> Result<String, String> {
-        // Check if we have an access token
+        // The access token is required to call the Admin API.
         if connection.shopify_access_token_hash.is_empty() {
             return Err("Shopify access token not configured. Customer will need to be created manually.".to_string());
         }
+        let access_token = &connection.shopify_access_token_hash;
 
-        // Note: In a real implementation, we would need to store the access token
-        // in a decryptable format or use OAuth flow. For now, we log that the
-        // customer is verified and ready for creation.
-        //
-        // The store owner can configure a webhook or use the Shopify Admin API
-        // directly to create the customer after verification.
+        let url = format!(
+            "https://{}/admin/api/2024-01/customers.json",
+            connection.store_domain
+        );
+        let body = serde_json::json!({
+            "customer": {
+                "first_name": first_name,
+                "last_name": last_name,
+                "email": email,
+                "phone": if phone.is_empty() { serde_json::Value::Null } else { serde_json::Value::String(phone.to_string()) },
+                "tags": tag,
+                "verified_email": true,
+            }
+        });
 
-        // For the auto-create feature to work, the store owner needs to:
-        // 1. Create a Shopify Custom App with Customer API access
-        // 2. Store the access token in the connection
-        // 3. The token is used here to call Shopify's /admin/api/2024-01/customers.json
+        let client = reqwest::Client::new();
+        let resp = client
+            .post(&url)
+            .header("X-Shopify-Access-Token", access_token.as_str())
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| format!("Failed to reach Shopify Admin API: {}", e))?;
 
-        // Placeholder: In production, this would call the Shopify Admin API
-        // with the stored access token to create the customer.
-        // For now, we return a placeholder ID and log the event.
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let text = resp.text().await.unwrap_or_default();
+            return Err(format!(
+                "Shopify Admin API returned {}: {}",
+                status, text
+            ));
+        }
 
-        info!("Customer verified for Shopify auto-creation: {} {} ({}) at {}",
-              first_name, last_name, email, connection.store_domain);
+        let payload: serde_json::Value = resp
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse Shopify customer response: {}", e))?;
+        let customer_id = payload
+            .get("customer")
+            .and_then(|c| c.get("id"))
+            .map(|id| id.to_string())
+            .ok_or_else(|| "Shopify response did not include a customer id".to_string())?;
 
-        // Store the verified customer data for later processing
-        let customer_id = format!("shopify_{}", uuid::Uuid::new_v4().as_hyphenated());
+        info!(
+            "Created Shopify customer {} for {} {} ({}) at {}",
+            customer_id, first_name, last_name, email, connection.store_domain
+        );
 
         sqlx::query(
             r#"UPDATE shopify_pending_customers
@@ -730,10 +758,10 @@ impl ShopifyStoreIntegrationService {
                WHERE id = $2"#
         )
         .bind(&customer_id)
-        .bind(email)
+        .bind(pending_id)
         .execute(pool)
         .await
-        .ok();
+        .map_err(|e| format!("Failed to record Shopify customer id: {}", e))?;
 
         Ok(customer_id)
     }
