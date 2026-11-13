@@ -9,7 +9,6 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
 use serde::Deserialize;
-use std::collections::HashMap;
 
 use crate::db::AppState;
 use crate::services::autonomous_resolution;
@@ -60,7 +59,7 @@ struct SnapshotQuery {
 // ——— Handlers ———
 
 /// GET /autonomous-resolution/summary
-pub async fn get_summary(State(state): State<AppState>) -> Result<Json<()>, (StatusCode, String)> {
+pub async fn get_summary(State(state): State<AppState>) -> Result<Json<autonomous_resolution::ResolutionSummary>, (StatusCode, String)> {
     let summary = autonomous_resolution::get_resolution_summary(&state)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -69,7 +68,7 @@ pub async fn get_summary(State(state): State<AppState>) -> Result<Json<()>, (Sta
 }
 
 /// GET /autonomous-resolution/config
-pub async fn get_config(State(state): State<AppState>) -> Result<Json<()>, (StatusCode, String)> {
+pub async fn get_config(State(state): State<AppState>) -> Result<Json<autonomous_resolution::ResolutionConfig>, (StatusCode, String)> {
     let config = autonomous_resolution::get_resolution_config(&state)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -81,7 +80,7 @@ pub async fn get_config(State(state): State<AppState>) -> Result<Json<()>, (Stat
 pub async fn update_config(
     State(state): State<AppState>,
     Json(config): Json<autonomous_resolution::ResolutionConfig>,
-) -> Result<Json<()>, (StatusCode, String)> {
+) -> Result<Json<autonomous_resolution::ConfigResult>, (StatusCode, String)> {
     let result = autonomous_resolution::update_resolution_config(&state, &config)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -93,7 +92,7 @@ pub async fn update_config(
 pub async fn list_escalation_rules(
     State(state): State<AppState>,
     Query(params): Query<EscalationRulesQuery>,
-) -> Result<Json<()>, (StatusCode, String)> {
+) -> Result<Json<Vec<autonomous_resolution::EscalationRule>>, (StatusCode, String)> {
     let rules = autonomous_resolution::list_escalation_rules(&state, params.is_active)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -105,7 +104,7 @@ pub async fn list_escalation_rules(
 pub async fn create_escalation_rule(
     State(state): State<AppState>,
     Json(rule): Json<autonomous_resolution::EscalationRule>,
-) -> Result<Json<()>, (StatusCode, String)> {
+) -> Result<Json<autonomous_resolution::EscalationResult>, (StatusCode, String)> {
     let result = autonomous_resolution::create_escalation_rule(
         &state,
         &rule.name,
@@ -132,7 +131,7 @@ pub async fn update_escalation_rule(
     State(state): State<AppState>,
     Path(_id): Path<String>,
     Json(rule): Json<autonomous_resolution::EscalationRule>,
-) -> Result<Json<()>, (StatusCode, String)> {
+) -> Result<Json<autonomous_resolution::EscalationResult>, (StatusCode, String)> {
     let result = autonomous_resolution::update_escalation_rule(&state, &rule)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -144,7 +143,7 @@ pub async fn update_escalation_rule(
 pub async fn delete_escalation_rule(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<()>, (StatusCode, String)> {
+) -> Result<Json<autonomous_resolution::EscalationResult>, (StatusCode, String)> {
     let result = autonomous_resolution::delete_escalation_rule(&state, &id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -156,7 +155,7 @@ pub async fn delete_escalation_rule(
 pub async fn list_policies(
     State(state): State<AppState>,
     Query(params): Query<PoliciesQuery>,
-) -> Result<Json<()>, (StatusCode, String)> {
+) -> Result<Json<Vec<autonomous_resolution::AgentPolicy>>, (StatusCode, String)> {
     let policies = autonomous_resolution::list_agent_policies(&state, params.is_active)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -168,7 +167,7 @@ pub async fn list_policies(
 pub async fn evaluate_decision(
     State(state): State<AppState>,
     Query(params): Query<EvaluateQuery>,
-) -> Result<Json<()>, (StatusCode, String)> {
+) -> Result<Json<autonomous_resolution::ResolutionDecision>, (StatusCode, String)> {
     let decision = autonomous_resolution::evaluate_resolution_decision(
         &state,
         &params.conversation_id,
@@ -186,7 +185,7 @@ pub async fn evaluate_decision(
 pub async fn log_attempt(
     State(state): State<AppState>,
     Json(params): Json<LogAttemptQuery>,
-) -> Result<Json<()>, (StatusCode, String)> {
+) -> Result<Json<autonomous_resolution::ResolutionLog>, (StatusCode, String)> {
     // First evaluate the decision
     let decision = autonomous_resolution::evaluate_resolution_decision(
         &state,
@@ -219,7 +218,7 @@ pub async fn log_attempt(
 pub async fn list_logs(
     State(state): State<AppState>,
     Query(params): Query<LogsQuery>,
-) -> Result<Json<()>, (StatusCode, String)> {
+) -> Result<Json<Vec<autonomous_resolution::ResolutionLog>>, (StatusCode, String)> {
     let logs = autonomous_resolution::list_resolution_logs(
         &state,
         params.outcome.as_deref(),
@@ -237,7 +236,7 @@ pub async fn list_logs(
 pub async fn generate_snapshot(
     State(state): State<AppState>,
     Query(params): Query<SnapshotQuery>,
-) -> Result<Json<()>, (StatusCode, String)> {
+) -> Result<Json<autonomous_resolution::AnalyticsSnapshot>, (StatusCode, String)> {
     let days = params.days.unwrap_or(7);
     let snapshot = autonomous_resolution::generate_analytics_snapshot(&state, days)
         .await
