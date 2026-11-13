@@ -117,9 +117,9 @@ pub struct RedirectCallbackQuery {
 async fn get_connection(pool: &PgPool) -> Option<NidOrganizationConnection> {
     sqlx::query_as!(
         NidOrganizationConnection,
-        r#"SELECT id, "nID_base_url" as nID_base_url, webhook_secret, auto_sync_enabled,
+        r#"SELECT id::TEXT as "id!", nid_base_url as "nID_base_url", webhook_secret, auto_sync_enabled,
                   auto_link_new_organizations, sync_interval_seconds, connection_status,
-                  last_error, "last_health_check_at" as last_health_check_at
+                  last_error, last_health_check_at::TEXT as last_health_check_at
            FROM nid_organization_connection LIMIT 1"#
     )
     .fetch_optional(pool)
@@ -173,22 +173,22 @@ async fn upsert_organization_from_webhook(
 
     // Log the sync event
     let payload_json = serde_json::to_value(org_data).unwrap_or_default();
-    let log_id = Uuid::new_v4().to_string();
+    let log_id = Uuid::new_v4();
     sqlx::query!(
         r#"INSERT INTO organization_sync_log (id, nid_organization_id, event_type, payload, status, error_message)
            VALUES ($1, $2, $3, $4, 'success', '')"#,
-        log_id.as_str(),
+        log_id,
         nid_org_id,
         event_type,
-        payload_json.to_string() as &str,
+        payload_json,
     )
     .execute(pool)
     .await
     .map_err(|e| format!("Failed to log sync: {}", e))?;
 
     // Upsert the organization
-    let org_id = Uuid::new_v4().to_string();
-    let now = Utc::now().to_rfc3339();
+    let org_id = Uuid::new_v4();
+    let now = Utc::now();
 
     // First try to find existing
     let existing = sqlx::query!(
@@ -220,8 +220,8 @@ async fn upsert_organization_from_webhook(
             subject_id,
             is_verified,
             verified_level.as_deref(),
-            &now,
-            &now,
+            now,
+            now,
             nid_org_id
         )
         .execute(pool)
@@ -234,7 +234,7 @@ async fn upsert_organization_from_webhook(
                    legal_name, registration_number, country_code, subject_id, is_verified,
                    verified_level, sync_status, last_synced_at, last_sync_error, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'synced', $11, '', $12, $13)"#,
-            org_id.as_str(),
+            org_id,
             nid_org_id,
             nid_tenant_id,
             tenant_slug,
@@ -244,9 +244,9 @@ async fn upsert_organization_from_webhook(
             subject_id,
             is_verified,
             verified_level.as_deref(),
-            &now,
-            &now,
-            &now
+            now,
+            now,
+            now
         )
         .execute(pool)
         .await
@@ -260,12 +260,12 @@ async fn upsert_organization_from_webhook(
 async fn fetch_organization_by_nid_id(pool: &PgPool, nid_org_id: &str) -> Result<NidOrganization, String> {
     let org = sqlx::query_as!(
         NidOrganization,
-        r#"SELECT id::TEXT as id, nid_organization_id, nid_tenant_id, tenant_slug,
+        r#"SELECT id::TEXT as "id!", nid_organization_id, nid_tenant_id, tenant_slug,
                   legal_name, registration_number, country_code, subject_id,
-                  is_verified, verified_level, webhook_url, sync_status,
-                  "last_synced_at"::TEXT as last_synced_at, last_sync_error,
+                  is_verified as "is_verified!", verified_level, webhook_url, sync_status,
+                  last_synced_at::TEXT as last_synced_at, last_sync_error,
                   linked_brand_id::TEXT as linked_brand_id,
-                  created_at::TEXT as created_at, updated_at::TEXT as updated_at
+                  created_at::TEXT as "created_at!", updated_at::TEXT as "updated_at!"
            FROM nid_organizations WHERE nid_organization_id = $1"#,
         nid_org_id
     )
@@ -279,12 +279,12 @@ async fn fetch_organization_by_nid_id(pool: &PgPool, nid_org_id: &str) -> Result
 async fn list_organizations(pool: &PgPool) -> Result<Vec<NidOrganization>, String> {
     let orgs = sqlx::query_as!(
         NidOrganization,
-        r#"SELECT id::TEXT as id, nid_organization_id, nid_tenant_id, tenant_slug,
+        r#"SELECT id::TEXT as "id!", nid_organization_id, nid_tenant_id, tenant_slug,
                   legal_name, registration_number, country_code, subject_id,
-                  is_verified, verified_level, webhook_url, sync_status,
-                  "last_synced_at"::TEXT as last_synced_at, last_sync_error,
+                  is_verified as "is_verified!", verified_level, webhook_url, sync_status,
+                  last_synced_at::TEXT as last_synced_at, last_sync_error,
                   linked_brand_id::TEXT as linked_brand_id,
-                  created_at::TEXT as created_at, updated_at::TEXT as updated_at
+                  created_at::TEXT as "created_at!", updated_at::TEXT as "updated_at!"
            FROM nid_organizations ORDER BY created_at DESC"#
     )
     .fetch_all(pool)
@@ -297,8 +297,8 @@ async fn list_organizations(pool: &PgPool) -> Result<Vec<NidOrganization>, Strin
 async fn get_sync_log(pool: &PgPool, limit: i64) -> Result<Vec<OrganizationSyncLog>, String> {
     let logs = sqlx::query_as!(
         OrganizationSyncLog,
-        r#"SELECT id::TEXT as id, nid_organization_id, event_type, status,
-                  error_message, created_at::TEXT as created_at
+        r#"SELECT id::TEXT as "id!", nid_organization_id, event_type, status,
+                  error_message, created_at::TEXT as "created_at!"
            FROM organization_sync_log ORDER BY created_at DESC LIMIT $1"#,
         limit
     )
@@ -317,21 +317,21 @@ async fn get_health(pool: &PgPool) -> Result<ConnectionHealth, String> {
     let last_error = conn.as_ref().map(|c| c.last_error.clone()).unwrap_or_default();
 
     let total: i64 = sqlx::query_scalar!(
-        r#"SELECT COUNT(*)::INTEGER FROM nid_organizations"#
+        r#"SELECT COUNT(*) as "count!" FROM nid_organizations"#
     )
     .fetch_one(pool)
     .await
     .map_err(|e| e.to_string())?;
 
     let synced: i64 = sqlx::query_scalar!(
-        r#"SELECT COUNT(*)::INTEGER FROM nid_organizations WHERE sync_status = 'synced'"#
+        r#"SELECT COUNT(*) as "count!" FROM nid_organizations WHERE sync_status = 'synced'"#
     )
     .fetch_one(pool)
     .await
     .map_err(|e| e.to_string())?;
 
     let errors: i64 = sqlx::query_scalar!(
-        r#"SELECT COUNT(*)::INTEGER FROM nid_organizations WHERE sync_status = 'error'"#
+        r#"SELECT COUNT(*) as "count!" FROM nid_organizations WHERE sync_status = 'error'"#
     )
     .fetch_one(pool)
     .await
@@ -363,11 +363,11 @@ pub async fn create_redirect_session(
     req: CreateRedirectRequest,
 ) -> Result<RedirectSession, String> {
     let state_token = generate_state_token();
-    let session_id = Uuid::new_v4().to_string();
-    let expires_at = chrono::Utc::now()
+    let session_id = Uuid::new_v4();
+    let expires_at_dt = chrono::Utc::now()
         .checked_add_days(chrono::Days::new(1))
-        .unwrap()
-        .to_rfc3339();
+        .unwrap();
+    let expires_at = expires_at_dt.to_rfc3339();
 
     let redirect_type = req.redirect_type.unwrap_or_else(|| "create".to_string());
 
@@ -375,12 +375,12 @@ pub async fn create_redirect_session(
         r#"INSERT INTO organization_redirect_sessions (id, state_token, redirect_type, return_url,
                    nid_tenant_id, expires_at)
            VALUES ($1, $2, $3, $4, $5, $6)"#,
-        session_id.as_str(),
+        session_id,
         &state_token,
         &redirect_type,
         &req.return_url,
         req.tenant_id.as_deref(),
-        &expires_at
+        expires_at_dt
     )
     .execute(pool)
     .await
@@ -411,8 +411,8 @@ pub async fn handle_redirect_callback(
     error: Option<&str>,
 ) -> Result<serde_json::Value, String> {
     let session = sqlx::query!(
-        r#"SELECT id::TEXT, state_token, redirect_type, return_url, nid_tenant_id,
-                  expires_at::TEXT, max_attempts, attempt_count, status, error_code, error_message
+        r#"SELECT id::TEXT as "id!", state_token, redirect_type, return_url, nid_tenant_id,
+                  expires_at, max_attempts, attempt_count, status, error_code, error_message
            FROM organization_redirect_sessions WHERE state_token = $1"#,
         state
     )
@@ -423,8 +423,7 @@ pub async fn handle_redirect_callback(
 
     // Check expiry
     let now = chrono::Utc::now();
-    let expires_at: chrono::DateTime<chrono::Utc> = session.expires_at.parse()
-        .map_err(|_| "Invalid expiry date".to_string())?;
+    let expires_at: chrono::DateTime<chrono::Utc> = session.expires_at;
 
     if now > expires_at {
         sqlx::query!(
@@ -463,7 +462,7 @@ pub async fn handle_redirect_callback(
                    attempt_count = attempt_count + 1, completed_at = $2
                WHERE state_token = $3"#,
             err,
-            now.to_rfc3339(),
+            now,
             state
         )
         .execute(pool)
@@ -482,7 +481,7 @@ pub async fn handle_redirect_callback(
         r#"UPDATE organization_redirect_sessions SET status = 'completed',
                attempt_count = attempt_count + 1, completed_at = $1
            WHERE state_token = $2"#,
-        now.to_rfc3339(),
+        now,
         state
     )
     .execute(pool)
@@ -574,38 +573,29 @@ pub async fn update_connection_handler(
     Json(req): Json<UpdateConnectionRequest>,
 ) -> StatusCode {
     let mut query_parts = vec![];
-    let mut params: Vec<&str> = vec![];
-    let mut param_idx = 1;
 
-    if let Some(url) = req.nID_base_url {
-        query_parts.push(format!("\"nID_base_url\" = '${}' ", param_idx));
-        params.push(&url);
-        param_idx += 1;
+    if let Some(url) = &req.nID_base_url {
+        query_parts.push(format!("nid_base_url = '{}'", url.replace('\'', "''")));
     }
-    if let Some(secret) = req.webhook_secret {
-        query_parts.push(format!("webhook_secret = '${}' ", param_idx));
-        params.push(&secret);
-        param_idx += 1;
+    if let Some(secret) = &req.webhook_secret {
+        query_parts.push(format!("webhook_secret = '{}'", secret.replace('\'', "''")));
     }
     if let Some(enabled) = req.auto_sync_enabled {
-        query_parts.push(format!("auto_sync_enabled = ${} ", param_idx));
-        param_idx += 1;
+        query_parts.push(format!("auto_sync_enabled = {}", enabled));
     }
     if let Some(link) = req.auto_link_new_organizations {
-        query_parts.push(format!("auto_link_new_organizations = ${} ", param_idx));
-        param_idx += 1;
+        query_parts.push(format!("auto_link_new_organizations = {}", link));
     }
     if let Some(interval) = req.sync_interval_seconds {
-        query_parts.push(format!("sync_interval_seconds = ${} ", param_idx));
-        param_idx += 1;
+        query_parts.push(format!("sync_interval_seconds = {}", interval));
     }
 
     if query_parts.is_empty() {
         return StatusCode::OK;
     }
 
-    query_parts.push(format!("connection_status = 'connected' "));
-    query_parts.push(format!("updated_at = NOW() "));
+    query_parts.push("connection_status = 'connected'".to_string());
+    query_parts.push("updated_at = NOW()".to_string());
 
     let query = format!(
         "UPDATE nid_organization_connection SET {} WHERE id = '00000000-0000-0000-0000-000000000001'",
