@@ -154,11 +154,12 @@ pub async fn get_config(state: &AppState) -> Result<OperatorConfig, sqlx::Error>
         id: row.try_get("id").unwrap_or_default(),
         scan_interval_minutes: row.try_get("scan_interval_minutes").unwrap_or(60),
         auto_deploy_enabled: row.try_get("auto_deploy_enabled").unwrap_or(false),
-        auto_deploy_max_risk: row.try_get("auto_deploy_max_risk").unwrap_or_else(|| "low".to_string()),
+        auto_deploy_max_risk: row.try_get("auto_deploy_max_risk").unwrap_or_else(|_| "low".to_string()),
         max_proposals_per_scan: row.try_get("max_proposals_per_scan").unwrap_or(5),
         min_confidence_threshold: row.try_get("min_confidence_threshold").unwrap_or(0.7),
         metrics_to_monitor: row.try_get::<Option<String>, _>("metrics_to_monitor")
             .ok()
+            .flatten()
             .and_then(|s| serde_json::from_str(&s).ok())
             .unwrap_or_else(|| json!(["validation_score", "feedback_rate", "error_rate"])),
         alert_on_failure: row.try_get("alert_on_failure").unwrap_or(true),
@@ -166,6 +167,7 @@ pub async fn get_config(state: &AppState) -> Result<OperatorConfig, sqlx::Error>
         last_scan_at: row.try_get("last_scan_at").ok(),
         last_scan_result: row.try_get::<Option<String>, _>("last_scan_result")
             .ok()
+            .flatten()
             .and_then(|s| serde_json::from_str(&s).ok()),
         updated_at: row.try_get("updated_at").unwrap_or_default(),
     })
@@ -323,7 +325,7 @@ pub async fn collect_metrics_snapshot(state: &AppState) -> Result<OperatorMetric
     let mut trends = serde_json::Map::new();
 
     if let Some(prev) = prev_snapshot {
-        let prev_data: Value = serde_json::from_str(&prev.try_get("metrics_data").unwrap_or_default())
+        let prev_data: Value = serde_json::from_str(&prev.try_get::<String, _>("metrics_data").unwrap_or_default())
             .unwrap_or_else(|_| json!({}));
 
         for (key, current_val) in metrics.as_object().unwrap().iter() {
@@ -381,7 +383,7 @@ pub async fn collect_metrics_snapshot(state: &AppState) -> Result<OperatorMetric
 
     Ok(OperatorMetricsSnapshot {
         id,
-        snapshot_time: now,
+        snapshot_time: now.clone(),
         metrics_data: metrics,
         anomalies: Some(anomalies_json),
         trend_data: Some(trend_json),
@@ -402,7 +404,7 @@ pub async fn run_scan(state: &AppState) -> Result<ScanResult, sqlx::Error> {
     // Get config
     let config = get_config(state).await?;
     if !config.enabled {
-        return Err(sqlx::Error::Pool(sqlx::pool::PoolError::Closed));
+        return Err(sqlx::Error::Configuration("operator is disabled".into()));
     }
 
     // Generate proposals based on anomalies and metrics
@@ -441,7 +443,8 @@ Return a JSON array of proposals. If no improvements are needed, return an empty
         Ok(response) => {
             // Parse proposals from Claude response
             if let Ok(parsed) = serde_json::from_str::<Value>(&response) {
-                let arr = if parsed.is_array() { parsed.as_array().unwrap() } else { &[] };
+                let empty: Vec<Value> = Vec::new();
+                let arr = parsed.as_array().unwrap_or(&empty);
                 for item in arr.iter().take(config.max_proposals_per_scan as usize) {
                     let title = item.get("title").and_then(|v| v.as_str()).unwrap_or("").to_string();
                     if title.is_empty() {
@@ -591,20 +594,20 @@ pub async fn get_summary(state: &AppState) -> Result<OperatorSummary, sqlx::Erro
             title: row.try_get("title").unwrap_or_default(),
             description: row.try_get("description").unwrap_or_default(),
             rationale: row.try_get("rationale").unwrap_or_default(),
-            expected_impact: row.try_get::<Option<String>, _>("expected_impact").ok().and_then(|s| serde_json::from_str(&s).ok()),
-            implementation_plan: row.try_get::<Option<String>, _>("implementation_plan").ok().and_then(|s| serde_json::from_str(&s).ok()),
+            expected_impact: row.try_get::<Option<String>, _>("expected_impact").ok().flatten().and_then(|s| serde_json::from_str(&s).ok()),
+            implementation_plan: row.try_get::<Option<String>, _>("implementation_plan").ok().flatten().and_then(|s| serde_json::from_str(&s).ok()),
             status: row.try_get("status").unwrap_or_default(),
             priority: row.try_get("priority").unwrap_or_default(),
             confidence: row.try_get("confidence").unwrap_or(0.0),
             source: row.try_get("source").unwrap_or_default(),
-            source_data: row.try_get::<Option<String>, _>("source_data").ok().and_then(|s| serde_json::from_str(&s).ok()),
-            related_feedback_ids: row.try_get::<Option<String>, _>("related_feedback_ids").ok().and_then(|s| serde_json::from_str(&s).ok()),
-            related_conversation_ids: row.try_get::<Option<String>, _>("related_conversation_ids").ok().and_then(|s| serde_json::from_str(&s).ok()),
+            source_data: row.try_get::<Option<String>, _>("source_data").ok().flatten().and_then(|s| serde_json::from_str(&s).ok()),
+            related_feedback_ids: row.try_get::<Option<String>, _>("related_feedback_ids").ok().flatten().and_then(|s| serde_json::from_str(&s).ok()),
+            related_conversation_ids: row.try_get::<Option<String>, _>("related_conversation_ids").ok().flatten().and_then(|s| serde_json::from_str(&s).ok()),
             created_by: row.try_get("created_by").unwrap_or_default(),
             reviewed_by: row.try_get("reviewed_by").ok(),
             reviewed_at: row.try_get("reviewed_at").ok(),
             deployed_at: row.try_get("deployed_at").ok(),
-            deployment_result: row.try_get::<Option<String>, _>("deployment_result").ok().and_then(|s| serde_json::from_str(&s).ok()),
+            deployment_result: row.try_get::<Option<String>, _>("deployment_result").ok().flatten().and_then(|s| serde_json::from_str(&s).ok()),
             created_at: row.try_get("created_at").unwrap_or_default(),
             updated_at: row.try_get("updated_at").unwrap_or_default(),
         }
@@ -625,7 +628,7 @@ pub async fn get_summary(state: &AppState) -> Result<OperatorSummary, sqlx::Erro
             action_detail: row.try_get("action_detail").unwrap_or_default(),
             target: row.try_get("target").ok(),
             result: row.try_get("result").unwrap_or_default(),
-            output_data: row.try_get::<Option<String>, _>("output_data").ok().and_then(|s| serde_json::from_str(&s).ok()),
+            output_data: row.try_get::<Option<String>, _>("output_data").ok().flatten().and_then(|s| serde_json::from_str(&s).ok()),
             duration_ms: row.try_get("duration_ms").ok(),
             created_at: row.try_get("created_at").unwrap_or_default(),
         }
@@ -642,9 +645,9 @@ pub async fn get_summary(state: &AppState) -> Result<OperatorSummary, sqlx::Erro
     let latest_snapshot = snap_row.map(|row| OperatorMetricsSnapshot {
         id: row.try_get("id").unwrap_or_default(),
         snapshot_time: row.try_get("snapshot_time").unwrap_or_default(),
-        metrics_data: serde_json::from_str(&row.try_get("metrics_data").unwrap_or_default()).unwrap_or_else(|_| json!({})),
-        anomalies: row.try_get::<Option<String>, _>("anomalies").ok().and_then(|s| serde_json::from_str(&s).ok()),
-        trend_data: row.try_get::<Option<String>, _>("trend_data").ok().and_then(|s| serde_json::from_str(&s).ok()),
+        metrics_data: serde_json::from_str(&row.try_get::<String, _>("metrics_data").unwrap_or_default()).unwrap_or_else(|_| json!({})),
+        anomalies: row.try_get::<Option<String>, _>("anomalies").ok().flatten().and_then(|s| serde_json::from_str(&s).ok()),
+        trend_data: row.try_get::<Option<String>, _>("trend_data").ok().flatten().and_then(|s| serde_json::from_str(&s).ok()),
         created_at: row.try_get("created_at").unwrap_or_default(),
     });
 
@@ -708,20 +711,20 @@ pub async fn list_proposals(
             title: row.try_get("title").unwrap_or_default(),
             description: row.try_get("description").unwrap_or_default(),
             rationale: row.try_get("rationale").unwrap_or_default(),
-            expected_impact: row.try_get::<Option<String>, _>("expected_impact").ok().and_then(|s| serde_json::from_str(&s).ok()),
-            implementation_plan: row.try_get::<Option<String>, _>("implementation_plan").ok().and_then(|s| serde_json::from_str(&s).ok()),
+            expected_impact: row.try_get::<Option<String>, _>("expected_impact").ok().flatten().and_then(|s| serde_json::from_str(&s).ok()),
+            implementation_plan: row.try_get::<Option<String>, _>("implementation_plan").ok().flatten().and_then(|s| serde_json::from_str(&s).ok()),
             status: row.try_get("status").unwrap_or_default(),
             priority: row.try_get("priority").unwrap_or_default(),
             confidence: row.try_get("confidence").unwrap_or(0.0),
             source: row.try_get("source").unwrap_or_default(),
-            source_data: row.try_get::<Option<String>, _>("source_data").ok().and_then(|s| serde_json::from_str(&s).ok()),
-            related_feedback_ids: row.try_get::<Option<String>, _>("related_feedback_ids").ok().and_then(|s| serde_json::from_str(&s).ok()),
-            related_conversation_ids: row.try_get::<Option<String>, _>("related_conversation_ids").ok().and_then(|s| serde_json::from_str(&s).ok()),
+            source_data: row.try_get::<Option<String>, _>("source_data").ok().flatten().and_then(|s| serde_json::from_str(&s).ok()),
+            related_feedback_ids: row.try_get::<Option<String>, _>("related_feedback_ids").ok().flatten().and_then(|s| serde_json::from_str(&s).ok()),
+            related_conversation_ids: row.try_get::<Option<String>, _>("related_conversation_ids").ok().flatten().and_then(|s| serde_json::from_str(&s).ok()),
             created_by: row.try_get("created_by").unwrap_or_default(),
             reviewed_by: row.try_get("reviewed_by").ok(),
             reviewed_at: row.try_get("reviewed_at").ok(),
             deployed_at: row.try_get("deployed_at").ok(),
-            deployment_result: row.try_get::<Option<String>, _>("deployment_result").ok().and_then(|s| serde_json::from_str(&s).ok()),
+            deployment_result: row.try_get::<Option<String>, _>("deployment_result").ok().flatten().and_then(|s| serde_json::from_str(&s).ok()),
             created_at: row.try_get("created_at").unwrap_or_default(),
             updated_at: row.try_get("updated_at").unwrap_or_default(),
         }
@@ -838,7 +841,7 @@ pub async fn list_logs(
             action_detail: row.try_get("action_detail").unwrap_or_default(),
             target: row.try_get("target").ok(),
             result: row.try_get("result").unwrap_or_default(),
-            output_data: row.try_get::<Option<String>, _>("output_data").ok().and_then(|s| serde_json::from_str(&s).ok()),
+            output_data: row.try_get::<Option<String>, _>("output_data").ok().flatten().and_then(|s| serde_json::from_str(&s).ok()),
             duration_ms: row.try_get("duration_ms").ok(),
             created_at: row.try_get("created_at").unwrap_or_default(),
         }
@@ -864,9 +867,9 @@ pub async fn list_snapshots(
         OperatorMetricsSnapshot {
             id: row.try_get("id").unwrap_or_default(),
             snapshot_time: row.try_get("snapshot_time").unwrap_or_default(),
-            metrics_data: serde_json::from_str(&row.try_get("metrics_data").unwrap_or_default()).unwrap_or_else(|_| json!({})),
-            anomalies: row.try_get::<Option<String>, _>("anomalies").ok().and_then(|s| serde_json::from_str(&s).ok()),
-            trend_data: row.try_get::<Option<String>, _>("trend_data").ok().and_then(|s| serde_json::from_str(&s).ok()),
+            metrics_data: serde_json::from_str(&row.try_get::<String, _>("metrics_data").unwrap_or_default()).unwrap_or_else(|_| json!({})),
+            anomalies: row.try_get::<Option<String>, _>("anomalies").ok().flatten().and_then(|s| serde_json::from_str(&s).ok()),
+            trend_data: row.try_get::<Option<String>, _>("trend_data").ok().flatten().and_then(|s| serde_json::from_str(&s).ok()),
             created_at: row.try_get("created_at").unwrap_or_default(),
         }
     }).collect();
