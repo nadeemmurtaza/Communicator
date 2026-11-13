@@ -1,6 +1,7 @@
 //! SMTP and email template management routes.
 
-use axum::{Json, Path, Query, State, http::StatusCode, response::IntoResponse};
+use axum::{Json, http::StatusCode, response::IntoResponse};
+use axum::extract::{Path, Query, State};
 use serde::Deserialize;
 use serde_json::{json, Value};
 
@@ -26,11 +27,11 @@ pub struct SendLogsQuery {
 // Helpers
 // ---------------------------------------------------------------------------
 
-fn err(status: StatusCode, msg: String) -> impl IntoResponse {
-    (status, Json(json!({ "error": msg })))
+fn err(status: StatusCode, msg: String) -> axum::response::Response {
+    (status, Json(json!({ "error": msg }))).into_response()
 }
 
-fn db_err(e: String) -> impl IntoResponse {
+fn db_err(e: String) -> axum::response::Response {
     err(StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {e}"))
 }
 
@@ -221,7 +222,7 @@ pub async fn update_smtp_settings(
     if let Some(v) = payload.password { settings.password = v; }
     if let Some(v) = payload.from_address { settings.from_address = v; }
     if let Some(v) = payload.from_name { settings.from_name = v; }
-    if let Some(v) = payload.reply_to_address { settings.reply_to_address = v; }
+    if let Some(v) = payload.reply_to_address { settings.reply_to_address = Some(v); }
     if let Some(v) = payload.connection_timeout_seconds { settings.connection_timeout_seconds = v; }
     if let Some(v) = payload.enabled { settings.enabled = v; }
     settings.updated_at = chrono::Utc::now().to_rfc3339();
@@ -269,7 +270,7 @@ pub async fn list_email_templates(
     State(state): State<AppState>,
     Query(params): Query<TemplatesQuery>,
 ) -> impl IntoResponse {
-    match EmailTemplate::list(&state.db, params.category.as_deref(), params.brand_id.as_deref()).await {
+    match EmailTemplate::list(&state.db, params.category.as_deref(), None, params.brand_id.as_deref()).await {
         Ok(templates) => {
             let list: Vec<Value> = templates.iter().map(|t| {
                 json!({
@@ -340,7 +341,7 @@ pub async fn get_email_template(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    match EmailTemplate::list(&state.db, None, None).await {
+    match EmailTemplate::list(&state.db, None, None, None).await {
         Ok(templates) => {
             match templates.into_iter().find(|t| t.id == id) {
                 Some(t) => Json(json!({
@@ -383,7 +384,7 @@ pub async fn update_email_template(
     Path(id): Path<String>,
     Json(payload): Json<UpdateTemplatePayload>,
 ) -> impl IntoResponse {
-    let existing = match EmailTemplate::list(&state.db, None, None).await {
+    let existing = match EmailTemplate::list(&state.db, None, None, None).await {
         Ok(templates) => templates.into_iter().find(|t| t.id == id),
         Err(e) => return db_err(e),
     };

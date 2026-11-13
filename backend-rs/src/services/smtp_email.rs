@@ -6,8 +6,10 @@
 
 use crate::db::DbPool;
 use serde::{Deserialize, Serialize};
-use sqlx::PgRow;
+use sqlx::postgres::PgRow;
+use sqlx::Row;
 use std::collections::HashMap;
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tracing::{info, warn};
 
 // ---------------------------------------------------------------------------
@@ -357,8 +359,8 @@ impl SmtpSettings {
             brand_id: row.try_get("brand_id").ok(),
             host: row.try_get("host").unwrap_or_default(),
             port: row.try_get("port").unwrap_or(587i64),
-            security: row.try_get("security").unwrap_or_else(|| "starttls".to_string()),
-            auth_method: row.try_get("auth_method").unwrap_or_else(|| "login".to_string()),
+            security: row.try_get("security").unwrap_or_else(|_| "starttls".to_string()),
+            auth_method: row.try_get("auth_method").unwrap_or_else(|_| "login".to_string()),
             username: row.try_get("username").unwrap_or_default(),
             password: row.try_get("password").unwrap_or_default(),
             from_address: row.try_get("from_address").unwrap_or_default(),
@@ -437,25 +439,29 @@ impl EmailTemplate {
                         .bind(ty)
                         .bind(brand)
                         .fetch_all(pool)
-                        .await?
+                        .await
+                        .map_err(|e| e.to_string())?
                 } else {
                     sqlx::query(&query)
                         .bind(cat)
                         .bind(ty)
                         .fetch_all(pool)
-                        .await?
+                        .await
+                        .map_err(|e| e.to_string())?
                 }
             } else if let Some(brand) = brand_id {
                 sqlx::query(&query)
                     .bind(cat)
                     .bind(brand)
                     .fetch_all(pool)
-                    .await?
+                    .await
+                    .map_err(|e| e.to_string())?
             } else {
                 sqlx::query(&query)
                     .bind(cat)
                     .fetch_all(pool)
-                    .await?
+                    .await
+                    .map_err(|e| e.to_string())?
             }
         } else if let Some(ty) = template_type {
             if let Some(brand) = brand_id {
@@ -463,22 +469,26 @@ impl EmailTemplate {
                     .bind(ty)
                     .bind(brand)
                     .fetch_all(pool)
-                    .await?
+                    .await
+                    .map_err(|e| e.to_string())?
             } else {
                 sqlx::query(&query)
                     .bind(ty)
                     .fetch_all(pool)
-                    .await?
+                    .await
+                    .map_err(|e| e.to_string())?
             }
         } else if let Some(brand) = brand_id {
             sqlx::query(&query)
                 .bind(brand)
                 .fetch_all(pool)
-                .await?
+                .await
+                .map_err(|e| e.to_string())?
         } else {
             sqlx::query(&query)
                 .fetch_all(pool)
-                .await?
+                .await
+                .map_err(|e| e.to_string())?
         };
 
         Ok(rows.into_iter().map(Self::from_row).collect())
@@ -579,7 +589,7 @@ impl EmailTemplate {
     }
 
     fn from_row(row: PgRow) -> Self {
-        let variables_raw: String = row.try_get("variables").unwrap_or_else(|| "[]".to_string());
+        let variables_raw: String = row.try_get("variables").unwrap_or_else(|_| "[]".to_string());
         let variables = serde_json::from_str(&variables_raw).unwrap_or_else(|_| serde_json::json!([]));
 
         Self {
@@ -589,9 +599,9 @@ impl EmailTemplate {
             subject: row.try_get("subject").unwrap_or_default(),
             body_html: row.try_get("body_html").unwrap_or_default(),
             body_text: row.try_get("body_text").unwrap_or_default(),
-            template_type: row.try_get("template_type").unwrap_or_else(|| "transactional".to_string()),
-            category: row.try_get("category").unwrap_or_else(|| "general".to_string()),
-            language: row.try_get("language").unwrap_or_else(|| "en".to_string()),
+            template_type: row.try_get("template_type").unwrap_or_else(|_| "transactional".to_string()),
+            category: row.try_get("category").unwrap_or_else(|_| "general".to_string()),
+            language: row.try_get("language").unwrap_or_else(|_| "en".to_string()),
             enabled: row.try_get("enabled").unwrap_or(true),
             is_default: row.try_get("is_default").unwrap_or(false),
             variables,
@@ -772,7 +782,7 @@ pub async fn send_templated_email(
     request: &SendEmailRequest,
 ) -> Result<SendEmailResponse, String> {
     // 1. Resolve SMTP settings
-    let settings = SmtpSettings::get(pool, request.brand_id)
+    let settings = SmtpSettings::get(pool, request.brand_id.as_deref())
         .await?
         .ok_or_else(|| "No SMTP settings configured. Please configure SMTP first.".to_string())?;
 
@@ -781,7 +791,7 @@ pub async fn send_templated_email(
     }
 
     // 2. Resolve template
-    let template = EmailTemplate::get_by_name(pool, &request.template_name, request.brand_id)
+    let template = EmailTemplate::get_by_name(pool, &request.template_name, request.brand_id.as_deref())
         .await?
         .ok_or_else(|| format!("Template '{}' not found", request.template_name))?;
 
@@ -818,7 +828,7 @@ pub async fn send_templated_email(
         Ok(msg_id) => {
             EmailSendLog::log(
                 pool,
-                request.brand_id,
+                request.brand_id.as_deref(),
                 Some(&template.id),
                 Some(&template.name),
                 &request.to_address,
@@ -836,7 +846,7 @@ pub async fn send_templated_email(
         Err(e) => {
             EmailSendLog::log(
                 pool,
-                request.brand_id,
+                request.brand_id.as_deref(),
                 Some(&template.id),
                 Some(&template.name),
                 &request.to_address,
@@ -875,6 +885,73 @@ pub async fn send_templated_email(
 
 /// Send an email via raw SMTP protocol.
 /// Returns the Message-ID on success.
+/// A plain or TLS-upgraded SMTP connection. Lets the rest of the SMTP client
+/// code use a single concrete stream type regardless of whether the
+/// connection started in plaintext (then upgraded via STARTTLS) or was TLS
+/// from the start, since `tokio::io::split` halves of a TcpStream and of a
+/// TlsStream<TcpStream> are otherwise incompatible types.
+enum SmtpConnection {
+    Plain(tokio::net::TcpStream),
+    Tls(tokio_native_tls::TlsStream<tokio::net::TcpStream>),
+}
+
+impl tokio::io::AsyncRead for SmtpConnection {
+    fn poll_read(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> std::task::Poll<std::io::Result<()>> {
+        match self.get_mut() {
+            SmtpConnection::Plain(s) => std::pin::Pin::new(s).poll_read(cx, buf),
+            SmtpConnection::Tls(s) => std::pin::Pin::new(s).poll_read(cx, buf),
+        }
+    }
+}
+
+impl tokio::io::AsyncWrite for SmtpConnection {
+    fn poll_write(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &[u8],
+    ) -> std::task::Poll<Result<usize, std::io::Error>> {
+        match self.get_mut() {
+            SmtpConnection::Plain(s) => std::pin::Pin::new(s).poll_write(cx, buf),
+            SmtpConnection::Tls(s) => std::pin::Pin::new(s).poll_write(cx, buf),
+        }
+    }
+
+    fn poll_flush(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Result<(), std::io::Error>> {
+        match self.get_mut() {
+            SmtpConnection::Plain(s) => std::pin::Pin::new(s).poll_flush(cx),
+            SmtpConnection::Tls(s) => std::pin::Pin::new(s).poll_flush(cx),
+        }
+    }
+
+    fn poll_shutdown(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Result<(), std::io::Error>> {
+        match self.get_mut() {
+            SmtpConnection::Plain(s) => std::pin::Pin::new(s).poll_shutdown(cx),
+            SmtpConnection::Tls(s) => std::pin::Pin::new(s).poll_shutdown(cx),
+        }
+    }
+}
+
+async fn upgrade_to_tls(host: &str, stream: tokio::net::TcpStream) -> Result<SmtpConnection, String> {
+    let native_connector = tokio_native_tls::native_tls::TlsConnector::new()
+        .map_err(|e| format!("Failed to build TLS connector: {}", e))?;
+    let tls_connector = tokio_native_tls::TlsConnector::from(native_connector);
+    let tls_stream = tls_connector
+        .connect(host, stream)
+        .await
+        .map_err(|e| format!("TLS handshake failed: {}", e))?;
+    Ok(SmtpConnection::Tls(tls_stream))
+}
+
 async fn send_smtp_email(
     host: &str,
     port: u16,
@@ -891,7 +968,6 @@ async fn send_smtp_email(
     body_html: &str,
     body_text: &str,
 ) -> Result<String, String> {
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
     use tokio::net::TcpStream;
 
     info!("Sending email via SMTP: {}:{} (security={})", host, port, security);
@@ -956,19 +1032,17 @@ async fn send_smtp_email(
     .map_err(|_| format!("Connection timeout to {}:{}", host, port))?
     .map_err(|e| format!("Failed to connect to {}: {}", host, e))?;
 
-    // Handle TLS
-    let (mut reader, mut writer) = if security == "tls" {
-        // Implicit TLS (port 465)
-        let tls_stream = tokio_native_tls::TlsConnector::new()
-            .connect(host, stream)
-            .await
-            .map_err(|e| format!("TLS handshake failed: {}", e))?;
-        let (read_half, write_half) = tokio::io::split(tls_stream);
-        (BufReader::new(read_half), write_half)
+    // Handle TLS. `conn` is a single stream for the whole conversation —
+    // SmtpConnection::Plain until/unless upgraded to ::Tls — since reading
+    // and writing happen one at a time here, there's no need to split it
+    // into separate halves, which avoids the type mismatch between a plain
+    // TcpStream split and a TLS-upgraded stream split.
+    let conn = if security == "tls" {
+        upgrade_to_tls(host, stream).await? // Implicit TLS (port 465)
     } else {
-        let (read_half, write_half) = tokio::io::split(stream);
-        (BufReader::new(read_half), write_half)
+        SmtpConnection::Plain(stream)
     };
+    let mut reader = BufReader::new(conn);
 
     // Read greeting
     let greeting = read_smtp_line(&mut reader).await?;
@@ -977,26 +1051,26 @@ async fn send_smtp_email(
     }
 
     // EHLO
-    write_smtp_line(&mut writer, &format!("EHLO communicator\r\n")).await?;
+    write_smtp_line(&mut reader, &format!("EHLO communicator\r\n")).await?;
     let _ehlo_response = read_smtp_lines(&mut reader).await?;
 
     // STARTTLS (if using port 587)
     if security == "starttls" {
-        write_smtp_line(&mut writer, "STARTTLS\r\n").await?;
+        write_smtp_line(&mut reader, "STARTTLS\r\n").await?;
         let _starttls_response = read_smtp_lines(&mut reader).await?;
 
-        // Upgrade to TLS
-        let tcp_stream = writer.into_inner();
-        let tls_stream = tokio_native_tls::TlsConnector::new()
-            .connect(host, tcp_stream)
-            .await
+        // Upgrade the plaintext connection to TLS in place.
+        let plain_conn = reader.into_inner();
+        let tcp_stream = match plain_conn {
+            SmtpConnection::Plain(s) => s,
+            SmtpConnection::Tls(_) => return Err("Connection is already TLS".to_string()),
+        };
+        let tls_conn = upgrade_to_tls(host, tcp_stream).await
             .map_err(|e| format!("STARTTLS handshake failed: {}", e))?;
-        let (read_half, write_half) = tokio::io::split(tls_stream);
-        reader = BufReader::new(read_half);
-        writer = write_half;
+        reader = BufReader::new(tls_conn);
 
         // EHLO again after TLS
-        write_smtp_line(&mut writer, "EHLO communicator\r\n").await?;
+        write_smtp_line(&mut reader, "EHLO communicator\r\n").await?;
         let _ehlo_response = read_smtp_lines(&mut reader).await?;
     }
 
@@ -1007,46 +1081,46 @@ async fn send_smtp_email(
                 // PLAIN auth
                 let auth_string = format!("\0{}\0{}", username, password);
                 let encoded = base64_encode(&auth_string);
-                write_smtp_line(&mut writer, &format!("AUTH PLAIN {}\r\n", encoded)).await?;
+                write_smtp_line(&mut reader, &format!("AUTH PLAIN {}\r\n", encoded)).await?;
                 let _auth_response = read_smtp_lines(&mut reader).await?;
             }
             "login" | _ => {
                 // LOGIN auth
-                write_smtp_line(&mut writer, "AUTH LOGIN\r\n").await?;
+                write_smtp_line(&mut reader, "AUTH LOGIN\r\n").await?;
                 let _challenge = read_smtp_lines(&mut reader).await?;
 
                 let encoded_user = base64_encode(username);
-                write_smtp_line(&mut writer, &format!("{}\r\n", encoded_user)).await?;
+                write_smtp_line(&mut reader, &format!("{}\r\n", encoded_user)).await?;
                 let _challenge = read_smtp_lines(&mut reader).await?;
 
                 let encoded_pass = base64_encode(password);
-                write_smtp_line(&mut writer, &format!("{}\r\n", encoded_pass)).await?;
+                write_smtp_line(&mut reader, &format!("{}\r\n", encoded_pass)).await?;
                 let _auth_response = read_smtp_lines(&mut reader).await?;
             }
         }
     }
 
     // MAIL FROM
-    write_smtp_line(&mut writer, &format!("MAIL FROM: <{}>\r\n", from_address)).await?;
+    write_smtp_line(&mut reader, &format!("MAIL FROM: <{}>\r\n", from_address)).await?;
     let _mail_response = read_smtp_lines(&mut reader).await?;
 
     // RCPT TO
-    write_smtp_line(&mut writer, &format!("RCPT TO: <{}>\r\n", to_address)).await?;
+    write_smtp_line(&mut reader, &format!("RCPT TO: <{}>\r\n", to_address)).await?;
     let _rcpt_response = read_smtp_lines(&mut reader).await?;
 
     // DATA
-    write_smtp_line(&mut writer, "DATA\r\n").await?;
+    write_smtp_line(&mut reader, "DATA\r\n").await?;
     let _data_response = read_smtp_lines(&mut reader).await?;
 
     // Send message body
-    write_smtp_line(&mut writer, &mime_message).await?;
+    write_smtp_line(&mut reader, &mime_message).await?;
 
     // Read final response
     let final_response = read_smtp_lines(&mut reader).await?;
     info!("SMTP final response: {}", final_response.lines().next().unwrap_or(""));
 
     // QUIT
-    write_smtp_line(&mut writer, "QUIT\r\n").await?;
+    write_smtp_line(&mut reader, "QUIT\r\n").await?;
 
     Ok(message_id)
 }
