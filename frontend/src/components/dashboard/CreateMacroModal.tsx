@@ -49,7 +49,7 @@ export function CreateMacroModal(props: CreateMacroModalProps) {
           <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl max-w-lg w-full p-6 space-y-4 animate-in fade-in zoom-in-95">
             <div className="flex items-start justify-between border-b border-[var(--color-border)] pb-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">
+                <div className="w-8 h-8 rounded-[var(--radius-md)] bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">
                   <Zap className="h-4 w-4 text-amber-700" />
                 </div>
                 <div>
@@ -74,7 +74,7 @@ export function CreateMacroModal(props: CreateMacroModalProps) {
                   placeholder="e.g. VIP Priority Escalation + Manager Note"
                   value={newMacroName}
                   onChange={(e) => setNewMacroName(e.target.value)}
-                  className="w-full px-3 py-1.5 border border-[var(--color-border)] rounded-lg text-xs focus:ring-2 focus:ring-brand-500 focus:outline-hidden"
+                  className="w-full px-3 py-1.5 border border-[var(--color-border)] rounded-[var(--radius-md)] text-xs focus:ring-2 focus:ring-brand-500 focus:outline-hidden"
                 />
               </div>
 
@@ -85,7 +85,7 @@ export function CreateMacroModal(props: CreateMacroModalProps) {
                   placeholder="Explains what this workflow executes"
                   value={newMacroDesc}
                   onChange={(e) => setNewMacroDesc(e.target.value)}
-                  className="w-full px-3 py-1.5 border border-[var(--color-border)] rounded-lg text-xs focus:ring-2 focus:ring-brand-500 focus:outline-hidden"
+                  className="w-full px-3 py-1.5 border border-[var(--color-border)] rounded-[var(--radius-md)] text-xs focus:ring-2 focus:ring-brand-500 focus:outline-hidden"
                 />
               </div>
 
@@ -95,7 +95,7 @@ export function CreateMacroModal(props: CreateMacroModalProps) {
                   <select
                     value={newMacroPriority}
                     onChange={(e) => setNewMacroPriority(e.target.value as any)}
-                    className="w-full px-2.5 py-1.5 border border-[var(--color-border)] rounded-lg text-xs bg-[var(--color-surface)] focus:outline-hidden"
+                    className="w-full px-2.5 py-1.5 border border-[var(--color-border)] rounded-[var(--radius-md)] text-xs bg-[var(--color-surface)] focus:outline-hidden"
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -111,7 +111,7 @@ export function CreateMacroModal(props: CreateMacroModalProps) {
                     placeholder="e.g. vip, follow-up"
                     value={newMacroTag}
                     onChange={(e) => setNewMacroTag(e.target.value)}
-                    className="w-full px-3 py-1.5 border border-[var(--color-border)] rounded-lg text-xs focus:outline-hidden"
+                    className="w-full px-3 py-1.5 border border-[var(--color-border)] rounded-[var(--radius-md)] text-xs focus:outline-hidden"
                   />
                 </div>
               </div>
@@ -144,7 +144,7 @@ export function CreateMacroModal(props: CreateMacroModalProps) {
                   placeholder="Automated reply sent directly to the customer..."
                   value={newMacroMessage}
                   onChange={(e) => setNewMacroMessage(e.target.value)}
-                  className="w-full px-3 py-1.5 border border-[var(--color-border)] rounded-lg text-xs focus:outline-hidden resize-none"
+                  className="w-full px-3 py-1.5 border border-[var(--color-border)] rounded-[var(--radius-md)] text-xs focus:outline-hidden resize-none"
                 />
               </div>
 
@@ -155,7 +155,7 @@ export function CreateMacroModal(props: CreateMacroModalProps) {
                   placeholder="Staff-only audit note attached to thread..."
                   value={newMacroNote}
                   onChange={(e) => setNewMacroNote(e.target.value)}
-                  className="w-full px-3 py-1.5 border border-[var(--color-border)] rounded-lg text-xs focus:outline-hidden resize-none"
+                  className="w-full px-3 py-1.5 border border-[var(--color-border)] rounded-[var(--radius-md)] text-xs focus:outline-hidden resize-none"
                 />
               </div>
 
@@ -163,13 +163,13 @@ export function CreateMacroModal(props: CreateMacroModalProps) {
                 <button
                   type="button"
                   onClick={() => setShowCreateMacroModal(false)}
-                  className="px-3 py-1.5 text-xs text-[var(--color-ink-muted)] hover:bg-[var(--color-accent-soft)] rounded-lg font-medium transition-colors cursor-pointer"
+                  className="px-3 py-1.5 text-xs text-[var(--color-ink-muted)] hover:bg-[var(--color-accent-soft)] rounded-[var(--radius-md)] font-medium transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 text-xs bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white rounded-lg font-semibold shadow-xs transition-colors cursor-pointer"
+                  className="px-4 py-1.5 text-xs bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white rounded-[var(--radius-md)] font-semibold shadow-none transition-colors cursor-pointer"
                 >
                   Save Macro
                 </button>

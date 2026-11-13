@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 use crate::db::AppState;
 use axum::{
@@ -62,11 +62,11 @@ fn write_not_found(table: &str, id: &str, rows: u64) -> Response {
 /// `teams` / `team_members` / `team_memberships` are created by init_db DDL.
 /// When a deployment predates that DDL we must not report an empty team list
 /// as if it were real data -- it is a missing schema, so say exactly that. A
-/// failed `sqlite_master` read is NOT evidence the table is missing, so `Err`
+/// failed `information_schema` read is NOT evidence the table is missing, so `Err`
 /// travels up instead of collapsing into `false` ("missing schema").
-async fn table_exists(db: &sqlx::SqlitePool, table: &str) -> Result<bool, sqlx::Error> {
+async fn table_exists(db: &sqlx::PgPool, table: &str) -> Result<bool, sqlx::Error> {
     let count = sqlx::query_scalar::<_, i64>(
-        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name=?",
+        "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name=$1",
     )
     .bind(table)
     .fetch_one(db)
@@ -74,7 +74,7 @@ async fn table_exists(db: &sqlx::SqlitePool, table: &str) -> Result<bool, sqlx::
     Ok(count > 0)
 }
 
-async fn require_table(db: &sqlx::SqlitePool, table: &str) -> Result<(), Response> {
+async fn require_table(db: &sqlx::PgPool, table: &str) -> Result<(), Response> {
     match table_exists(db, table).await {
         Ok(true) => Ok(()),
         Ok(false) => Err(err(
@@ -112,7 +112,7 @@ struct LoadRow {
 /// A failed read is an error, not "every agent has zero conversations" -- the
 /// capacity math downstream would act on that invention.
 async fn active_load(
-    db: &sqlx::SqlitePool,
+    db: &sqlx::PgPool,
 ) -> Result<std::collections::HashMap<String, i64>, sqlx::Error> {
     let rows = sqlx::query_as::<_, LoadRow>(
         r#"
@@ -137,7 +137,7 @@ async fn active_load(
 
 const MEMBER_COLUMNS: &str = "id, name, email, role, availability_status, max_concurrent_conversations, last_assigned_at";
 
-async fn load_member(db: &sqlx::SqlitePool, id: &str) -> Result<Option<MemberRow>, sqlx::Error> {
+async fn load_member(db: &sqlx::PgPool, id: &str) -> Result<Option<MemberRow>, sqlx::Error> {
     sqlx::query_as::<_, MemberRow>(&format!(
         "SELECT {MEMBER_COLUMNS} FROM team_members WHERE id = ?"
     ))
@@ -580,7 +580,7 @@ struct TeamRow {
 const TEAM_COLUMNS: &str = "id, name, description, auto_assign, created_at";
 
 async fn team_members_of(
-    db: &sqlx::SqlitePool,
+    db: &sqlx::PgPool,
     team_id: &str,
 ) -> Result<Vec<(String, String, String)>, sqlx::Error> {
     let rows = sqlx::query(
@@ -611,7 +611,7 @@ async fn team_members_of(
 }
 
 async fn serialize_team(
-    db: &sqlx::SqlitePool,
+    db: &sqlx::PgPool,
     t: &TeamRow,
 ) -> Result<serde_json::Value, sqlx::Error> {
     // membersCount and the member roster below are what the response claims,

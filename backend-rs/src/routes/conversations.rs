@@ -1,8 +1,8 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 use crate::{
     db::AppState,
-    models::{Conversation, Message, SlaPolicy, TeamMember},
+    models::{Conversation, Message, MessageFeedback, SlaPolicy, TeamMember},
 };
 use axum::{
     extract::{Path, Query, State},
@@ -193,7 +193,13 @@ pub async fn get_conversation(
             provider_message_id,
             provider_metadata, 
             sender_name, 
-            is_private
+            is_private,
+            media_type,
+            media_url,
+            media_filename,
+            media_mimetype,
+            voice_duration,
+            transcription_text
         FROM messages
         WHERE conversation_id = ?
         ORDER BY sent_at ASC
@@ -212,6 +218,49 @@ pub async fn get_conversation(
                 err,
             )
         }
+    };
+
+    // Load feedback for all messages in this conversation so the response can
+    // carry the rating alongside each message without N+1 queries.
+    let message_ids: Vec<String> = messages.iter().map(|m| m.id.clone()).collect();
+    let feedback_rows: Vec<MessageFeedback> = if message_ids.is_empty() {
+        Vec::new()
+    } else {
+        let placeholders: Vec<String> = (0..message_ids.len()).map(|i| format!("?{}", i + 1)).collect();
+        let query_text = format!(
+            "SELECT id, message_id, conversation_id, rating, comment, author_type, author_id, created_at \
+             FROM message_feedback WHERE message_id IN ({})",
+            placeholders.join(", ")
+        );
+        let mut query = sqlx::query_as::<_, MessageFeedback>(&query_text);
+        for mid in &message_ids {
+            query = query.bind(mid);
+        }
+        match query.fetch_all(&state.db).await {
+            Ok(rows) => rows,
+            Err(_) => Vec::new(), // table may not exist yet if migration hasn't run
+        }
+    };
+
+    // Build a map from message_id -> feedback (keep only the latest per message)
+    let feedback_map: std::collections::HashMap<String, Option<MessageFeedback>> = {
+        let mut map: std::collections::HashMap<String, MessageFeedback> = std::collections::HashMap::new();
+        for fb in feedback_rows {
+            let msg_id = fb.message_id.clone();
+            let created = fb.created_at.clone();
+            map.entry(msg_id)
+                .and_modify(|existing| {
+                    if created > existing.created_at {
+                        *existing = fb.clone();
+                    }
+                })
+                .or_insert(fb);
+        }
+        let mut result = std::collections::HashMap::new();
+        for mid in &message_ids {
+            result.insert(mid.clone(), map.get(mid).cloned());
+        }
+        result
     };
 
     let mut read_warnings: Vec<String> = Vec::new();
@@ -376,6 +425,103 @@ pub async fn get_conversation(
         }
     };
 
+    // WhatsApp 24-hour customer service window status
+    let whatsapp_24h_window: serde_json::Value = if c.channel.as_deref() == Some("whatsapp") {
+        let contact_id = c.contact_id.clone();
+        // Query the whatsapp_session_windows table for the active session
+        let session_row: Option<(String, String, i64)> = sqlx::query_as(
+            r#"
+            SELECT id, expires_at, is_active
+            FROM whatsapp_session_windows
+            WHERE contact_id = ?1 AND is_active = 1
+            ORDER BY expires_at DESC
+            LIMIT 1
+            "#
+        )
+        .bind(&contact_id)
+        .fetch_optional(&state.db)
+        .await
+        .unwrap_or(None);
+
+        match session_row {
+            Some((_, expires_at, _)) => {
+                let expires_dt: Option<chrono::DateTime<chrono::Utc>> =
+                    chrono::DateTime::parse_from_rfc3339(&expires_at)
+                        .ok()
+                        .map(|dt| dt.with_timezone(&chrono::Utc));
+
+                match expires_dt {
+                    Some(exp) => {
+                        let remaining = exp - now;
+                        let remaining_seconds = remaining.num_seconds().max(0);
+                        let remaining_minutes = remaining.num_minutes().max(0);
+                        let is_open = remaining_seconds > 0;
+                        let is_closing_soon = is_open && remaining_minutes <= 60;
+
+                        json!({
+                            "isOpen": is_open,
+                            "isClosingSoon": is_closing_soon,
+                            "expiresAt": expires_at,
+                            "remainingSeconds": remaining_seconds,
+                            "remainingMinutes": remaining_minutes,
+                        })
+                    }
+                    None => json!({
+                        "isOpen": false,
+                        "isClosingSoon": false,
+                        "expiresAt": expires_at,
+                        "remainingSeconds": 0,
+                        "remainingMinutes": 0,
+                    }),
+                }
+            }
+            None => json!({
+                "isOpen": false,
+                "isClosingSoon": false,
+                "expiresAt": null,
+                "remainingSeconds": 0,
+                "remainingMinutes": 0,
+            }),
+        }
+    } else {
+        serde_json::Value::Null
+    };
+
+    // Attach feedback to each message so the frontend can render the rating.
+    let messages_with_feedback: Vec<serde_json::Value> = messages
+        .iter()
+        .map(|m| {
+            let fb = feedback_map.get(&m.id).and_then(|opt| opt.as_ref());
+            json!({
+                "id": m.id,
+                "conversationId": m.conversation_id,
+                "direction": m.direction,
+                "channel": m.channel,
+                "body": m.body,
+                "intent": m.intent,
+                "status": m.status,
+                "sentAt": m.sent_at,
+                "providerMessageId": m.provider_message_id,
+                "providerMetadata": m.provider_metadata,
+                "senderName": m.sender_name,
+                "isPrivate": m.is_private,
+                "mediaType": m.media_type,
+                "mediaUrl": m.media_url,
+                "mediaFilename": m.media_filename,
+                "mediaMimetype": m.media_mimetype,
+                "voiceDuration": m.voice_duration,
+                "transcriptionText": m.transcription_text,
+                "feedback": fb.map(|f| json!({
+                    "id": f.id,
+                    "rating": f.rating,
+                    "comment": f.comment,
+                    "authorType": f.author_type,
+                    "createdAt": f.created_at,
+                })),
+            })
+        })
+        .collect();
+
     (
         StatusCode::OK,
         Json(json!({
@@ -403,7 +549,8 @@ pub async fn get_conversation(
             "customAttributes": parsed_custom_attrs,
             "slaStatus": sla_status_label,
             "sla": sla_obj,
-            "messages": messages,
+            "whatsapp24hWindow": whatsapp_24h_window,
+            "messages": messages_with_feedback,
             "warnings": read_warnings,
         })),
     )
@@ -1072,11 +1219,9 @@ pub async fn add_contact_note(
         }
     };
 
-    // SQLite runs without `PRAGMA foreign_keys`, so the
-    // `contact_notes.contact_id REFERENCES contacts (id)` constraint would not
-    // stop a note for a contact that does not exist. The read is split so a
+    // PostgreSQL enforces foreign keys, but the read is split so a
     // failure is not reported as "no such contact".
-    match sqlx::query_scalar::<_, i64>("SELECT 1 FROM contacts WHERE id = ?")
+    match sqlx::query_scalar::<_, i64>("SELECT 1 FROM contacts WHERE id = $1")
         .bind(&contact_id)
         .fetch_optional(&state.db)
         .await
@@ -1410,6 +1555,261 @@ pub async fn auto_assign(
             "conversationUpdated": true,
             "memberStamped": member_stamped,
             "warnings": warnings,
+        })),
+    )
+        .into_response()
+}
+
+// ---------------------------------------------------------------------------
+// Message Feedback — thumbs up / down on AI-generated messages
+// ---------------------------------------------------------------------------
+
+#[derive(Deserialize)]
+pub struct SubmitFeedbackPayload {
+    pub rating: i32,       // 1 = helpful, -1 = not helpful
+    pub comment: Option<String>,
+    pub author_type: Option<String>,
+    pub author_id: Option<String>,
+}
+
+/// Submit or update feedback on an outbound message.
+/// If the same author already rated this message, the rating is updated.
+pub async fn submit_message_feedback(
+    State(state): State<AppState>,
+    Path(message_id): Path<String>,
+    Json(payload): Json<SubmitFeedbackPayload>,
+) -> impl IntoResponse {
+    let mut warnings: Vec<String> = Vec::new();
+
+    // Validate rating
+    if payload.rating != 1 && payload.rating != -1 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "error": "rating must be 1 (thumbs up) or -1 (thumbs down)",
+                "received": payload.rating,
+            })),
+        )
+            .into_response();
+    }
+
+    let author_type = payload.author_type.unwrap_or_else(|| "customer".to_string());
+    let now = Utc::now().to_rfc3339();
+
+    // Verify the message exists and belongs to a conversation
+    let msg_row: Option<(String, String)> = match sqlx::query_as(
+        "SELECT id, conversation_id FROM messages WHERE id = ?",
+    )
+    .bind(&message_id)
+    .fetch_optional(&state.db)
+    .await
+    {
+        Ok(row) => row,
+        Err(err) => return db_error("the message could not be read", err),
+    };
+
+    let (msg_id, conversation_id) = match msg_row {
+        Some(row) => row,
+        None => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({
+                    "error": format!("no message with id '{message_id}' exists"),
+                    "messageId": message_id,
+                })),
+            )
+                .into_response();
+        }
+    };
+
+    // Check if this author already rated this message — update if so
+    let existing: Option<String> = match sqlx::query_scalar::<_, String>(
+        "SELECT id FROM message_feedback WHERE message_id = ? AND author_type = ?",
+    )
+    .bind(&msg_id)
+    .bind(&author_type)
+    .fetch_optional(&state.db)
+    .await
+    {
+        Ok(row) => row,
+        Err(_) => None, // table may not exist yet
+    };
+
+    let feedback_stored = if let Some(existing_id) = existing {
+        // Update existing feedback
+        match sqlx::query(
+            "UPDATE message_feedback SET rating = ?, comment = ?, created_at = ? WHERE id = ?",
+        )
+        .bind(&payload.rating)
+        .bind(&payload.comment)
+        .bind(&now)
+        .bind(&existing_id)
+        .execute(&state.db)
+        .await
+        {
+            Ok(report) if report.rows_affected() == 1 => {
+                warnings.push("an existing rating from this author was updated".to_string());
+                true
+            }
+            Ok(report) => {
+                warnings.push(format!(
+                    "UPDATE affected {} rows instead of 1 for feedback id '{}'",
+                    report.rows_affected(),
+                    existing_id
+                ));
+                false
+            }
+            Err(_) => {
+                // Table may not exist yet — try INSERT instead
+                let fb_id = Uuid::new_v4().to_string();
+                match sqlx::query(
+                    "INSERT INTO message_feedback (id, message_id, conversation_id, rating, comment, author_type, author_id, created_at) \
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                )
+                .bind(&fb_id)
+                .bind(&msg_id)
+                .bind(&conversation_id)
+                .bind(&payload.rating)
+                .bind(&payload.comment)
+                .bind(&author_type)
+                .bind(&payload.author_id)
+                .bind(&now)
+                .execute(&state.db)
+                .await
+                {
+                    Ok(report) if report.rows_affected() == 1 => true,
+                    _ => false,
+                }
+            }
+        }
+    } else {
+        // Insert new feedback
+        let fb_id = Uuid::new_v4().to_string();
+        match sqlx::query(
+            "INSERT INTO message_feedback (id, message_id, conversation_id, rating, comment, author_type, author_id, created_at) \
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .bind(&fb_id)
+        .bind(&msg_id)
+        .bind(&conversation_id)
+        .bind(&payload.rating)
+        .bind(&payload.comment)
+        .bind(&author_type)
+        .bind(&payload.author_id)
+        .bind(&now)
+        .execute(&state.db)
+        .await
+        {
+            Ok(report) if report.rows_affected() == 1 => true,
+            Ok(report) => {
+                warnings.push(format!(
+                    "INSERT affected {} rows instead of 1 for feedback id '{}'",
+                    report.rows_affected(),
+                    fb_id
+                ));
+                false
+            }
+            Err(err) => {
+                warnings.push(format!(
+                    "could not store feedback — the message_feedback table may not exist yet \
+                     (run migration 0015): {err}"
+                ));
+                false
+            }
+        }
+    };
+
+    if !feedback_stored {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({
+                "error": "the feedback could not be stored; see warnings",
+                "messageId": message_id,
+                "feedbackStored": false,
+                "warnings": warnings,
+            })),
+        )
+            .into_response();
+    }
+
+    (
+        StatusCode::OK,
+        Json(json!({
+            "messageId": message_id,
+            "conversationId": conversation_id,
+            "rating": payload.rating,
+            "comment": payload.comment,
+            "authorType": author_type,
+            "createdAt": now,
+            "feedbackStored": true,
+            "warnings": warnings,
+        })),
+    )
+        .into_response()
+}
+
+/// Get feedback summary across all messages (for analytics dashboard).
+/// Returns counts of positive/negative ratings, recent negative feedback with
+/// message context for the self-improvement loop.
+pub async fn get_feedback_summary(State(state): State<AppState>) -> impl IntoResponse {
+    // Overall counts
+    let counts: Option<(i64, i64)> = match sqlx::query_as(
+        "SELECT \
+            COALESCE(SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END), 0) as positive, \
+            COALESCE(SUM(CASE WHEN rating = -1 THEN 1 ELSE 0 END), 0) as negative \
+         FROM message_feedback",
+    )
+    .fetch_optional(&state.db)
+    .await
+    {
+        Ok(row) => row,
+        Err(_) => None, // table may not exist
+    };
+
+    let (positive, negative) = counts.unwrap_or((0, 0));
+    let total = positive + negative;
+    let satisfaction_rate = if total > 0 {
+        positive as f64 / total as f64 * 100.0
+    } else {
+        0.0
+    };
+
+    // Recent negative feedback with message body for analysis
+    let recent_negative: Vec<(String, String, Option<String>, String)> = match sqlx::query_as(
+        "SELECT mf.message_id, m.body, mf.comment, mf.created_at \
+         FROM message_feedback mf \
+         JOIN messages m ON m.id = mf.message_id \
+         WHERE mf.rating = -1 \
+         ORDER BY mf.created_at DESC \
+         LIMIT 50",
+    )
+    .fetch_all(&state.db)
+    .await
+    {
+        Ok(rows) => rows,
+        Err(_) => Vec::new(),
+    };
+
+    let negative_items: Vec<serde_json::Value> = recent_negative
+        .iter()
+        .map(|(msg_id, body, comment, created_at)| {
+            json!({
+                "messageId": msg_id,
+                "body": body.chars().take(200).collect::<String>(),
+                "comment": comment,
+                "createdAt": created_at,
+            })
+        })
+        .collect();
+
+    (
+        StatusCode::OK,
+        Json(json!({
+            "totalFeedback": total,
+            "positiveRatings": positive,
+            "negativeRatings": negative,
+            "satisfactionRate": (satisfaction_rate * 100.0).round() as f64 / 100.0,
+            "recentNegativeFeedback": negative_items,
         })),
     )
         .into_response()

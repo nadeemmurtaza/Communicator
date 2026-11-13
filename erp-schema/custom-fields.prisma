@@ -1,0 +1,43 @@
+// Custom fields: a narrow, bounded JSONB overlay, never a general EAV model
+// (architecture-patterns/104-jsonb-eav-extensibility.md, WO-104.1,
+// DECISIONS.md ADR-045). `entityType` is a closed, code-known list — adding
+// an entity to it is a small, reviewed code change (one Prisma field, one
+// service branch), never an arbitrary string a client could point at a
+// table this mechanism was never wired into.
+//
+// No `organizationId`: per ADR-044/ADR-040, this deployment IS the tenant —
+// `organization` is off by default in every deployment today, and threading
+// a column through every table for a multi-org concept most deployments
+// never turn on is exactly the anti-pattern those ADRs already rejected.
+
+enum CustomFieldValueType {
+  TEXT
+  NUMBER
+  BOOLEAN
+  DATE
+  SELECT
+  MULTI_SELECT
+  JSON
+}
+
+model CustomFieldDefinition {
+  id         String               @id @default(cuid())
+  entityType String
+  key        String
+  label      String
+  valueType  CustomFieldValueType
+  isRequired Boolean              @default(false)
+  // Constraints below are each meaningful for exactly one valueType (pattern:
+  // TEXT, minValue/maxValue: NUMBER, options: SELECT/MULTI_SELECT) and null
+  // for the rest — enforced in CustomFieldsService, not here, same as
+  // valueType-specific validation already was before these existed.
+  pattern    String?
+  minValue   Float?
+  maxValue   Float?
+  options    Json?
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+
+  @@unique([entityType, key])
+  @@index([entityType])
+}

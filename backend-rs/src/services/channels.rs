@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 //! Outbound channel adapters: one per provider the product connects to.
 //!
@@ -130,6 +130,8 @@ pub fn credential_aliases(key: &str) -> Option<&'static [&'static str]> {
     match key {
         "access_token" => Some(&["access_token", "app_access_token"]),
         "bot_token" => Some(&["bot_token", "telegram_bot_token", "access_token"]),
+        "discord_bot_token" => Some(&["discord_bot_token", "bot_token", "access_token"]),
+        "discord_client_id" => Some(&["discord_client_id", "client_id", "application_id"]),
         "page_access_token" => Some(&["page_access_token", "access_token"]),
         "ig_id" => Some(&["ig_id", "instagram_user_id", "user_id"]),
         "channel_access_token" => Some(&["channel_access_token"]),
@@ -239,6 +241,8 @@ fn env_names(channel: &str, key: &str) -> Vec<&'static str> {
             vec!["META_PAGE_ACCESS_TOKEN", "FACEBOOK_PAGE_ACCESS_TOKEN"]
         }
         "bot_token" if channel == "telegram" => vec!["TELEGRAM_BOT_TOKEN", "TELEGRAM_BOT_API_TOKEN"],
+        "bot_token" if channel == "discord" => vec!["DISCORD_BOT_TOKEN"],
+        "discord_client_id" if channel == "discord" => vec!["DISCORD_CLIENT_ID", "DISCORD_APPLICATION_ID"],
         "channel_access_token" | "channel_secret" if channel == "line" => {
             if key == "channel_access_token" {
                 vec!["LINE_CHANNEL_ACCESS_TOKEN"]
@@ -375,7 +379,7 @@ fn absorb(
 /// A text column read only to label the audit trail. `None` means the column is
 /// missing, NULL or undecodable, and the refusal says "(unreadable)" rather
 /// than showing an empty name as if the row really had one.
-fn read_column(row: &sqlx::sqlite::SqliteRow, column: &str) -> Option<String> {
+fn read_column(row: &sqlx::postgres::PgRow, column: &str) -> Option<String> {
     match row.try_get::<Option<String>, _>(column) {
         Ok(value) => value,
         Err(err) => {
@@ -404,6 +408,7 @@ fn inbox_channel_types(channel: &str) -> Vec<&'static str> {
         "facebook" => vec!["facebook", "messenger"],
         "instagram" => vec!["instagram", "ig", "instagram_dm"],
         "telegram" => vec!["telegram"],
+        "discord" => vec!["discord"],
         "line" => vec!["line"],
         "sms" => vec!["sms"],
         "email" => vec!["email"],
@@ -744,6 +749,7 @@ fn provider_error(provider: &str, reply: &Reply) -> String {
         "meta" | "messenger" | "instagram" => meta_error(&reply.body, status),
         "twilio" | "twilio_voice" => twilio_error(&reply.body, status),
         "telegram" => telegram_error(&reply.body, status),
+        "discord" => discord_error(&reply.body, status),
         "postmark" => postmark_error(&reply.body, status),
         "line" => line_error(&reply.body, status),
         "tiktok" => tiktok_error(&reply.body, status),
@@ -840,6 +846,22 @@ fn twilio_error(body: &Value, status: u16) -> String {
         (false, _) => format!("Twilio error (HTTP {status}): {message}"),
         (true, Some(code)) => format!("Twilio error {code} (HTTP {status}){note}"),
         (true, _) => format!("Twilio returned HTTP {status} with no error message"),
+    }
+}
+
+fn discord_error(body: &Value, status: u16) -> String {
+    let message = body.get("message").and_then(Value::as_str).unwrap_or("");
+    let code = body.get("code").and_then(Value::as_i64);
+    match code {
+        Some(50035) => format!("Discord: invalid form body (50035): {message}"),
+        Some(50013) => format!("Discord: missing access/permissions (50013): {message}"),
+        Some(50027) => format!("Discord: bot not in guild (50027): {message}"),
+        Some(50034) => format!("Discord: channel not found (50034): {message}"),
+        Some(401) => "Discord: bot token is invalid or revoked (401)".to_string(),
+        Some(403) => format!("Discord: missing permissions (403): {message}"),
+        Some(429) => format!("Discord rate limit (429): {message}"),
+        Some(c) => format!("Discord error {c} (HTTP {status}): {message}"),
+        None => format!("Discord error (HTTP {status}): {message}"),
     }
 }
 
@@ -1912,6 +1934,53 @@ impl ChannelAdapter for TwilioVoiceAdapter {
     }
 }
 
+// --- Discord ---------------------------------------------------------------
+
+pub struct DiscordAdapter;
+
+impl ChannelAdapter for DiscordAdapter {
+    fn channel(&self) -> &'static str {
+        "discord"
+    }
+    fn provider(&self) -> &'static str {
+        "discord"
+    }
+    fn required_credentials(&self) -> &'static [&'static str] {
+        &["bot_token", "discord_client_id"]
+    }
+    fn send<'a>(&'a self, state: &'a AppState, creds: &'a Credentials, ctx: &'a SendContext) -> SendFuture<'a> {
+        Box::pin(async move {
+            let token = need!(creds, "bot_token", "discord");
+            let channel_id = ctx.destination.trim();
+            let url = format!("https://discord.com/api/v10/channels/{channel_id}/messages");
+            let response = state
+                .http_client
+                .post(&url)
+                .header("Authorization", format!("Bot {token}"))
+                .json(&json!({
+                    "content": clamp(&ctx.body, 2000),
+                }))
+                .timeout(Duration::from_secs(15))
+                .send()
+                .await;
+
+            let reply = match response {
+                Ok(response) => read_reply(response, "discord.com").await,
+                Err(err) => transport_error("discord.com", err),
+            };
+            if reply.ok() {
+                let id = reply
+                    .body
+                    .get("id")
+                    .map(|v| v.to_string())
+                    .unwrap_or_default();
+                return SendResult::accepted("discord", id, reply.status.unwrap_or(200), reply.body);
+            }
+            reject("discord", reply)
+        })
+    }
+}
+
 // --- Web chat --------------------------------------------------------------
 
 pub struct WebChatAdapter;
@@ -1969,7 +2038,7 @@ impl ChannelAdapter for WebChatAdapter {
 // Registry + dispatch
 // ---------------------------------------------------------------------------
 
-static ADAPTERS: [&dyn ChannelAdapter; 11] = [
+static ADAPTERS: [&dyn ChannelAdapter; 12] = [
     &WhatsAppMetaAdapter,
     &TwilioWhatsAppAdapter,
     &TwilioSmsAdapter,
@@ -1981,6 +2050,7 @@ static ADAPTERS: [&dyn ChannelAdapter; 11] = [
     &TikTokAdapter,
     &TwilioVoiceAdapter,
     &WebChatAdapter,
+    &DiscordAdapter,
 ];
 
 /// Channel aliases the rest of the product uses for the same transport.

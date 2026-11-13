@@ -1,0 +1,1141 @@
+#![allow(dead_code)]
+
+//! Shopify sync adapter: full bidirectional sync for products, orders, and inventory.
+//!
+//! Implements the SyncAdapter trait with real Shopify Admin API calls.
+//! Uses external_product_mapping and external_order_mapping tables for ID tracking.
+
+use serde::{Deserialize, Serialize};
+use sqlx::SqlitePool;
+use uuid::Uuid;
+
+use crate::models::SyncConnection;
+use crate::services::sync_adapter::{SyncAdapter, SyncResult};
+
+pub struct ShopifySyncAdapter {
+    pool: SqlitePool,
+    http_client: reqwest::Client,
+    connection: SyncConnection,
+}
+
+impl ShopifySyncAdapter {
+    pub fn new(pool: SqlitePool, http_client: reqwest::Client, connection: SyncConnection) -> Self {
+        Self { pool, http_client, connection }
+    }
+
+    fn api_base(&self) -> Option<String> {
+        let creds: serde_json::Value =
+            serde_json::from_str(self.connection.credentials.as_ref()?).ok()?;
+        let shop = creds.get("shop").and_then(|v| v.as_str())?;
+        Some(format!("https://{}/admin/api/2024-01", shop))
+    }
+
+    fn api_token(&self) -> Option<String> {
+        let creds: serde_json::Value =
+            serde_json::from_str(self.connection.credentials.as_ref()?).ok()?;
+        creds.get("api_password").and_then(|v| v.as_str()).map(|s| s.to_string())
+    }
+
+    // -----------------------------------------------------------------------
+    // HTTP helpers
+    // -----------------------------------------------------------------------
+
+    async fn get_json(&self, url: &str) -> Result<serde_json::Value, String> {
+        let token = self.api_token().ok_or("No Shopify API token")?;
+        let resp = self
+            .http_client
+            .get(url)
+            .header("X-Shopify-Access-Token", &token)
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            return Err(format!("Shopify API error {}: {}", status, body));
+        }
+
+        resp.json::<serde_json::Value>().await.map_err(|e| e.to_string())
+    }
+
+    async fn post_json(
+        &self,
+        url: &str,
+        body: &serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
+        let token = self.api_token().ok_or("No Shopify API token")?;
+        let resp = self
+            .http_client
+            .post(url)
+            .header("Content-Type", "application/json")
+            .header("X-Shopify-Access-Token", &token)
+            .json(body)
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            return Err(format!("Shopify API error {}: {}", status, body));
+        }
+
+        resp.json::<serde_json::Value>().await.map_err(|e| e.to_string())
+    }
+
+    async fn put_json(
+        &self,
+        url: &str,
+        body: &serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
+        let token = self.api_token().ok_or("No Shopify API token")?;
+        let resp = self
+            .http_client
+            .put(url)
+            .header("Content-Type", "application/json")
+            .header("X-Shopify-Access-Token", &token)
+            .json(body)
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            return Err(format!("Shopify API error {}: {}", status, body));
+        }
+
+        resp.json::<serde_json::Value>().await.map_err(|e| e.to_string())
+    }
+
+    // -----------------------------------------------------------------------
+    // Paginated fetch helper
+    // -----------------------------------------------------------------------
+
+    async fn fetch_all_products(&self) -> Result<Vec<serde_json::Value>, String> {
+        let base = self.api_base().ok_or("Shopify shop URL not configured")?;
+        let mut all_products = Vec::new();
+        let mut cursor: Option<String> = None;
+
+        loop {
+            let limit = 250;
+            let url = match &cursor {
+                Some(c) => format!("{}/products.json?limit={}&page_info={}", base, limit, c),
+                None => format!("{}/products.json?limit={}", base, limit),
+            };
+
+            let data = self.get_json(&url).await?;
+            let products = data.get("products").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+            all_products.extend(products);
+
+            // Check for next page
+            let has_next = data
+                .get("pagination")
+                .and_then(|p| p.get("next_page_info"))
+                .and_then(|v| v.as_str());
+
+            match has_next {
+                Some(page_info) => cursor = Some(page_info.to_string()),
+                None => break,
+            }
+        }
+
+        Ok(all_products)
+    }
+
+    async fn fetch_all_orders(&self) -> Result<Vec<serde_json::Value>, String> {
+        let base = self.api_base().ok_or("Shopify shop URL not configured")?;
+        let mut all_orders = Vec::new();
+        let mut since_id: i64 = 0;
+
+        loop {
+            let limit = 250;
+            let url = format!(
+                "{}/orders.json?limit={}&since_id={}&status=any",
+                base, limit, since_id
+            );
+
+            let data = self.get_json(&url).await?;
+            let orders = data.get("orders").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+
+            if orders.is_empty() {
+                break;
+            }
+
+            // Get the last order's ID for pagination
+            if let Some(last) = orders.last() {
+                since_id = last.get("id").and_then(|v| v.as_i64()).unwrap_or(since_id);
+            }
+
+            all_orders.extend(orders);
+            if all_orders.len() >= 4000 {
+                // Shopify max per request
+                break;
+            }
+        }
+
+        Ok(all_orders)
+    }
+
+    // -----------------------------------------------------------------------
+    // Mapping helpers
+    // -----------------------------------------------------------------------
+
+    async fn get_product_mapping(
+        &self,
+        product_id: &str,
+    ) -> Option<(String, String)> {
+        // Returns (mapping_id, external_id)
+        let row = sqlx::query(
+            "SELECT id, external_id FROM external_product_mapping \
+             WHERE product_id = ? AND platform = 'shopify' AND connection_id = ?",
+        )
+        .bind(product_id)
+        .bind(&self.connection.id)
+        .fetch_optional(&self.pool)
+        .await
+        .ok()?;
+
+        row.map(|r| (r.get("id"), r.get("external_id")))
+    }
+
+    async fn get_product_by_external_id(&self, external_id: &str) -> Option<String> {
+        // Returns our product_id
+        let row = sqlx::query(
+            "SELECT product_id FROM external_product_mapping \
+             WHERE external_id = ? AND platform = 'shopify' AND connection_id = ?",
+        )
+        .bind(external_id)
+        .bind(&self.connection.id)
+        .fetch_optional(&self.pool)
+        .await
+        .ok()?;
+
+        row.map(|r| r.get("product_id"))
+    }
+
+    async fn get_product_by_sku(&self, sku: &str) -> Option<String> {
+        // Returns our product_id by SKU match
+        let row = sqlx::query(
+            "SELECT id FROM products WHERE sku = ? AND brand_id = ? AND is_active = 1",
+        )
+        .bind(sku)
+        .bind(&self.connection.brand_id)
+        .fetch_optional(&self.pool)
+        .await
+        .ok()?;
+
+        row.map(|r| r.get("id"))
+    }
+
+    async fn upsert_product_mapping(
+        &self,
+        product_id: &str,
+        external_id: &str,
+        external_sku: Option<&str>,
+    ) -> Result<(), String> {
+        let now = chrono::Utc::now().to_rfc3339();
+        let mapping_id = Uuid::new_v4().to_string();
+
+        // Try to insert; if conflict, update
+        match sqlx::query(
+            "INSERT INTO external_product_mapping (id, product_id, platform, connection_id, \
+             external_id, external_sku, last_synced_at, created_at, updated_at) \
+             VALUES (?, ?, 'shopify', ?, ?, ?, ?, ?, ?)",
+        )
+        .bind(&mapping_id)
+        .bind(product_id)
+        .bind(&self.connection.id)
+        .bind(external_id)
+        .bind(external_sku)
+        .bind(&now)
+        .bind(&now)
+        .bind(&now)
+        .execute(&self.pool)
+        .await
+        {
+            Ok(_) => Ok(()),
+            Err(_) => {
+                // Conflict — update existing
+                sqlx::query(
+                    "UPDATE external_product_mapping \
+                     SET external_id = ?, external_sku = ?, last_synced_at = ?, updated_at = ? \
+                     WHERE product_id = ? AND platform = 'shopify' AND connection_id = ?",
+                )
+                .bind(external_id)
+                .bind(external_sku)
+                .bind(&now)
+                .bind(&now)
+                .bind(product_id)
+                .bind(&self.connection.id)
+                .execute(&self.pool)
+                .await
+                .map_err(|e| format!("Failed to update product mapping: {}", e))?;
+                Ok(())
+            }
+        }
+    }
+
+    async fn get_order_mapping(&self, order_id: &str) -> Option<String> {
+        // Returns external_id
+        let row = sqlx::query(
+            "SELECT external_id FROM external_order_mapping \
+             WHERE order_id = ? AND platform = 'shopify' AND connection_id = ?",
+        )
+        .bind(order_id)
+        .bind(&self.connection.id)
+        .fetch_optional(&self.pool)
+        .await
+        .ok()?;
+
+        row.map(|r| r.get("external_id"))
+    }
+
+    async fn get_order_by_external_id(&self, external_id: &str) -> Option<String> {
+        // Returns our order_id
+        let row = sqlx::query(
+            "SELECT order_id FROM external_order_mapping \
+             WHERE external_id = ? AND platform = 'shopify' AND connection_id = ?",
+        )
+        .bind(external_id)
+        .bind(&self.connection.id)
+        .fetch_optional(&self.pool)
+        .await
+        .ok()?;
+
+        row.map(|r| r.get("order_id"))
+    }
+
+    async fn upsert_order_mapping(
+        &self,
+        order_id: &str,
+        external_id: &str,
+        external_order_number: Option<&str>,
+    ) -> Result<(), String> {
+        let now = chrono::Utc::now().to_rfc3339();
+
+        // Try to insert; if conflict, update
+        match sqlx::query(
+            "INSERT INTO external_order_mapping (id, order_id, platform, connection_id, \
+             external_id, external_order_number, last_synced_at, created_at, updated_at) \
+             VALUES (?, ?, 'shopify', ?, ?, ?, ?, ?, ?)",
+        )
+        .bind(Uuid::new_v4().to_string())
+        .bind(order_id)
+        .bind(&self.connection.id)
+        .bind(external_id)
+        .bind(external_order_number)
+        .bind(&now)
+        .bind(&now)
+        .bind(&now)
+        .execute(&self.pool)
+        .await
+        {
+            Ok(_) => Ok(()),
+            Err(_) => {
+                sqlx::query(
+                    "UPDATE external_order_mapping \
+                     SET external_id = ?, external_order_number = ?, last_synced_at = ?, updated_at = ? \
+                     WHERE order_id = ? AND platform = 'shopify' AND connection_id = ?",
+                )
+                .bind(external_id)
+                .bind(external_order_number)
+                .bind(&now)
+                .bind(&now)
+                .bind(order_id)
+                .bind(&self.connection.id)
+                .execute(&self.pool)
+                .await
+                .map_err(|e| format!("Failed to update order mapping: {}", e))?;
+                Ok(())
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Status mapping
+    // -----------------------------------------------------------------------
+
+    fn shopify_fulfillment_status_to_our_status(&self, status: &str) -> &'static str {
+        match status {
+            "fulfilled" => "shipped",
+            "partial" => "processing",
+            _ => "confirmed",
+        }
+    }
+
+    fn shopify_financial_status_to_payment(&self, status: &str) -> &'static str {
+        match status {
+            "paid" => "paid",
+            "partially_paid" => "partially_paid",
+            "refunded" => "refunded",
+            _ => "pending",
+        }
+    }
+
+    fn our_status_to_shopify_status(&self, status: &str) -> &'static str {
+        match status {
+            "cancelled" => "cancelled",
+            "shipped" => "fulfilled",
+            "processing" => "open",
+            _ => "open",
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Product sync
+    // -----------------------------------------------------------------------
+
+    async fn sync_products_outbound_impl(&self) -> Result<SyncResult, String> {
+        let base = self.api_base().ok_or("Shopify shop URL not configured")?;
+
+        // Fetch all our active products
+        let products = sqlx::query(
+            "SELECT id, name, description, sku, price, compare_at_price, currency, \
+             inventory_count, variants, images, category_id \
+             FROM products WHERE brand_id = ? AND is_active = 1",
+        )
+        .bind(&self.connection.brand_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let mut synced = 0;
+        let mut errors = Vec::new();
+
+        for row in products {
+            let product_id: String = row.get("id");
+            let name: String = row.get("name");
+            let description: Option<String> = row.get("description");
+            let sku: Option<String> = row.get("sku");
+            let price: f64 = row.get("price");
+            let compare_at_price: Option<f64> = row.get("compare_at_price");
+            let currency: String = row.get("currency");
+            let inventory_count: i32 = row.get("inventory_count");
+            let variants_json: Option<String> = row.get("variants");
+            let images_json: Option<String> = row.get("images");
+
+            // Check if we have a mapping (product exists on Shopify)
+            let mapping = self.get_product_mapping(&product_id).await;
+
+            // Build Shopify product payload
+            let images: Vec<serde_json::Value> = images_json
+                .and_then(|s| serde_json::from_str(&s).ok())
+                .unwrap_or_default();
+
+            let image_objects: Vec<serde_json::Value> = images
+                .iter()
+                .filter_map(|img| {
+                    img.get("src")
+                        .and_then(|s| s.as_str())
+                        .map(|src| serde_json::json!({"src": src}))
+                })
+                .collect();
+
+            // Build variants
+            let variants: Vec<serde_json::Value> = variants_json
+                .and_then(|s| serde_json::from_str(&s).ok())
+                .unwrap_or_else(|| {
+                    vec![serde_json::json!({
+                        "price": price,
+                        "sku": sku.clone().unwrap_or_default(),
+                        "inventory_quantity": inventory_count,
+                        "inventory_management": "shopify"
+                    })]
+                });
+
+            let product_payload = serde_json::json!({
+                "product": {
+                    "title": name,
+                    "body_html": description.unwrap_or_default(),
+                    "vendor": self.connection.brand_id,
+                    "product_type": "",
+                    "tags": "",
+                    "variants": variants,
+                    "images": if image_objects.is_empty() { serde_json::Value::Null } else { serde_json::json!(image_objects) }
+                }
+            });
+
+            let result = if let Some((_mapping_id, external_id)) = mapping {
+                // Update existing product on Shopify
+                let url = format!("{}/products/{}/json", base, external_id);
+                match self.put_json(&url, &product_payload).await {
+                    Ok(_) => {
+                        synced += 1;
+                        self.upsert_product_mapping(&product_id, &external_id, sku.as_deref()).await.ok();
+                    }
+                    Err(e) => errors.push(format!("Product {}: {}", product_id, e)),
+                }
+            } else {
+                // Create new product on Shopify
+                match self.post_json(&format!("{}/products.json", base), &product_payload).await {
+                    Ok(resp) => {
+                        if let Some(shopify_product) = resp.get("product") {
+                            let shopify_id = shopify_product
+                                .get("id")
+                                .and_then(|v| v.to_string().parse::<i64>().ok())
+                                .map(|v| v.to_string())
+                                .unwrap_or_default();
+
+                            if !shopify_id.is_empty() {
+                                synced += 1;
+                                self.upsert_product_mapping(&product_id, &shopify_id, sku.as_deref()).await.ok();
+                            } else {
+                                errors.push(format!("Product {}: no ID returned from Shopify", product_id));
+                            }
+                        } else {
+                            errors.push(format!("Product {}: no product in response", product_id));
+                        }
+                    }
+                    Err(e) => errors.push(format!("Product {}: {}", product_id, e)),
+                }
+            };
+        }
+
+        Ok(SyncResult {
+            success: errors.is_empty(),
+            direction: "outbound".to_string(),
+            entity_type: "products".to_string(),
+            synced_count: synced,
+            errors,
+        })
+    }
+
+    async fn sync_products_inbound_impl(&self) -> Result<SyncResult, String> {
+        let shopify_products = self.fetch_all_products().await?;
+        let mut synced = 0;
+        let mut errors = Vec::new();
+
+        for sp in shopify_products {
+            let shopify_id = sp.get("id").and_then(|v| v.to_string().parse::<i64>().ok()).map(|v| v.to_string());
+            let title = sp.get("title").and_then(|v| v.as_str());
+            let sku = sp.get("variants")
+                .and_then(|v| v.as_array())
+                .and_then(|variants| variants.first())
+                .and_then(|v| v.get("sku"))
+                .and_then(|v| v.as_str());
+
+            let (shop_id, title_s) = match (shopify_id, title) {
+                Some(id) => (id, title.unwrap_or("").to_string()),
+                None => continue,
+            };
+
+            if title_s.is_empty() {
+                continue;
+            }
+
+            // Check if we already have a mapping for this external ID
+            if let Some(_existing_product_id) = self.get_product_by_external_id(&shop_id).await {
+                // Already mapped, skip (our system is primary)
+                continue;
+            }
+
+            // Try to find by SKU
+            let local_product_id = sku.and_then(|s| self.get_product_by_sku(s).await);
+
+            let product_id = if let Some(pid) = local_product_id {
+                // Found by SKU — use existing product
+                pid
+            } else {
+                // Create new product in our system
+                let new_id = Uuid::new_v4().to_string();
+                let body_html = sp.get("body_html").and_then(|v| v.as_str()).unwrap_or("");
+                let vendor = sp.get("vendor").and_then(|v| v.as_str()).unwrap_or("");
+
+                // Extract price from variants
+                let price = sp.get("variants")
+                    .and_then(|v| v.as_array())
+                    .and_then(|variants| variants.first())
+                    .and_then(|v| v.get("price"))
+                    .and_then(|v| v.as_f64())
+                    .unwrap_or(0.0);
+
+                let compare_at_price = sp.get("variants")
+                    .and_then(|v| v.as_array())
+                    .and_then(|variants| variants.first())
+                    .and_then(|v| v.get("compare_at_price"))
+                    .and_then(|v| v.as_f64());
+
+                let inventory_count = sp.get("variants")
+                    .and_then(|v| v.as_array())
+                    .and_then(|variants| variants.first())
+                    .and_then(|v| v.get("inventory_quantity"))
+                    .and_then(|v| v.as_i64())
+                    .unwrap_or(0) as i32;
+
+                // Extract images
+                let images: Vec<serde_json::Value> = sp.get("images")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| {
+                        arr.iter().filter_map(|img| {
+                            img.get("src").and_then(|s| s.as_str()).map(|src| {
+                                serde_json::json!({"src": src})
+                            })
+                        }).collect()
+                    })
+                    .unwrap_or_default();
+
+                let images_json = serde_json::to_string(&images).ok();
+
+                // Store variants as JSON
+                let variants_json = sp.get("variants")
+                    .and_then(|v| serde_json::to_string(v).ok());
+
+                let now = chrono::Utc::now().to_rfc3339();
+                let sku_str = sku.map(|s| s.to_string());
+
+                match sqlx::query(
+                    "INSERT INTO products (id, brand_id, name, description, sku, price, \
+                     compare_at_price, currency, images, variants, inventory_count, \
+                     track_inventory, is_active, created_at, updated_at) \
+                     VALUES (?, ?, ?, ?, ?, ?, ?, 'USD', ?, ?, ?, 1, 1, ?, ?)",
+                )
+                .bind(&new_id)
+                .bind(&self.connection.brand_id)
+                .bind(&title_s)
+                .bind(body_html)
+                .bind(&sku_str)
+                .bind(price)
+                .bind(compare_at_price)
+                .bind(images_json)
+                .bind(variants_json)
+                .bind(inventory_count)
+                .bind(&now)
+                .bind(&now)
+                .execute(&self.pool)
+                .await
+                {
+                    Ok(_) => {
+                        // Create channel visibility for this product
+                        let _ = sqlx::query(
+                            "INSERT INTO product_channel_visibility (id, product_id, channel_type, is_visible) \
+                             VALUES (?, ?, 'website', 1)",
+                        )
+                        .bind(Uuid::new_v4().to_string())
+                        .bind(&new_id)
+                        .execute(&self.pool)
+                        .await;
+
+                        new_id
+                    }
+                    Err(e) => {
+                        errors.push(format!("Failed to create product from Shopify: {}", e));
+                        continue;
+                    }
+                }
+            };
+
+            // Record/update mapping
+            self.upsert_product_mapping(&product_id, &shop_id, sku).await.ok();
+            synced += 1;
+        }
+
+        Ok(SyncResult {
+            success: errors.is_empty(),
+            direction: "inbound".to_string(),
+            entity_type: "products".to_string(),
+            synced_count: synced,
+            errors,
+        })
+    }
+
+    // -----------------------------------------------------------------------
+    // Order sync
+    // -----------------------------------------------------------------------
+
+    async fn sync_orders_outbound_impl(&self) -> Result<SyncResult, String> {
+        let base = self.api_base().ok_or("Shopify shop URL not configured")?;
+
+        // Fetch orders that don't have a Shopify mapping yet
+        let orders = sqlx::query(
+            "SELECT o.id, o.customer_id, o.order_number, o.channel_type, o.status, \
+             o.total_amount, o.subtotal, o.tax, o.shipping, o.currency, \
+             o.shipping_address, o.payment_status, o.payment_method, o.source, o.created_at \
+             FROM commerce_orders o \
+             LEFT JOIN external_order_mapping eom ON o.id = eom.order_id \
+             AND eom.platform = 'shopify' AND eom.connection_id = ? \
+             WHERE o.brand_id = ? AND eom.id IS NULL AND o.status != 'draft'",
+        )
+        .bind(&self.connection.id)
+        .bind(&self.connection.brand_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let mut synced = 0;
+        let mut errors = Vec::new();
+
+        for row in orders {
+            let order_id: String = row.get("id");
+            let customer_id: Option<String> = row.get("customer_id");
+            let total_amount: f64 = row.get("total_amount");
+            let shipping_address_json: Option<String> = row.get("shipping_address");
+            let payment_status: String = row.get("payment_status");
+
+            // Parse shipping address
+            let shipping_address: serde_json::Value = shipping_address_json
+                .and_then(|s| serde_json::from_str(&s).ok())
+                .unwrap_or_default();
+
+            let first_name = shipping_address.get("first_name").and_then(|v| v.as_str()).unwrap_or("");
+            let last_name = shipping_address.get("last_name").and_then(|v| v.as_str()).unwrap_or("");
+            let email = customer_id
+                .as_ref()
+                .and_then(|cid| {
+                    sqlx::query("SELECT email FROM customers WHERE id = ?")
+                        .bind(cid)
+                        .fetch_optional(&self.pool)
+                        .ok()
+                })
+                .flatten()
+                .and_then(|r| r.get::<Option<String>, _>("email").ok())
+                .unwrap_or_default();
+
+            let address1 = shipping_address.get("address1").and_then(|v| v.as_str()).unwrap_or("");
+            let address2 = shipping_address.get("address2").and_then(|v| v.as_str()).unwrap_or("");
+            let city = shipping_address.get("city").and_then(|v| v.as_str()).unwrap_or("");
+            let province = shipping_address.get("province").and_then(|v| v.as_str()).unwrap_or("");
+            let country = shipping_address.get("country").and_then(|v| v.as_str()).unwrap_or("");
+            let zip = shipping_address.get("zip").and_then(|v| v.as_str()).unwrap_or("");
+            let phone = shipping_address.get("phone").and_then(|v| v.as_str()).unwrap_or("");
+
+            // Fetch order items
+            let items = sqlx::query(
+                "SELECT product_name, sku, quantity, unit_price FROM commerce_order_items WHERE order_id = ?",
+            )
+            .bind(&order_id)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+            let line_items: Vec<serde_json::Value> = items
+                .iter()
+                .map(|item| {
+                    let name: String = item.get("product_name");
+                    let quantity: i32 = item.get("quantity");
+                    let unit_price: f64 = item.get("unit_price");
+                    serde_json::json!({
+                        "variant_id": null,
+                        "quantity": quantity,
+                        "price": unit_price,
+                        "title": name,
+                    })
+                })
+                .collect();
+
+            let financial_status = match payment_status.as_str() {
+                "paid" => "paid",
+                "refunded" => "refunded",
+                _ => "pending",
+            };
+
+            let order_payload = serde_json::json!({
+                "order": {
+                    "email": email,
+                    "financial_status": financial_status,
+                    "line_items": line_items,
+                    "shipping_address": {
+                        "first_name": first_name,
+                        "last_name": last_name,
+                        "address1": address1,
+                        "address2": address2,
+                        "city": city,
+                        "province": province,
+                        "country": country,
+                        "zip": zip,
+                        "phone": phone,
+                    },
+                    "note": format!("Imported from {} (order: {})", self.connection.brand_id, row.get::<String, _>("order_number")),
+                    "send_receipt": false,
+                    "send_fulfillment_receipt": false,
+                }
+            });
+
+            match self.post_json(&format!("{}/orders.json", base), &order_payload).await {
+                Ok(resp) => {
+                    if let Some(shopify_order) = resp.get("order") {
+                        let shopify_id = shopify_order
+                            .get("id")
+                            .and_then(|v| v.to_string().parse::<i64>().ok())
+                            .map(|v| v.to_string())
+                            .unwrap_or_default();
+
+                        let order_number = shopify_order
+                            .get("order_number")
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string());
+
+                        if !shopify_id.is_empty() {
+                            synced += 1;
+                            self.upsert_order_mapping(&order_id, &shopify_id, order_number.as_deref()).await.ok();
+                        } else {
+                            errors.push(format!("Order {}: no ID returned from Shopify", order_id));
+                        }
+                    }
+                }
+                Err(e) => errors.push(format!("Order {}: {}", order_id, e)),
+            }
+        }
+
+        Ok(SyncResult {
+            success: errors.is_empty(),
+            direction: "outbound".to_string(),
+            entity_type: "orders".to_string(),
+            synced_count: synced,
+            errors,
+        })
+    }
+
+    async fn sync_orders_inbound_impl(&self) -> Result<SyncResult, String> {
+        let shopify_orders = self.fetch_all_orders().await?;
+        let mut synced = 0;
+        let mut errors = Vec::new();
+
+        for so in shopify_orders {
+            let shopify_id = so.get("id").and_then(|v| v.to_string().parse::<i64>().ok()).map(|v| v.to_string());
+            let order_number = so.get("order_number").and_then(|v| v.as_i64()).map(|v| v.to_string());
+
+            let shop_id = match shopify_id {
+                Some(id) => id,
+                None => continue,
+            };
+
+            // Skip if already mapped
+            if let Some(_existing) = self.get_order_by_external_id(&shop_id).await {
+                continue;
+            }
+
+            // Skip if imported from our system (check note)
+            let note = so.get("note").and_then(|v| v.as_str()).unwrap_or("");
+            if note.contains("Imported from") {
+                continue;
+            }
+
+            // Extract order data
+            let processed_at = so.get("processed_at").and_then(|v| v.as_str()).unwrap_or("");
+            let total_price = so.get("total_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let subtotal = so.get("subtotal_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let tax = so.get("total_tax").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let shipping = so.get("total_shipping_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let currency = so.get("currency").and_then(|v| v.as_str()).unwrap_or("USD");
+
+            let fulfillment_status = so.get("fulfillment_status").and_then(|v| v.as_str()).unwrap_or("");
+            let financial_status = so.get("financial_status").and_then(|v| v.as_str()).unwrap_or("");
+            let cancelled_at = so.get("cancelled_at");
+
+            let status = if cancelled_at.is_some() {
+                "cancelled"
+            } else {
+                self.shopify_fulfillment_status_to_our_status(fulfillment_status)
+            };
+            let payment_status = self.shopify_financial_status_to_payment(financial_status);
+
+            // Extract customer
+            let customer = so.get("customer");
+            let customer_email = customer.and_then(|c| c.get("email")).and_then(|v| v.as_str()).unwrap_or("");
+            let customer_first = customer.and_then(|c| c.get("first_name")).and_then(|v| v.as_str()).unwrap_or("");
+            let customer_last = customer.and_then(|c| c.get("last_name")).and_then(|v| v.as_str()).unwrap_or("");
+
+            // Find or create customer
+            let customer_id = if !customer_email.is_empty() {
+                let existing = sqlx::query(
+                    "SELECT id FROM customers WHERE email = ? AND brand_id = ?",
+                )
+                .bind(customer_email)
+                .bind(&self.connection.brand_id)
+                .fetch_optional(&self.pool)
+                .await
+                .ok();
+
+                if let Some(row) = existing {
+                    Some(row.get("id"))
+                } else {
+                    // Create customer
+                    let new_customer_id = Uuid::new_v4().to_string();
+                    let now = chrono::Utc::now().to_rfc3339();
+                    let phone = customer.and_then(|c| c.get("phone")).and_then(|v| v.as_str()).unwrap_or("");
+
+                    let _ = sqlx::query(
+                        "INSERT INTO customers (id, brand_id, first_name, last_name, email, phone, \
+                         total_orders, total_spent, created_at, updated_at) \
+                         VALUES (?, ?, ?, ?, ?, ?, 0, 0.0, ?, ?)",
+                    )
+                    .bind(&new_customer_id)
+                    .bind(&self.connection.brand_id)
+                    .bind(customer_first)
+                    .bind(customer_last)
+                    .bind(customer_email)
+                    .bind(phone)
+                    .bind(&now)
+                    .bind(&now)
+                    .execute(&self.pool)
+                    .await;
+
+                    Some(new_customer_id)
+                }
+            } else {
+                None
+            };
+
+            let cust_id = customer_id.unwrap_or_else(|| Uuid::new_v4().to_string());
+
+            // Extract shipping address
+            let shipping_addr = so.get("shipping_address");
+            let shipping_address = serde_json::json!({
+                "first_name": shipping_addr.and_then(|a| a.get("first_name")).and_then(|v| v.as_str()).unwrap_or(""),
+                "last_name": shipping_addr.and_then(|a| a.get("last_name")).and_then(|v| v.as_str()).unwrap_or(""),
+                "address1": shipping_addr.and_then(|a| a.get("address1")).and_then(|v| v.as_str()).unwrap_or(""),
+                "address2": shipping_addr.and_then(|a| a.get("address2")).and_then(|v| v.as_str()).unwrap_or(""),
+                "city": shipping_addr.and_then(|a| a.get("city")).and_then(|v| v.as_str()).unwrap_or(""),
+                "province": shipping_addr.and_then(|a| a.get("province")).and_then(|v| v.as_str()).unwrap_or(""),
+                "country": shipping_addr.and_then(|a| a.get("country")).and_then(|v| v.as_str()).unwrap_or(""),
+                "zip": shipping_addr.and_then(|a| a.get("zip")).and_then(|v| v.as_str()).unwrap_or(""),
+                "phone": shipping_addr.and_then(|a| a.get("phone")).and_then(|v| v.as_str()).unwrap_or(""),
+            });
+
+            // Extract line items
+            let line_items = so.get("line_items").and_then(|v| v.as_array()).unwrap_or(&vec![]);
+
+            // Create order
+            let order_id = Uuid::new_v4().to_string();
+            let order_num = format!("SF-{}", order_number.unwrap_or_default());
+            let now = chrono::Utc::now().to_rfc3339();
+            let created_at = if !processed_at.is_empty() {
+                processed_at.to_string()
+            } else {
+                now.clone()
+            };
+
+            // Build items snapshot
+            let items_snapshot: Vec<serde_json::Value> = line_items
+                .iter()
+                .map(|item| {
+                    serde_json::json!({
+                        "product_name": item.get("title").and_then(|v| v.as_str()).unwrap_or(""),
+                        "sku": item.get("variant_id").and_then(|v| v.to_string().parse::<i64>().ok()).map(|v| v.to_string()),
+                        "quantity": item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(0) as i32,
+                        "unit_price": item.get("price").and_then(|v| v.as_f64()).unwrap_or(0.0),
+                    })
+                })
+                .collect();
+
+            let items_snapshot_json = serde_json::to_string(&items_snapshot).ok().unwrap_or("[]".to_string());
+
+            // Insert order
+            match sqlx::query(
+                "INSERT INTO commerce_orders (id, brand_id, customer_id, order_number, channel_type, \
+                 status, total_amount, subtotal, tax, shipping, currency, items_snapshot, \
+                 shipping_address, payment_status, payment_method, metadata, source, \
+                 external_order_id, created_at, updated_at) \
+                 VALUES (?, ?, ?, ?, 'website', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'shopify', ?, ?, ?)",
+            )
+            .bind(&order_id)
+            .bind(&self.connection.brand_id)
+            .bind(&cust_id)
+            .bind(&order_num)
+            .bind(status)
+            .bind(total_price)
+            .bind(subtotal)
+            .bind(tax)
+            .bind(shipping)
+            .bind(currency)
+            .bind(&items_snapshot_json)
+            .bind(shipping_address.to_string())
+            .bind(payment_status)
+            .bind("shopify_payments")
+            .bind(serde_json::json!({"shopify_order_number": order_number}).to_string())
+            .bind(&shop_id)
+            .bind(&created_at)
+            .bind(&now)
+            .execute(&self.pool)
+            .await
+            {
+                Ok(_) => {
+                    // Insert order items
+                    for item in line_items {
+                        let item_id = Uuid::new_v4().to_string();
+                        let product_name = item.get("title").and_then(|v| v.as_str()).unwrap_or("");
+                        let quantity = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+                        let unit_price = item.get("price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                        let total_price = unit_price * quantity as f64;
+                        let sku = item.get("sku").and_then(|v| v.as_str()).map(|s| s.to_string());
+                        let variant_id = item.get("variant_id")
+                            .and_then(|v| v.to_string().parse::<i64>().ok())
+                            .map(|v| v.to_string());
+
+                        let _ = sqlx::query(
+                            "INSERT INTO commerce_order_items (id, order_id, product_id, variant_id, \
+                             product_name, sku, quantity, unit_price, total_price) \
+                             VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?)",
+                        )
+                        .bind(&item_id)
+                        .bind(&order_id)
+                        .bind(variant_id)
+                        .bind(product_name)
+                        .bind(sku)
+                        .bind(quantity)
+                        .bind(unit_price)
+                        .bind(total_price)
+                        .execute(&self.pool)
+                        .await;
+                    }
+
+                    // Record payment
+                    let payment_id = Uuid::new_v4().to_string();
+                    let _ = sqlx::query(
+                        "INSERT INTO commerce_payments (id, order_id, amount, currency, method, status, created_at) \
+                         VALUES (?, ?, ?, ?, 'shopify_payments', ?, ?)",
+                    )
+                    .bind(&payment_id)
+                    .bind(&order_id)
+                    .bind(total_price)
+                    .bind(currency)
+                    .bind(payment_status)
+                    .bind(&created_at)
+                    .execute(&self.pool)
+                    .await;
+
+                    // Record mapping
+                    self.upsert_order_mapping(&order_id, &shop_id, order_number.as_deref()).await.ok();
+                    synced += 1;
+                }
+                Err(e) => errors.push(format!("Shopify order {}: {}", shop_id, e)),
+            }
+        }
+
+        Ok(SyncResult {
+            success: errors.is_empty(),
+            direction: "inbound".to_string(),
+            entity_type: "orders".to_string(),
+            synced_count: synced,
+            errors,
+        })
+    }
+
+    // -----------------------------------------------------------------------
+    // Inventory sync
+    // -----------------------------------------------------------------------
+
+    async fn sync_inventory_outbound_impl(&self) -> Result<SyncResult, String> {
+        let base = self.api_base().ok_or("Shopify shop URL not configured")?;
+
+        // Get all our products that have Shopify mappings
+        let mappings = sqlx::query(
+            "SELECT epm.product_id, epm.external_id, p.inventory_count \
+             FROM external_product_mapping epm \
+             JOIN products p ON epm.product_id = p.id \
+             WHERE epm.platform = 'shopify' AND epm.connection_id = ?",
+        )
+        .bind(&self.connection.id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let mut synced = 0;
+        let mut errors = Vec::new();
+
+        for row in mappings {
+            let product_id: String = row.get("product_id");
+            let external_id: String = row.get("external_id");
+            let inventory_count: i32 = row.get("inventory_count");
+
+            // Get variant ID from Shopify
+            let url = format!("{}/products/{}/json", base, external_id);
+            match self.get_json(&url).await {
+                Ok(product) => {
+                    let variants = product
+                        .get("product")
+                        .and_then(|p| p.get("variants"))
+                        .and_then(|v| v.as_array());
+
+                    if let Some(variants) = variants {
+                        for variant in variants {
+                            let variant_id = variant.get("id").and_then(|v| v.to_string().parse::<i64>().ok());
+                            if let Some(v_id) = variant_id {
+                                let inventory_payload = serde_json::json!({
+                                    "inventory_item_id": v_id,
+                                    "location_id": null,
+                                    "available": inventory_count
+                                });
+
+                                match self
+                                    .post_json(
+                                        &format!("{}/inventory_levels/set.json", base),
+                                        &serde_json::json!({"inventory_level": [inventory_payload]}),
+                                    )
+                                    .await
+                                {
+                                    Ok(_) => {
+                                        synced += 1;
+                                    }
+                                    Err(e) => errors.push(format!("Product {} variant {}: {}", product_id, v_id, e)),
+                                }
+                            }
+                        }
+                    }
+                }
+                Err(e) => errors.push(format!("Product {}: {}", product_id, e)),
+            }
+        }
+
+        Ok(SyncResult {
+            success: errors.is_empty(),
+            direction: "outbound".to_string(),
+            entity_type: "inventory".to_string(),
+            synced_count: synced,
+            errors,
+        })
+    }
+
+    // -----------------------------------------------------------------------
+    // Platform data info
+    // -----------------------------------------------------------------------
+
+    pub async fn get_platform_info(&self) -> Result<serde_json::Value, String> {
+        let products = self.fetch_all_products().await?;
+        let orders = self.fetch_all_orders().await?;
+
+        Ok(serde_json::json!({
+            "platform": "shopify",
+            "product_count": products.len(),
+            "order_count": orders.len(),
+            "shop": self.api_base().map(|b| b.replace("https://", "").split('/').next().unwrap_or("")).unwrap_or_default(),
+        }))
+    }
+}
+
+#[async_trait::async_trait]
+impl SyncAdapter for ShopifySyncAdapter {
+    fn platform_name(&self) -> &str {
+        "shopify"
+    }
+
+    async fn test_connection(&self) -> Result<(), String> {
+        let base = self.api_base().ok_or("Shopify shop URL not configured")?;
+        let _ = self
+            .get_json(&format!("{}/products.json?limit=1", base))
+            .await?;
+        Ok(())
+    }
+
+    async fn sync_products_outbound(&self) -> Result<SyncResult, String> {
+        self.sync_products_outbound_impl().await
+    }
+
+    async fn sync_products_inbound(&self) -> Result<SyncResult, String> {
+        self.sync_products_inbound_impl().await
+    }
+
+    async fn sync_orders_outbound(&self) -> Result<SyncResult, String> {
+        self.sync_orders_outbound_impl().await
+    }
+
+    async fn sync_orders_inbound(&self) -> Result<SyncResult, String> {
+        self.sync_orders_inbound_impl().await
+    }
+
+    async fn sync_inventory_outbound(&self) -> Result<SyncResult, String> {
+        self.sync_inventory_outbound_impl().await
+    }
+}

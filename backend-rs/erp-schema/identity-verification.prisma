@@ -1,0 +1,39 @@
+/// Tracks a User's identity verification against nID (Newax's external
+/// identity/KYC platform — https://github.com/nadeemmurtaza/nID). One row per
+/// User: erp-1 is a single-tenant shop today, so there is exactly one nID
+/// tenant (this shop) and one verification per person, not per case — a
+/// retry after EXPIRED or REJECTED reuses this row rather than creating a
+/// second one, since nidCaseId always points at nID's most recent case for
+/// this user.
+enum IdentityVerificationStatus {
+  NOT_STARTED
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+model IdentityVerification {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  /// nID's Subject.id for this user. Set on the first start() call and
+  /// reused on every retry — nID's Phase 0 has no dedup of its own (a
+  /// second POST /v1/subjects with the same externalRef creates a second
+  /// Subject), so this column is where that idempotency actually lives.
+  /// See NidVerificationProvider.start().
+  nidSubjectId  String?
+  /// nID's VerificationCase.id for the current or most recent attempt.
+  nidCaseId     String?
+  status        IdentityVerificationStatus @default(NOT_STARTED)
+  /// The VerificationMethodProvider key nID resolved the case with, e.g. "otp_sms".
+  method        String?
+  failureReason String?
+
+  startedAt  DateTime?
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

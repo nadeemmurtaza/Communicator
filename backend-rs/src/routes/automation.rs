@@ -1,4 +1,4 @@
-use crate::routes::auth::Tenant;
+﻿use crate::routes::auth::Tenant;
 use crate::routes::canned_macros_sla::dispatch_whatsapp_text;
 use crate::{db::AppState, models::AutomationRule};
 use axum::{

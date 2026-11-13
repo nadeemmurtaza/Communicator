@@ -1,0 +1,789 @@
+// Catalog: categories, products, variants, images.
+//
+// Two things to know before changing anything here:
+//   1. Money is integer paisa (Rs 3,499 -> 349900). Never a float.
+//   2. Customer-facing text is never a column — it lives in *Translation rows,
+//      one per locale, so adding a language needs no migration.
+
+enum ProductKind {
+  GOODS // physical goods (electronics, grocery, etc)
+  SERVICE // non-physical services
+  DIGITAL // software, licenses, digital downloads
+  STITCHED // legacy: ready to wear
+  UNSTITCHED // legacy: fabric, optionally stitched to measure
+  STITCHING_SERVICE // legacy: the tailoring itself, sold as a product
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  /// Short SKU-template code, e.g. "LWN". Uppercase, slug-derived by default,
+  /// editable. WO-3.3, 03-variants-sku-seo.md.
+  code      String?
+  parentId  String?
+  imageUrl  String?
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parent       Category?             @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children     Category[]            @relation("CategoryTree")
+  translations CategoryTranslation[]
+  products     Product[]
+
+  @@index([parentId])
+  @@index([isActive])
+}
+
+/// 47-preconfigured-sector-taxonomy.md — a named, versioned starter
+/// category tree for one vertical, seeded (never user-created through the
+/// admin UI). Applying one creates ordinary Category rows; this row itself
+/// is never referenced by the categories it produces, per this document's
+/// own "undoing a preset is deleting the categories it created, like any
+/// other category deletion" position.
+model CategoryPreset {
+  id          String  @id @default(cuid())
+  key         String  @unique
+  label       String
+  /// { name, nameUr?, children: [...] } recursively — never compiled into
+  /// application code, so a tenth vertical's preset is a seed-data change.
+  treeJson    Json
+  description String?
+}
+
+/// A label a product is sold under. Managed from /admin/brands rather than
+/// typed per product: `Product.brand` used to be free text, so "Gul Ahmed",
+/// "gul ahmed" and "Gul  Ahmed" were three different brands as far as any
+/// filter or report was concerned.
+model Brand {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  /// Brand mark, shown on the storefront's brand listing.
+  logoUrl   String?
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  translations BrandTranslation[]
+  products     Product[]
+
+  @@index([isActive])
+}
+
+/// House Rule 6: a customer-facing name is a translation row, not a column.
+/// Most brand names are proper nouns that read the same in both languages,
+/// but a shop writing them in Urdu script has somewhere to put that.
+model BrandTranslation {
+  id          String  @id @default(cuid())
+  brandId     String
+  locale      String // "en" | "ur"
+  name        String
+  description String?
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, locale])
+}
+
+model CategoryTranslation {
+  id          String  @id @default(cuid())
+  categoryId  String
+  locale      String // "en" | "ur"
+  name        String
+  description String?
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, locale])
+}
+
+model Product {
+  id         String        @id @default(cuid())
+  slug       String        @unique
+  kind       ProductKind
+  status     ProductStatus @default(DRAFT)
+  categoryId String?
+
+  /// Price in paisa. For a STITCHING_SERVICE this is the base stitching fee.
+  basePrice      Int
+  /// Optional "was" price for showing a discount, in paisa.
+  compareAtPrice Int?
+
+  brandId String?
+  fabric  String? // lawn, chiffon, khaddar, linen…
+  season  String? // summer, winter, festive
+  tags    String[] @default([])
+
+  /// Per-product SKU-template code, e.g. "3PC-EMB". Defaults from the slug,
+  /// editable. WO-3.3, 03-variants-sku-seo.md.
+  code String?
+
+  /// SEO section, WO-3.7. `false` (default) means indexable — most products
+  /// never need to touch this.
+  noindex           Boolean @default(false)
+  /// Rare override for a canonical URL other than this product's own page
+  /// (e.g. a duplicate listing that should point elsewhere). Null (the
+  /// common case) means "canonical to self", computed at render time.
+  canonicalOverride String?
+
+  /// UNSTITCHED only: how many pieces the fabric contains (1/2/3-piece) and
+  /// how many metres, both shown on the product page.
+  pieceCount   Int?
+  fabricMeters Float?
+
+  /// UNSTITCHED only: whether "get it stitched" is offered on this product.
+  stitchingAvailable Boolean @default(false)
+
+  /// A repeat-buy item worth nudging customers to reorder — set by staff.
+  /// Read by MarketingAutomationCron (marketing.replenishment_reminder) on a
+  /// single global cadence (Setting marketing.replenishment_reminder_days),
+  /// not a per-product one.
+  isConsumable Boolean @default(false)
+
+  /// STITCHING_SERVICE only: which garment this service stitches.
+  garmentTypeId String?
+
+  /// WO-6.1's own closing line — a per-product handling fee added at
+  /// checkout on top of the zone/method rate. Null (the default) costs
+  /// nothing extra to pack.
+  shippingClassId String?
+
+  /// Sort weight for merchandising; higher floats to the top of listings.
+  featuredRank Int       @default(0)
+  publishedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  category              Category?             @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  brand                 Brand?                @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  /// fulfilment.prisma (WO-6.1) — both core, same idiom as category/brand above.
+  shippingClass         ShippingClass?        @relation(fields: [shippingClassId], references: [id], onDelete: SetNull)
+  translations          ProductTranslation[]
+  variants              ProductVariant[]
+  options               ProductOption[]
+  images                ProductImage[]
+  /// UNSTITCHED only: the garments this fabric may be stitched into.
+  garmentTypes          ProductGarmentType[]
+  cartItems             CartItem[]
+  orderItems            OrderItem[]
+  /// Carts/orders where this product was chosen as the stitching service.
+  cartItemsAsService    CartItem[]            @relation("CartItemStitchingService")
+  orderItemsAsService   OrderItem[]           @relation("OrderItemStitchingService")
+  /// collections.prisma section below (WO-8.2).
+  collectionMemberships CollectionProduct[]
+  /// Phase 7 WO-7.5 (docs/implementation/customer-portal-loyalty/07-customer-portal.md).
+  reviews               Review[]
+  wishlistItems         WishlistItem[]
+  /// Phase 9 (09-ai-layer.md) — this product's own pending AI-generated copy.
+  aiSuggestions         ProductAiSuggestion[]
+  sizeBias              ProductSizeBias?
+  reviewSummary         ProductReviewSummary?
+  /// The "also/complete the look" side of a cross-sell pair — see
+  /// ProductCrossSell's own doc comment for why this is two relations.
+  crossSellsFrom        ProductCrossSell[]    @relation("CrossSellSource")
+  crossSellsTo          ProductCrossSell[]    @relation("CrossSellTarget")
+
+  @@index([status, kind])
+  @@index([categoryId])
+  @@index([featuredRank])
+  @@index([createdAt])
+}
+
+model ProductTranslation {
+  id               String  @id @default(cuid())
+  productId        String
+  locale           String
+  name             String
+  description      String?
+  careInstructions String?
+  metaTitle        String?
+  metaDescription  String?
+  /// The term the SEO checklist scores this locale's copy against — never
+  /// shown to a customer. WO-3.7, 03-variants-sku-seo.md.
+  focusKeyword     String?
+
+  /// 166-unified-product-reference-registry.md, WO-166.4. Set only when this
+  /// row's name/description/careInstructions track a
+  /// `GlobalProductReference` (the platform app's shared registry) — never
+  /// set by an ordinary hand-typed edit. `ProductAdminService.update()`
+  /// clears both fields back to null the moment a staff member edits this
+  /// row directly through the normal product form, which is what makes a
+  /// later local edit "a deliberate override... never silently clobbered"
+  /// (doc 166 §2): once null, no future sync delivery for this locale is
+  /// applied until the tenant re-adopts a reference explicitly.
+  sourcedFromGlobalReferenceId  String?
+  /// The reference's own `updatedAt` as of the last applied sync — compared
+  /// against an incoming delivery's `updatedAt` so a redelivered (at-least-
+  /// once) sync is a no-op rather than a redundant rewrite.
+  sourcedFromReferenceUpdatedAt DateTime?
+
+  /// WO-8.3 (08-content-marketing-search.md). Precomputed by
+  /// SearchService.reindexProduct() on every write to this row or to the
+  /// product/category/brand/tags it's derived from — a `VariantSalesStat`-
+  /// style cache, not a live-computed column. `Unsupported`: Prisma has no
+  /// tsvector type, so every read and write of it goes through raw SQL in
+  /// SearchService, never the generated client. Locale-aware: 'english' text
+  /// search config for `en`, 'simple' for `ur` — Postgres ships no Urdu
+  /// stemmer, and 'simple' (token match, no stemming) is the honest choice
+  /// over silently running Urdu text through the English one.
+  searchVector Unsupported("tsvector")?
+
+  /// WO-9.5 (09-ai-layer.md). OpenAI text-embedding-3-small's own dimension
+  /// (1536) — re-embedded by SearchReindexListener alongside searchVector, on
+  /// the SAME DomainEvent.ProductChanged, so the two never drift out of sync.
+  /// Null whenever no embedding-capable AiProvider is configured; hybrid
+  /// search falls back to ts_rank/trigram alone in that case (builds on
+  /// Phase 8, never replaces it).
+  embedding Unsupported("vector(1536)")?
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, locale])
+  @@index([name])
+}
+
+model ProductVariant {
+  id                String  @id @default(cuid())
+  productId         String
+  sku               String  @unique
+  size              String? // S/M/L or "Free size"
+  color             String?
+  colorHex          String?
+  /// Cached display string, "Medium / Ferozi", joining ProductVariantOptionValue
+  /// labels in option order. Denormalised deliberately — lists, cart lines and
+  /// order snapshots must not need three joins. WO-3.1, 03-variants-sku-seo.md.
+  label             String?
+  /// Overrides Product.basePrice when set, in paisa.
+  priceOverride     Int?
+  stock             Int     @default(0)
+  lowStockThreshold Int     @default(3)
+  isActive          Boolean @default(true)
+
+  /// Weighted average cost in paisa. 0 means "never received against a PO" (UNKNOWN), not free.
+  costPrice           Int       @default(0)
+  reorderPoint        Int?
+  reorderQuantity     Int?
+  preferredSupplierId String?
+  preferredSupplier   Supplier? @relation("PreferredSupplier", fields: [preferredSupplierId], references: [id], onDelete: SetNull)
+  lastReceivedAt      DateTime?
+  barcode             String?   @unique
+  /// True once a human has hand-edited this SKU — the generator then never
+  /// silently rewrites it again. WO-3.3, 03-variants-sku-seo.md.
+  skuIsManual         Boolean   @default(false)
+
+  /// True when this variant is made in-house from a BillOfMaterial (production
+  /// module) rather than bought in from preferredSupplier. A variant is one or
+  /// the other, never both — enforced in service code, not the schema, since
+  /// the BillOfMaterial relation itself lives in the production module's own
+  /// schema file (production.prisma) and must not be typed here.
+  producedInHouse Boolean @default(false)
+
+  /// 32-lots-batch-expiry-fefo.md, DECISIONS.md ADR-068. Off by default,
+  /// and off means byte-identical to today's behavior — only a variant a
+  /// merchant explicitly flags (perishables, pharma, anything with a real
+  /// expiry) gains the extra receiving/FEFO step. A category-level default
+  /// is a deliberately deferred refinement (see the ADR); this flag is the
+  /// per-SKU override every deployment can use today.
+  lotTracked Boolean @default(false)
+
+  /// 158-serialized-unit-tracking.md, DECISIONS.md ADR-068. Off by default;
+  /// the same "absent collaborator" discipline as lotTracked above — a
+  /// t-shirt or a bag of rice never asks for a serial number, only a
+  /// variant a merchant explicitly flags (phones, laptops, appliances,
+  /// anything IMEI-regulated or individually warrantied).
+  tracksSerials  Boolean @default(false)
+  /// Null = no warranty tracked for this variant. Used only to compute
+  /// `getUnitHistory()`'s own read-only warrantyEndsOn (soldOn + this) —
+  /// never a claims workflow of its own (out of scope, doc 158).
+  warrantyMonths Int?
+
+  /// Null = the store's default tax class (Setting `tax.default_class`).
+  /// Most products never set this. Tax is core (MULTI-SECTOR.md), so this
+  /// relation is a normal core-to-core reference, not a pack boundary.
+  taxClassId String?
+  taxClass   TaxClass? @relation(fields: [taxClassId], references: [id], onDelete: SetNull)
+
+  salesStat VariantSalesStat?
+
+  /// bom.prisma's RawMaterial (WO-C.1) — set only when this variant IS a raw
+  /// material, not one built from them.
+  rawMaterial  RawMaterial?
+  /// bom.prisma's BomRecipe (WO-C.2) — set only when this variant IS BUILT
+  /// FROM raw materials. A variant is at most one of rawMaterial/bomRecipe,
+  /// enforced in recipe.service.ts (no nesting in v1).
+  bomRecipe    BomRecipe?
+  /// Every BomProductionRun that has credited this variant's stock (WO-C.3).
+  producedRuns BomProductionRun[] @relation("BomProducedVariant")
+
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product             Product                     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  images              ProductImage[]
+  cartItems           CartItem[]
+  optionValues        ProductVariantOptionValue[]
+  orderItems          OrderItem[]
+  supplierProducts    SupplierProduct[]
+  stockAdjustments    StockAdjustment[]
+  stockMovements      StockMovement[]
+  locationStocks      VariantLocationStock[]
+  stockVariances      StockVariance[]
+  purchaseOrderItems  PurchaseOrderItem[]
+  goodsReceiptItems   GoodsReceiptItem[]
+  stockCountLines     StockCountLine[]
+  requisitionLines    RequisitionLine[]
+  spotCheckLines      SpotCheckLine[]
+  billOfMaterial      BillOfMaterial?
+  bomComponentOf      BillOfMaterialLine[]        @relation("BomComponent")
+  workOrders          WorkOrder[]
+  /// Phase 7 WO-7.6 (docs/implementation/customer-portal-loyalty/07-customer-portal.md).
+  wishlistItems       WishlistItem[]
+  backInStockRequests BackInStockRequest[]
+  /// Ecosystem audit 2026-10-29 (merged from @newaxhq/cart).
+  stockHolds          CartStockHold[]
+  /// Phase 9 (09-ai-layer.md) — inventory.prisma's own cache/advisory rows.
+  forecast            VariantForecast?
+  markdownSuggestions MarkdownSuggestion[]
+  /// 32-lots-batch-expiry-fefo.md / 158-serialized-unit-tracking.md.
+  lots                Lot[]
+  serializedUnits     SerializedUnit[]
+
+  @@index([productId])
+  @@index([stock])
+}
+
+/// One entry per change to ProductVariant.stock, so "why is stock 4" has an
+/// answer without an audit table bolted on after the fact.
+model StockAdjustment {
+  id             String   @id @default(cuid())
+  variantId      String
+  /// Positive = stock added, negative = stock removed. Never zero.
+  delta          Int
+  /// Stock level AFTER this adjustment, so history reads without replaying deltas.
+  resultingStock Int
+  reason         String // "restock" | "correction" | "damaged" | "sold_offline" | "other"
+  note           String?
+  actorId        String?
+  createdAt      DateTime @default(now())
+
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  actor   User?          @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([variantId, createdAt])
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  variantId String?
+  url       String
+  /// Deprecated by `translations` (WO-3.6, 03-variants-sku-seo.md) — alt text
+  /// is customer-facing (House Rule 6) so it needs one row per locale.
+  /// Additive only: kept, unwritten, so nothing that still reads it breaks.
+  alt       String?
+  order     Int      @default(0)
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  /// 166-unified-product-reference-registry.md, WO-166.4. Set only on a row
+  /// written by `ProductReferenceSyncService` — never by the ordinary image
+  /// upload path. `url` on such a row points directly at the platform app's
+  /// own shared storage, never a locally re-uploaded copy (doc 166's own
+  /// "one buffer, many readers" saving). A sync delivery only ever deletes
+  /// and recreates rows carrying this same reference id, so a staff-uploaded
+  /// image (this column null) is never touched by a sync.
+  sourcedFromGlobalReferenceId String?
+
+  product       Product                   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant       ProductVariant?           @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  translations  ProductImageTranslation[]
+  aiSuggestions ProductAiSuggestion[]
+
+  @@index([productId, order])
+}
+
+/// Alt text per locale. A filename is not a description in any language, so
+/// this starts empty rather than lying — see the migration's backfill.
+model ProductImageTranslation {
+  id      String @id @default(cuid())
+  imageId String
+  locale  String
+  alt     String
+
+  image ProductImage @relation(fields: [imageId], references: [id], onDelete: Cascade)
+
+  @@unique([imageId, locale])
+}
+
+/// Which garments a given unstitched fabric can be made into.
+model ProductGarmentType {
+  productId     String
+  garmentTypeId String
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([productId, garmentTypeId])
+}
+
+enum OptionDisplay {
+  BUTTON // "S M L XL"
+  DROPDOWN // long lists
+  SWATCH // colour or fabric image
+  TEXT // free entry, e.g. a monogram
+}
+
+/// A dynamic option axis a product varies along: "Size", "Colour", "Storage".
+/// WO-3.1 (03-variants-sku-seo.md, Blocker B2) — additive alongside
+/// ProductVariant's size/color/colorHex columns; those stay until a later,
+/// separate release both writes and reads exclusively go through this model
+/// (00-HOUSE-RULES.md §4, expand/contract). Do not drop them here.
+model ProductOption {
+  id        String        @id @default(cuid())
+  productId String
+  /// Stable machine key: "size", "storage". Never shown to a customer.
+  key       String
+  display   OptionDisplay @default(BUTTON)
+  order     Int           @default(0)
+  createdAt DateTime      @default(now())
+
+  product      Product                    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  translations ProductOptionTranslation[]
+  values       ProductOptionValue[]
+
+  @@unique([productId, key])
+  @@index([productId, order])
+}
+
+model ProductOptionTranslation {
+  id       String @id @default(cuid())
+  optionId String
+  locale   String
+  label    String
+
+  option ProductOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  @@unique([optionId, locale])
+}
+
+/// A specific value on an option axis: "M", "Ferozi", "128GB".
+model ProductOptionValue {
+  id        String  @id @default(cuid())
+  optionId  String
+  key       String
+  /// Colour swatch.
+  swatchHex String?
+  /// Fabric/pattern swatch image, when a hex cannot describe it.
+  swatchUrl String?
+  order     Int     @default(0)
+
+  option       ProductOption                   @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  translations ProductOptionValueTranslation[]
+  variantLinks ProductVariantOptionValue[]
+
+  @@unique([optionId, key])
+  @@index([optionId, order])
+}
+
+model ProductOptionValueTranslation {
+  id      String @id @default(cuid())
+  valueId String
+  locale  String
+  label   String
+
+  value ProductOptionValue @relation(fields: [valueId], references: [id], onDelete: Cascade)
+
+  @@unique([valueId, locale])
+}
+
+/// The join that DEFINES a variant: one row per option axis per variant. The
+/// composite id guarantees a variant can never carry two values for the same
+/// axis (e.g. both "Red" and "Blue" for "Colour" at once).
+model ProductVariantOptionValue {
+  variantId String
+  optionId  String
+  valueId   String
+
+  variant ProductVariant     @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  value   ProductOptionValue @relation(fields: [valueId], references: [id], onDelete: Restrict)
+
+  @@id([variantId, optionId])
+  @@index([valueId])
+}
+
+/// Store-level, reusable option axis — "Size: XS/S/M/L/XL/XXL" typed once
+/// under Catalogue -> Options & attributes instead of on every product. A
+/// product instantiates from a template by copying its values into its own
+/// ProductOption/ProductOptionValue rows; editing the template afterwards
+/// never silently changes a live product. WO-3.1, 03-variants-sku-seo.md.
+model OptionTemplate {
+  id        String        @id @default(cuid())
+  key       String        @unique
+  display   OptionDisplay @default(BUTTON)
+  order     Int           @default(0)
+  createdAt DateTime      @default(now())
+
+  translations OptionTemplateTranslation[]
+  values       OptionTemplateValue[]
+
+  @@index([order])
+}
+
+model OptionTemplateTranslation {
+  id         String @id @default(cuid())
+  templateId String
+  locale     String
+  label      String
+
+  template OptionTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, locale])
+}
+
+model OptionTemplateValue {
+  id         String  @id @default(cuid())
+  templateId String
+  key        String
+  swatchHex  String?
+  swatchUrl  String?
+  order      Int     @default(0)
+
+  template     OptionTemplate                   @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  translations OptionTemplateValueTranslation[]
+
+  @@unique([templateId, key])
+  @@index([templateId, order])
+}
+
+model OptionTemplateValueTranslation {
+  id      String @id @default(cuid())
+  valueId String
+  locale  String
+  label   String
+
+  value OptionTemplateValue @relation(fields: [valueId], references: [id], onDelete: Cascade)
+
+  @@unique([valueId, locale])
+}
+
+/// A storefront path that now 301s somewhere else — created automatically
+/// when a live product/category slug changes, or entered by hand (including
+/// a CSV import when migrating an old site). WO-3.9, 03-variants-sku-seo.md.
+model Redirect {
+  id          String   @id @default(cuid())
+  /// Path only, no host, no locale prefix: "/product/old-slug". The locale
+  /// segment is stripped before lookup and reapplied to `toPath` on 301,
+  /// since a slug is shared across locales (Product.slug is not per-locale).
+  fromPath    String   @unique
+  toPath      String
+  /// 301 permanent or 302 temporary.
+  statusCode  Int      @default(301)
+  /// True when created automatically by a slug change.
+  isAutomatic Boolean  @default(false)
+  hitCount    Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([isAutomatic])
+}
+
+// Collections and merchandising. WO-8.2,
+// docs/implementation/content-marketing-search/08-content-marketing-search.md.
+//
+// Separate from the Category tree deliberately (the doc's own words): a
+// Category is where a product structurally lives; a Collection is a curated
+// or rule-based merchandising surface — a lookbook, a seasonal drop, a
+// "complete the look" set — that cuts across categories.
+
+enum CollectionSortStrategy {
+  MANUAL
+  BEST_SELLING
+  NEWEST
+  PRICE_ASC
+  PRICE_DESC
+  /// Sort by margin (basePrice - ProductVariant.costPrice). Needs Phase 1's
+  /// cost data, which is exactly why most platforms cannot offer this.
+  MARGIN
+}
+
+model Collection {
+  id           String                 @id @default(cuid())
+  slug         String                 @unique
+  /// Null: manual/curated membership only (CollectionProduct rows). Non-null:
+  /// evaluated at read time by CollectionsService.resolveRuleProducts() —
+  /// shape is `CollectionRule` in packages/shared/src/collection-rules.ts.
+  /// Nightly materialisation for a very large catalogue is named and
+  /// sequenced as its own follow-on in the Phase 8 status note, not built
+  /// here — read-time evaluation is the honest, correct choice at this
+  /// catalogue's size today.
+  rule         Json?
+  sortStrategy CollectionSortStrategy @default(MANUAL)
+  imageUrl     String?
+  isActive     Boolean                @default(true)
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  translations CollectionTranslation[]
+  products     CollectionProduct[]
+
+  @@index([isActive])
+}
+
+model CollectionTranslation {
+  id              String  @id @default(cuid())
+  collectionId    String
+  locale          String
+  name            String
+  description     String?
+  metaTitle       String?
+  metaDescription String?
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, locale])
+}
+
+/// Manual membership and manual sort order. Unused for a rule-based
+/// collection — resolveRuleProducts() computes membership from
+/// Collection.rule at read time instead of reading this table.
+model CollectionProduct {
+  collectionId String
+  productId    String
+  order        Int    @default(0)
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  product    Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, productId])
+  @@index([productId])
+}
+
+// ─── Phase 9 — AI layer (09-ai-layer.md) ────────────────────────────────────
+// The two rules that govern every model below: everything AI-generated is a
+// DRAFT a human confirms (never written to the real Product/ProductImage
+// columns until APPROVED), and every row here traces back to an AiUsageLog
+// entry for cost accounting — see core.prisma's own comment on that model.
+
+enum AiSuggestionKind {
+  ALT_TEXT
+  META_TITLE
+  META_DESCRIPTION
+  DESCRIPTION
+  CARE_INSTRUCTIONS
+}
+
+enum AiSuggestionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// WO-9.1. One row per (product or image, kind, locale) draft. ALT_TEXT sets
+/// `imageId`; every other kind is product-level and leaves it null.
+/// Approving a suggestion is what writes the real ProductTranslation/
+/// ProductImageTranslation column — see ProductAiService.approve().
+model ProductAiSuggestion {
+  id            String             @id @default(cuid())
+  productId     String
+  imageId       String?
+  kind          AiSuggestionKind
+  locale        String
+  suggestedText String
+  status        AiSuggestionStatus @default(PENDING)
+  createdAt     DateTime           @default(now())
+  reviewedAt    DateTime?
+  reviewedById  String?
+
+  product Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  image   ProductImage? @relation(fields: [imageId], references: [id], onDelete: Cascade)
+
+  @@index([productId, status])
+  @@index([status, createdAt])
+}
+
+/// WO-9.2. One row per product, refreshed nightly from Review.fitFeedback —
+/// "a garment where 40% say too small gets its recommendation shifted up a
+/// size" (the doc's own words). `shift` is what SizeRecommendationService
+/// adds to the arithmetic size match; it is never itself the recommendation.
+model ProductSizeBias {
+  productId     String   @id
+  tooSmallPct   Float    @default(0)
+  trueToSizePct Float    @default(0)
+  tooLargePct   Float    @default(0)
+  sampleSize    Int      @default(0)
+  /// -1 = recommend one size down, 0 = no adjustment, +1 = one size up.
+  shift         Int      @default(0)
+  computedAt    DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+/// WO-9.6. A directed edge, product -> relatedProduct — "customers who
+/// bought this kameez also bought this dupatta". Two relations on Product
+/// (crossSellsFrom/crossSellsTo) because the edge is directional: a manual
+/// "complete the look" pairing set from the kameez's own admin screen does
+/// not imply the reverse is equally relevant from the dupatta's page.
+/// MANUAL rows always outrank CO_OCCURRENCE/EMBEDDING ones at read time
+/// (RecommendationsService's own rule, not encoded here) — "a merchandiser's
+/// curated pairing beats the algorithm often enough that removing the
+/// control is a mistake" (the doc's own words).
+enum ProductCrossSellKind {
+  MANUAL
+  CO_OCCURRENCE
+  EMBEDDING
+}
+
+model ProductCrossSell {
+  id               String               @id @default(cuid())
+  productId        String
+  relatedProductId String
+  kind             ProductCrossSellKind
+  order            Int                  @default(0)
+  createdAt        DateTime             @default(now())
+
+  product        Product @relation("CrossSellSource", fields: [productId], references: [id], onDelete: Cascade)
+  relatedProduct Product @relation("CrossSellTarget", fields: [relatedProductId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, relatedProductId])
+  @@index([relatedProductId])
+}
+
+/// 150-product-kitting-bundles.md — a sellable shell over existing
+/// variants, never a new physical item: selling one is entirely expressed
+/// as decrementing its components (BundlesService.sellBundle()), and its
+/// own "stock" is definitionally computed, never stored (see
+/// bundleAvailableStock()). No `organizationId` column, the same deviation
+/// from this document's own sketch pricing.prisma already made for the
+/// same reason: `Category`/`Product` (what the doc claims this mirrors)
+/// carry no such column either — this codebase is one Organization per
+/// deployment.
+model ProductBundle {
+  id        String   @id @default(cuid())
+  /// The bundle's own sellable identity — has its own SKU, its own listing,
+  /// its own price via resolvePrice() (doc 146) — but produces NO stock row
+  /// of its own.
+  variantId String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  components BundleComponent[]
+}
+
+model BundleComponent {
+  id                 String @id @default(cuid())
+  bundleId           String
+  componentVariantId String
+  quantity           Int    @default(1)
+
+  bundle ProductBundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+
+  @@unique([bundleId, componentVariantId])
+}

@@ -1,0 +1,211 @@
+// The till (RETAIL-ERP.md R7/R11, Tranche 4). WO-21.1 owns a terminal's
+// identity and how it authenticates. WO-21.2 (this file's other half) owns
+// the shift lifecycle and cash movements. WO-21.3 wired the actual sale —
+// PosSalesService hands a validated line list to OrdersService.placeFromPos()
+// (`pos -> orders` in KNOWN_MODULE_COUPLINGS, per R11) — so a shift's X/Z
+// report is still cash-movements-only here; folding sale/tender totals into
+// it is a follow-up, not faked by this file. WO-21.5 adds PosReceipt and a
+// return path (reusing OrdersService.changeStatus()/PaymentsService.refund()
+// through their EXISTING admin endpoints — no new pos -> payments coupling).
+// pos-hardware/31 (WO-31.2/31.3) builds park/retrieve (PosParkedSale) and a
+// line's modifier set / non-typed quantity source (PosLineModifier,
+// PosLineQuantitySource) — a till-side price override remains unbuilt.
+
+enum PosTerminalStatus {
+  /// Registered, no working device credential yet — cannot authenticate.
+  PENDING
+  ACTIVE
+  /// Manually disabled — a lost or decommissioned till. Its own credential
+  /// stops working immediately even if it still hashes correctly, the same
+  /// guarantee TradingPartner/Node give their SUSPENDED row.
+  SUSPENDED
+}
+
+/// A physical till. `locationId` is a bare scalar, not a `@relation` — the
+/// same "no coupling to another module's schema file" choice
+/// invoicing.prisma already made for `tradingPartnerId`/`orderId` — so this
+/// file stays fully self-contained; `PosTerminalsService` checks the
+/// location exists at write time instead of leaning on a DB-level FK.
+model PosTerminal {
+  id         String @id @default(cuid())
+  /// Short, human-chosen — "LHR-01-T1" — printed on receipts (WO-21.5) and
+  /// shown on the branch's own exception dashboard.
+  code       String @unique
+  label      String
+  locationId String
+
+  /// SHA-256 of the device credential this terminal presents on every
+  /// request — same shape as `TradingPartner.inboundApiKeyHash` /
+  /// `Node.inboundApiKeyHash`: issued once via `rotateDeviceKey()`, shown to
+  /// the operator raw exactly that once, never persisted or echoed back.
+  deviceKeyHash String? @unique
+
+  status     PosTerminalStatus @default(PENDING)
+  lastSeenAt DateTime?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  shifts PosShift[]
+
+  @@index([locationId])
+  @@index([status])
+}
+
+enum PosShiftStatus {
+  OPEN
+  CLOSED
+}
+
+/// One cashier's stretch at one terminal, opened with a cash float and
+/// closed with a physical count (RETAIL-ERP.md R11, WO-21.2). `terminalId`
+/// is a real `@relation` — unlike `PosTerminal.locationId`, this stays
+/// inside the SAME module's own schema file, so there is no cross-module
+/// coupling to avoid. `openedByUserId`/`closedByUserId` are bare scalars,
+/// the same decoupling `JournalLine.contactId`/`supplierId`
+/// (accounting.prisma) already use for naming a `User` without a
+/// `@relation` into another module's table.
+model PosShift {
+  id             String  @id @default(cuid())
+  terminalId     String
+  openedByUserId String
+  closedByUserId String?
+
+  openingCashMinor Int
+  /// The cashier's own physical count at close — compared against the
+  /// running total from `cashMovements` for the Z-report's over/short.
+  closingCashMinor Int?
+
+  status   PosShiftStatus @default(OPEN)
+  openedAt DateTime       @default(now())
+  closedAt DateTime?
+
+  terminal       PosTerminal     @relation(fields: [terminalId], references: [id], onDelete: Restrict)
+  cashMovements  CashMovement[]
+  /// 156-single-employee-branch-loss-prevention.md — variances attributed to
+  /// this shift's own custody window.
+  stockVariances StockVariance[]
+  /// pos-hardware/31 WO-31.2/31.3 — sales started but not yet tendered.
+  parkedSales    PosParkedSale[]
+
+  @@index([terminalId])
+  @@index([status])
+}
+
+enum CashMovementType {
+  /// The float the shift opened with — recorded once, by `openShift()`, never by `recordCashMovement()` directly.
+  OPENING_FLOAT
+  /// Cash added to the drawer mid-shift outside a sale (a bank top-up, a correction).
+  CASH_IN
+  /// Cash removed for a reason other than a drop — a refund paid in cash, a till-to-safe correction.
+  CASH_OUT
+  /// A cash drop to the safe — physically leaves the drawer, still counted toward the shift's own cash-in total until the Z-report.
+  DROP
+  /// Petty cash paid out of the drawer for an expense (a delivery rider, a supply run).
+  PAID_OUT
+}
+
+/// One physical cash movement at the drawer during a shift — always a
+/// positive `amountMinor`; `type` says which direction. Never a sale: a
+/// sale's cash tender posts through `orders`/`payments`
+/// (OrdersService.placeFromPos(), WO-21.3) like any other payment, not as a
+/// row here.
+model CashMovement {
+  id          String           @id @default(cuid())
+  shiftId     String
+  type        CashMovementType
+  amountMinor Int
+  reason      String?
+  actorId     String
+  createdAt   DateTime         @default(now())
+
+  shift PosShift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  @@index([shiftId])
+}
+
+/// One receipt per POS sale (WO-21.5) — created by PosSalesService right
+/// after OrdersService.placeFromPos() succeeds, best-effort and outside that
+/// call's own transaction, the same "not core to the sale's correctness"
+/// reasoning AuditService.record() already uses: a missing receipt row would
+/// never be why a sale should roll back. `orderId` is a bare scalar (orders
+/// is a different module's schema file), unique — one receipt per order, its
+/// print history tracked by incrementing `printCount` rather than creating a
+/// new row per reprint.
+model PosReceipt {
+  id         String    @id @default(cuid())
+  orderId    String    @unique
+  printCount Int       @default(0)
+  printedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([orderId])
+}
+
+/// pos-hardware/31 §2 (WO-31.2) — a modifier on a basket/receipt line, e.g.
+/// "extra shot", "no onions", "large". `priceDeltaMinor` is why this is not
+/// just a text note: it changes the till total, folded into the OrderItem's
+/// own `unitPrice` at `OrdersService.placeFromPos()` (no schema change to
+/// `orders` needed — "a richer line, no new coupling", doc 31's own words).
+/// This row is pos-owned display/audit metadata written best-effort AFTER
+/// the sale commits; it is never read back to compute money.
+model PosLineModifier {
+  id     String @id @default(cuid())
+  /// The basket line this modifier applies to — a bare scalar per this
+  /// file's existing decoupling convention (no `@relation` across the
+  /// pos/catalog/orders boundary): deliberately NOT a foreign key to the
+  /// `OrderItem` it produced, since `pos` never learns that item's id.
+  lineRef String
+  key     String
+  label   String
+  priceDeltaMinor Int @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([lineRef])
+}
+
+enum QuantitySource {
+  TYPED
+  SCALE_WEIGHT
+  BOM_RECIPE_SCALE
+}
+
+/// pos-hardware/31 §2 (WO-31.2) — extends the basket line concept with
+/// where its quantity came from: a scale reading or a scaled BOM recipe,
+/// not just a typed integer. Metadata on the line, not a new sale model;
+/// same bare-scalar `lineRef` convention as `PosLineModifier` above.
+model PosLineQuantitySource {
+  lineRef  String @id
+  source   QuantitySource
+  /// Set only when source = BOM_RECIPE_SCALE — which bom.prisma recipe this
+  /// line's formula came from. Read-only pointer; pos never writes to bom.
+  recipeId String?
+}
+
+enum PosOrderType {
+  COUNTER
+  TAB
+  TABLE
+}
+
+/// pos-hardware/31 §3 (WO-31.2/31.3) — a sale that has started but not
+/// tendered, exactly the "park/retrieve" pos.prisma's own header already
+/// named as unbuilt. A `COUNTER` sale never parks (retail/bakery counters
+/// tender immediately); `TAB`/`TABLE` sales may park repeatedly before final
+/// tender. Belongs to a shift, never floats free of one.
+model PosParkedSale {
+  id      String       @id @default(cuid())
+  shiftId String
+  orderType PosOrderType @default(COUNTER)
+  /// "Table 4", "Tab — Ahmed" — free text; this repository does not model a
+  /// restaurant floor plan, only a label a server recognizes.
+  label   String
+  /// The full basket snapshot (pos-core's own basket shape) — park/retrieve
+  /// replays the underlying maths, never a second sale model.
+  basketSnapshot Json
+  parkedAt    DateTime  @default(now())
+  retrievedAt DateTime?
+
+  shift PosShift @relation(fields: [shiftId], references: [id], onDelete: Restrict)
+
+  @@index([shiftId, retrievedAt])
+}

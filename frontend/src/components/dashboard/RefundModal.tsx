@@ -61,7 +61,7 @@ export function RefundModal(props: RefundModalProps) {
                     const inv = stripeInvoices.find((i: any) => i.id === e.target.value)
                     setSelectedInvoiceForRefund(inv || null)
                   }}
-                  className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-hidden"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-hidden"
                 >
                   {stripeInvoices.map((inv: any) => (
                     <option key={inv.id} value={inv.id}>
@@ -99,7 +99,7 @@ export function RefundModal(props: RefundModalProps) {
                   }
                   value={refundAmountInput}
                   onChange={(e) => setRefundAmountInput(e.target.value)}
-                  className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-hidden"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-hidden"
                 />
                 <p className="text-[10px] text-[var(--color-ink-faint)] mt-1">
                   Leave blank to refund the full paid amount.
@@ -113,7 +113,7 @@ export function RefundModal(props: RefundModalProps) {
                 <select
                   value={refundReason}
                   onChange={(e) => setRefundReason(e.target.value)}
-                  className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-hidden"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-hidden"
                 >
                   <option value="requested_by_customer">Customer Request / Satisfaction Guarantee</option>
                   <option value="duplicate">Accidental Duplicate Charge</option>
@@ -122,7 +122,7 @@ export function RefundModal(props: RefundModalProps) {
                 </select>
               </div>
 
-              <div className="rounded-lg bg-amber-50 p-2.5 border border-amber-200 text-[11px] text-amber-800 leading-snug flex items-start gap-1.5">
+              <div className="rounded-[var(--radius-md)] bg-amber-50 p-2.5 border border-amber-200 text-[11px] text-amber-800 leading-snug flex items-start gap-1.5">
                 <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                 <span>Refunds are recorded immediately in Stripe and an immutable audit log is generated.</span>
               </div>
@@ -140,7 +140,7 @@ export function RefundModal(props: RefundModalProps) {
                 type="button"
                 onClick={handleExecuteRefund}
                 disabled={refundSubmitting}
-                className="px-4 py-1.5 text-xs bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold shadow-xs transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-1.5 text-xs bg-rose-600 hover:bg-rose-700 text-white rounded-[var(--radius-md)] font-bold shadow-none transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
               >
                 {refundSubmitting ? 'Processing...' : 'Confirm & Execute Refund'}
               </button>

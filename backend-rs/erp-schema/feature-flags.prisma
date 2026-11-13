@@ -1,0 +1,77 @@
+// Feature flags — the missing piece between "built" and "everyone has it"
+// (resilience-scalability/37-scalability-future-upgrades.md, WO-37.2).
+// Additive only; no existing table altered.
+//
+// A flag is a de-risking tool, not a permanent branch in the code (doc 37's
+// own words): every flag names, at creation, either a removal date or the
+// criteria that ends it. `removalCriteria` completes doc 37's own Prisma
+// sketch, which named the WO-37.3 lifecycle audit ("every flag with no
+// stated removal criteria") but never gave it a column to check — this one
+// is that column, the same "necessary, non-speculative completion" doc 37
+// itself asks for.
+
+/// FeatureFlagService.isEnabled(key, organizationId) is the one caller
+/// every other module goes through — never a raw `prisma.featureFlag`
+/// read from outside core/feature-flags, the same "one writer per
+/// invariant" discipline CLAUDE.md already states for stock.
+model FeatureFlag {
+  id          String @id @default(cuid())
+  /// "payroll.advance-salary-v2", "pos.kitchen-ticket". Already
+  /// unique-indexed by the constraint below — doc 37's own scope-lens text
+  /// says so explicitly ("key is already unique-indexed"), so no separate
+  /// `@@index([key])` duplicates it.
+  key         String @unique
+  description String
+
+  /// Rows, not a single global boolean — an org-level allowlist, a
+  /// percentage rollout, or both, exactly the way LeaveType/Rank favour
+  /// rows over a hardcoded enum for the same reason: one rollout shape
+  /// does not fit every flag.
+  rolloutPercent Int      @default(0)
+  enabledOrgIds  String[]
+  /// true = force off regardless of the above, for an incident. The
+  /// operational reason this table exists at all — generalizes the
+  /// `tax.enabled`-style one-off settings boolean into a reusable
+  /// primitive.
+  killSwitch     Boolean  @default(false)
+
+  /// Doc 37's own "threshold nobody approves alone" scope-lens: true when
+  /// this flag gates a money- or stock-writing path, so flipping it to
+  /// 100% rollout or clearing `killSwitch` needs a second approver who is
+  /// not whoever proposed the change — the identical
+  /// createdById/approvedById maker-checker shape
+  /// `BankFacilityDrawdown` and `SettlementBatch.writeoff*` already
+  /// establish for their own thresholds. A cosmetic/UI-only flag never
+  /// sets this and never needs the second approval below.
+  moneyOrStockPath Boolean @default(false)
+
+  /// The pending half of the same maker-checker pair, held on the flag
+  /// itself (never more than one risky change proposed at a time) rather
+  /// than a separate request table — proportional to a boolean gate, the
+  /// same "smallest complete change" CLAUDE.md's change-minimization rule
+  /// asks for. `proposedRolloutPercent`/`proposedKillSwitchOff` name what
+  /// was asked for, `proposedById` who asked; `approveRollout()` refuses a
+  /// caller equal to `proposedById` (FeatureFlagsAdminService, mirroring
+  /// `SettlementsService.approveWriteoff()`'s own refusal) and clears all
+  /// four fields on commit.
+  proposedRolloutPercent Int?
+  proposedKillSwitchOff  Boolean   @default(false)
+  proposedById           String?
+  proposedAt             DateTime?
+  approvedById           String?
+  approvedAt             DateTime?
+
+  /// Every flag's own age, for WO-37.3's staleness window — never a
+  /// separately maintained "flag age" counter that could drift from this.
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Null until either the flag is removed from the codebase (100%
+  /// rollout, deleted) or promoted to a permanent Setting/MODULES entry.
+  /// WO-37.3's audit surfaces every row still null past the staleness
+  /// window — "no artifact" is exactly what a bare `n/a` would be here,
+  /// so this column exists precisely so that answer is checkable.
+  removalCriteria String?
+
+  @@index([createdAt])
+}

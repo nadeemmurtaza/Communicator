@@ -1,62 +1,56 @@
 /**
- * Communicator's own brand VALUES, typed against @nadeemmurtaza/design-system's
- * BrandTheme contract -- the ecosystem-shared engine. index.css's :root custom
- * properties are the actual rendered values (unchanged by this file); this is
- * the typed source of truth they're transcribed from, so a future CSS build
- * step or another surface (e.g. a React Native client) can derive the same
- * values without re-deriving by eye. See packages/design-system/README.md in
- * core-newax for the engine/values split.
+ * Communicator design tokens -- Intercom-inspired palette.
+ *
+ * Warm cream canvas (#faf9f6), off-black ink (#111111), Fin Orange accent
+ * (#ff5600), sharp 4px geometry. index.css :root custom properties are the
+ * rendered values; this file is the typed source of truth for programmatic
+ * consumers (charts, dynamic theming).
  */
 import type { BrandTheme } from '@nadeemmurtaza/design-system';
 
 export const THEME: BrandTheme = {
   colors: {
     neutral: {
-      50: '#faf8f3',
-      100: '#f5f3ef',
-      // 200/300 darkened from #e7e2d6/#a8a29e -- same hue, lightness only --
-      // until each cleared the WCAG 3:1 non-text floor against the cream
-      // page (#faf8f3): #e7e2d6 was 1.22:1, #a8a29e was 2.38:1. Computed via
-      // @nadeemmurtaza/design-system's darkenToContrastHex; see
-      // scripts/check-contrast.mjs.
-      200: '#928f88',
-      300: '#908b88',
+      50: '#faf9f6',
+      100: '#f1eee9',
+      200: '#dedbd6',
+      300: '#928f88',
       400: '#57534e',
-      500: '#1c1917',
+      500: '#111111',
     },
-    accent: { DEFAULT: '#1c1917', hover: '#0c0a09' },
+    accent: { DEFAULT: '#ff5600', hover: '#e64e00' },
     white: '#ffffff',
     surface: '#ffffff',
     overlay: '#ffffff',
-    inverse: '#1c1917',
+    inverse: '#111111',
     onInverse: '#ffffff',
-    scrim: '#1c1917',
+    scrim: '#000000',
     star: '#f5b841',
-    feedback: { positive: '#0f7a4d', negative: '#b42318' },
-    chart: ['#1c1917'],
+    feedback: { positive: '#0bdf50', negative: '#c41c1c' },
+    chart: ['#ff5600', '#65b5ff', '#0bdf50', '#ff2067', '#b3e01c'],
   },
   colorsDark: {
     neutral: {
-      50: '#1c1917',
-      100: '#292524',
-      200: '#44403c',
-      300: '#a8a29e',
-      400: '#d6d3d1',
-      500: '#faf8f3',
+      50: '#111111',
+      100: '#1a1a1a',
+      200: '#333333',
+      300: '#928f88',
+      400: '#dedbd6',
+      500: '#faf9f6',
     },
-    accent: { DEFAULT: '#faf8f3', hover: '#f5f3ef' },
-    accentInk: { DEFAULT: '#d6d3d1', hover: '#e7e2d6' },
+    accent: { DEFAULT: '#ff6a1a', hover: '#ff7b2e' },
+    accentInk: { DEFAULT: '#dedbd6', hover: '#f1eee9' },
     white: '#ffffff',
-    surface: '#292524',
-    overlay: '#292524',
-    inverse: '#faf8f3',
-    onInverse: '#1c1917',
+    surface: '#1a1a1a',
+    overlay: '#1a1a1a',
+    inverse: '#faf9f6',
+    onInverse: '#111111',
     scrim: '#000000',
     star: '#f5b841',
     feedback: { positive: '#3dcb8b', negative: '#ff8a80' },
-    chart: ['#d6d3d1'],
+    chart: ['#ff6a1a', '#65b5ff', '#3dcb8b', '#ff2067', '#b3e01c'],
   },
-  radii: { sharp: 8, lg: 16, pill: 9999 },
+  radii: { sharp: 4, lg: 8, pill: 9999 },
   type: {
     micro: { size: 11, line: 16 },
     tiny: { size: 12, line: 16 },

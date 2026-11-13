@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 use crate::db::{AppState, DbPool};
 use crate::routes::auth::Tenant;
@@ -89,11 +89,11 @@ pub fn looks_like_email(raw: &str) -> bool {
     }
 }
 
-/// True when `table` exists in this SQLite database. Used instead of assuming a
+/// True when `table` exists in this PostgreSQL database. Used instead of assuming a
 /// schema the deployment may not have wired yet, so a route can name the exact
 /// missing dependency instead of returning fabricated rows.
 pub async fn table_exists(db: &DbPool, table: &str) -> bool {
-    sqlx::query_scalar::<_, i64>("SELECT count(*) FROM sqlite_master WHERE type='table' AND name = ?")
+    sqlx::query_scalar::<_, i64>("SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name = $1")
         .bind(table)
         .fetch_one(db)
         .await
@@ -471,11 +471,11 @@ pub struct ContactRecord {
     pub quality_rating: Option<String>,
 }
 
-/// Dynamic CRM segment filter matching against SQLite contact and tags.
+/// Dynamic CRM segment filter matching against PostgreSQL contact and tags.
 /// `Ok(None)` means the segment id is not in `contact_segments` at all, which
 /// must not be reported as "matches everything"; `Err` is a database failure.
 async fn contact_matches_segment(
-    db: &sqlx::SqlitePool,
+    db: &sqlx::PgPool,
     segment_id: &str,
     channel: &str,
     tags: &[String],
@@ -615,7 +615,7 @@ pub struct LoadedContact {
 }
 
 impl LoadedContact {
-    pub fn from_row(row: &sqlx::sqlite::SqliteRow) -> Self {
+    pub fn from_row(row: &sqlx::postgres::PgRow) -> Self {
         let text = |name: &str| -> Option<String> {
             row.try_get::<Option<String>, _>(name)
                 .ok()
@@ -658,8 +658,8 @@ pub fn field_string(fields: &serde_json::Value, key: &str) -> Option<String> {
     })
 }
 
-/// DATETIME columns in this schema are written both as RFC-3339 text and as
-/// SQLite-style `'YYYY-MM-DD HH:MM:SS'`; normalize before comparing.
+/// DATETIME columns in this schema are written as RFC-3339 text;
+/// normalize before comparing.
 pub fn parse_db_timestamp(raw: &str) -> Option<chrono::DateTime<Utc>> {
     let trimmed = raw.trim();
     if trimmed.is_empty() {
@@ -931,14 +931,14 @@ pub async fn get_contact(
     // evidence of when somebody opted in.
     let recorded_at = consent.and_then(|cr| cr.recorded_at);
 
-    // Custom fields directly from contacts table in SQLite
+    // Custom fields directly from contacts table
     let custom_fields: serde_json::Value = match c.custom_fields.as_deref() {
         Some(raw) if !raw.trim().is_empty() => serde_json::from_str(raw)
             .unwrap_or_else(|_| json!({ "_unparseable": raw.to_string() })),
         _ => json!({}),
     };
 
-    // Latest Conversation Telemetry directly from conversations table in SQLite
+    // Latest Conversation Telemetry directly from conversations table
     #[derive(sqlx::FromRow)]
     struct RawConv {
         id: String,
@@ -1075,7 +1075,7 @@ pub async fn get_contact(
         }
     }
 
-    // Memories directly from contact_memories table in SQLite
+    // Memories directly from contact_memories table
     #[derive(sqlx::FromRow)]
     struct MemoryItem {
         id: String,
@@ -1128,7 +1128,7 @@ pub async fn get_contact(
         })
         .collect();
 
-    // Lead Info from leads table in SQLite if contact has a lead_id
+    // Lead Info from leads table if contact has a lead_id
     let mut lead_json = serde_json::Value::Null;
     if let Some(ref lid) = c.lead_id {
         #[derive(sqlx::FromRow)]

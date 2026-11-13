@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 use crate::db::AppState;
 use axum::{
@@ -930,7 +930,7 @@ pub async fn list_simulation_scenarios(
 
 // Dynamic Evaluation Engine
 async fn evaluate_scenario_internal(
-    db: &sqlx::SqlitePool,
+    db: &sqlx::PgPool,
     scenario_id: &str,
     policy_id_override: Option<&str>,
 ) -> Result<Value, String> {

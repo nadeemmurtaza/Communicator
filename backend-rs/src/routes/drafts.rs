@@ -1,4 +1,4 @@
-//! AI reply drafts. The generation and the send are delegated to
+﻿//! AI reply drafts. The generation and the send are delegated to
 //! `services::reply_engine` and `services::draft_actions`; this file only turns
 //! those results into HTTP responses. Nothing here composes reply text, a
 //! confidence number, or a delivery status.
@@ -49,7 +49,7 @@ fn citations_value(raw: Option<String>) -> (Value, Option<String>) {
 }
 
 fn read_text(
-    row: &sqlx::sqlite::SqliteRow,
+    row: &sqlx::postgres::PgRow,
     column: &'static str,
     unreadable: &mut Vec<&'static str>,
 ) -> Value {
@@ -64,7 +64,7 @@ fn read_text(
 
 /// A column that cannot be read is emitted as `null` with its name listed in
 /// `unreadableColumns`, not as an empty string or a zero that looks like data.
-fn draft_json(row: &sqlx::sqlite::SqliteRow) -> Value {
+fn draft_json(row: &sqlx::postgres::PgRow) -> Value {
     let mut unreadable: Vec<&'static str> = Vec::new();
     let id = read_text(row, "id", &mut unreadable);
     let conversation_id = read_text(row, "conversation_id", &mut unreadable);

@@ -141,7 +141,7 @@ export function BusinessProfile() {
       <div className="flex h-96 items-center justify-center">
         <div className="text-center">
           <Building2 className="h-10 w-10 text-indigo-600 animate-pulse mx-auto" />
-          <p className="mt-3 text-sm text-slate-500 font-medium">Loading Shared Business Profile...</p>
+          <p className="mt-3 text-sm text-[var(--color-ink-faint)] font-medium">Loading Shared Business Profile...</p>
         </div>
       </div>
     )
@@ -152,26 +152,26 @@ export function BusinessProfile() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
-            <Link to="/team" className="hover:text-slate-800">
+          <div className="flex items-center gap-2 text-xs text-[var(--color-ink-faint)] mb-1">
+            <Link to="/team" className="hover:text-[var(--color-ink)]">
               Admin
             </Link>
             <span>/</span>
-            <span className="font-semibold text-slate-700">Business Profile</span>
+            <span className="font-semibold text-[var(--color-ink)]">Business Profile</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-xs">
+            <div className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-lg)] bg-indigo-600 text-white shadow-none">
               <Building2 className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <h1 className="text-xl font-bold text-[var(--color-ink)] flex items-center gap-2">
                 Shared Business Profile & Brand Identity
                 <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 flex items-center gap-1">
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   Verified Meta Cloud Sync
                 </span>
               </h1>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[var(--color-ink-faint)]">
                 Independent organization entity shared across all channels (WhatsApp, Live Chat, SMS, Voice, Social).
               </p>
             </div>
@@ -182,7 +182,7 @@ export function BusinessProfile() {
           <button
             onClick={handleSyncMeta}
             disabled={syncingMeta}
-            className="rounded-md border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 shadow-xs flex items-center gap-2 transition-colors"
+            className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3.5 py-2 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-accent-muted)] disabled:opacity-50 shadow-none flex items-center gap-2 transition-colors"
           >
             <RefreshCw className={`h-3.5 w-3.5 text-indigo-600 ${syncingMeta ? 'animate-spin' : ''}`} />
             {syncingMeta ? 'Syncing Meta...' : 'Sync with Meta'}
@@ -190,7 +190,7 @@ export function BusinessProfile() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="rounded-md bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-50 shadow-xs flex items-center gap-2 transition-colors"
+            className="rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50 shadow-none flex items-center gap-2 transition-colors"
           >
             <Save className="h-3.5 w-3.5" />
             {saving ? 'Saving...' : 'Save Profile'}
@@ -200,9 +200,9 @@ export function BusinessProfile() {
 
       {/* Strict Meta Verified Health Metric Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Display Phone</span>
-          <p className="mt-1 font-bold text-slate-900 text-base font-mono">
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-4 shadow-none">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">Display Phone</span>
+          <p className="mt-1 font-bold text-[var(--color-ink)] text-base font-mono">
             {profile?.displayPhone || displayPhone || 'Configured in Meta'}
           </p>
           <span className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-emerald-600 font-semibold">
@@ -210,9 +210,9 @@ export function BusinessProfile() {
             Verified Number
           </span>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Verified Name</span>
-          <p className="mt-1 font-bold text-slate-900 text-base truncate">
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-4 shadow-none">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">Verified Name</span>
+          <p className="mt-1 font-bold text-[var(--color-ink)] text-base truncate">
             {profile?.verifiedName || profile?.businessName || businessName || 'Business Profile'}
           </p>
           <span className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-blue-600 font-semibold">
@@ -220,19 +220,19 @@ export function BusinessProfile() {
             {profile?.verificationStatus || 'Official Business Account'}
           </span>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Quality Rating</span>
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-4 shadow-none">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">Quality Rating</span>
           <p className="mt-1 font-bold text-emerald-700 text-base flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
             {profile?.qualityRating || 'HIGH (Green)'}
           </p>
-          <span className="mt-1.5 inline-block text-[11px] text-slate-400 font-medium">
+          <span className="mt-1.5 inline-block text-[11px] text-[var(--color-ink-faint)] font-medium">
             {profile?.spamFlags || 'Zero spam flags'}
           </span>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Messaging Limit</span>
-          <p className="mt-1 font-bold text-slate-900 text-base">
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-4 shadow-none">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">Messaging Limit</span>
+          <p className="mt-1 font-bold text-[var(--color-ink)] text-base">
             {profile?.messagingLimit || '250 / day'}
           </p>
           <span className="mt-1.5 inline-block text-[11px] text-purple-600 font-semibold">
@@ -243,7 +243,7 @@ export function BusinessProfile() {
 
       {/* Live Alerts */}
       {error && (
-        <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-xs">
+        <div className="flex items-center justify-between rounded-[var(--radius-md)] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-none">
           <span>{error}</span>
           <button onClick={() => setError(null)} className="text-red-700 hover:text-red-900">
             <X className="h-4 w-4" />
@@ -251,7 +251,7 @@ export function BusinessProfile() {
         </div>
       )}
       {success && (
-        <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 shadow-xs">
+        <div className="flex items-center justify-between rounded-[var(--radius-md)] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 shadow-none">
           <span className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
             {success}
@@ -263,18 +263,18 @@ export function BusinessProfile() {
       )}
 
       {/* Meta Graph Status Banner */}
-      <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+      <div className="rounded-[var(--radius-lg)] border border-indigo-100 bg-indigo-50/50 p-4 shadow-none flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0">
+          <div className="h-8 w-8 rounded-[var(--radius-md)] bg-indigo-600 text-white flex items-center justify-center shrink-0">
             <Share2 className="h-4 w-4" />
           </div>
           <div>
-            <p className="font-bold text-slate-900">
+            <p className="font-bold text-[var(--color-ink)]">
               Omnichannel Shared Identity · Meta Graph API (v21.0) Synced {profile?.metaIntegration?.verifiedAt ? `(Verified ${new Date(profile.metaIntegration.verifiedAt).toLocaleTimeString()})` : ''}
             </p>
-            <p className="text-slate-500">
-              Phone Number ID: <span className="font-mono text-slate-700">1436650392860391</span> · WABA ID:{' '}
-              <span className="font-mono text-slate-700">990754184075228</span>
+            <p className="text-[var(--color-ink-faint)]">
+              Phone Number ID: <span className="font-mono text-[var(--color-ink)]">1436650392860391</span> · WABA ID:{' '}
+              <span className="font-mono text-[var(--color-ink)]">990754184075228</span>
             </p>
           </div>
         </div>
@@ -287,11 +287,11 @@ export function BusinessProfile() {
       {/* Main Form Sections */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Card 1: Official Verified Identity */}
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
-          <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-6 shadow-none space-y-4">
+          <div className="border-b border-[var(--color-border)] pb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-indigo-600" />
-              <h2 className="text-sm font-bold text-slate-900">Official Verified Identity</h2>
+              <h2 className="text-sm font-bold text-[var(--color-ink)]">Official Verified Identity</h2>
             </div>
             <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
               Meta Approved
@@ -299,53 +299,53 @@ export function BusinessProfile() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700">Verified Business Name</label>
+            <label className="block text-xs font-semibold text-[var(--color-ink)]">Verified Business Name</label>
             <input
               type="text"
               value={businessName}
               onChange={(e) => setBusinessName(e.target.value)}
               placeholder="Newax Technologies"
-              className="mt-1.5 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-xs focus:border-indigo-500 focus:outline-none"
+              className="mt-1.5 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-2 text-sm shadow-none focus:border-indigo-500 focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700">Official Display Phone</label>
+            <label className="block text-xs font-semibold text-[var(--color-ink)]">Official Display Phone</label>
             <div className="relative mt-1.5">
-              <Phone className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <Phone className="absolute left-3 top-2.5 h-4 w-4 text-[var(--color-ink-faint)]" />
               <input
                 type="text"
                 value={displayPhone}
                 onChange={(e) => setDisplayPhone(e.target.value)}
                 placeholder="+1 (555) 000-0000"
-                className="w-full rounded-md border border-slate-300 pl-9 pr-3 py-2 text-sm font-mono shadow-xs focus:border-indigo-500 focus:outline-none"
+                className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] pl-9 pr-3 py-2 text-sm font-mono shadow-none focus:border-indigo-500 focus:outline-none"
               />
             </div>
-            <p className="mt-1 text-[11px] text-slate-500">
+            <p className="mt-1 text-[11px] text-[var(--color-ink-faint)]">
               Synced across WhatsApp, Live Chat, and SMS caller identification.
             </p>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700">Support Email</label>
+            <label className="block text-xs font-semibold text-[var(--color-ink)]">Support Email</label>
             <div className="relative mt-1.5">
-              <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <Mail className="absolute left-3 top-2.5 h-4 w-4 text-[var(--color-ink-faint)]" />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="hello@newax.co"
-                className="w-full rounded-md border border-slate-300 pl-9 pr-3 py-2 text-sm shadow-xs focus:border-indigo-500 focus:outline-none"
+                className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] pl-9 pr-3 py-2 text-sm shadow-none focus:border-indigo-500 focus:outline-none"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700">Industry Vertical / Category</label>
+            <label className="block text-xs font-semibold text-[var(--color-ink)]">Industry Vertical / Category</label>
             <select
               value={vertical}
               onChange={(e) => setVertical(e.target.value)}
-              className="mt-1.5 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-xs bg-white font-medium focus:border-indigo-500 focus:outline-none"
+              className="mt-1.5 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-2 text-sm shadow-none bg-white font-medium focus:border-indigo-500 focus:outline-none"
             >
               <option value="PROF_SERVICES">Professional Services &amp; Digital Infrastructure</option>
               <option value="TECH">Technology &amp; Software Solutions</option>
@@ -359,76 +359,76 @@ export function BusinessProfile() {
         </div>
 
         {/* Card 2: Brand Details & Presence */}
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
-          <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-6 shadow-none space-y-4">
+          <div className="border-b border-[var(--color-border)] pb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Building2 className="h-5 w-5 text-indigo-600" />
-              <h2 className="text-sm font-bold text-slate-900">Brand Presence &amp; Address</h2>
+              <h2 className="text-sm font-bold text-[var(--color-ink)]">Brand Presence &amp; Address</h2>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700">Official Website URL</label>
+            <label className="block text-xs font-semibold text-[var(--color-ink)]">Official Website URL</label>
             <div className="relative mt-1.5">
-              <Globe className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <Globe className="absolute left-3 top-2.5 h-4 w-4 text-[var(--color-ink-faint)]" />
               <input
                 type="url"
                 value={website}
                 onChange={(e) => setWebsite(e.target.value)}
                 placeholder="https://newax.co/"
-                className="w-full rounded-md border border-slate-300 pl-9 pr-3 py-2 text-sm shadow-xs focus:border-indigo-500 focus:outline-none"
+                className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] pl-9 pr-3 py-2 text-sm shadow-none focus:border-indigo-500 focus:outline-none"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700">Physical Headquarters Address</label>
+            <label className="block text-xs font-semibold text-[var(--color-ink)]">Physical Headquarters Address</label>
             <div className="relative mt-1.5">
-              <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-[var(--color-ink-faint)]" />
               <input
                 type="text"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="Building 9, College Road, Township, Lahore, Pakistan, 54700"
-                className="w-full rounded-md border border-slate-300 pl-9 pr-3 py-2 text-sm shadow-xs focus:border-indigo-500 focus:outline-none"
+                className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] pl-9 pr-3 py-2 text-sm shadow-none focus:border-indigo-500 focus:outline-none"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700">Tagline / About Status (Max 139 chars)</label>
+            <label className="block text-xs font-semibold text-[var(--color-ink)]">Tagline / About Status (Max 139 chars)</label>
             <input
               type="text"
               maxLength={139}
               value={about}
               onChange={(e) => setAbout(e.target.value)}
               placeholder="Official Business Profile for Newax Technologies"
-              className="mt-1.5 w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-xs focus:border-indigo-500 focus:outline-none"
+              className="mt-1.5 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-2 text-sm shadow-none focus:border-indigo-500 focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700">Company Description (Max 512 chars)</label>
+            <label className="block text-xs font-semibold text-[var(--color-ink)]">Company Description (Max 512 chars)</label>
             <textarea
               rows={3}
               maxLength={512}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe your organization and capabilities..."
-              className="mt-1.5 w-full rounded-md border border-slate-300 p-2.5 text-sm shadow-xs focus:border-indigo-500 focus:outline-none"
+              className="mt-1.5 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] p-2.5 text-sm shadow-none focus:border-indigo-500 focus:outline-none"
             />
           </div>
         </div>
       </div>
 
       {/* Card 3: Operating Hours & Away Protocol */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
-        <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+      <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-6 shadow-none space-y-4">
+        <div className="border-b border-[var(--color-border)] pb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Clock className="h-5 w-5 text-indigo-600" />
             <div>
-              <h2 className="text-sm font-bold text-slate-900">Shared Operating Hours &amp; Automated Away Protocol</h2>
-              <p className="text-xs text-slate-500">
+              <h2 className="text-sm font-bold text-[var(--color-ink)]">Shared Operating Hours &amp; Automated Away Protocol</h2>
+              <p className="text-xs text-[var(--color-ink-faint)]">
                 Shared schedule applied globally across all inboxes (WhatsApp, Live Chat, SMS, Social).
               </p>
             </div>
@@ -440,18 +440,18 @@ export function BusinessProfile() {
               onChange={(e) => setBusinessHoursEnabled(e.target.checked)}
               className="sr-only peer"
             />
-            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+            <div className="w-11 h-6 bg-[var(--color-border)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[var(--color-border)] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
           </label>
         </div>
 
         {businessHoursEnabled && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
             <div>
-              <label className="block text-xs font-semibold text-slate-700">Timezone</label>
+              <label className="block text-xs font-semibold text-[var(--color-ink)]">Timezone</label>
               <select
                 value={businessTimezone}
                 onChange={(e) => setBusinessTimezone(e.target.value)}
-                className="mt-1.5 w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white shadow-xs"
+                className="mt-1.5 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-2 text-sm bg-white shadow-none"
               >
                 <option value="Asia/Karachi">Asia/Karachi (PKT, UTC+5)</option>
                 <option value="UTC">UTC (Coordinated Universal Time)</option>
@@ -463,11 +463,11 @@ export function BusinessProfile() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700">Start Time (24h format)</label>
+              <label className="block text-xs font-semibold text-[var(--color-ink)]">Start Time (24h format)</label>
               <select
                 value={businessHoursStart}
                 onChange={(e) => setBusinessHoursStart(Number(e.target.value))}
-                className="mt-1.5 w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white shadow-xs"
+                className="mt-1.5 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-2 text-sm bg-white shadow-none"
               >
                 {Array.from({ length: 24 }).map((_, i) => (
                   <option key={i} value={i}>
@@ -478,11 +478,11 @@ export function BusinessProfile() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700">End Time (24h format)</label>
+              <label className="block text-xs font-semibold text-[var(--color-ink)]">End Time (24h format)</label>
               <select
                 value={businessHoursEnd}
                 onChange={(e) => setBusinessHoursEnd(Number(e.target.value))}
-                className="mt-1.5 w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white shadow-xs"
+                className="mt-1.5 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-2 text-sm bg-white shadow-none"
               >
                 {Array.from({ length: 24 }).map((_, i) => (
                   <option key={i} value={i}>
@@ -493,13 +493,13 @@ export function BusinessProfile() {
             </div>
 
             <div className="md:col-span-3">
-              <label className="block text-xs font-semibold text-slate-700">Automated Away Message</label>
+              <label className="block text-xs font-semibold text-[var(--color-ink)]">Automated Away Message</label>
               <textarea
                 rows={2}
                 value={awayMessage}
                 onChange={(e) => setAwayMessage(e.target.value)}
                 placeholder="Thanks for reaching out! Our team is currently outside working hours..."
-                className="mt-1.5 w-full rounded-md border border-slate-300 p-2.5 text-sm shadow-xs focus:border-indigo-500 focus:outline-none"
+                className="mt-1.5 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] p-2.5 text-sm shadow-none focus:border-indigo-500 focus:outline-none"
               />
             </div>
           </div>
@@ -507,13 +507,13 @@ export function BusinessProfile() {
       </div>
 
       {/* Card 4: All Channels Sharing This Profile */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
-        <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+      <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white p-6 shadow-none space-y-4">
+        <div className="border-b border-[var(--color-border)] pb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Radio className="h-5 w-5 text-indigo-600" />
             <div>
-              <h2 className="text-sm font-bold text-slate-900">Omnichannel Propagation</h2>
-              <p className="text-xs text-slate-500">
+              <h2 className="text-sm font-bold text-[var(--color-ink)]">Omnichannel Propagation</h2>
+              <p className="text-xs text-[var(--color-ink-faint)]">
                 Channels actively linked to this shared organization identity and operating hours.
               </p>
             </div>
@@ -530,13 +530,13 @@ export function BusinessProfile() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           <Link
             to="/channels/whatsapp"
-            className="p-3.5 rounded-lg border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/30 transition-all flex items-center gap-3"
+            className="p-3.5 rounded-[var(--radius-md)] border border-[var(--color-border)] hover:border-emerald-500 hover:bg-emerald-50/30 transition-all flex items-center gap-3"
           >
-            <div className="h-9 w-9 rounded-lg bg-emerald-500 text-white flex items-center justify-center shrink-0">
+            <div className="h-9 w-9 rounded-[var(--radius-md)] bg-emerald-500 text-white flex items-center justify-center shrink-0">
               <Smartphone className="h-5 w-5" />
             </div>
             <div className="truncate">
-              <p className="font-bold text-slate-900 text-xs truncate">WhatsApp Business</p>
+              <p className="font-bold text-[var(--color-ink)] text-xs truncate">WhatsApp Business</p>
               <p className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
                 <CheckCircle2 className="h-3 w-3" />
                 Meta Synced
@@ -546,13 +546,13 @@ export function BusinessProfile() {
 
           <Link
             to="/channels/live-chat"
-            className="p-3.5 rounded-lg border border-slate-200 hover:border-blue-500 hover:bg-blue-50/30 transition-all flex items-center gap-3"
+            className="p-3.5 rounded-[var(--radius-md)] border border-[var(--color-border)] hover:border-blue-500 hover:bg-blue-50/30 transition-all flex items-center gap-3"
           >
-            <div className="h-9 w-9 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0">
+            <div className="h-9 w-9 rounded-[var(--radius-md)] bg-blue-600 text-white flex items-center justify-center shrink-0">
               <MessageSquare className="h-5 w-5" />
             </div>
             <div className="truncate">
-              <p className="font-bold text-slate-900 text-xs truncate">Website Live Chat</p>
+              <p className="font-bold text-[var(--color-ink)] text-xs truncate">Website Live Chat</p>
               <p className="text-[11px] text-blue-600 font-semibold flex items-center gap-1">
                 <CheckCircle2 className="h-3 w-3" />
                 Branding Active
@@ -562,13 +562,13 @@ export function BusinessProfile() {
 
           <Link
             to="/channels/sms"
-            className="p-3.5 rounded-lg border border-slate-200 hover:border-purple-500 hover:bg-purple-50/30 transition-all flex items-center gap-3"
+            className="p-3.5 rounded-[var(--radius-md)] border border-[var(--color-border)] hover:border-purple-500 hover:bg-purple-50/30 transition-all flex items-center gap-3"
           >
-            <div className="h-9 w-9 rounded-lg bg-purple-600 text-white flex items-center justify-center shrink-0">
+            <div className="h-9 w-9 rounded-[var(--radius-md)] bg-purple-600 text-white flex items-center justify-center shrink-0">
               <Phone className="h-5 w-5" />
             </div>
             <div className="truncate">
-              <p className="font-bold text-slate-900 text-xs truncate">Twilio SMS 10DLC</p>
+              <p className="font-bold text-[var(--color-ink)] text-xs truncate">Twilio SMS 10DLC</p>
               <p className="text-[11px] text-purple-600 font-semibold flex items-center gap-1">
                 <CheckCircle2 className="h-3 w-3" />
                 Verified Caller
@@ -578,13 +578,13 @@ export function BusinessProfile() {
 
           <Link
             to="/channels/facebook"
-            className="p-3.5 rounded-lg border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/30 transition-all flex items-center gap-3"
+            className="p-3.5 rounded-[var(--radius-md)] border border-[var(--color-border)] hover:border-indigo-500 hover:bg-indigo-50/30 transition-all flex items-center gap-3"
           >
-            <div className="h-9 w-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0">
+            <div className="h-9 w-9 rounded-[var(--radius-md)] bg-indigo-600 text-white flex items-center justify-center shrink-0">
               <Bot className="h-5 w-5" />
             </div>
             <div className="truncate">
-              <p className="font-bold text-slate-900 text-xs truncate">Meta Messenger</p>
+              <p className="font-bold text-[var(--color-ink)] text-xs truncate">Meta Messenger</p>
               <p className="text-[11px] text-indigo-600 font-semibold flex items-center gap-1">
                 <CheckCircle2 className="h-3 w-3" />
                 Hours Linked

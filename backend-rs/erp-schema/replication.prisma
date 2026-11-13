@@ -1,0 +1,184 @@
+// The replication engine (RETAIL-ERP.md Part 6, WO-20.1: "log, cursors,
+// registry, quarantine") — core platform, not a module, the same standing
+// as core/events/. A chain deployment (BRANCH/BRAND/ORG) is one schema at
+// every tier (R1); a row is byte-identical wherever it lands, so
+// replication is a copy, not a transform.
+//
+// R2 is the whole conflict-resolution policy and the reason no distributed
+// transaction is ever needed: a FACT (a sale, a journal entry — something
+// that happened) flows UP only, and the originating node always wins,
+// append-only, never edited from above. A POLICY (a product, a price, a
+// chart of accounts — something someone with authority decided) flows DOWN
+// only, and the owning tier always wins. A LEDGER (stock on hand, an
+// account balance) never replicates as a total — only its deltas
+// (StockMovement, JournalLine) do, and every tier recomputes its own
+// aggregate locally. `ReplicationRecord` carries FACT/POLICY rows only;
+// nothing here ever stores or ships a running balance.
+//
+// This is dormant machinery under `NODE_ROLE=STANDALONE` (every deployment
+// today) by design (R14 — "every tier concept must be invisible in Solo"):
+// `ReplicationLogService.append()` is a deliberate no-op there, so these
+// tables exist (an empty table costs a row in the system catalogue and
+// nothing else — MULTI-SECTOR.md) but stay empty until a deployment
+// actually joins a chain. WO-20.1 builds this foundation only — the actual
+// HTTPS pull/push agent that moves rows between nodes is WO-20.2, and
+// wiring specific entities (orders, journal lines, products…) to call
+// `append()` is WO-20.4/`20.3`. Nothing calls this yet.
+
+enum ReplicationClass {
+  FACT
+  POLICY
+}
+
+enum ReplicationDirection {
+  UP
+  DOWN
+}
+
+enum ReplicationOp {
+  UPSERT
+  DELETE
+}
+
+/// The log. One row per fact/policy change this node originated, in the
+/// order it happened here. `sequence` is monotonic per `originNodeId` (see
+/// `ReplicationSequenceCounter`) — a peer's `ReplicationCursor` is just "the
+/// highest sequence from this origin I've already applied", which is what
+/// makes a gap safe to buffer-and-flag rather than something that must
+/// block: the peer can tell exactly what it is missing.
+model ReplicationRecord {
+  id            String               @id @default(cuid())
+  originNodeId  String
+  sequence      BigInt
+  /// "Order", "JournalLine", "Product" — must be registered with
+  /// `ReplicationRegistry` before anything can log or apply it.
+  entity        String
+  /// The cuid — identical at every tier (R6), so this is never translated
+  /// in transit the way a per-node autoincrement id would have to be.
+  entityId      String
+  dataClass     ReplicationClass
+  direction     ReplicationDirection
+  op            ReplicationOp
+  payload       Json
+  /// Lets a receiving node that hasn't yet deployed a payload-shape change
+  /// tell "old shape, still valid" apart from "genuinely broken" — carried
+  /// on every record rather than inferred from `entity` alone.
+  schemaVersion Int
+  /// The fact's own original time — never rewritten by a late apply,
+  /// mirroring how a late-posted JournalEntry keeps its own date (R15).
+  occurredAt    DateTime
+  createdAt     DateTime             @default(now())
+
+  @@unique([originNodeId, sequence])
+  @@index([entity, entityId])
+}
+
+/// This node's own per-origin sequence counter — `originNodeId` is always
+/// this node's own `NODE_ID` when appending locally, so in practice there
+/// is exactly one row. A dedicated counter, not a MAX-scan over
+/// `ReplicationRecord` (purchasing.prisma's `nextPONumber` pattern): that
+/// table grows without bound over a chain's lifetime, and this stays O(1).
+model ReplicationSequenceCounter {
+  nodeId String @id
+  value  BigInt @default(0)
+}
+
+/// "The highest sequence I've already synced with this peer, in this
+/// direction" — read and advanced by `ReplicationSyncAgent` (WO-20.2).
+/// Keyed by `(peerNodeId, direction)`, not `peerNodeId` alone: a BRANCH or
+/// BRAND has exactly one parent but two independent progress counters
+/// against it — how far it has PUSHed its own facts UP, and how far it has
+/// PULLed policy DOWN — and a single row per peer cannot hold both without
+/// conflating them. On this node's own side (pushing/pulling against its
+/// one parent) `peerNodeId` is the literal `'parent'`, since there is only
+/// ever one; on the parent's side (tracking many children) it is each
+/// child's real `nodeId`. Unexercised under `STANDALONE`, which has no
+/// peers to hold a cursor for.
+model ReplicationCursor {
+  peerNodeId   String
+  direction    ReplicationDirection
+  lastSequence BigInt
+  lastSyncAt   DateTime
+
+  @@id([peerNodeId, direction])
+}
+
+enum ReplicationQuarantineStatus {
+  OPEN
+  RESOLVED
+}
+
+/// Where an incoming record lands when it fails to apply — never dropped,
+/// never retried forever (that would silently corrupt a peer's own
+/// convergence guarantee the same way an infinite-retry webhook corrupts an
+/// integration). An operator resolves it by hand once the cause — a schema
+/// mismatch, a missing parent row — is fixed, which is a manual, audited
+/// step on purpose: nothing here auto-retries into a database that has
+/// already moved on.
+model ReplicationQuarantine {
+  id            String                      @id @default(cuid())
+  originNodeId  String
+  sequence      BigInt
+  entity        String
+  entityId      String
+  op            ReplicationOp
+  payload       Json
+  schemaVersion Int
+  reason        String
+  status        ReplicationQuarantineStatus @default(OPEN)
+  createdAt     DateTime                    @default(now())
+  resolvedAt    DateTime?
+
+  @@index([status])
+}
+
+/// R9's OTHER quarantine — "a fact arriving in violation is accepted and
+/// quarantined for review — never silently dropped, never silently
+/// honoured." Deliberately a SEPARATE table from `ReplicationQuarantine`
+/// above (ADR-021/ADR-023): that one is for a record that failed to
+/// apply at all — a bug, a schema mismatch, nothing registered — a
+/// technical fault with no relation to what the fact itself says. This one
+/// is for a fact that is technically fine but whose own `scopeLevel`
+/// disagrees with the `BrandPolicy` switch that was supposed to govern the
+/// node that raised it — a governance exception, never a failure, and
+/// R5/R2 both forbid rejecting it outright: the fact already happened.
+/// `sequence`/`op`/`schemaVersion` are deliberately absent — those describe
+/// the REPLICATION mechanics `ReplicationApplyService` already handled
+/// successfully by the time a policy check runs; this row is about the
+/// fact's own content, not its transport.
+model PolicyQuarantine {
+  id            String                      @id @default(cuid())
+  /// The branch (or other node) whose own fact triggered this — always the
+  /// authenticated node from the inbound push, never taken from the payload
+  /// itself (`ReplicationController.push()`'s own convention).
+  originNodeId  String
+  entity        String
+  entityId      String
+  /// The `BrandPolicy` column violated — e.g. "allowBranchLocalPurchasing".
+  /// A string, not an enum: R9 names four switches total and only one has a
+  /// real receiving-tier check today (WO-23.3b) — an enum would have to
+  /// grow every time a new switch gains enforcement, for a column nothing
+  /// queries by value alone.
+  policyKey     String
+  /// Resolved from `Node.retailBrandId` — null when that node carries no
+  /// brand at all, which `reason` says explicitly rather than leaving the
+  /// column to explain itself.
+  retailBrandId String?
+  /// The fact's own payload, unmodified — the same one `ReplicationRecord`
+  /// carried, so a reviewer sees exactly what arrived.
+  payload       Json
+  reason        String
+  status        ReplicationQuarantineStatus @default(OPEN)
+  createdAt     DateTime                    @default(now())
+  resolvedAt    DateTime?
+  resolvedById  String?
+  /// The reviewer's own note. "Quarantined for review" with no record of
+  /// what the review concluded is not a review.
+  resolvedNote  String?
+
+  resolvedBy User? @relation("PolicyQuarantineResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([entity, entityId])
+  @@index([retailBrandId])
+}

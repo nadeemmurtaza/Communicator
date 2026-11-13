@@ -1,0 +1,316 @@
+// BOM: which raw materials go into a finished product, how much of each, and
+// what that makes the product cost to produce (RETAIL-ERP.md Tranche 6,
+// WO-23.2 — "build 10-admin-dashboard.md §C as written"). WO-C.1 added
+// RawMaterial, WO-C.2 added BomRecipe/BomComponent, WO-C.3 (this revision)
+// adds BomProductionRun/BomProductionLine — the step that actually consumes
+// raw stock and produces finished stock, closing the loop the earlier two
+// work orders only estimated.
+//
+// A raw material is NOT a new kind of thing. It is an ordinary ProductVariant
+// with a RawMaterial marker row pointing at it, so purchase orders, goods
+// receipts, the stock ledger, stock counts, reorder points and weighted-average
+// costing all work on fabric exactly as they work on a kurta (D5) — this file
+// adds no coupling to inventory/purchasing at all; every one of those already
+// works on any ProductVariant.
+//
+// QUANTITIES ARE INTEGER BASE UNITS, the same discipline money uses. unitScale
+// says how many base units make one display unit: fabric is GAZ with unitScale
+// 1000, so stock 12500 is 12.5 gaz and costPrice is paisa per milli-gaz.
+// Convert only at the UI boundary, through @newax/shared's toBaseUnits /
+// fromBaseUnits / formatQuantity. A bare scale multiplication in a component
+// is a bug.
+
+enum RawMaterialUnit {
+  GAZ
+  METRE
+  PIECE
+  SPOOL
+  GRAM
+  MILLILITRE
+}
+
+model RawMaterial {
+  id String @id @default(cuid())
+
+  /// The ProductVariant that carries stock, costPrice, supplier links and the
+  /// movement ledger. One variant is at most one raw material.
+  variantId String @unique
+
+  /// Staff-only. Not a translation row (Rule 6, D10): nobody shopping sees this.
+  name String
+  /// "fabric" | "trim" | "packaging" | "consumable". Groups the raw-usage report.
+  kind String @default("fabric")
+
+  unit      RawMaterialUnit
+  /// Base units per display unit. 1000 for continuous goods, 1 for countable.
+  /// Effectively immutable once stock or a StockMovement exists for the
+  /// variant — see raw-material.service.ts's own note on why.
+  unitScale Int             @default(1)
+
+  notes    String?
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  variant         ProductVariant      @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  /// Recipes that consume this material. Restrict delete (BomComponent's own
+  /// FK): a raw material a live recipe depends on cannot vanish out from
+  /// under it.
+  components      BomComponent[]
+  /// Every production-run line that ever consumed this material — ledger
+  /// history, kept even after the material is deactivated.
+  productionLines BomProductionLine[]
+
+  @@index([isActive, kind])
+  @@index([name])
+}
+
+enum BomStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+/// The recipe for one finished ProductVariant: which raw materials, how much
+/// of each, and the resulting cost estimate. WO-C.2 (10-admin-dashboard.md
+/// §C). No nesting in v1 — recipe.service.ts refuses a BomComponent whose
+/// raw material's own variant carries a BomRecipe, and a component pointing
+/// at the recipe's own output variant. Sub-assemblies are explicitly
+/// deferred (they turn a two-day work order into a two-week one).
+model BomRecipe {
+  id String @id @default(cuid())
+
+  /// The finished ProductVariant this recipe produces. One live recipe per variant.
+  variantId String @unique
+
+  status  BomStatus @default(DRAFT)
+  version Int       @default(1)
+
+  /// How many finished units one run yields. Lets a recipe be written
+  /// per-dozen where that is how the workshop actually thinks.
+  outputQuantity Int @default(1)
+
+  /// Expected scrap, basis points (Rule 5). 500 = 5%. Per-component override wins.
+  wastageBps Int @default(0)
+
+  /// Paisa per finished unit. Not materials — stitching labour and overhead.
+  labourCost   Int @default(0)
+  overheadCost Int @default(0)
+
+  /// CACHE. Paisa per finished unit at CURRENT raw costs (cost-rollup.ts).
+  /// Recomputed on every recipe edit and every goods receipt touching a
+  /// component (bom.listener.ts). An ESTIMATE for the editor — it is NEVER
+  /// the COGS of a sale, which is OrderItem.unitCost (Rule 7).
+  rolledUpUnitCost Int       @default(0)
+  /// False when any non-optional component's variant.costPrice is 0
+  /// (UNKNOWN, not free) — surfaced, never silently treated as free.
+  costComplete     Boolean   @default(false)
+  costComputedAt   DateTime?
+
+  notes       String?
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  variant    ProductVariant     @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  createdBy  User?              @relation("BomRecipeCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  components BomComponent[]
+  runs       BomProductionRun[]
+  stages     BomRecipeStage[]
+
+  @@index([status])
+  @@index([costComplete])
+}
+
+/// Ecosystem audit 2026-10-29 (merged from @newaxhq/production): a named
+/// machine group a routing step runs at — "Cutting Table 1", "Overlock
+/// Line". Capacity (machineCount * shiftsPerDay * hoursPerShift *
+/// efficiencyFactor) feeds capacity-scheduling-engine.ts; this table has no
+/// opinion on scheduling itself, only on how much a work center can do per
+/// day.
+model WorkCenter {
+  id               String   @id @default(cuid())
+  name             String
+  /// Ecosystem audit 2026-10-30: which site this machine group's capacity
+  /// belongs to. Null means ungrouped — the single-site deployment shape
+  /// this table shipped with (ADR-044's "optional even when its own module
+  /// is on" reasoning, the same `OrgUnit.nodeId`/`retailBrandId` already
+  /// apply) — never backfilled to a guessed unit on an existing deployment.
+  orgUnitId        String?
+  machineCount     Int      @default(1)
+  shiftsPerDay     Int      @default(1)
+  hoursPerShift    Int      @default(8)
+  /// 0–1, e.g. 0.85 = 85% efficiency. Never 0 — capacity-scheduling-engine.ts
+  /// falls back to 1.0 for a work center with none, but this column itself
+  /// defaults to a realistic 1.0, not 0.
+  efficiencyFactor Float    @default(1.0)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+
+  stages  BomRecipeStage[]
+  orgUnit OrgUnit?         @relation(fields: [orgUnitId], references: [id])
+
+  @@index([isActive])
+  @@index([orgUnitId])
+}
+
+/// Ecosystem audit 2026-10-29 (merged from @newaxhq/production's
+/// capacity-scheduling and bom-yield engines): one sequential production
+/// step for a recipe — unifies "routing step" (capacity scheduling needs a
+/// work center, setup/run time) and "yield stage" (yield calc needs a
+/// scrap rate) into one row per step, rather than two parallel "stage"
+/// concepts for the same recipe.
+model BomRecipeStage {
+  id                   String  @id @default(cuid())
+  recipeId             String
+  stepNumber           Int
+  operationName        String
+  workCenterId         String?
+  setupTimeMinutes     Int     @default(0)
+  runTimeMinutesPerUnit Int    @default(0)
+  /// Basis points scrapped AT this stage, independent of the recipe-level
+  /// `wastageBps` used for the single-level cost rollup — this is the
+  /// multi-stage, compounding scrap rate `calculateMultiStageYield` needs.
+  scrapBps             Int     @default(0)
+
+  recipe     BomRecipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  workCenter WorkCenter? @relation(fields: [workCenterId], references: [id])
+
+  @@unique([recipeId, stepNumber])
+  @@index([workCenterId])
+}
+
+model BomComponent {
+  id            String @id @default(cuid())
+  recipeId      String
+  rawMaterialId String
+
+  /// BASE units of the raw material consumed per outputQuantity finished units.
+  quantityBase Int
+  /// Overrides BomRecipe.wastageBps for this line. Null = inherit.
+  wastageBps   Int?
+  isOptional   Boolean @default(false)
+  note         String?
+  order        Int     @default(0)
+
+  recipe      BomRecipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  rawMaterial RawMaterial @relation(fields: [rawMaterialId], references: [id], onDelete: Restrict)
+
+  @@unique([recipeId, rawMaterialId])
+  @@index([rawMaterialId])
+}
+
+/// One production run: the recipe was run N times, consuming raw stock and
+/// crediting finished stock, both through InventoryService.move()/moveMany()
+/// in the SAME transaction as this row (production.service.ts, WO-C.3). A
+/// run is ledger history — SNAPSHOTS its costs (Rule 7) so a later recipe
+/// edit or raw-material cost change never rewrites what this batch actually
+/// cost. Deletion is not supported; a correction is a reversing adjustment
+/// through the normal inventory screen.
+model BomProductionRun {
+  id     String @id @default(cuid())
+  number String @unique
+
+  recipeId  String
+  variantId String
+
+  /// How many times the recipe was run.
+  runs             Int @default(1)
+  /// runs * recipe.outputQuantity at the time of this run.
+  quantityProduced Int
+
+  /// SNAPSHOTS. A later recipe edit or raw-material cost change must not
+  /// rewrite what this batch cost to make.
+  materialCost     Int
+  labourCost       Int
+  overheadCost     Int
+  /// round((materialCost + labourCost + overheadCost) / quantityProduced).
+  producedUnitCost Int
+
+  notes      String?
+  operatorId String?
+  producedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  /// WO-23.3 (RETAIL-ERP.md R13/R8, ADR-021). Which tier this run belongs
+  /// to. Defaults to BRAND, same reasoning as PurchaseOrder.scopeLevel.
+  scopeLevel   ScopeLevel @default(BRAND)
+  /// This node's own identifier (AppConfigService.nodeId) at run time — a
+  /// bare string, never a Node row FK. Null for a run recorded before this
+  /// column existed.
+  originNodeId String?
+  /// Where this run actually happened — a WAREHOUSE/PRODUCTION Location
+  /// (R13). Bare scalar, no `@relation`, matching GoodsReceipt.locationId's
+  /// own decoupling reasoning. Resolves to
+  /// InventoryService.defaultLocationId() when the caller does not name
+  /// one, matching every run before this column existed.
+  locationId   String
+
+  /// 71-recipe-batch-traceability.md, DECISIONS.md ADR-068. The lot the
+  /// FINISHED output of this run belongs to — created at the moment of
+  /// production, a production run being the other legitimate origin of a
+  /// new lot besides a purchase (doc 32's own `Lot.sourceReceiptId`). Null
+  /// when the output variant isn't lot-tracked (`ProductVariant.lotTracked`).
+  outputLotId String?
+
+  recipe    BomRecipe           @relation(fields: [recipeId], references: [id])
+  variant   ProductVariant      @relation("BomProducedVariant", fields: [variantId], references: [id])
+  operator  User?               @relation("BomProductionOperator", fields: [operatorId], references: [id], onDelete: SetNull)
+  lines     BomProductionLine[]
+  outputLot Lot?                @relation("BomOutputLot", fields: [outputLotId], references: [id])
+
+  @@index([producedAt])
+  @@index([scopeLevel])
+  @@index([locationId])
+  @@index([recipeId])
+  @@index([variantId])
+  @@index([outputLotId])
+}
+
+/// One raw-material line consumed by a production run — the same SNAPSHOT
+/// discipline as the run itself.
+model BomProductionLine {
+  id    String @id @default(cuid())
+  runId String
+
+  rawMaterialId String
+  /// The raw material's own variant, denormalised so the ledger join is
+  /// direct — not a Prisma relation, deliberately: this is a read
+  /// convenience copied from RawMaterial.variantId at write time, never
+  /// itself the source of truth.
+  variantId     String
+
+  /// Base units actually consumed, wastage included.
+  quantityBase Int
+  /// Snapshot of the raw material's costPrice at run time, paisa per base unit.
+  unitCost     Int
+  lineCost     Int
+
+  run            BomProductionRun       @relation(fields: [runId], references: [id], onDelete: Cascade)
+  rawMaterial    RawMaterial            @relation(fields: [rawMaterialId], references: [id])
+  lotAllocations BomProductionLineLot[]
+
+  @@index([runId])
+  @@index([rawMaterialId])
+}
+
+/// 71-recipe-batch-traceability.md, DECISIONS.md ADR-068. One row per input
+/// lot actually drawn on by one production line — the same "join a recall
+/// query walks" role doc 32's own LotAllocation already plays for an
+/// ordinary stock movement, extended to a production consumption. Nullable
+/// on the BomProductionLine side: a raw material with no Lot rows at all
+/// (never received through a lot-tracked goods receipt) legitimately has
+/// none.
+model BomProductionLineLot {
+  id               String @id @default(cuid())
+  productionLineId String
+  lotId            String
+  quantityBase     Int
+
+  productionLine BomProductionLine @relation(fields: [productionLineId], references: [id], onDelete: Cascade)
+  lot            Lot               @relation(fields: [lotId], references: [id])
+
+  @@index([productionLineId])
+  @@index([lotId])
+}

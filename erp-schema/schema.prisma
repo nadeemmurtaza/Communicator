@@ -1,0 +1,31 @@
+// Datasource and generator only. Models live in one file per module —
+// see core.prisma, catalog.prisma, measurements.prisma, and so on.
+//
+// Adding a module means adding a .prisma file in this folder; nothing here
+// needs to change.
+
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../../src/generated/prisma"
+  // "native" covers local dev on whatever OS you're on; the musl target is
+  // for the Alpine-based Docker image — listing both means `prisma generate`
+  // produces an engine that runs correctly in both places from one schema.
+  binaryTargets   = ["native", "linux-musl-openssl-3.0.x"]
+  // WO-9.5 (09-ai-layer.md) — lets `extensions = [vector]` below register the
+  // pgvector extension declaratively, and is what makes
+  // ProductTranslation.embedding's `Unsupported("vector(1536)")` column
+  // possible at all.
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  // `vector` ships as a normal Postgres extension (pgvector), no separate
+  // service — WO-9.5's own "no extra service" requirement. Declared here so
+  // `prisma migrate` tracks it the same way it tracks everything else, even
+  // though pgvector's actual CREATE EXTENSION statement lives in the hand-
+  // written migration.sql (this repo's own migration discipline), not in
+  // Prisma-generated DDL.
+  extensions = [vector]
+}

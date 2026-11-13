@@ -1,0 +1,280 @@
+// Phase 6 (docs/implementation/06-shipping-fulfilment-returns.md) — shipping
+// as data instead of a JSON setting, the shipment lifecycle, and returns/RMA.
+//
+// New module `fulfilment` (core pack — every shop ships something). Owns
+// this file; Shipment itself stays in orders.prisma (extended below) because
+// WO-6.4 says so explicitly and orders already owns its lifecycle columns.
+
+enum ShippingRateType {
+  FLAT
+  BY_WEIGHT
+  BY_PRICE
+  BY_ITEM
+}
+
+model ShippingZone {
+  id         String   @id @default(cuid())
+  key        String   @unique
+  order      Int      @default(0)
+  /// Cities matched case-insensitively. An empty list = the catch-all zone.
+  cities     String[] @default([])
+  isActive   Boolean  @default(true)
+  /// Exactly one zone must be the fallback — enforced in ShippingService, not
+  /// the database, the same way "exactly one Location isDefault" already is.
+  isCatchAll Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  translations ShippingZoneTranslation[]
+  rates        ShippingRate[]
+}
+
+/// House Rule 6: labelEn/labelUr, not columns on ShippingZone itself.
+model ShippingZoneTranslation {
+  id     String @id @default(cuid())
+  zoneId String
+  locale String
+  label  String
+
+  zone ShippingZone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  @@unique([zoneId, locale])
+}
+
+model ShippingMethod {
+  id         String   @id @default(cuid())
+  key        String   @unique // "standard" | "express" | "same_day"
+  /// Preferred CourierProvider key for this method — matches a live
+  /// provider's `key`, but stored as a bare string (courier-provider.ts is a
+  /// TS interface, not a table) so adding a provider never touches this row.
+  courierKey String?
+  etaMinDays Int      @default(2)
+  etaMaxDays Int      @default(5)
+  isActive   Boolean  @default(true)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  translations ShippingMethodTranslation[]
+  rates        ShippingRate[]
+  shipments    Shipment[]
+}
+
+model ShippingMethodTranslation {
+  id       String @id @default(cuid())
+  methodId String
+  locale   String
+  label    String
+
+  method ShippingMethod @relation(fields: [methodId], references: [id], onDelete: Cascade)
+
+  @@unique([methodId, locale])
+}
+
+model ShippingRate {
+  id            String           @id @default(cuid())
+  zoneId        String
+  methodId      String
+  type          ShippingRateType @default(FLAT)
+  /// Paisa. For BY_WEIGHT/BY_ITEM this is per unit above `includedUnits`.
+  fee           Int
+  baseFee       Int              @default(0)
+  includedUnits Int              @default(0)
+  /// Order subtotal above which this rate is free. Null = never free.
+  freeAbove     Int?
+  /// Band bounds, for tiered rates. Null = unbounded.
+  minValue      Int?
+  maxValue      Int?
+  isActive      Boolean          @default(true)
+
+  zone   ShippingZone   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  method ShippingMethod @relation(fields: [methodId], references: [id], onDelete: Cascade)
+
+  /// Not unique: BY_PRICE/BY_WEIGHT tier a zone+method pair across several
+  /// banded rows (minValue/maxValue); FLAT/BY_ITEM use exactly one.
+  @@index([zoneId, methodId])
+}
+
+/// WO-6.1's own closing line: "Add per-product shipping classes and a
+/// handling fee." A product with no class costs nothing extra to pack — the
+/// FK is nullable and every read treats null as a zero handling fee.
+model ShippingClass {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  /// Paisa, added on top of the zone/method rate for every unit of this
+  /// class in the order.
+  handlingFee Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  translations ShippingClassTranslation[]
+  products     Product[]
+}
+
+model ShippingClassTranslation {
+  id      String @id @default(cuid())
+  classId String
+  locale  String
+  label   String
+
+  shippingClass ShippingClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, locale])
+}
+
+enum ManifestStatus {
+  OPEN
+  DISPATCHED
+}
+
+/// A day's pickup, grouped by courier — WO-6.4's printable handover sheet.
+model Manifest {
+  id           String         @id @default(cuid())
+  number       String         @unique // "MFT-2026-0001"
+  courierKey   String
+  status       ManifestStatus @default(OPEN)
+  dispatchedAt DateTime?
+  createdById  String?
+  createdAt    DateTime       @default(now())
+
+  createdBy User?      @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  shipments Shipment[]
+
+  @@index([courierKey, status])
+}
+
+/// A shipment may cover only part of an order (WO-6.4's partial-shipment
+/// note) — the shipment holds these rather than implicitly covering every
+/// OrderItem on the order.
+model ShipmentItem {
+  id          String @id @default(cuid())
+  shipmentId  String
+  orderItemId String
+  quantity    Int
+
+  shipment  Shipment  @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId])
+  @@index([orderItemId])
+}
+
+/// The tracking timeline — one row per status change, courier's raw string
+/// kept in `meta` for support, never trusted for logic (WO-6.2's own rule).
+model ShipmentEvent {
+  id         String         @id @default(cuid())
+  shipmentId String
+  status     ShipmentStatus
+  rawStatus  String?
+  meta       Json?
+  occurredAt DateTime       @default(now())
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId, occurredAt])
+}
+
+/// Seeded, editable — WO-6.6's own rule: reason codes are the fit-feedback
+/// input for Phase 9, never free text.
+model ReturnReasonCode {
+  id       String  @id @default(cuid())
+  key      String  @unique // "too_small" | "damaged" | "not_as_described" | …
+  isActive Boolean @default(true)
+  order    Int     @default(0)
+
+  translations ReturnReasonTranslation[]
+  items        ReturnRequestItem[]
+}
+
+model ReturnReasonTranslation {
+  id       String @id @default(cuid())
+  reasonId String
+  locale   String
+  label    String
+
+  reason ReturnReasonCode @relation(fields: [reasonId], references: [id], onDelete: Cascade)
+
+  @@unique([reasonId, locale])
+}
+
+enum ReturnStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  IN_TRANSIT
+  RECEIVED
+  INSPECTED
+  REFUNDED
+  CLOSED
+}
+
+enum ReturnResolution {
+  REFUND
+  EXCHANGE
+  STORE_CREDIT
+  REPAIR
+  REJECTED
+}
+
+model ReturnRequest {
+  id           String            @id @default(cuid())
+  number       String            @unique // "RMA-2026-0001"
+  orderId      String
+  userId       String?
+  status       ReturnStatus      @default(REQUESTED)
+  resolution   ReturnResolution?
+  customerNote String?
+  staffNote    String?
+  /// Customer-uploaded photos, via StorageDriver.
+  photoUrls    String[]          @default([])
+
+  requestedAt  DateTime  @default(now())
+  approvedAt   DateTime?
+  receivedAt   DateTime?
+  inspectedAt  DateTime?
+  refundedAt   DateTime?
+  refundAmount Int?
+  /// Ecosystem audit 2026-10-30 (merged from @newaxhq/orders's RMA restocking
+  /// fee) — snapshotted when `refundAmount` was computed rather than
+  /// caller-supplied, so a later rate change never rewrites history. Null
+  /// when the resolver typed `refundAmount` by hand, or no fee applied.
+  restockingFeeMinor Int?
+
+  order Order               @relation(fields: [orderId], references: [id])
+  user  User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items ReturnRequestItem[]
+
+  @@index([status, requestedAt])
+  @@index([orderId])
+}
+
+model ReturnRequestItem {
+  id          String   @id @default(cuid())
+  returnId    String
+  orderItemId String
+  reasonId    String
+  quantity    Int
+  /// Set at inspection: is it saleable? Null until then.
+  restockable Boolean?
+  restocked   Boolean  @default(false)
+
+  returnRequest ReturnRequest    @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  orderItem     OrderItem        @relation(fields: [orderItemId], references: [id])
+  reason        ReturnReasonCode @relation(fields: [reasonId], references: [id])
+
+  @@index([returnId])
+  @@index([orderItemId])
+}
+
+/// Same INSERT ... ON CONFLICT ... RETURNING shape as every other
+/// document-prefix.ts counter (OrderNumberCounter, PayRunNumberCounter, …).
+model ReturnRequestNumberCounter {
+  year    Int @id
+  counter Int @default(0)
+}
+
+model ManifestNumberCounter {
+  year    Int @id
+  counter Int @default(0)
+}

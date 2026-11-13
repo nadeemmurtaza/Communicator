@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 //! Port of `services/reply_engine.py`.
 //!
@@ -14,6 +14,8 @@ use crate::services::alerts::{send_hot_lead_alert, HotLeadAlert};
 use crate::services::claude_client::ask_json;
 use crate::services::draft_actions::record_draft_audit;
 use crate::services::integration_settings;
+use crate::services::reply_integration::ReplyIntegrationService;
+use crate::services::validation::{self, ValidationResult};
 use serde_json::{json, Value};
 use sqlx::Row;
 use std::sync::OnceLock;
@@ -211,6 +213,8 @@ pub struct GeneratedDraft {
     pub alert: Option<String>,
     pub warnings: Vec<String>,
     pub draft_written: bool,
+    /// Result of the validation layer check (Phase 7).
+    pub validation: ValidationResult,
 }
 
 impl GeneratedDraft {
@@ -241,6 +245,7 @@ impl GeneratedDraft {
             "ignoredModelFields": self.model.ignored_fields,
             "saved": self.draft_written,
             "warnings": self.warnings,
+            "validation": self.validation.to_json(),
         })
     }
 }
@@ -566,15 +571,17 @@ async fn memory_context(
 }
 
 /// Build the lead-facing user prompt from real rows only. Returns the prompt,
-/// the thread it was built from, and the lead facts (also needed for the
-/// hot-lead alert text) so the caller does not re-query either.
+/// the thread it was built from, the lead facts (also needed for the
+/// hot-lead alert text), the knowledge context string (needed for the
+/// validation layer to check grounding), and the knowledge sources used
+/// (for Phase 37 tracking) so the caller does not re-query any of these.
 async fn build_user_prompt(
     state: &AppState,
     conversation_id: &str,
-    contact: &sqlx::sqlite::SqliteRow,
+    contact: &sqlx::postgres::PgRow,
     tenant_key: &str,
     warnings: &mut Vec<String>,
-) -> Result<(String, Thread, LeadFacts), ReplyError> {
+) -> Result<(String, Thread, LeadFacts, String, Vec<crate::services::reply_integration::KnowledgeSourceUsed>), ReplyError> {
     let thread = load_history(state, conversation_id).await?;
     if thread.message_count == 0 {
         warnings.push(
@@ -661,8 +668,47 @@ async fn build_user_prompt(
     let knowledge = knowledge_context(state, tenant_key, warnings).await;
     let memories = memory_context(state, &contact_id, warnings).await;
 
+    // Combine services and knowledge base for the validator's grounding check.
+    let knowledge_context = format!("{}{}", services, knowledge);
+
+    // Phase 37: Use ReplyIntegrationService to combine all knowledge sources
+    // (KB entries, help center, document chunks, audience scoping, tone/guidance)
+    let integration_service = ReplyIntegrationService::new(&state.db);
+    let context_package = integration_service.build_context_package(
+        Some(&contact_id),
+        &thread.last_inbound_body,
+        tenant_key,
+    ).await;
+
+    let (integration_knowledge, tone_instructions, guidance_instructions, sources_used) = match context_package {
+        Ok(pkg) => {
+            (pkg.knowledge_context, pkg.tone_instructions, pkg.guidance_instructions, pkg.sources_used)
+        }
+        Err(e) => {
+            warnings.push(format!("reply integration context build failed: {e}, using legacy context only"));
+            (String::new(), String::new(), String::new(), Vec::new())
+        }
+    };
+
+    // Store sources_used in warnings for later tracking (we'll pass them through the return)
+    // We return them as part of the tuple so generate_reply can track them
+
+    // Use integration knowledge if available (supersedes legacy knowledge), otherwise fall back
+    let final_knowledge = if integration_knowledge.is_empty() {
+        knowledge
+    } else {
+        integration_knowledge
+    };
+
+    // Combine for validator grounding check: use integration knowledge if available
+    let final_knowledge_context = if integration_knowledge.is_empty() {
+        knowledge_context
+    } else {
+        integration_knowledge.clone()
+    };
+
     let prompt = format!(
-        "{lead_line}\n{services}\n{knowledge}{memories}\
+        "{lead_line}\n{services}\n{final_knowledge}{memories}{tone_instructions}{guidance_instructions}\
          CONVERSATION HISTORY:\n{}\n\nDraft the next reply to send to this lead.",
         if thread.history.trim().is_empty() {
             "(no messages recorded in this thread)"
@@ -670,7 +716,7 @@ async fn build_user_prompt(
             &thread.history
         },
     );
-    Ok((prompt, thread, lead_facts))
+    Ok((prompt, thread, lead_facts, final_knowledge_context, sources_used))
 }
 
 /// Port of `generate_reply`. Returns the stored draft, or the reason nothing was
@@ -784,7 +830,7 @@ pub async fn generate_reply(
     );
 
     let system_prompt = build_system_prompt(state, &tenant_key, &mut warnings).await;
-    let (user_prompt, thread, lead_facts) =
+    let (user_prompt, thread, lead_facts, knowledge_context, knowledge_sources) =
         build_user_prompt(state, conversation_id, &contact, &tenant_key, &mut warnings).await?;
 
     let parsed = match ask_json(state, &system_prompt, &user_prompt, REPLY_MAX_TOKENS).await {
@@ -863,6 +909,44 @@ pub async fn generate_reply(
     )
     .await;
 
+    // --- Validation Layer (Phase 7) ---
+    // Before deciding the draft status, run an independent validation check.
+    // If validation fails, the draft is forced to pending_review regardless of
+    // the confidence threshold.
+    let validation_config = validation::ValidationConfig::from_env();
+    let validation_result = validation::validate_draft(
+        state,
+        &validation_config,
+        &thread.last_inbound_body,
+        &body,
+        &knowledge_context,
+    )
+    .await;
+
+    if validation_result.validated {
+        if !validation_result.passed {
+            warnings.push(format!(
+                "validation failed: {}",
+                validation_result.reason.as_deref().unwrap_or("see issues")
+            ));
+            for issue in &validation_result.issues {
+                warnings.push(format!("validation issue: {issue}"));
+            }
+        } else {
+            warnings.push(format!(
+                "validation passed (relevance: {:.2}, grounding: {:.2}, latency: {}ms)",
+                validation_result.relevance_score,
+                validation_result.grounding_score,
+                validation_result.latency_ms,
+            ));
+        }
+    } else {
+        // Validation was skipped — log the reason but don't block.
+        if let Some(reason) = &validation_result.reason {
+            warnings.push(format!("validation skipped: {reason}"));
+        }
+    }
+
     let escalate = model
         .intent
         .as_deref()
@@ -879,7 +963,16 @@ pub async fn generate_reply(
     }
     match (threshold, model.confidence, escalate) {
         (Some(limit), Some(confidence), false) if confidence >= limit => {
-            status = String::from("auto_approved");
+            // Even if confidence is high, validation failure forces pending_review.
+            if validation_result.validated && !validation_result.passed {
+                warnings.push(
+                    "confidence exceeds auto-send threshold but validation failed — \
+                     draft remains pending_review for human approval"
+                        .to_string(),
+                );
+            } else {
+                status = String::from("auto_approved");
+            }
         }
         (None, _, false) => warnings.push(
             "REPLY_AUTO_SEND_CONFIDENCE is not set, so nothing was auto-approved; the draft waits \
@@ -1018,6 +1111,14 @@ pub async fn generate_reply(
         warnings.push(note);
     }
 
+    // Phase 37: Track knowledge sources used in this reply
+    if !knowledge_sources.is_empty() && draft_written {
+        let integration_service = ReplyIntegrationService::new(&state.db);
+        if let Err(e) = integration_service.track_knowledge_sources(&draft_id, conversation_id, &knowledge_sources).await {
+            warnings.push(format!("failed to track knowledge sources: {e}"));
+        }
+    }
+
     // Hot-lead paging: reported whether or not it worked.
     let alert: Option<String>;
     let needs_alert = model
@@ -1069,6 +1170,7 @@ pub async fn generate_reply(
         alert,
         warnings,
         draft_written,
+        validation: validation_result,
     })
 }
 

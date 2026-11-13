@@ -1,4 +1,4 @@
-//! Zero-trust mesh ingress and egress.
+﻿//! Zero-trust mesh ingress and egress.
 //!
 //! Inbound envelopes are verified and decrypted by `CryptoMesh`, then handed to
 //! the same dispatcher the plaintext ecosystem webhook uses, so an event cannot

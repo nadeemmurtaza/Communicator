@@ -1,0 +1,35 @@
+// A general EAV model, built by explicit owner override (ADR-026).
+// architecture-patterns/140-general-eav-extensibility-model.md (WO-140.1),
+// DECISIONS.md ADR-049. Coexists with doc 104's own bounded
+// CustomFieldDefinition/Supplier.customFields — that overlay remains in
+// place for the entities it already covers; this table is the general
+// fallback for any entity doc 104's own allowlist does not (yet) name.
+//
+// No organizationId: per ADR-044/ADR-040 (already applied to doc 104's own
+// CustomFieldDefinition), this deployment IS the tenant.
+//
+// No foreign key to the target entity: entityType varies, so entityId
+// cannot be a real Prisma relation. Deleting an entity does NOT cascade to
+// its attributes automatically — EntityAttributeService.deleteAll() must be
+// called explicitly by every entity's own deletion path that opts in. This
+// is a real, standing maintenance obligation, not a one-time cost.
+
+model EntityAttribute {
+  id             String   @id @default(cuid())
+  /// No code-known allowlist — validated at write time against the live
+  /// Prisma.ModelName registry (EntityAttributeService's own runtime
+  /// check), never a hand-maintained array that can drift from the schema.
+  entityType     String
+  entityId       String
+  attributeKey   String
+  /// Stored as text; typed interpretation (number, date, boolean) is a
+  /// caller-side convention via valueType, not a database constraint — the
+  /// direct consequence of accepting the EAV trade-off doc 140 names.
+  attributeValue String
+  valueType      String   @default("TEXT")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([entityType, entityId, attributeKey])
+  @@index([entityType, entityId])
+}

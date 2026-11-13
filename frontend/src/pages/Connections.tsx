@@ -59,7 +59,7 @@ export function Connections() {
 
         <Link
           to="/self-improving"
-          className="inline-flex items-center gap-1.5 self-start rounded-md bg-[var(--color-accent-soft)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-accent)] hover:bg-indigo-100 transition-colors"
+          className="inline-flex items-center gap-1.5 self-start rounded-[var(--radius-sm)] bg-[var(--color-accent-soft)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-accent)] hover:bg-indigo-100 transition-colors"
         >
           <Bot className="h-4 w-4" />
           <span>Configure AI Model Hub</span>
@@ -262,7 +262,7 @@ function UniversalGatewaysSection({
   return (
     <div className="space-y-6">
       {/* Overview & Action Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-[var(--color-surface)] p-4 rounded-lg border border-[var(--color-border)]">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-[var(--color-surface)] p-4 rounded-[var(--radius-md)] border border-[var(--color-border)]">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-xs font-semibold text-[var(--color-ink-muted)] uppercase tracking-wider mr-2">Filter:</span>
           {[
@@ -277,7 +277,7 @@ function UniversalGatewaysSection({
               className={`rounded-full px-3 py-1 text-xs font-medium transition-colors flex items-center ${
                 filterType === item.id
                   ? 'bg-[var(--color-accent)] text-white'
-                  : 'bg-slate-100 text-[var(--color-ink-muted)] hover:bg-slate-200'
+                  : 'bg-[var(--color-accent-muted)] text-[var(--color-ink-muted)] hover:bg-[var(--color-border)]'
               }`}
             >
               {item.icon}{item.label}
@@ -287,7 +287,7 @@ function UniversalGatewaysSection({
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-1.5 rounded-md bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] px-3.5 py-1.5 text-xs font-medium text-white shadow-sm transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] px-3.5 py-1.5 text-xs font-medium text-white shadow-sm transition-colors"
         >
           <Plus className="h-3.5 w-3.5" />
           <span>Connect Any Provider</span>
@@ -298,7 +298,7 @@ function UniversalGatewaysSection({
       {loading ? (
         <p className="text-sm text-[var(--color-ink-muted)] py-6 text-center">Loading gateways…</p>
       ) : gateways.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center bg-[var(--color-surface)]">
+        <div className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] p-8 text-center bg-[var(--color-surface)]">
           <p className="text-sm text-[var(--color-ink-muted)]">No gateways configured for this filter.</p>
           <button
             onClick={() => setShowAddModal(true)}
@@ -312,7 +312,7 @@ function UniversalGatewaysSection({
           {gateways.map((gw) => (
             <div
               key={gw.id}
-              className={`flex flex-col justify-between rounded-lg border bg-[var(--color-surface)] p-4 shadow-xs transition-shadow hover:shadow-sm ${
+              className={`flex flex-col justify-between rounded-[var(--radius-md)] border bg-[var(--color-surface)] p-4 shadow-none transition-shadow hover:border-[var(--color-accent)] ${
                 gw.is_default ? 'border-indigo-300 ring-1 ring-indigo-200' : 'border-[var(--color-border)]'
               }`}
             >
@@ -329,7 +329,7 @@ function UniversalGatewaysSection({
                       )}
                     </div>
                     <div className="mt-0.5 flex items-center gap-2 text-xs text-[var(--color-ink-muted)]">
-                      <span className="font-mono text-2xs uppercase px-1.5 py-0.5 bg-slate-100 rounded text-[var(--color-ink-muted)]">
+                      <span className="font-mono text-2xs uppercase px-1.5 py-0.5 bg-[var(--color-accent-muted)] rounded text-[var(--color-ink-muted)]">
                         {gw.provider}
                       </span>
                       <span>·</span>
@@ -344,7 +344,7 @@ function UniversalGatewaysSection({
                         ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                         : gw.test_status === 'error'
                           ? 'bg-red-50 text-red-700 border border-red-200'
-                          : 'bg-slate-100 text-[var(--color-ink-muted)] border border-[var(--color-border)]'
+                          : 'bg-[var(--color-accent-muted)] text-[var(--color-ink-muted)] border border-[var(--color-border)]'
                     }`}
                   >
                     <span
@@ -353,7 +353,7 @@ function UniversalGatewaysSection({
                           ? 'bg-emerald-500'
                           : gw.test_status === 'error'
                             ? 'bg-red-500'
-                            : 'bg-slate-400'
+                            : 'bg-[var(--color-ink-faint)]'
                       }`}
                     />
                     {gw.test_status === 'connected'
@@ -365,7 +365,7 @@ function UniversalGatewaysSection({
                 </div>
 
                 {/* Configuration Specs Preview */}
-                <div className="my-3 rounded-md bg-[var(--color-page)] p-2.5 text-xs text-[var(--color-ink-muted)] space-y-1 font-mono">
+                <div className="my-3 rounded-[var(--radius-sm)] bg-[var(--color-page)] p-2.5 text-xs text-[var(--color-ink-muted)] space-y-1 font-mono">
                   {gw.gateway_type === 'sms' && (
                     <>
                       {gw.config?.from_number && <div>From: {gw.config.from_number}</div>}
@@ -582,7 +582,7 @@ function AddGatewayModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-accent)]/40 p-4 backdrop-blur-xs">
-      <div className="w-full max-w-lg rounded-xl bg-[var(--color-surface)] shadow-xl border border-[var(--color-border)] overflow-hidden max-h-[90vh] flex flex-col">
+      <div className="w-full max-w-lg rounded-[var(--radius-lg)] bg-[var(--color-surface)] shadow-xl border border-[var(--color-border)] overflow-hidden max-h-[90vh] flex flex-col">
         <div className="border-b border-[var(--color-border)] px-5 py-3.5 flex items-center justify-between bg-[var(--color-page)]">
           <h2 className="text-sm font-semibold text-[var(--color-ink)]">+ Connect Any Provider</h2>
           <button onClick={onClose} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] p-1 cursor-pointer"><X className="h-4 w-4" /></button>
@@ -602,7 +602,7 @@ function AddGatewayModal({
                   key={t.id}
                   type="button"
                   onClick={() => setGatewayType(t.id as any)}
-                  className={`py-1.5 px-3 rounded-md border text-center font-medium flex items-center justify-center ${
+                  className={`py-1.5 px-3 rounded-[var(--radius-sm)] border text-center font-medium flex items-center justify-center ${
                     gatewayType === t.id
                       ? 'border-indigo-600 bg-[var(--color-accent-soft)] text-[var(--color-accent)]'
                       : 'border-[var(--color-border)] hover:bg-[var(--color-page)] text-[var(--color-ink)]'
@@ -620,7 +620,7 @@ function AddGatewayModal({
             <select
               value={provider}
               onChange={(e) => setProvider(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs text-slate-800"
+              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-ink)]"
             >
               {providerList.map((p) => (
                 <option key={p.provider} value={p.provider}>
@@ -637,14 +637,14 @@ function AddGatewayModal({
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs"
+              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs"
               placeholder="e.g. Production Vonage Gateway"
             />
           </div>
 
           {/* Dynamic Provider Input Fields */}
           {provider === 'custom_http' && (
-            <div className="space-y-3 p-3 bg-[var(--color-page)] rounded-md border border-[var(--color-border)]">
+            <div className="space-y-3 p-3 bg-[var(--color-page)] rounded-[var(--radius-sm)] border border-[var(--color-border)]">
               <p className="font-semibold text-[var(--color-ink)]">Custom HTTP REST Gateway Settings</p>
               <div>
                 <label className="block text-2xs text-[var(--color-ink-muted)] mb-0.5">Endpoint URL</label>
@@ -653,7 +653,7 @@ function AddGatewayModal({
                   required
                   value={endpointUrl}
                   onChange={(e) => setEndpointUrl(e.target.value)}
-                  className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                  className="w-full rounded border border-[var(--color-border)] px-2 py-1 text-xs"
                   placeholder="https://sms-gw.internal.company.com/v1/send"
                 />
               </div>
@@ -663,7 +663,7 @@ function AddGatewayModal({
                   type="password"
                   value={bearerToken}
                   onChange={(e) => setBearerToken(e.target.value)}
-                  className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                  className="w-full rounded border border-[var(--color-border)] px-2 py-1 text-xs"
                   placeholder="Bearer token"
                 />
               </div>
@@ -671,7 +671,7 @@ function AddGatewayModal({
           )}
 
           {provider === 'smtp' && (
-            <div className="space-y-3 p-3 bg-[var(--color-page)] rounded-md border border-[var(--color-border)]">
+            <div className="space-y-3 p-3 bg-[var(--color-page)] rounded-[var(--radius-sm)] border border-[var(--color-border)]">
               <p className="font-semibold text-[var(--color-ink)]">SMTP Server Configuration</p>
               <div className="grid grid-cols-3 gap-2">
                 <div className="col-span-2">
@@ -681,7 +681,7 @@ function AddGatewayModal({
                     required
                     value={smtpHost}
                     onChange={(e) => setSmtpHost(e.target.value)}
-                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                    className="w-full rounded border border-[var(--color-border)] px-2 py-1 text-xs"
                     placeholder="smtp.example.com"
                   />
                 </div>
@@ -691,7 +691,7 @@ function AddGatewayModal({
                     type="number"
                     value={smtpPort}
                     onChange={(e) => setSmtpPort(Number(e.target.value))}
-                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                    className="w-full rounded border border-[var(--color-border)] px-2 py-1 text-xs"
                   />
                 </div>
               </div>
@@ -702,7 +702,7 @@ function AddGatewayModal({
                     type="text"
                     value={smtpUsername}
                     onChange={(e) => setSmtpUsername(e.target.value)}
-                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                    className="w-full rounded border border-[var(--color-border)] px-2 py-1 text-xs"
                   />
                 </div>
                 <div>
@@ -711,7 +711,7 @@ function AddGatewayModal({
                     type="password"
                     value={smtpPassword}
                     onChange={(e) => setSmtpPassword(e.target.value)}
-                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                    className="w-full rounded border border-[var(--color-border)] px-2 py-1 text-xs"
                   />
                 </div>
               </div>
@@ -722,7 +722,7 @@ function AddGatewayModal({
                     type="email"
                     value={fromAddress}
                     onChange={(e) => setFromAddress(e.target.value)}
-                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                    className="w-full rounded border border-[var(--color-border)] px-2 py-1 text-xs"
                     placeholder="support@company.com"
                   />
                 </div>
@@ -732,7 +732,7 @@ function AddGatewayModal({
                     type="text"
                     value={fromName}
                     onChange={(e) => setFromName(e.target.value)}
-                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                    className="w-full rounded border border-[var(--color-border)] px-2 py-1 text-xs"
                     placeholder="Support Team"
                   />
                 </div>
@@ -741,7 +741,7 @@ function AddGatewayModal({
           )}
 
           {provider === 'sip_trunk' && (
-            <div className="space-y-3 p-3 bg-[var(--color-page)] rounded-md border border-[var(--color-border)]">
+            <div className="space-y-3 p-3 bg-[var(--color-page)] rounded-[var(--radius-sm)] border border-[var(--color-border)]">
               <p className="font-semibold text-[var(--color-ink)]">Generic SIP Trunk / PBX Settings</p>
               <div className="grid grid-cols-3 gap-2">
                 <div className="col-span-2">
@@ -751,7 +751,7 @@ function AddGatewayModal({
                     required
                     value={sipServer}
                     onChange={(e) => setSipServer(e.target.value)}
-                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                    className="w-full rounded border border-[var(--color-border)] px-2 py-1 text-xs"
                     placeholder="pbx.company.com"
                   />
                 </div>
@@ -761,7 +761,7 @@ function AddGatewayModal({
                     type="number"
                     value={sipPort}
                     onChange={(e) => setSipPort(Number(e.target.value))}
-                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                    className="w-full rounded border border-[var(--color-border)] px-2 py-1 text-xs"
                   />
                 </div>
               </div>
@@ -772,7 +772,7 @@ function AddGatewayModal({
                     type="text"
                     value={sipUser}
                     onChange={(e) => setSipUser(e.target.value)}
-                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                    className="w-full rounded border border-[var(--color-border)] px-2 py-1 text-xs"
                     placeholder="1001"
                   />
                 </div>
@@ -782,7 +782,7 @@ function AddGatewayModal({
                     type="password"
                     value={sipPass}
                     onChange={(e) => setSipPass(e.target.value)}
-                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                    className="w-full rounded border border-[var(--color-border)] px-2 py-1 text-xs"
                   />
                 </div>
               </div>
@@ -792,7 +792,7 @@ function AddGatewayModal({
                   type="text"
                   value={fromNumber}
                   onChange={(e) => setFromNumber(e.target.value)}
-                  className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                  className="w-full rounded border border-[var(--color-border)] px-2 py-1 text-xs"
                   placeholder="+14155550199 or extension"
                 />
               </div>
@@ -801,7 +801,7 @@ function AddGatewayModal({
 
           {/* Generic API Key / Secret Form for REST Providers */}
           {provider !== 'custom_http' && provider !== 'smtp' && provider !== 'sip_trunk' && (
-            <div className="space-y-3 p-3 bg-[var(--color-page)] rounded-md border border-[var(--color-border)]">
+            <div className="space-y-3 p-3 bg-[var(--color-page)] rounded-[var(--radius-sm)] border border-[var(--color-border)]">
               <p className="font-semibold text-[var(--color-ink)]">{provider.toUpperCase()} Credentials</p>
               <div>
                 <label className="block text-2xs text-[var(--color-ink-muted)] mb-0.5">API Key / Token / Account SID</label>
@@ -813,7 +813,7 @@ function AddGatewayModal({
                     setApiKey(e.target.value)
                     setAccountSid(e.target.value)
                   }}
-                  className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                  className="w-full rounded border border-[var(--color-border)] px-2 py-1 text-xs"
                   placeholder="Paste credentials"
                 />
               </div>
@@ -823,7 +823,7 @@ function AddGatewayModal({
                   type="password"
                   value={authToken}
                   onChange={(e) => setAuthToken(e.target.value)}
-                  className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                  className="w-full rounded border border-[var(--color-border)] px-2 py-1 text-xs"
                   placeholder="Auth Token / Secret"
                 />
               </div>
@@ -836,7 +836,7 @@ function AddGatewayModal({
                     setFromNumber(e.target.value)
                     setFromAddress(e.target.value)
                   }}
-                  className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                  className="w-full rounded border border-[var(--color-border)] px-2 py-1 text-xs"
                   placeholder="+14155550100 or support@company.com"
                 />
               </div>
@@ -849,7 +849,7 @@ function AddGatewayModal({
               type="checkbox"
               checked={isDefault}
               onChange={(e) => setIsDefault(e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-[var(--color-accent)]"
+              className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)]"
             />
             <span>Set as active default gateway for {gatewayType.toUpperCase()}</span>
           </label>
@@ -858,14 +858,14 @@ function AddGatewayModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)]"
+              className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="rounded-md bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] px-4 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+              className="rounded-[var(--radius-sm)] bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] px-4 py-1.5 text-xs font-medium text-white disabled:opacity-50"
             >
               {saving ? 'Connecting…' : 'Save & Connect Provider'}
             </button>
@@ -917,7 +917,7 @@ function SendPingModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-accent)]/40 p-4 backdrop-blur-xs">
-      <div className="w-full max-w-md rounded-xl bg-[var(--color-surface)] shadow-xl border border-[var(--color-border)] p-5 space-y-4 text-xs">
+      <div className="w-full max-w-md rounded-[var(--radius-lg)] bg-[var(--color-surface)] shadow-xl border border-[var(--color-border)] p-5 space-y-4 text-xs">
         <div className="flex items-center justify-between border-b pb-3 border-[var(--color-border)]">
           <h3 className="font-semibold text-[var(--color-ink)] text-sm">Send Test Ping · {gateway.name}</h3>
           <button onClick={onClose} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] p-1 cursor-pointer"><X className="h-4 w-4" /></button>
@@ -933,7 +933,7 @@ function SendPingModal({
               required
               value={target}
               onChange={(e) => setTarget(e.target.value)}
-              className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+              className="w-full rounded border border-[var(--color-border)] px-3 py-1.5 text-xs"
             />
           </div>
 
@@ -943,7 +943,7 @@ function SendPingModal({
               rows={2}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+              className="w-full rounded border border-[var(--color-border)] px-3 py-1.5 text-xs"
             />
           </div>
 
@@ -951,7 +951,7 @@ function SendPingModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded border border-slate-300 px-3 py-1.5 text-[var(--color-ink-muted)] hover:bg-[var(--color-page)]"
+              className="rounded border border-[var(--color-border)] px-3 py-1.5 text-[var(--color-ink-muted)] hover:bg-[var(--color-page)]"
             >
               Cancel
             </button>
@@ -974,7 +974,7 @@ function Banner({ tone, children }: { tone: 'error' | 'success'; children: React
     tone === 'error'
       ? 'border-red-200 bg-red-50 text-red-700'
       : 'border-emerald-200 bg-emerald-50 text-emerald-700'
-  return <div className={`rounded-md border px-4 py-3 text-sm ${cls}`}>{children}</div>
+  return <div className={`rounded-[var(--radius-sm)] border px-4 py-3 text-sm ${cls}`}>{children}</div>
 }
 
 function SectionCard({
@@ -987,7 +987,7 @@ function SectionCard({
   children: React.ReactNode
 }) {
   return (
-    <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
+    <section className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)]">
       <div className="border-b border-[var(--color-border)] px-5 py-4">
         <h2 className="text-sm font-semibold text-[var(--color-ink)]">{title}</h2>
         <p className="mt-0.5 text-xs text-[var(--color-ink-muted)]">{description}</p>
@@ -1018,7 +1018,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+        className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-sm"
       />
     </div>
   )
@@ -1085,7 +1085,7 @@ function WhatsAppSection({
     >
       <div className="mb-4 flex items-center gap-2">
         <span
-          className={`inline-block h-2 w-2 rounded-full ${connected ? 'bg-emerald-500' : 'bg-slate-300'}`}
+          className={`inline-block h-2 w-2 rounded-full ${connected ? 'bg-emerald-500' : 'bg-[var(--color-border)]'}`}
         />
         <span className="text-sm text-[var(--color-ink)]">
           {connected
@@ -1118,12 +1118,12 @@ function WhatsAppSection({
         />
       </div>
 
-      <div className="mt-4 rounded-md border border-[var(--color-border)] bg-[var(--color-page)] px-4 py-3">
+      <div className="mt-4 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-page)] px-4 py-3">
         <p className="text-xs font-medium text-[var(--color-ink-muted)]">Webhook setup (paste into Meta's console)</p>
         <dl className="mt-2 space-y-1 text-sm">
           <div className="flex gap-2">
             <dt className="shrink-0 text-[var(--color-ink-muted)]">Callback URL path:</dt>
-            <dd className="font-mono text-xs text-slate-800">{data.whatsapp.webhookCallbackPath}</dd>
+            <dd className="font-mono text-xs text-[var(--color-ink)]">{data.whatsapp.webhookCallbackPath}</dd>
           </div>
         </dl>
         <div className="mt-3 max-w-xs">
@@ -1141,14 +1141,14 @@ function WhatsAppSection({
         <button
           onClick={save}
           disabled={saving}
-          className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
           {saving ? 'Saving…' : 'Save'}
         </button>
         <button
           onClick={verify}
           disabled={verifying}
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-50"
+          className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-sm font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-50"
         >
           {verifying ? 'Verifying…' : 'Verify connection'}
         </button>
@@ -1215,7 +1215,7 @@ function BusinessProfileSection({
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
             placeholder="What you do, who you serve."
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+            className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-sm"
           />
         </div>
         <div>
@@ -1225,7 +1225,7 @@ function BusinessProfileSection({
             onChange={(e) => setGuidelines(e.target.value)}
             rows={4}
             placeholder="Tone, things to never promise, when to escalate to a human, etc."
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+            className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-sm"
           />
         </div>
         <label className="flex items-center gap-2 text-sm text-[var(--color-ink)]">
@@ -1233,18 +1233,18 @@ function BusinessProfileSection({
             type="checkbox"
             checked={autoReply}
             onChange={(e) => setAutoReply(e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300"
+            className="h-4 w-4 rounded border-[var(--color-border)]"
           />
           Auto-reply enabled
         </label>
 
-        <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-page)] p-4">
+        <div className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-page)] p-4">
           <label className="flex items-center gap-2 text-sm font-medium text-[var(--color-ink)]">
             <input
               type="checkbox"
               checked={hoursEnabled}
               onChange={(e) => setHoursEnabled(e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300"
+              className="h-4 w-4 rounded border-[var(--color-border)]"
             />
             Only auto-reply during business hours
           </label>
@@ -1259,7 +1259,7 @@ function BusinessProfileSection({
                     max={23}
                     value={hoursStart}
                     onChange={(e) => setHoursStart(Number(e.target.value))}
-                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                    className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-sm"
                   />
                 </div>
                 <div>
@@ -1270,7 +1270,7 @@ function BusinessProfileSection({
                     max={23}
                     value={hoursEnd}
                     onChange={(e) => setHoursEnd(Number(e.target.value))}
-                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                    className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-sm"
                   />
                 </div>
                 <div>
@@ -1279,7 +1279,7 @@ function BusinessProfileSection({
                     value={timezone}
                     onChange={(e) => setTimezone(e.target.value)}
                     placeholder="Asia/Karachi"
-                    className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                    className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-sm"
                   />
                 </div>
               </div>
@@ -1291,7 +1291,7 @@ function BusinessProfileSection({
                   value={awayMessage}
                   onChange={(e) => setAwayMessage(e.target.value)}
                   rows={2}
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                  className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-sm"
                 />
               </div>
             </div>
@@ -1301,7 +1301,7 @@ function BusinessProfileSection({
       <button
         onClick={save}
         disabled={saving}
-        className="mt-4 rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+        className="mt-4 rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
       >
         {saving ? 'Saving…' : 'Save'}
       </button>
@@ -1373,21 +1373,21 @@ function TemplatesSection({
           <div className="mb-3 flex justify-end">
             <button
               onClick={() => setShowForm((v) => !v)}
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)]"
+              className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-sm font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)]"
             >
               {showForm ? 'Cancel' : 'New template'}
             </button>
           </div>
 
           {showForm && (
-            <form onSubmit={submit} className="mb-4 space-y-3 rounded-md border border-[var(--color-border)] p-4">
+            <form onSubmit={submit} className="mb-4 space-y-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] p-4">
               <Field label="Name" value={name} onChange={setName} placeholder="order_update" />
               <div>
                 <label className="block text-xs font-medium text-[var(--color-ink-muted)]">Category</label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                  className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-sm"
                 >
                   <option value="UTILITY">Utility</option>
                   <option value="MARKETING">Marketing</option>
@@ -1401,13 +1401,13 @@ function TemplatesSection({
                   onChange={(e) => setBodyText(e.target.value)}
                   rows={3}
                   required
-                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                  className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-sm"
                 />
               </div>
               <button
                 type="submit"
                 disabled={saving}
-                className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                className="rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
               >
                 {saving ? 'Submitting…' : 'Submit for approval'}
               </button>
@@ -1419,11 +1419,11 @@ function TemplatesSection({
           ) : templates.length === 0 ? (
             <p className="text-sm text-[var(--color-ink-muted)]">No templates yet.</p>
           ) : (
-            <ul className="divide-y divide-slate-100 rounded-md border border-[var(--color-border)]">
+            <ul className="divide-y divide-slate-100 rounded-[var(--radius-sm)] border border-[var(--color-border)]">
               {templates.map((t) => (
                 <li key={t.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
                   <div className="min-w-0">
-                    <span className="font-medium text-slate-800">{t.name}</span>
+                    <span className="font-medium text-[var(--color-ink)]">{t.name}</span>
                     <span className="ml-2 text-xs text-[var(--color-ink-muted)]">
                       {t.category} · {t.language} ·{' '}
                       <span
@@ -1543,7 +1543,7 @@ function StripeBillingSection({
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center text-[var(--color-ink-muted)]">
+      <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center text-[var(--color-ink-muted)]">
         <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
         <p className="mt-2 text-sm">Loading Stripe configuration...</p>
       </div>
@@ -1552,10 +1552,10 @@ function StripeBillingSection({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-xs space-y-6">
+      <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-none space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[var(--color-border)] pb-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-accent-soft)] border border-indigo-100 text-2xl">
+            <div className="flex h-12 w-12 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--color-accent-soft)] border border-indigo-100 text-2xl">
               <CreditCard className="h-6 w-6 text-indigo-600" />
             </div>
             <div>
@@ -1564,7 +1564,7 @@ function StripeBillingSection({
                 <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
                   config?.last_test_status === 'connected' || config?.last_test_status === 'connected_simulated'
                     ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                    : 'bg-slate-100 text-[var(--color-ink-muted)]'
+                    : 'bg-[var(--color-accent-muted)] text-[var(--color-ink-muted)]'
                 }`}>
                   {config?.last_test_status === 'connected' ? 'Live Connected' : (config?.last_test_status === 'connected_simulated' ? 'Sandbox Active' : 'Untested')}
                 </span>
@@ -1579,14 +1579,14 @@ function StripeBillingSection({
             <button
               onClick={handleTest}
               disabled={testing}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-50 shadow-2xs cursor-pointer transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-50 shadow-2xs cursor-pointer transition-colors"
             >
               <span className="flex items-center gap-1">{testing ? 'Testing...' : <><Zap className="h-3.5 w-3.5 text-amber-500" /> Test Connection</>}</span>
             </button>
             <button
               onClick={handleSave}
               disabled={saving}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-4 py-1.5 text-xs font-bold text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50 shadow-xs cursor-pointer transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-accent)] px-4 py-1.5 text-xs font-bold text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50 shadow-none cursor-pointer transition-colors"
             >
               <span>{saving ? 'Saving...' : 'Save Configuration'}</span>
             </button>
@@ -1594,7 +1594,7 @@ function StripeBillingSection({
         </div>
 
         {testResult && (
-          <div className={`rounded-lg p-3 text-xs flex items-center justify-between border ${
+          <div className={`rounded-[var(--radius-md)] p-3 text-xs flex items-center justify-between border ${
             testResult.status === 'connected' || testResult.status === 'connected_simulated'
               ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
               : 'bg-rose-50 text-rose-800 border-rose-200'
@@ -1615,7 +1615,7 @@ function StripeBillingSection({
               value={accountName}
               onChange={(e) => setAccountName(e.target.value)}
               placeholder="e.g. Primary Production Billing"
-              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-hidden"
+              className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-hidden"
             />
           </div>
 
@@ -1624,7 +1624,7 @@ function StripeBillingSection({
             <select
               value={currency}
               onChange={(e) => setCurrency(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-hidden"
+              className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-hidden"
             >
               <option value="usd">USD ($)</option>
               <option value="eur">EUR (€)</option>
@@ -1646,7 +1646,7 @@ function StripeBillingSection({
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder={config?.has_api_key ? '•••••••••••••••• (Leave blank to keep)' : 'sk_test_... or sk_live_...'}
-              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-hidden font-mono"
+              className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-hidden font-mono"
             />
             <p className="text-[11px] text-[var(--color-ink-faint)] mt-1">
               Leave blank to use the built-in Sandbox Simulator with high-fidelity customer mock subscriptions.
@@ -1660,7 +1660,7 @@ function StripeBillingSection({
               value={publishableKey}
               onChange={(e) => setPublishableKey(e.target.value)}
               placeholder="pk_test_... or pk_live_..."
-              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-hidden font-mono"
+              className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-hidden font-mono"
             />
           </div>
 
@@ -1676,7 +1676,7 @@ function StripeBillingSection({
               value={webhookSecret}
               onChange={(e) => setWebhookSecret(e.target.value)}
               placeholder={config?.has_webhook_secret ? '•••••••••••••••• (Leave blank to keep)' : 'whsec_...'}
-              className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-hidden font-mono"
+              className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-hidden font-mono"
             />
           </div>
 
@@ -1686,7 +1686,7 @@ function StripeBillingSection({
                 type="checkbox"
                 checked={testMode}
                 onChange={(e) => setTestMode(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+                className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
               />
               <span className="text-xs font-semibold text-[var(--color-ink)]">
                 Enable Sandbox / Test Mode Simulator
@@ -1698,7 +1698,7 @@ function StripeBillingSection({
                 type="checkbox"
                 checked={isEnabled}
                 onChange={(e) => setIsEnabled(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
+                className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-accent)]"
               />
               <span className="text-xs font-semibold text-[var(--color-ink)]">
                 Stripe Integration Enabled in Conversation Sidebar
@@ -1858,7 +1858,7 @@ function IssueTrackersSection({
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center text-[var(--color-ink-muted)]">
+      <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-8 text-center text-[var(--color-ink-muted)]">
         <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
         <p className="mt-2 text-sm">Loading issue tracker &amp; Slack configurations...</p>
       </div>
@@ -1872,9 +1872,9 @@ function IssueTrackersSection({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-xs space-y-2">
+      <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-none space-y-2">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50 border border-purple-100 text-2xl">
+          <div className="flex h-12 w-12 items-center justify-center rounded-[var(--radius-lg)] bg-purple-50 border border-purple-100 text-2xl">
             <Target className="h-6 w-6 text-purple-600" />
           </div>
           <div>
@@ -1890,7 +1890,7 @@ function IssueTrackersSection({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* 1. Linear */}
-        <div className="rounded-xl border border-purple-100 bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+        <div className="rounded-[var(--radius-lg)] border border-purple-100 bg-[var(--color-surface)] p-5 shadow-none space-y-4">
           <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
             <div className="flex items-center gap-2">
               <Layers className="h-5 w-5 text-purple-600" />
@@ -1929,7 +1929,7 @@ function IssueTrackersSection({
                 placeholder={linCfg?.credentials?.has_api_key ? '•••••••••••••••• (Leave blank to keep)' : 'lin_api_...'}
                 value={linearApiKey}
                 onChange={(e) => setLinearApiKey(e.target.value)}
-                className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs font-mono"
+                className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs font-mono"
               />
             </div>
             <div>
@@ -1941,17 +1941,17 @@ function IssueTrackersSection({
                 value={linearTeamKey}
                 onChange={(e) => setLinearTeamKey(e.target.value)}
                 placeholder="ENG"
-                className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs font-mono"
+                className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs font-mono"
               />
             </div>
           </div>
         </div>
 
         {/* 2. GitHub Issues */}
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-none space-y-4">
           <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
             <div className="flex items-center gap-2">
-              <GitFork className="h-5 w-5 text-slate-800" />
+              <GitFork className="h-5 w-5 text-[var(--color-ink)]" />
               <div>
                 <h3 className="font-bold text-sm text-[var(--color-ink)]">GitHub Issues</h3>
                 <span className="text-[10px] text-[var(--color-ink-faint)] font-mono">
@@ -1987,7 +1987,7 @@ function IssueTrackersSection({
                 placeholder={ghCfg?.credentials?.has_access_token ? '•••••••••••••••• (Leave blank to keep)' : 'ghp_...'}
                 value={ghToken}
                 onChange={(e) => setGhToken(e.target.value)}
-                className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs font-mono"
+                className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs font-mono"
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -1998,7 +1998,7 @@ function IssueTrackersSection({
                   value={ghOwner}
                   onChange={(e) => setGhOwner(e.target.value)}
                   placeholder="newax-org"
-                  className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs font-mono"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs font-mono"
                 />
               </div>
               <div>
@@ -2008,7 +2008,7 @@ function IssueTrackersSection({
                   value={ghRepo}
                   onChange={(e) => setGhRepo(e.target.value)}
                   placeholder="product-engine"
-                  className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs font-mono"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs font-mono"
                 />
               </div>
             </div>
@@ -2016,7 +2016,7 @@ function IssueTrackersSection({
         </div>
 
         {/* 3. Jira Cloud */}
-        <div className="rounded-xl border border-blue-100 bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+        <div className="rounded-[var(--radius-lg)] border border-blue-100 bg-[var(--color-surface)] p-5 shadow-none space-y-4">
           <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
             <div className="flex items-center gap-2">
               <Hash className="h-5 w-5 text-blue-600" />
@@ -2054,7 +2054,7 @@ function IssueTrackersSection({
                   value={jiraDomain}
                   onChange={(e) => setJiraDomain(e.target.value)}
                   placeholder="newax.atlassian.net"
-                  className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs font-mono"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs font-mono"
                 />
               </div>
               <div>
@@ -2064,7 +2064,7 @@ function IssueTrackersSection({
                   value={jiraProject}
                   onChange={(e) => setJiraProject(e.target.value)}
                   placeholder="SUP"
-                  className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs font-mono"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs font-mono"
                 />
               </div>
             </div>
@@ -2075,7 +2075,7 @@ function IssueTrackersSection({
                 value={jiraEmail}
                 onChange={(e) => setJiraEmail(e.target.value)}
                 placeholder="agent@newax.com"
-                className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs"
+                className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs"
               />
             </div>
             <div>
@@ -2085,14 +2085,14 @@ function IssueTrackersSection({
                 placeholder={jiraCfg?.credentials?.has_api_token ? '•••••••••••••••• (Leave blank to keep)' : 'API token'}
                 value={jiraToken}
                 onChange={(e) => setJiraToken(e.target.value)}
-                className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs font-mono"
+                className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs font-mono"
               />
             </div>
           </div>
         </div>
 
         {/* 4. Slack Workspace Sync */}
-        <div className="rounded-xl border border-emerald-100 bg-[var(--color-surface)] p-5 shadow-xs space-y-4">
+        <div className="rounded-[var(--radius-lg)] border border-emerald-100 bg-[var(--color-surface)] p-5 shadow-none space-y-4">
           <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
             <div className="flex items-center gap-2">
               <MessageSquare className="h-5 w-5 text-emerald-600" />
@@ -2131,7 +2131,7 @@ function IssueTrackersSection({
                 placeholder={slackCfg?.credentials?.has_bot_token ? '•••••••••••••••• (Leave blank to keep)' : 'xoxb-...'}
                 value={slackToken}
                 onChange={(e) => setSlackToken(e.target.value)}
-                className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs font-mono"
+                className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs font-mono"
               />
             </div>
             <div>
@@ -2143,7 +2143,7 @@ function IssueTrackersSection({
                 value={slackChannel}
                 onChange={(e) => setSlackChannel(e.target.value)}
                 placeholder="#customer-escalations"
-                className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs font-mono"
+                className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs font-mono"
               />
             </div>
           </div>

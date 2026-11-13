@@ -1,4 +1,4 @@
-//! Discovery-flow routes (WhatsApp business-inquiry funnel).
+﻿//! Discovery-flow routes (WhatsApp business-inquiry funnel).
 //!
 //! Ported from `src/communicator/api/routes/discovery.py`. Every response below
 //! is either backed by real rows / a real provider call, or refuses with the
@@ -42,9 +42,9 @@ fn db_error(e: sqlx::Error, context: &str) -> Response {
         .into_response()
 }
 
-async fn has_table(pool: &sqlx::Pool<sqlx::Sqlite>, table: &str) -> Result<bool, sqlx::Error> {
+async fn has_table(pool: &sqlx::PgPool, table: &str) -> Result<bool, sqlx::Error> {
     sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name = ?",
+        "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public' AND table_name = $1",
     )
     .bind(table)
     .fetch_one(pool)
@@ -52,12 +52,12 @@ async fn has_table(pool: &sqlx::Pool<sqlx::Sqlite>, table: &str) -> Result<bool,
     .map(|c| c > 0)
 }
 
-/// A failed `sqlite_master` read is not the same fact as "table absent", and a
+/// A failed `information_schema` read is not the same fact as "table absent", and a
 /// missing table must not become an invented listing either: both answer with
 /// the DDL the operator has to apply. Returns `Some(refusal)` when the caller
 /// must stop, `None` when the table is really there.
 async fn require_table(
-    pool: &sqlx::Pool<sqlx::Sqlite>,
+    pool: &sqlx::PgPool,
     table: &str,
     ddl: &str,
     wanted: &str,
@@ -65,7 +65,7 @@ async fn require_table(
     match has_table(pool, table).await {
         Ok(true) => None,
         Ok(false) => Some(missing_table_response(table, ddl, wanted)),
-        Err(e) => Some(db_error(e, &format!("sqlite_master lookup for '{table}'"))),
+        Err(e) => Some(db_error(e, &format!("information_schema lookup for '{table}'"))),
     }
 }
 
@@ -880,7 +880,7 @@ pub async fn sync_campaign_template_status(
 
     let table_present = match has_table(&state.db, "campaign_templates").await {
         Ok(present) => present,
-        Err(e) => return db_error(e, "sqlite_master lookup for 'campaign_templates'"),
+        Err(e) => return db_error(e, "information_schema lookup for 'campaign_templates'"),
     };
 
     let mut local_rows: Vec<(String, String, String)> = Vec::new();

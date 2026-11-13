@@ -1,0 +1,344 @@
+model Supplier {
+  id              String   @id @default(cuid())
+  name            String
+  contactName     String?
+  phone           String?
+  email           String?
+  address         String?
+  city            String?
+  /// ISO 3166-1 alpha-2, e.g. "PK", "CN". Null for a domestic supplier whose
+  /// country was never recorded before this field existed (RETAIL-ERP.md R16).
+  country         String?
+  /// ISO 4217 — the currency their bills are raised in. Defaults to the
+  /// deployment's own base currency; only an international supplier's bills
+  /// actually carry FX (see SupplierBill.fxRateScaled).
+  currency        String   @default("PKR")
+  /// Their tax registration number — NTN, TRN, VAT id, whatever the
+  /// jurisdiction calls it. Free text: the label is locale policy, not a
+  /// column (see brand.ts), and a supplier's own paperwork is what the
+  /// bookkeeper reads regardless of what we'd call it.
+  taxId           String?
+  /// Free text: "FOB Shanghai", "DDP", "EXW" — customs/shipping terms for an
+  /// international supplier. Display-only today, no INCOTERMS enum.
+  incoterms       String?
+  /// True marks a supplier whose bills need the FX posting rules (WO-19.3) —
+  /// distinct from `currency !== base`, since a shop may quote a domestic
+  /// supplier in USD without customs/duty being involved at all.
+  isInternational Boolean  @default(false)
+  /// Free text: "30 days net", "advance", "on delivery".
+  paymentTerms    String?
+  /// Typical days from order to delivery. Feeds reorder suggestions.
+  leadTimeDays    Int      @default(7)
+  notes           String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  /// The permanent counterparty profile this Supplier is the SUPPLIER-role
+  /// extension of (parties.prisma). Nullable during the expand phase of an
+  /// expand/contract rollout: a backfill script (prisma/backfill-parties.ts)
+  /// creates one Party per pre-existing Supplier row; every Supplier created
+  /// from here on gets one transactionally (see PurchasingService.create()).
+  /// name/contactName/phone/email/address/city above stay in place — reading
+  /// exclusively through party and dropping them is a deliberate follow-up,
+  /// not part of this change.
+  partyId          String? @unique
+  party            Party?  @relation(fields: [partyId], references: [id], onDelete: SetNull)
+  /// Null (the default) means manual entry, exactly as before this field
+  /// existed. Set it to feed this supplier's bills in automatically once
+  /// they're a connected TradingPartner (18-trading-partner-network.md,
+  /// WO-18.2) — trading-partners is a togglable pack and purchasing must
+  /// never import it, so this is a bare scalar FK, not a cross-module
+  /// service call.
+  tradingPartnerId String?
+
+  products SupplierProduct[]
+  expenses Expense[]
+  // Note: purchaseOrders and bills are for WO-1.5, not included yet.
+
+  /// architecture-patterns/104-jsonb-eav-extensibility.md, WO-104.1 — a
+  /// bounded, admin-defined overlay (CustomFieldDefinition), never a
+  /// business-logic input; application code never branches on a value here.
+  customFields Json @default("{}")
+
+  tradingPartner    TradingPartner?  @relation(fields: [tradingPartnerId], references: [id], onDelete: SetNull)
+  preferredVariants ProductVariant[] @relation("PreferredSupplier")
+  purchaseOrders    PurchaseOrder[]
+  supplierBills     SupplierBill[]
+
+  @@index([isActive, name])
+  @@index([tradingPartnerId])
+}
+
+/// What a given supplier charges for a given variant, and under what terms.
+model SupplierProduct {
+  id           String  @id @default(cuid())
+  supplierId   String
+  variantId    String
+  /// The supplier's own code for it, for the PO they will read.
+  supplierSku  String?
+  /// Last agreed unit cost in paisa. Pre-fills a new PO line.
+  lastCost     Int     @default(0)
+  /// Minimum order quantity this supplier accepts.
+  moq          Int     @default(1)
+  leadTimeDays Int?
+  isPreferred  Boolean @default(false)
+
+  supplier Supplier       @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  variant  ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([supplierId, variantId])
+  @@index([variantId, isPreferred])
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  SENT
+  PARTIAL
+  RECEIVED
+  CANCELLED
+}
+
+model PurchaseOrder {
+  id         String              @id @default(cuid())
+  number     String              @unique
+  supplierId String
+  status     PurchaseOrderStatus @default(DRAFT)
+  currency   String              @default("PKR")
+
+  subtotal    Int @default(0)
+  freightCost Int @default(0)
+  dutyCost    Int @default(0)
+  otherCost   Int @default(0)
+  total       Int @default(0)
+
+  /// WO-23.3 (RETAIL-ERP.md R13/R8, ADR-021). Which tier raised this PO.
+  /// Defaults to BRAND — "brand purchasing is the default and behaves as
+  /// today," and every deployment shipped so far is exactly one brand. A
+  /// request, not itself a FACT (R2 names "goods receipt", not "purchase
+  /// order") — ReplicationRegistry registers GoodsReceipt, not this model.
+  scopeLevel   ScopeLevel @default(BRAND)
+  /// This node's own identifier (AppConfigService.nodeId) at the moment the
+  /// PO was created — a bare string, never a Node row FK (a branch has no
+  /// Node row for itself). Null for a PO raised before this column existed.
+  originNodeId String?
+
+  expectedAt  DateTime?
+  sentAt      DateTime?
+  receivedAt  DateTime?
+  cancelledAt DateTime?
+  notes       String?
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  supplier          Supplier             @relation(fields: [supplierId], references: [id])
+  /// WO-213.2 (213-partner-fact-exchange.md). The `PartnerFactInbox` row this
+  /// order was created from, when a connected partner's `sale.dispatched` fact
+  /// made it. Null means "raised by a person, or from a requisition". A bare
+  /// scalar, no `@relation`: purchasing is decoupled from `tradingpartners`
+  /// (ADR-012). UNIQUE is the point: a fact is delivered at least once, so the
+  /// second attempt to create its order must be a no-op by constraint, not by
+  /// a check that two deliveries could race past.
+  sourceFactInboxId String? @unique
+  createdBy         User?                @relation("PurchaseOrderCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  items             PurchaseOrderItem[]
+  receipts          GoodsReceipt[]
+  bills             SupplierBill[]
+  /// The requisition this PO was converted from, if any — doc 152's own
+  /// "click the number" lens: the PO's own detail screen links back to why
+  /// it was bought. Back-relation only; the FK lives on PurchaseRequisition.
+  sourceRequisition PurchaseRequisition?
+
+  @@index([status, createdAt])
+  @@index([supplierId])
+  @@index([scopeLevel])
+}
+
+model PurchaseOrderItem {
+  id               String  @id @default(cuid())
+  purchaseOrderId  String
+  variantId        String
+  quantityOrdered  Int
+  quantityReceived Int     @default(0)
+  unitCost         Int
+  lineTotal        Int
+  note             String?
+
+  purchaseOrder PurchaseOrder      @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  variant       ProductVariant     @relation(fields: [variantId], references: [id])
+  receiptItems  GoodsReceiptItem[]
+
+  @@index([purchaseOrderId])
+  @@index([variantId])
+}
+
+model GoodsReceipt {
+  id              String   @id @default(cuid())
+  number          String   @unique
+  purchaseOrderId String
+  receivedAt      DateTime @default(now())
+  receivedById    String?
+  notes           String?
+  freightCost     Int      @default(0)
+  dutyCost        Int      @default(0)
+  otherCost       Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  /// Where this receipt actually landed — WO-23.3, R13's org-warehouse
+  /// receiving. Bare scalar, no `@relation`: purchasing decouples from
+  /// inventory the same way transfers.prisma's own Location-id columns
+  /// already do. Resolves to InventoryService.defaultLocationId() when the
+  /// caller does not name one, matching every receipt before this column
+  /// existed.
+  locationId String
+
+  purchaseOrder PurchaseOrder      @relation(fields: [purchaseOrderId], references: [id])
+  receivedBy    User?              @relation("GoodsReceiptReceiver", fields: [receivedById], references: [id], onDelete: SetNull)
+  items         GoodsReceiptItem[]
+
+  @@index([purchaseOrderId])
+  @@index([locationId])
+}
+
+model GoodsReceiptItem {
+  id                  String @id @default(cuid())
+  goodsReceiptId      String
+  purchaseOrderItemId String
+  variantId           String
+  quantity            Int
+  unitCost            Int
+  landedUnitCost      Int
+
+  goodsReceipt      GoodsReceipt      @relation(fields: [goodsReceiptId], references: [id], onDelete: Cascade)
+  purchaseOrderItem PurchaseOrderItem @relation(fields: [purchaseOrderItemId], references: [id])
+  variant           ProductVariant    @relation(fields: [variantId], references: [id])
+
+  @@index([goodsReceiptId])
+  @@index([variantId])
+}
+
+enum SupplierBillStatus {
+  UNPAID
+  PARTIAL
+  PAID
+  /// Ecosystem audit 2026-10-30 (merged from @newaxhq/purchasing's 3-way
+  /// match, per docs/erp-lenses/procurement-supplier-lifecycle/13's "The
+  /// bill nobody checked" lens) — the bill's amount fell outside
+  /// purchasing.bill_match_tolerance_percent of the PO/GoodsReceiptItem
+  /// total. Never posts to Accounts Payable and never accepts a payment
+  /// until released back to UNPAID by a `purchasing.release_bill_match`
+  /// holder (PurchasingService.releaseBillMatchReview()).
+  PENDING_MATCH_REVIEW
+}
+
+model SupplierBill {
+  id              String             @id @default(cuid())
+  supplierId      String
+  purchaseOrderId String?
+  reference       String?
+  /// In `currency` below — the supplier's own invoiced amount, not
+  /// necessarily the base currency (RETAIL-ERP.md R16).
+  amount          Int
+  /// Cumulative, in `currency` below — the same unit as `amount`, so
+  /// "amount - amountPaid" is always the outstanding balance in the bill's
+  /// own currency without a conversion.
+  amountPaid      Int                @default(0)
+  /// ISO 4217. Defaults to the deployment's own base currency; set from the
+  /// supplier's own `currency` when raised.
+  currency        String             @default("PKR")
+  /// rate * 1_000_000 (House Rule 5 / R16) at the moment this bill was
+  /// raised — the "booked" rate a later payment's settlement rate is
+  /// compared against to post a realised FX gain/loss. 1_000_000 for a
+  /// base-currency bill; never re-derived once set (House Rule 7).
+  fxRateScaled    Int                @default(1000000)
+  /// `amount` converted to the base currency at `fxRateScaled`, computed
+  /// once at creation (`convertToBase`, @newax/shared) — what actually
+  /// posts to Accounts Payable (posting-rules.subscriber.ts).
+  baseAmountMinor Int
+  status          SupplierBillStatus @default(UNPAID)
+  /// Ecosystem audit 2026-10-30. Why this bill is PENDING_MATCH_REVIEW, in
+  /// words an operator can act on (the PartnerFactInbox.statusReason idiom)
+  /// — null once released, or if the bill never needed review.
+  matchReviewReason String?
+  issuedAt        DateTime           @default(now())
+  dueAt           DateTime?
+  paidAt          DateTime?
+  notes           String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  supplier      Supplier       @relation(fields: [supplierId], references: [id])
+  purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+
+  @@index([supplierId, status])
+  @@index([status, dueAt])
+}
+
+/// 152-purchase-requisition.md. A request to buy, distinct from the
+/// PurchaseOrder that results once approved — the two different decisions
+/// ("should we buy this at all" vs. "is this specific PO's price/supplier
+/// right") this repository previously conflated into one PurchaseOrder row.
+enum RequisitionApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CONVERTED
+}
+
+model PurchaseRequisition {
+  id                       String                    @id @default(cuid())
+  requestedById            String
+  /// Named explicitly, never defaulted — the same discipline every other
+  /// location-aware write in this repository already follows.
+  locationId               String
+  justification            String
+  status                   RequisitionApprovalStatus @default(PENDING)
+  /// Set once, by convertToPurchaseOrder() — converting an already-CONVERTED
+  /// requisition is refused, so one requisition never produces two POs.
+  convertedPurchaseOrderId String?                   @unique
+  rejectionNote            String?
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+
+  requestedBy            User              @relation("RequisitionRequester", fields: [requestedById], references: [id])
+  convertedPurchaseOrder PurchaseOrder?    @relation(fields: [convertedPurchaseOrderId], references: [id], onDelete: SetNull)
+  lines                  RequisitionLine[]
+
+  @@index([status, createdAt])
+  @@index([requestedById, createdAt])
+  @@index([locationId])
+}
+
+model RequisitionLine {
+  id                     String @id @default(cuid())
+  requisitionId          String
+  variantId              String
+  quantity               Int
+  /// A requester's own estimate — never a real cost until an actual PO line
+  /// snapshots one at convertToPurchaseOrder() time.
+  estimatedUnitCostMinor Int?
+
+  requisition PurchaseRequisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  variant     ProductVariant      @relation(fields: [variantId], references: [id])
+
+  @@index([requisitionId])
+  @@index([variantId])
+}
+
+/// resilience-scalability/144-supply-chain-resilience-planning-engine.md
+/// (WO-144.6, R25) — one row per goods receipt, backfilling a real lead-time
+/// distribution from history already in the database. Populated by a
+/// listener on GoodsReceived (never new data entry). Bare scalars, no
+/// `@relation`: an observation stands on its own even if the PurchaseOrder
+/// or Supplier it cites is later deleted, the same "erasure the ledger
+/// cannot obey" shape this document set already applies elsewhere.
+model SupplierLeadTimeObservation {
+  id              String   @id @default(cuid())
+  supplierId      String
+  purchaseOrderId String
+  observedDays    Int
+  createdAt       DateTime @default(now())
+
+  @@index([supplierId, createdAt])
+}

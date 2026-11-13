@@ -12,43 +12,53 @@
  */
 :root {
   /*
-   * NEWAX ecosystem palette -- charcoal-black primary on a cream-white
-   * page. Every product in the ecosystem (Communicator, core-newax, nID,
-   * erp-1, ...) shares this same token set, this same glass recipe, and
-   * the same three-tier nav + breadcrumb shell (Layout.tsx). A product
-   * does not invent its own palette or spacing scale; it imports these.
+   * Intercom-inspired design tokens -- warm cream canvas, off-black ink,
+   * Fin Orange accent, sharp 4px geometry. Every product surface reads
+   * these custom properties instead of literal values, so a rebrand is
+   * an edit here, not a hunt through every page.
+   *
+   * Core palette mirrors Intercom's product UI:
+   *   Canvas cream (#faf9f6) -- warm off-white page background
+   *   Off-black (#111111) -- primary text and button backgrounds
+   *   Fin Orange (#ff5600) -- singular brand accent (AI / interactive)
+   *   Hairline (#dedbd6) -- warm oat borders and dividers
+   *   Linen (#f1eee9) -- secondary elevated surfaces
+   *
+   * Report palette for charts and data visualization:
+   *   Report Blue (#65b5ff), Report Green (#0bdf50), Report Red (#c41c1c),
+   *   Report Pink (#ff2067), Report Lime (#b3e01c), Report Orange (#fe4c02)
    */
-  --color-page: #faf8f3;
+  --color-page: #faf9f6;
   --color-surface: #ffffff;
-  --color-surface-glass: rgb(255 255 255 / 0.62);
-  --color-surface-glass-strong: rgb(255 255 255 / 0.82);
-  --color-border-glass: rgb(255 255 255 / 0.55);
-  /* border/ink-faint darkened to clear the WCAG 3:1 non-text floor against
-   * --color-page -- see src/theme.ts's neutral.200/300 comment. */
-  --color-border: #928f88;
-  --color-ink: #1c1917;
+  --color-surface-elevated: #f1eee9;
+  --color-surface-glass: rgb(255 255 255 / 0.72);
+  --color-surface-glass-strong: rgb(255 255 255 / 0.88);
+  --color-border-glass: rgb(255 255 255 / 0.6);
+  --color-border: #dedbd6;
+  --color-ink: #111111;
   --color-ink-muted: #57534e;
-  --color-ink-faint: #908b88;
+  --color-ink-faint: #928f88;
 
-  --color-accent: #1c1917;
-  --color-accent-hover: #0c0a09;
-  --color-accent-soft: #f5f3ef;
+  --color-accent: #ff5600;
+  --color-accent-hover: #e64e00;
+  --color-accent-soft: #fff0e6;
   --color-on-accent: #ffffff;
+  --color-accent-muted: rgba(255, 86, 0, 0.08);
 
-  --color-positive: #0f7a4d;
-  --color-negative: #b42318;
+  --color-positive: #0bdf50;
+  --color-negative: #c41c1c;
 
-  /* ---- Shape ---- */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  /* ---- Shape: Intercom uses sharp 4px radius universally ---- */
+  --radius-sm: 4px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
   --radius-pill: 9999px;
 
-  /* ---- Elevation: neutral-tinted, two-layer shadows per step ---- */
-  --elevation-raised: 0 1px 2px 0 rgb(16 24 40 / 0.04), 0 1px 3px 0 rgb(16 24 40 / 0.06);
-  --elevation-overlay: 0 4px 8px -2px rgb(16 24 40 / 0.06), 0 12px 24px -6px rgb(16 24 40 / 0.1);
-  --elevation-modal: 0 8px 16px -4px rgb(16 24 40 / 0.1), 0 24px 56px -12px rgb(16 24 40 / 0.22);
+  /* ---- Elevation: minimal shadows, depth through warm borders ---- */
+  --elevation-raised: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --elevation-overlay: 0 2px 8px -2px rgb(0 0 0 / 0.06), 0 8px 16px -4px rgb(0 0 0 / 0.08);
+  --elevation-modal: 0 8px 16px -4px rgb(0 0 0 / 0.1), 0 24px 48px -12px rgb(0 0 0 / 0.18);
 
   /* ---- Stacking layers (named, never a literal z-index in a component) ---- */
   --layer-sticky: 10;
@@ -64,9 +74,6 @@
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-decelerate: cubic-bezier(0.22, 0.61, 0.36, 1);
   --ease-settle: cubic-bezier(0.16, 1, 0.3, 1);
-
-  /* ---- Glass panel recipe ---- */
-  --glass-blur: 16px;
 }
 
 html {
@@ -75,44 +82,114 @@ html {
 
 body {
   background-color: var(--color-page);
-  background-image:
-    radial-gradient(60rem 36rem at 90% -10%, rgb(28 25 23 / 0.05), transparent 60%),
-    radial-gradient(50rem 30rem at -10% 20%, rgb(28 25 23 / 0.035), transparent 55%);
-  background-attachment: fixed;
   color: var(--color-ink);
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
 /*
- * Glass surfaces -- the one recipe every card, panel and nav in the product
- * uses. Translucent, blurred, a thin luminous border, a shallow shadow so
- * each pane reads as a separate sheet without competing with dense content.
+ * Intercom-style surfaces -- solid white cards with warm oat borders.
+ * Depth comes from border color, not glass-morphism or heavy shadows.
+ * Cards use sharp 4px radius matching Intercom's geometry.
  */
 .glass-panel {
-  background: var(--color-surface-glass);
-  backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
-  border: 1px solid var(--color-border-glass);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--elevation-raised);
 }
 
 .glass-panel-strong {
-  background: var(--color-surface-glass-strong);
-  backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
-  border: 1px solid var(--color-border-glass);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--elevation-overlay);
+  box-shadow: var(--elevation-raised);
 }
 
 .glass-card {
-  background: var(--color-surface-glass);
-  backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
-  border: 1px solid var(--color-border-glass);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: var(--elevation-raised);
-  transition: box-shadow var(--motion-normal) var(--ease-standard), transform var(--motion-fast) var(--ease-standard);
+  transition: box-shadow var(--motion-normal) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard);
+}
+
+.glass-card:hover {
+  border-color: var(--color-accent);
+  box-shadow: var(--elevation-overlay);
+}
+
+/*
+ * Intercom-style buttons -- sharp 4px radius, black primary, scale(1.1) hover.
+ * Primary buttons use off-black (#111111) background, never the accent color.
+ * Accent color is reserved for interactive states and AI branding.
+ */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-ink);
+  color: var(--color-on-accent);
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--color-ink);
+  cursor: pointer;
+  transition: transform var(--motion-fast) var(--ease-standard),
+              background var(--motion-fast) var(--ease-standard);
+}
+
+.btn-primary:hover {
+  transform: scale(1.05);
+  background: #000000;
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: transform var(--motion-fast) var(--ease-standard),
+              border-color var(--motion-fast) var(--ease-standard),
+              background var(--motion-fast) var(--ease-standard);
+}
+
+.btn-secondary:hover {
+  transform: scale(1.05);
+  border-color: var(--color-ink);
+  background: var(--color-page);
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-ink-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: color var(--motion-fast) var(--ease-standard),
+              background var(--motion-fast) var(--ease-standard);
+}
+
+.btn-ghost:hover {
+  color: var(--color-ink);
+  background: var(--color-page);
 }
 
 /* Transforms and opacity only -- never layout properties (left/top/width). */

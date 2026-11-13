@@ -1,0 +1,286 @@
+// Payroll: compensation rates, leave balances and pay runs
+// (docs/implementation/payroll/19-payroll.md, closing the gap
+// docs/erp-lenses/gap-38/38-gap-hr-payroll-no-posting-artifact-for-compe.md names).
+//
+// Every actor here is a User — same idiom as Expense.createdById,
+// BomRecipe.createdById, StockCount creator/assignee. GL posting
+// (PayRunLine -> JournalEntry on PayrollRunPosted) is additive: this module
+// works standalone with `accounting` disabled, same non-coupling every
+// other module's posting rule already demonstrates (R15).
+
+enum CompensationBasis {
+  MONTHLY
+  HOURLY
+  COMMISSION
+}
+
+/// One row per rate change, never updated in place — effectiveFrom is what
+/// lets a pay-run built for a past period read the rate actually in force
+/// on each of its days, not today's rate applied retroactively to a
+/// mid-period raise.
+model CompensationRate {
+  id            String            @id @default(cuid())
+  userId        String
+  basis         CompensationBasis
+  /// Paisa — MONTHLY: per month. HOURLY: per hour. COMMISSION: base salary;
+  /// commission itself is computed at pay-run build time (WO-19.2), not
+  /// stored here.
+  amountMinor   Int
+  effectiveFrom DateTime
+  /// Null = still in force. Set the moment a later row's effectiveFrom
+  /// begins, so a query never has to compute "the latest row before X".
+  effectiveTo   DateTime?
+  createdById   String?
+  createdAt     DateTime          @default(now())
+
+  user        User         @relation(fields: [userId], references: [id])
+  createdBy   User?        @relation("CompensationRateCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  payRunLines PayRunLine[]
+
+  @@index([userId, effectiveFrom])
+}
+
+enum LeaveKind {
+  ANNUAL
+  SICK
+  UNPAID
+  OTHER
+}
+
+model LeaveType {
+  id                String    @id @default(cuid())
+  key               String    @unique // "annual", "sick", "unpaid"
+  name              String
+  kind              LeaveKind
+  /// Days credited per accrual run (LeaveAccrualCron, WO-19.3). 0 for
+  /// UNPAID and OTHER, which are never accrued, only requested.
+  accrualDaysPerRun Float     @default(0)
+  isActive          Boolean   @default(true)
+
+  balances    LeaveBalance[]
+  requests    LeaveRequest[]
+  accrualRuns LeaveAccrualRun[]
+}
+
+/// One row per user per leave type — the running balance a request debits
+/// and an accrual run credits. Never derived on the fly from a sum of
+/// requests, so a balance is a fact a payslip can quote, not a report that
+/// might disagree with itself between two reads.
+model LeaveBalance {
+  id          String   @id @default(cuid())
+  userId      String
+  leaveTypeId String
+  /// Days, to 0.25 precision (half/quarter-day leave is real).
+  balance     Float    @default(0)
+  updatedAt   DateTime @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id])
+  leaveType LeaveType @relation(fields: [leaveTypeId], references: [id])
+
+  @@unique([userId, leaveTypeId])
+}
+
+/// Idempotency guard for LeaveAccrualCron (WO-19.3) — mirrors FinanceCron's
+/// own recurring-expense idempotency (WO-B.2): one row per (leaveTypeId,
+/// period) makes a re-run of the same period a no-op instead of a double
+/// credit.
+model LeaveAccrualRun {
+  id          String   @id @default(cuid())
+  leaveTypeId String
+  /// "2026-09" — the period this run credited.
+  period      String
+  ranAt       DateTime @default(now())
+
+  leaveType LeaveType @relation(fields: [leaveTypeId], references: [id])
+
+  @@unique([leaveTypeId, period])
+}
+
+enum LeaveRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model LeaveRequest {
+  id           String             @id @default(cuid())
+  userId       String
+  leaveTypeId  String
+  startDate    DateTime
+  endDate      DateTime
+  /// Inclusive day count, half-days allowed — computed at submit time, not
+  /// re-derived from startDate/endDate later, so an approved request's
+  /// cost cannot silently drift if a leave-type's working-day calendar
+  /// changes.
+  days         Float
+  reason       String?
+  status       LeaveRequestStatus @default(PENDING)
+  decidedById  String?
+  decidedAt    DateTime?
+  decisionNote String?
+  createdAt    DateTime           @default(now())
+
+  user      User      @relation("LeaveRequestUser", fields: [userId], references: [id])
+  leaveType LeaveType @relation(fields: [leaveTypeId], references: [id])
+  decidedBy User?     @relation("LeaveRequestDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+}
+
+enum PayRunStatus {
+  DRAFT
+  APPROVED
+  POSTED
+}
+
+/// The pay-run document (erp-lenses/38: "the pay run is a document, not a
+/// report"). scopeLevel/originNodeId follow Expense's own precedent
+/// (WO-23.3, ADR-021) — payroll is recorded at whichever tier employs the
+/// staff, defaulting to BRAND.
+model PayRun {
+  id           String       @id @default(cuid())
+  number       String       @unique // PayRunNumberCounter, "PR-2026-0001"
+  periodStart  DateTime
+  periodEnd    DateTime
+  status       PayRunStatus @default(DRAFT)
+  scopeLevel   ScopeLevel   @default(BRAND)
+  originNodeId String?
+  approvedById String?
+  approvedAt   DateTime?
+  postedAt     DateTime?
+  createdById  String?
+  createdAt    DateTime     @default(now())
+
+  lines       PayRunLine[]
+  adjustments PayRunAdjustment[]
+  approvedBy  User?              @relation("PayRunApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  createdBy   User?              @relation("PayRunCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([status, periodStart])
+}
+
+/// One line per employee per run. Every money field is paisa, computed once
+/// at build time and frozen — re-running the builder on a DRAFT run
+/// replaces its lines; nothing recomputes a line silently after APPROVED.
+model PayRunLine {
+  id                 String @id @default(cuid())
+  payRunId           String
+  userId             String
+  /// The CompensationRate row this line's gross was computed from —
+  /// traceable, not a copied scalar with no source.
+  compensationRateId String
+  grossMinor         Int
+  /// Days of UNPAID leave in this period, and the paisa deducted for them —
+  /// both zero for someone who took none.
+  unpaidLeaveDays    Float  @default(0)
+  unpaidLeaveMinor   Int    @default(0)
+  /// Itemised statutory deductions, e.g. [{"code":"TAX","amountMinor":...}].
+  /// Sums to deductionsMinor; not its own table yet (19.1's note in
+  /// 19-payroll.md) because no jurisdiction-specific rule has been
+  /// requested — a JSON line-item bag is honest about that, a hardcoded tax
+  /// bracket would not be.
+  deductions         Json
+  deductionsMinor    Int    @default(0)
+  netMinor           Int
+  /// Which `PayrollTaxBracket.version` produced this line's TAX deduction —
+  /// null for a line calculated before brackets were ever configured, or
+  /// with no tax bracket in effect. Never recomputed after the fact: a
+  /// later `setBrackets` call starts a new version and leaves this alone.
+  taxBracketVersion  Int?
+
+  payRun           PayRun           @relation(fields: [payRunId], references: [id])
+  user             User             @relation(fields: [userId], references: [id])
+  compensationRate CompensationRate @relation(fields: [compensationRateId], references: [id])
+
+  @@unique([payRunId, userId])
+}
+
+enum PayRunAdjustmentReason {
+  OVERPAYMENT
+  UNDERPAYMENT
+  CORRECTION
+}
+
+/// erp-lenses/38's "the overpayment has no way back": a line-level
+/// correction keyed to the original PayRun, postable in the CURRENT open
+/// period even when the original run's period is CLOSED — never a
+/// full-entry reversal of the whole run for one employee's error (WO-19.5).
+model PayRunAdjustment {
+  id          String                 @id @default(cuid())
+  payRunId    String
+  userId      String
+  reason      PayRunAdjustmentReason
+  /// Positive always; sign is implied by `reason` (OVERPAYMENT recovers
+  /// money, UNDERPAYMENT/CORRECTION pays more), never a signed amount a
+  /// reader has to interpret.
+  amountMinor Int
+  note        String
+  createdById String?
+  createdAt   DateTime               @default(now())
+
+  payRun    PayRun @relation(fields: [payRunId], references: [id])
+  user      User   @relation(fields: [userId], references: [id])
+  createdBy User?  @relation("PayRunAdjustmentCreator", fields: [createdById], references: [id], onDelete: SetNull)
+}
+
+/// Ecosystem audit 2026-10-29 (merged from @newaxhq/payroll's
+/// ProgressiveTaxEngine): the progressive tax schedule PayRunService.build()
+/// withholds against. One row per bracket, `baseTaxMinor` (cumulative tax
+/// from lower brackets) recomputed at read time rather than stored, so
+/// editing one bracket's rate can never leave a stale cumulative figure on
+/// the brackets above it. Empty table = no brackets = $0 withheld, the same
+/// "not modelled" behaviour 19-payroll.md shipped with — configuring this is
+/// opt-in, not a surprise deduction on an existing deployment.
+model PayrollTaxBracket {
+  id           String   @id @default(cuid())
+  /// Paisa. The top bracket's row has ceilingMinor = null (open-ended).
+  floorMinor   Int
+  ceilingMinor Int?
+  /// Basis points, e.g. 1000 = 10.00%.
+  rateBps      Int
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  /// Ecosystem audit 2026-10-30: `setBrackets` replaces the active schedule
+  /// by deactivating this version's rows and inserting the next version's,
+  /// never deleting — a `PayRunLine.taxBracketVersion` written at
+  /// calculation time can always be joined back to the exact rates that
+  /// produced it, even after a later edit.
+  version      Int      @default(1)
+
+  @@index([isActive, floorMinor])
+  @@index([version])
+}
+
+enum PayrollBankAccountType {
+  CHECKING
+  SAVINGS
+}
+
+/// Ecosystem audit 2026-10-29 (merged from @newaxhq/payroll's
+/// BankFileGenerator): one disbursement account per employee, used to build
+/// a NACHA/SEPA/BACS payment file for a POSTED pay run. Every field but
+/// `userId` is optional because the three formats need different ones (ACH
+/// wants routingNumberOrSortCode + accountNumber, SEPA wants iban) — which
+/// fields are required is validated at file-generation time, against the
+/// format actually requested, not here.
+model PayrollBankAccount {
+  id                     String                  @id @default(cuid())
+  userId                 String                  @unique
+  routingNumberOrSortCode String?
+  accountNumber          String?
+  iban                   String?
+  bic                    String?
+  accountType            PayrollBankAccountType?
+  updatedAt              DateTime                @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+/// The eighth document-number counter (document-prefix.ts), same
+/// INSERT ... ON CONFLICT ... RETURNING shape as the other seven
+/// (TransferNumberCounter's own year/counter columns, named identically).
+model PayRunNumberCounter {
+  year    Int @id
+  counter Int @default(0)
+}

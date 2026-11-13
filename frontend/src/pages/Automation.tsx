@@ -268,7 +268,7 @@ export function Automation() {
           <button
             onClick={handleSeedDefaults}
             disabled={seeding}
-            className="flex items-center gap-1.5 rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-2 text-xs font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-sm disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-sm disabled:opacity-50"
             title="Install 11 standard WhatsApp automations in one click"
           >
             {seeding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4 text-amber-500" />}
@@ -277,7 +277,7 @@ export function Automation() {
           <button
             onClick={handleRunNudges}
             disabled={runningNudges}
-            className="flex items-center gap-1.5 rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-2 text-xs font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-sm disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-sm disabled:opacity-50"
             title="Check for conversations nearing the 24h Meta session window cutoff"
           >
             {runningNudges ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clock className="h-4 w-4" />}
@@ -285,14 +285,14 @@ export function Automation() {
           </button>
           <button
             onClick={() => setShowTester((v) => !v)}
-            className="flex items-center gap-1.5 rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-2 text-xs font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-sm"
+            className="flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-sm"
           >
             <FlaskConical className="h-4 w-4 text-indigo-600" />
             <span>{showTester ? 'Hide Simulator' : 'Test Simulator'}</span>
           </button>
           <button
             onClick={() => setShowForm((v) => !v)}
-            className="flex items-center gap-1.5 rounded-md bg-[var(--color-accent)] px-3 py-2 text-xs font-medium text-white hover:bg-[var(--color-accent-hover)] shadow-sm"
+            className="flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-3 py-2 text-xs font-medium text-white hover:bg-[var(--color-accent-hover)] shadow-sm"
           >
             {showForm ? (
               <span>Cancel</span>
@@ -308,32 +308,32 @@ export function Automation() {
 
       {/* Alert Notices */}
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex justify-between items-center">
+        <div className="rounded-[var(--radius-sm)] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex justify-between items-center">
           <span>{error}</span>
           <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700"><X className="h-4 w-4" /></button>
         </div>
       )}
       {success && (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 flex justify-between items-center">
+        <div className="rounded-[var(--radius-sm)] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 flex justify-between items-center">
           <span>{success}</span>
-          <button onClick={() => setSuccess(null)} className="text-emerald-500 hover:text-emerald-700"><X className="h-4 w-4" /></button>
+          <button onClick={() => setSuccess(null)} className="text-emerald-500 hover:text-[var(--color-accent)]"><X className="h-4 w-4" /></button>
         </div>
       )}
 
       {/* Stats Summary Cards */}
       {stats && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
             <p className="text-xs font-medium text-[var(--color-ink-muted)]">Active Rules</p>
             <p className="mt-1 text-2xl font-bold text-[var(--color-ink)]">
               {stats.activeRules ?? 0} <span className="text-xs text-[var(--color-ink-faint)] font-normal">/ {stats.totalRules ?? 0}</span>
             </p>
           </div>
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
             <p className="text-xs font-medium text-[var(--color-ink-muted)]">Total Executions</p>
             <p className="mt-1 text-2xl font-bold text-[var(--color-ink)]">{(stats.totalExecutions ?? 0).toLocaleString()}</p>
           </div>
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
             <p className="text-xs font-medium text-[var(--color-ink-muted)]">Avg CSAT Rating</p>
             <div className="mt-1 flex items-center gap-1.5 text-2xl font-bold text-amber-500">
               {stats.csatAverage ? (
@@ -346,7 +346,7 @@ export function Automation() {
               )}
             </div>
           </div>
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
             <p className="text-xs font-medium text-[var(--color-ink-muted)]">CSAT Feedback Count</p>
             <p className="mt-1 text-2xl font-bold text-[var(--color-ink)]">{stats.csatResponsesCount ?? 0}</p>
           </div>
@@ -355,7 +355,7 @@ export function Automation() {
 
       {/* Simulator / Tester Drawer */}
       {showTester && (
-        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-accent-soft)]/50 p-5 space-y-4">
+        <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-accent-soft)]/50 p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-indigo-900 flex items-center gap-2">
               <FlaskConical className="h-4 w-4 text-indigo-600" />
@@ -370,7 +370,7 @@ export function Automation() {
                 value={testInput}
                 onChange={(e) => setTestInput(e.target.value)}
                 placeholder='e.g. "menu", "pricing", "agent", "quote", "#bot"'
-                className="mt-1 w-full rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-sm"
+                className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-sm"
               />
             </div>
             <div>
@@ -379,14 +379,14 @@ export function Automation() {
                 value={testPayload}
                 onChange={(e) => setTestPayload(e.target.value)}
                 placeholder='e.g. "csat:5", "menu:services"'
-                className="mt-1 w-full rounded-md border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-sm"
+                className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-sm"
               />
             </div>
             <div className="sm:col-span-3">
               <button
                 type="submit"
                 disabled={testing || (!testInput && !testPayload)}
-                className="flex items-center gap-1.5 rounded-md bg-[var(--color-accent)] px-4 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-4 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
               >
                 {testing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 <span>{testing ? 'Testing...' : 'Simulate WhatsApp Rule'}</span>
@@ -395,21 +395,21 @@ export function Automation() {
           </form>
 
           {testResult && (
-            <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4 space-y-2 text-sm">
+            <div className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 space-y-2 text-sm">
               {testResult.matched ? (
                 <>
                   <div className="flex items-center gap-2 font-medium text-emerald-700">
                     <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                     <span>Matched Rule:</span>
                     <span className="font-semibold">{testResult.rule?.name || 'Automation Rule'}</span>
-                    <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-[var(--color-ink-muted)]">
+                    <span className="rounded bg-[var(--color-accent-muted)] px-2 py-0.5 text-xs text-[var(--color-ink-muted)]">
                       Priority: {testResult.rule?.priority ?? 0}
                     </span>
                   </div>
                   <div className="text-xs text-[var(--color-ink-muted)]">
                     <strong>Action:</strong> {testResult.actionType}
                   </div>
-                  <div className="rounded bg-[var(--color-page)] p-3 font-mono text-xs text-slate-800 whitespace-pre-wrap">
+                  <div className="rounded bg-[var(--color-page)] p-3 font-mono text-xs text-[var(--color-ink)] whitespace-pre-wrap">
                     {testResult.actionValue}
                   </div>
                 </>
@@ -431,7 +431,7 @@ export function Automation() {
 
       {/* New Rule Creation Form */}
       {showForm && (
-        <form onSubmit={submit} className="space-y-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
+        <form onSubmit={submit} className="space-y-4 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-[var(--color-ink)] border-b border-[var(--color-border)] pb-2">
             Create WhatsApp Automation Rule
           </h2>
@@ -443,7 +443,7 @@ export function Automation() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Services Catalog Menu"
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-sm"
               />
             </div>
             <div>
@@ -453,7 +453,7 @@ export function Automation() {
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
                 placeholder="e.g. services, menu, or agent"
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-sm"
               />
             </div>
             <div>
@@ -461,7 +461,7 @@ export function Automation() {
               <select
                 value={matchType}
                 onChange={(e) => setMatchType(e.target.value)}
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm bg-[var(--color-surface)]"
+                className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-sm bg-[var(--color-surface)]"
               >
                 <option value="contains">Contains Keyword</option>
                 <option value="exact">Exact Match</option>
@@ -477,7 +477,7 @@ export function Automation() {
               <select
                 value={actionType}
                 onChange={(e) => setActionType(e.target.value)}
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm bg-[var(--color-surface)]"
+                className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-sm bg-[var(--color-surface)]"
               >
                 <option value="auto_reply">Plain Text Reply</option>
                 <option value="interactive_buttons">Quick-Reply Buttons</option>
@@ -498,7 +498,7 @@ export function Automation() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Brief internal note about this automation"
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-sm"
               />
             </div>
             <div>
@@ -507,21 +507,21 @@ export function Automation() {
                 type="number"
                 value={priority}
                 onChange={(e) => setPriority(Number(e.target.value))}
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-sm"
               />
             </div>
           </div>
 
           {/* Action configuration details */}
           {actionType === 'interactive_buttons' ? (
-            <div className="space-y-3 rounded-md bg-[var(--color-page)] p-4 border border-[var(--color-border)]">
+            <div className="space-y-3 rounded-[var(--radius-sm)] bg-[var(--color-page)] p-4 border border-[var(--color-border)]">
               <label className="block text-xs font-medium text-[var(--color-ink)]">Message Body Text</label>
               <textarea
                 value={actionValue}
                 onChange={(e) => setActionValue(e.target.value)}
                 rows={2}
                 placeholder="Please select an option below:"
-                className="w-full rounded-md border border-slate-300 p-2 text-sm"
+                className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] p-2 text-sm"
               />
               <p className="text-xs font-medium text-[var(--color-ink-muted)]">Buttons (up to 3 for WhatsApp Cloud API):</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -529,19 +529,19 @@ export function Automation() {
                   value={button1}
                   onChange={(e) => setButton1(e.target.value)}
                   placeholder="Button 1 (e.g. Services)"
-                  className="rounded-md border border-slate-300 px-2.5 py-1.5 text-sm"
+                  className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2.5 py-1.5 text-sm"
                 />
                 <input
                   value={button2}
                   onChange={(e) => setButton2(e.target.value)}
                   placeholder="Button 2 (e.g. Pricing)"
-                  className="rounded-md border border-slate-300 px-2.5 py-1.5 text-sm"
+                  className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2.5 py-1.5 text-sm"
                 />
                 <input
                   value={button3}
                   onChange={(e) => setButton3(e.target.value)}
                   placeholder="Button 3 (e.g. Talk to Agent)"
-                  className="rounded-md border border-slate-300 px-2.5 py-1.5 text-sm"
+                  className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2.5 py-1.5 text-sm"
                 />
               </div>
             </div>
@@ -552,7 +552,7 @@ export function Automation() {
                 value={actionValue}
                 onChange={(e) => setActionValue(e.target.value)}
                 placeholder="Reason or instructions for live agent"
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-sm"
               />
             </div>
           ) : actionType === 'add_tag' || actionType === 'remove_tag' ? (
@@ -563,7 +563,7 @@ export function Automation() {
                 value={actionValue}
                 onChange={(e) => setActionValue(e.target.value)}
                 placeholder="e.g. high_intent, inquiry, vip"
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-sm"
               />
             </div>
           ) : actionType === 'send_csat' ? (
@@ -573,7 +573,7 @@ export function Automation() {
                 value={actionValue}
                 onChange={(e) => setActionValue(e.target.value)}
                 placeholder="How was your experience today?"
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-sm"
               />
             </div>
           ) : (
@@ -591,7 +591,7 @@ export function Automation() {
                     ? '{"body": "Book a demo now", "display_text": "Book Call", "url": "https://calendly.com"}'
                     : 'Reply text or configuration JSON'
                 }
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm font-mono text-xs"
+                className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-sm font-mono text-xs"
               />
             </div>
           )}
@@ -600,14 +600,14 @@ export function Automation() {
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="rounded-md border border-slate-300 px-4 py-1.5 text-sm font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)]"
+              className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-4 py-1.5 text-sm font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center gap-1.5 rounded-md bg-[var(--color-accent)] px-4 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-4 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               <span>{saving ? 'Saving...' : 'Save Rule'}</span>
@@ -623,7 +623,7 @@ export function Automation() {
           <span>Loading automation suite...</span>
         </div>
       ) : rules.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-[var(--color-surface)] p-12 text-center">
+        <div className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-12 text-center">
           <p className="text-sm font-medium text-[var(--color-ink)]">No automation rules configured yet.</p>
           <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
             Click below to instantly install all 11 battle-tested WhatsApp automations!
@@ -631,14 +631,14 @@ export function Automation() {
           <button
             onClick={handleSeedDefaults}
             disabled={seeding}
-            className="mt-4 flex items-center gap-1.5 mx-auto rounded-md bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] shadow disabled:opacity-50"
+            className="mt-4 flex items-center gap-1.5 mx-auto rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] shadow disabled:opacity-50"
           >
             {seeding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
             <span>{seeding ? 'Loading Pre-Built Rules...' : 'Load All Pre-Built WhatsApp Automations'}</span>
           </button>
         </div>
       ) : (
-        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm overflow-hidden">
+        <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm overflow-hidden">
           <div className="border-b border-[var(--color-border)] bg-[var(--color-page)]/75 px-4 py-3 flex items-center justify-between text-xs font-medium text-[var(--color-ink-muted)]">
             <span>Automation Rule ({rules.length})</span>
             <span>Priority & Status</span>
@@ -648,7 +648,7 @@ export function Automation() {
               const meta = ACTION_LABELS[r.actionType] ?? {
                 label: r.actionType,
                 icon: <Zap className="h-4 w-4" />,
-                color: 'bg-slate-100 text-[var(--color-ink)]',
+                color: 'bg-[var(--color-accent-muted)] text-[var(--color-ink)]',
               }
               return (
                 <li key={r.id} className="p-4 hover:bg-[var(--color-page)]/50 transition-colors">
@@ -661,7 +661,7 @@ export function Automation() {
                           <span>{meta.label}</span>
                         </span>
                         {r.executionCount ? (
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-[var(--color-ink-muted)] font-mono">
+                          <span className="rounded-full bg-[var(--color-accent-muted)] px-2 py-0.5 text-xs text-[var(--color-ink-muted)] font-mono">
                             {r.executionCount} fired
                           </span>
                         ) : null}
@@ -702,7 +702,7 @@ export function Automation() {
                         className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
                           r.isActive
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-slate-100 text-[var(--color-ink-muted)] border border-[var(--color-border)]'
+                            : 'bg-[var(--color-accent-muted)] text-[var(--color-ink-muted)] border border-[var(--color-border)]'
                         }`}
                       >
                         {r.isActive ? 'Active' : 'Paused'}

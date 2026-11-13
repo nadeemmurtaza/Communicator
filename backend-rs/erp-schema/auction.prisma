@@ -1,0 +1,388 @@
+// Auction app (launchpad-apps/234-auction-app.md, WO-234.1 to WO-234.5).
+// Sell — or, later, buy — by competitive bidding. This file holds what the
+// work orders so far read and write: the auction, its lots, the bidders, the
+// hash-chained bids, the encrypted proxy maxima and the result of a closed lot.
+// Deposits and adjustments (doc 234 §4) arrive in the work orders that first
+// use them, each as its own additive migration, so no table or column here
+// sits unused.
+
+enum AuctionType {
+  ENGLISH
+  SEALED_BID
+  REVERSE
+}
+
+enum AuctionStatus {
+  DRAFT
+  SCHEDULED
+  OPEN
+  CLOSING
+  CLOSED
+  SETTLED
+  CANCELLED
+}
+
+enum AuctionLotStatus {
+  PENDING
+  OPEN
+  CLOSED
+  WITHDRAWN
+}
+
+/// Who a bid came from. Only MANUAL is written today; PROXY_AUTO (WO-234.3)
+/// and SEALED (WO-234.7) exist so the column never needs altering.
+enum BidKind {
+  MANUAL
+  PROXY_AUTO
+  SEALED
+}
+
+/// Where a bidder stands in one auction (WO-234.5). PENDING is a registration
+/// waiting for staff; APPROVED may bid; DECLINED is a registration staff
+/// refused; SUSPENDED is a bidder staff stopped, with a reason either way. A
+/// declined registration is not a suspension: the person reads one sentence and
+/// staff read another history.
+enum BidderStatus {
+  PENDING
+  APPROVED
+  SUSPENDED
+  DECLINED
+}
+
+/// How an auction vets who may bid (WO-234.5). OPEN: any signed-in customer who
+/// does not run it, registered by their first bid. VERIFIED: a customer whose
+/// identity is verified is approved on registering, anyone else waits for
+/// staff. APPROVAL: everyone waits for staff. Chosen while the auction is a
+/// draft; frozen from `schedule()` like the bidding rules.
+enum AuctionRegistration {
+  OPEN
+  VERIFIED
+  APPROVAL
+}
+
+/// One auction event. The three scope columns exist from the first migration
+/// (doc 234 §4, "three silhouettes") and are written as soon as a deployment
+/// has them: `organizationId` is unset outside the Organization tier,
+/// `outletLocationId` names the selling location when the auction is run
+/// from one branch. Plain strings, not relations, matching how `Order` and
+/// `WalletAccount` already hold the same two ids.
+model Auction {
+  id               String              @id @default(cuid())
+  /// "AUC-2026-0001" — documentNumber(), node-prefixed on a replica so two
+  /// nodes never mint the same number (doc 234 §15, adoption test).
+  number           String              @unique
+  organizationId   String?
+  outletLocationId String?
+  /// Only ENGLISH can be created today; the other two values exist so the
+  /// column never needs altering when sealed-bid (WO-234.7) and reverse
+  /// (WO-234.8) arrive. AuctionService.create() refuses them until then.
+  type             AuctionType         @default(ENGLISH)
+  title            String
+  status           AuctionStatus       @default(DRAFT)
+  startsAt         DateTime
+  endsAt           DateTime
+  currency         String
+  terms            String?
+  /// The bidding rules this auction runs under, copied from Settings when it
+  /// is scheduled (`{ incrementBps, minStepMinor }` today) so a later change
+  /// to a Setting can never alter an auction bidders have already seen
+  /// (doc 234 §15, "rules are versioned per auction"). Null while a draft;
+  /// WO-234.3 adds the anti-snipe window here without a new column.
+  bidRules         Json?
+  /// Who may bid (WO-234.5). The column defaults to OPEN, the rule every
+  /// auction ran under before it existed; AuctionService.create() writes the
+  /// Setting `auction.registration_default` (APPROVAL) for a new one.
+  registration     AuctionRegistration @default(OPEN)
+  createdById      String
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  lots    AuctionLot[]
+  bidders Bidder[]
+
+  @@index([status, startsAt])
+  @@index([organizationId])
+  @@index([outletLocationId])
+}
+
+/// One thing being sold within an auction. Prices are integer minor units
+/// like every other money column here, held as BIGINT (WO-234.2) so a plot or
+/// a vehicle fits and no later bid column needs a type change. The service
+/// hands them out as plain numbers and caps them at MAX_PRICE_MINOR, the
+/// largest value whose arithmetic stays exact in a JavaScript number.
+model AuctionLot {
+  id                String           @id @default(cuid())
+  auctionId         String
+  /// Position within the auction, shown to bidders as "Lot 7".
+  lotNo             Int
+  title             String
+  description       String?
+  /// What backs the lot — a catalogue item, a stock lot, a housing-society
+  /// plot — as the provider names it. Filled through `AuctionLotSource`
+  /// (WO-234.11); null for a lot typed in by hand.
+  sourceType        String?
+  sourceId          String?
+  quantity          Int              @default(1)
+  startPriceMinor   BigInt
+  /// Hidden from bidders always (doc 234 §5.5, §15). Never part of any
+  /// public response.
+  reservePriceMinor BigInt?
+  /// The highest accepted bid, null until the first one. Changed only by
+  /// AuctionService.placeBid(), in the same statement that bumps `bidSeq`
+  /// (doc 234 §6, predicate-on-write).
+  currentBidMinor   BigInt?
+  leaderBidderId    String?
+  /// How many bids this lot has accepted; also the version the predicate
+  /// compares, so two writers who read the same value cannot both win.
+  bidSeq            Int              @default(0)
+  /// When bidding on this lot ends, once it has been moved: by anti-snipe
+  /// (WO-234.3) or by recovery after an outage. Null means "when the auction
+  /// ends", so a lot nobody has bid late on has one end, the auction's.
+  endsAt            DateTime?
+  /// Milliseconds of anti-snipe extension used so far, counted on its own so
+  /// that moving a lot's end after an outage never spends the cap that bounds
+  /// a bidding war.
+  extendedMs        Int              @default(0)
+  status            AuctionLotStatus @default(PENDING)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  auction     Auction             @relation(fields: [auctionId], references: [id])
+  bids        Bid[]
+  proxies     ProxyBid[]
+  result      AuctionResult?
+  settlements AuctionSettlement[]
+  images      AuctionLotImage[]
+
+  @@unique([auctionId, lotNo])
+  @@index([auctionId, status])
+}
+
+/// A photograph of a lot (WO-234.12). Changed only while the auction is a draft,
+/// like the rest of what bidders are told about the lot, and removed by its row,
+/// never by deleting a lot (lots are withdrawn). `order` is 0 for the cover and
+/// stays contiguous (the service renumbers on removal); it is deliberately not
+/// unique so a reorder can write its rows in any sequence. `storageKey` is the
+/// driver's key, kept so removing the photo can remove the object.
+model AuctionLotImage {
+  id         String   @id @default(cuid())
+  lotId      String
+  url        String
+  storageKey String
+  order      Int
+  createdAt  DateTime @default(now())
+
+  lot AuctionLot @relation(fields: [lotId], references: [id])
+
+  @@index([lotId, order])
+}
+
+/// A person bidding in one auction. Registered by themselves (WO-234.5) or by
+/// their first bid under an OPEN auction, and shown to everyone else only by
+/// `alias` ("Bidder 7"), never by name (doc 234 §15, "whose rows"). `userId` is
+/// the portal account that acts as this bidder, a plain string like the other
+/// cross-module ids in this file. The decision columns say who last decided and
+/// why (the reason is written for the bidder to read); the appeal is the
+/// bidder's one open question, cleared by the next decision, and the history of
+/// both is the audit trail. Strikes are about the person, so they live apart.
+model Bidder {
+  id             String       @id @default(cuid())
+  auctionId      String
+  userId         String
+  alias          String
+  status         BidderStatus @default(APPROVED)
+  decidedById    String?
+  decidedAt      DateTime?
+  decisionReason String?
+  appealText     String?
+  appealedAt     DateTime?
+  createdAt      DateTime     @default(now())
+
+  auction     Auction             @relation(fields: [auctionId], references: [id])
+  bids        Bid[]
+  proxies     ProxyBid[]
+  results     AuctionResult[]
+  strikes     BidderStrike[]
+  settlements AuctionSettlement[]
+
+  @@unique([auctionId, userId])
+  @@unique([auctionId, alias])
+  // The staff queue: one auction's bidders by status, oldest first.
+  @@index([auctionId, status, createdAt])
+}
+
+/// A mark against a person (WO-234.5), recorded by staff with a reason and,
+/// when there is one, the lot it concerns. Counted over a rolling window per
+/// `userId`, never stored as a number, so voiding one cannot leave a stale
+/// count. Never deleted: a mistaken strike is voided with a reason.
+model BidderStrike {
+  id           String    @id @default(cuid())
+  userId       String
+  bidderId     String
+  lotId        String?
+  reason       String
+  /// The staff member who recorded it. Null for a strike the system recorded
+  /// itself when a payment window passed (WO-234.6): then `settlementId` names
+  /// the settlement, and is unique so a retried sweep cannot strike twice.
+  recordedById String?
+  settlementId String?   @unique
+  recordedAt   DateTime  @default(now())
+  voidedAt     DateTime?
+  voidedById   String?
+  voidReason   String?
+
+  bidder Bidder @relation(fields: [bidderId], references: [id])
+
+  @@index([userId, recordedAt])
+  @@index([bidderId])
+}
+
+/// One accepted bid: a record, never edited and never deleted (doc 234 §5.2).
+/// A mistaken bid is answered by an adjustment document (WO-234.9), not an
+/// UPDATE. `seq` is assigned under the lot's lock, so it is strictly
+/// increasing per lot; `hash = SHA-256(prevHash ‖ canonical row)` makes an
+/// insert, an edit or a removal visible to anyone who re-walks the chain
+/// (doc 234 §6). Bid ids are random UUIDs, safe for two nodes to mint offline.
+model Bid {
+  id             String   @id @default(uuid())
+  lotId          String
+  bidderId       String
+  amountMinor    BigInt
+  kind           BidKind  @default(MANUAL)
+  seq            Int
+  /// The server's clock when the bid was accepted. The client's is never
+  /// consulted (doc 234 §5.1).
+  acceptedAt     DateTime
+  /// Chosen by the caller, one per intended bid, resent unchanged on a retry.
+  idempotencyKey String
+  /// The previous bid's `hash`; null only for `seq` 1.
+  prevHash       String?
+  hash           String
+
+  lot    AuctionLot @relation(fields: [lotId], references: [id])
+  bidder Bidder     @relation(fields: [bidderId], references: [id])
+
+  @@unique([lotId, seq])
+  @@unique([lotId, bidderId, idempotencyKey])
+  @@index([bidderId, acceptedAt])
+}
+
+/// A bidder's standing maximum on one lot (doc 234 §5.3): the system bids the
+/// least that keeps them ahead, up to this. Stored encrypted (AES-256-GCM,
+/// `APP_ENCRYPTION_KEY`) and never returned to anyone but its owner, because the
+/// number is the whole of the bidder's strategy; the database holds no readable
+/// copy. It can be raised and never lowered or withdrawn (doc 234 §5.6).
+model ProxyBid {
+  id             String   @id @default(cuid())
+  lotId          String
+  bidderId       String
+  /// `iv:authTag:ciphertext`, from `encryptSecret`.
+  maxCipher      String
+  /// The lot's `bidSeq` when this maximum was first placed. Of two equal
+  /// maxima the one placed after fewer bids is the earlier and wins (doc 234
+  /// §5.3); it is compared as `placedAfterSeq + 0.5`, so it sorts after the bid
+  /// with that `seq` and before the next.
+  placedAfterSeq Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  lot    AuctionLot @relation(fields: [lotId], references: [id])
+  bidder Bidder     @relation(fields: [bidderId], references: [id])
+
+  @@unique([lotId, bidderId])
+}
+
+/// How a lot ended (doc 234 §5.5). One row per lot, written once by the close
+/// job in the same transaction that closes the lot, so a second run cannot make
+/// a second result. The winner is `topBidderId` when `reserveMet`, nobody
+/// otherwise; a lot whose reserve was not met keeps its highest bidder here so
+/// staff can decide whether to make that bidder an offer, which is never
+/// automatic. The order and settlement columns arrive with WO-234.6.
+model AuctionResult {
+  id          String   @id @default(cuid())
+  lotId       String   @unique
+  topBidderId String?
+  topBidMinor BigInt?
+  reserveMet  Boolean
+  bidCount    Int
+  closedAt    DateTime
+
+  lot    AuctionLot @relation(fields: [lotId], references: [id])
+  bidder Bidder?    @relation(fields: [topBidderId], references: [id])
+}
+
+/// Where a settlement stands (WO-234.6, doc 234 §9). INVOICING: claimed, the
+/// order not yet made (a sweep retries one stuck here). INVOICE_FAILED: the
+/// order could not be made and `failureReason` says why; staff Replay it once
+/// that is fixed. AWAITING_PAYMENT: the order exists and the window is running.
+/// PAID: what was received reached what is owed. EXPIRED: the window passed
+/// unpaid; the order was cancelled and a strike recorded. CANCELLED: staff
+/// ended it, or its order was cancelled elsewhere; no strike.
+enum AuctionSettlementStatus {
+  INVOICING
+  INVOICE_FAILED
+  AWAITING_PAYMENT
+  PAID
+  EXPIRED
+  CANCELLED
+}
+
+/// What a winning lot owes: one row per lot per offer (WO-234.6). `attempt` 1 is
+/// the winner; a staff-made offer to the next highest bidder is attempt 2, and
+/// so on, so `(lotId, attempt)` is the "second copy of the write" guard (doc 234
+/// §15). Money is BIGINT minor units like every other auction column; the order
+/// it becomes is limited to 32 bits, which the sink reports as INVOICE_FAILED.
+model AuctionSettlement {
+  id             String                  @id @default(cuid())
+  lotId          String
+  auctionId      String
+  bidderId       String
+  /// The portal account that owes it, copied from the bidder at the moment of
+  /// the win: a Bidder is per auction, and the order and the strike follow the person.
+  userId         String
+  attempt        Int                     @default(1)
+  status         AuctionSettlementStatus @default(INVOICING)
+  currency       String
+  hammerMinor    BigInt
+  /// The buyer's premium rate this auction was scheduled with, in basis points,
+  /// and what it came to on this win (rounded half up, never negative).
+  premiumBps     Int                     @default(0)
+  premiumMinor   BigInt                  @default(0)
+  totalMinor     BigInt
+  /// Sum of the payments received against the order (AuctionSettlementPayment).
+  paidMinor      BigInt                  @default(0)
+  dueAt          DateTime
+  orderId        String?
+  orderNumber    String?
+  failureReason  String?
+  resolvedAt     DateTime?
+  resolvedById   String?
+  resolutionNote String?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  lot      AuctionLot                 @relation(fields: [lotId], references: [id])
+  bidder   Bidder                     @relation(fields: [bidderId], references: [id])
+  payments AuctionSettlementPayment[]
+
+  @@unique([lotId, attempt])
+  // The staff list: one auction's settlements by status, newest first.
+  @@index([auctionId, status, createdAt])
+  // The sweep: what is due, and what is stuck invoicing.
+  @@index([status, dueAt])
+  @@index([orderId])
+}
+
+/// One payment counted against a settlement (WO-234.6). `payment.succeeded`
+/// fires once per payment row and is delivered at least once, so the payment's
+/// own id is the key: the second delivery finds the row and adds nothing.
+model AuctionSettlementPayment {
+  paymentId    String   @id
+  settlementId String
+  amountMinor  BigInt
+  receivedAt   DateTime @default(now())
+
+  settlement AuctionSettlement @relation(fields: [settlementId], references: [id])
+
+  @@index([settlementId])
+}

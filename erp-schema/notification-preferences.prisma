@@ -1,0 +1,50 @@
+// Phase 7 WO-7.8 (docs/implementation/customer-portal-loyalty/07-customer-portal.md).
+//
+// Transactional categories (order confirmation, payment result) are not
+// represented here at all — they are not opt-out, so there is nothing to
+// store. Only the categories a customer may actually turn off exist as rows:
+// stitching progress, marketing, and back-in-stock alerts.
+//
+// `marketing` × `email` is the one cell this table does NOT own: it already
+// has a real, wired subscriber (`User.marketingEmailOptOut`, read by
+// `MarketingAutomationCron`'s abandoned-cart and review-request sends) that
+// predates this model. Duplicating that one cell into a second store would
+// create two sources of truth for the same fact, so `NotificationsService`
+// reads/writes that specific cell through the existing column and every
+// other (channel, category) pair through this table. Absence of a row means
+// enabled — a customer who has changed nothing needs no rows at all.
+//
+// SMS and WhatsApp have no wired `NotificationChannel` implementation yet
+// (doc 33, `docs/implementation/integrations-connectivity/33-sms-whatsapp-channels.md`,
+// is written but unbuilt) — their preference rows are honestly inert until
+// that channel exists, the same "absent collaborator" pattern this repo
+// already uses for JazzCash/Easypaisa before their credentials exist.
+
+enum NotificationPreferenceChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+  PUSH
+}
+
+enum NotificationPreferenceCategory {
+  STITCHING_PROGRESS
+  MARKETING
+  BACK_IN_STOCK
+}
+
+model NotificationPreference {
+  id       String                         @id @default(cuid())
+  userId   String
+  channel  NotificationPreferenceChannel
+  category NotificationPreferenceCategory
+  enabled  Boolean                        @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, channel, category])
+  @@index([userId])
+}

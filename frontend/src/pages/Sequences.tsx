@@ -76,7 +76,7 @@ export function Sequences() {
         </div>
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="shrink-0 flex items-center gap-1.5 rounded-md bg-[var(--color-accent)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-accent-hover)] shadow-xs"
+          className="shrink-0 flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-accent-hover)] shadow-none"
         >
           {showForm ? (
             <>
@@ -91,7 +91,7 @@ export function Sequences() {
       </div>
 
       {error && (
-        <div className="flex items-center justify-between rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="flex items-center justify-between rounded-[var(--radius-sm)] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           <span>{error}</span>
           <button onClick={() => setError(null)} className="font-bold">
             <X className="h-4 w-4" />
@@ -100,7 +100,7 @@ export function Sequences() {
       )}
 
       {success && (
-        <div className="flex items-center justify-between rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        <div className="flex items-center justify-between rounded-[var(--radius-sm)] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           <span className="flex items-center gap-1.5">
             <Check className="h-4 w-4 text-emerald-600" /> {success}
           </span>
@@ -113,7 +113,7 @@ export function Sequences() {
       {showForm && (
         <form
           onSubmit={handleCreateSequence}
-          className="space-y-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm"
+          className="space-y-4 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm"
         >
           <h2 className="text-sm font-bold text-[var(--color-ink)]">Configure new follow-up sequence</h2>
           <div>
@@ -125,7 +125,7 @@ export function Sequences() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Enterprise Re-Engagement Sequence"
-              className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm shadow-xs focus:border-indigo-500 focus:outline-none"
+              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-sm shadow-none focus:border-indigo-500 focus:outline-none"
             />
           </div>
           <div>
@@ -137,7 +137,7 @@ export function Sequences() {
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
               placeholder="Purpose and schedule of this follow-up sequence..."
-              className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm shadow-xs focus:border-indigo-500 focus:outline-none"
+              className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-sm shadow-none focus:border-indigo-500 focus:outline-none"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -146,7 +146,7 @@ export function Sequences() {
               id="is_active"
               checked={isActive}
               onChange={(e) => setIsActive(e.target.checked)}
-              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              className="rounded border-[var(--color-border)] text-indigo-600 focus:ring-indigo-500"
             />
             <label htmlFor="is_active" className="text-xs font-medium text-[var(--color-ink)] cursor-pointer">
               Active sequence (enrollments permitted)
@@ -156,14 +156,14 @@ export function Sequences() {
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)]"
+              className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center gap-1.5 rounded-md bg-[var(--color-accent)] px-4 py-1.5 text-xs font-bold text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50 shadow-xs"
+              className="flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-4 py-1.5 text-xs font-bold text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50 shadow-none"
             >
               <Check className="h-3.5 w-3.5" />
               {saving ? 'Saving...' : 'Save sequence'}
@@ -175,8 +175,8 @@ export function Sequences() {
       {sequences === null ? (
         <p className="text-sm text-[var(--color-ink-muted)]">Loading sequences...</p>
       ) : sequences.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-[var(--color-surface)] px-4 py-12 text-center text-sm text-[var(--color-ink-muted)]">
-          <GitBranch className="h-8 w-8 text-slate-400 mx-auto mb-2" />
+        <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-12 text-center text-sm text-[var(--color-ink-muted)]">
+          <GitBranch className="h-8 w-8 text-[var(--color-ink-faint)] mx-auto mb-2" />
           No sequences configured. Add one to enable automated follow-up cadences.
         </div>
       ) : (
@@ -184,14 +184,14 @@ export function Sequences() {
           {sequences.map((s) => (
             <li
               key={s.id}
-              className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xs overflow-hidden transition-colors"
+              className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-none overflow-hidden transition-colors"
             >
               <button
                 onClick={() => toggle(s.id)}
                 className="flex w-full items-center justify-between p-4 text-left hover:bg-[var(--color-page)]/50"
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] bg-indigo-50 text-indigo-600">
                     <GitBranch className="h-4 w-4" />
                   </div>
                   <div>
@@ -202,10 +202,10 @@ export function Sequences() {
                 <div className="flex items-center gap-3">
                   <span
                     className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                      s.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+                      s.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-[var(--color-accent-muted)] text-[var(--color-ink-muted)]'
                     }`}
                   >
-                    <span className={`h-1.5 w-1.5 rounded-full ${s.isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                    <span className={`h-1.5 w-1.5 rounded-full ${s.isActive ? 'bg-emerald-500' : 'bg-[var(--color-ink-faint)]'}`} />
                     {s.isActive ? 'Active' : 'Inactive'}
                   </span>
                   {openId === s.id ? (
@@ -222,7 +222,7 @@ export function Sequences() {
                   ) : stats.variants.length === 0 ? (
                     <p className="text-xs text-[var(--color-ink-muted)]">No enrollments yet recorded for this sequence.</p>
                   ) : (
-                    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden shadow-2xs">
+                    <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden shadow-2xs">
                       <table className="w-full text-xs">
                         <thead className="bg-[var(--color-page)]/70 text-left uppercase tracking-wider text-[var(--color-ink-faint)] border-b border-[var(--color-border)]">
                           <tr>

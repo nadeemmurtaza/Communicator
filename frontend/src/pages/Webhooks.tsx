@@ -141,7 +141,7 @@ export function Webhooks() {
             setEditingEndpoint(null)
             setShowAddModal(true)
           }}
-          className="inline-flex items-center gap-1.5 self-start rounded-md bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] px-3.5 py-1.5 text-xs font-medium text-white shadow-xs transition-colors"
+          className="inline-flex items-center gap-1.5 self-start rounded-[var(--radius-sm)] bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] px-3.5 py-1.5 text-xs font-medium text-white shadow-none transition-colors"
         >
           <Plus className="h-3.5 w-3.5" />
           <span>Add Webhook Endpoint</span>
@@ -153,21 +153,21 @@ export function Webhooks() {
 
       {/* KPI Stats Bar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 shadow-2xs">
+        <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 shadow-2xs">
           <span className="text-xs text-[var(--color-ink-muted)] font-medium">Active Endpoints</span>
           <div className="mt-1 text-xl font-bold text-[var(--color-ink)]">
             {endpoints.filter((e) => e.is_active).length} <span className="text-xs text-[var(--color-ink-faint)] font-normal">/ {endpoints.length}</span>
           </div>
         </div>
-        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 shadow-2xs">
+        <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 shadow-2xs">
           <span className="text-xs text-[var(--color-ink-muted)] font-medium">Deliveries Dispatched</span>
           <div className="mt-1 text-xl font-bold text-[var(--color-ink)]">{totalDelivered.toLocaleString()}</div>
         </div>
-        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 shadow-2xs">
+        <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 shadow-2xs">
           <span className="text-xs text-[var(--color-ink-muted)] font-medium">Delivery Success Rate</span>
           <div className="mt-1 text-xl font-bold text-emerald-600">{successRate}%</div>
         </div>
-        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 shadow-2xs">
+        <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 shadow-2xs">
           <span className="text-xs text-[var(--color-ink-muted)] font-medium">Signature Standard</span>
           <div className="mt-1 text-sm font-semibold text-[var(--color-accent)] bg-[var(--color-accent-soft)] px-2 py-0.5 rounded inline-block mt-1">
             HMAC-SHA256
@@ -215,7 +215,7 @@ export function Webhooks() {
           {loading ? (
             <p className="text-sm text-[var(--color-ink-muted)] py-8 text-center">Loading webhook endpoints…</p>
           ) : endpoints.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center bg-[var(--color-surface)]">
+            <div className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] p-8 text-center bg-[var(--color-surface)]">
               <p className="text-sm text-[var(--color-ink-muted)]">No outgoing webhooks configured yet.</p>
               <button
                 onClick={() => setShowAddModal(true)}
@@ -229,7 +229,7 @@ export function Webhooks() {
               {endpoints.map((ep) => (
                 <div
                   key={ep.id}
-                  className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-2xs flex flex-col justify-between hover:shadow-xs transition-shadow"
+                  className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-2xs flex flex-col justify-between hover:shadow-none transition-shadow"
                 >
                   <div>
                     <div className="flex items-start justify-between gap-3 mb-2">
@@ -240,7 +240,7 @@ export function Webhooks() {
                             className={`rounded-full px-2 py-0.5 text-3xs font-medium ${
                               ep.is_active
                                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : 'bg-slate-100 text-[var(--color-ink-muted)] border border-[var(--color-border)]'
+                                : 'bg-[var(--color-accent-muted)] text-[var(--color-ink-muted)] border border-[var(--color-border)]'
                             }`}
                           >
                             {ep.is_active ? 'Active' : 'Paused'}
@@ -258,7 +258,7 @@ export function Webhooks() {
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : ep.last_status_code && ep.last_status_code >= 400
                               ? 'bg-red-50 text-red-700 border border-red-200'
-                              : 'bg-slate-100 text-[var(--color-ink-muted)] border border-[var(--color-border)]'
+                              : 'bg-[var(--color-accent-muted)] text-[var(--color-ink-muted)] border border-[var(--color-border)]'
                         }`}
                       >
                         {ep.last_status_code ? `HTTP ${ep.last_status_code}` : 'Untested'}
@@ -274,7 +274,7 @@ export function Webhooks() {
                         {ep.events.map((ev) => (
                           <span
                             key={ev}
-                            className="rounded bg-slate-100 px-1.5 py-0.5 text-3xs font-mono text-[var(--color-ink)]"
+                            className="rounded bg-[var(--color-accent-muted)] px-1.5 py-0.5 text-3xs font-mono text-[var(--color-ink)]"
                           >
                             {ev}
                           </span>
@@ -299,7 +299,7 @@ export function Webhooks() {
                         </button>
                       </div>
                       <div className="text-right">
-                        <span>Delivered: <strong className="text-slate-800">{ep.total_delivered}</strong></span>
+                        <span>Delivered: <strong className="text-[var(--color-ink)]">{ep.total_delivered}</strong></span>
                         {ep.total_failed > 0 && (
                           <span className="ml-2 text-red-600">Failed: {ep.total_failed}</span>
                         )}
@@ -356,13 +356,13 @@ export function Webhooks() {
       {/* Tab 2: Delivery History & Logs */}
       {activeTab === 'deliveries' && (
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-[var(--color-surface)] p-3.5 rounded-lg border border-[var(--color-border)]">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-[var(--color-surface)] p-3.5 rounded-[var(--radius-md)] border border-[var(--color-border)]">
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-[var(--color-ink-muted)] uppercase tracking-wider">Endpoint:</span>
               <select
                 value={selectedEndpointId || ''}
                 onChange={(e) => setSelectedEndpointId(e.target.value || null)}
-                className="rounded-md border border-slate-300 px-3 py-1 text-xs text-slate-800"
+                className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1 text-xs text-[var(--color-ink)]"
               >
                 <option value="">All Endpoints ({deliveries.length} logs)</option>
                 {endpoints.map((ep) => (
@@ -383,11 +383,11 @@ export function Webhooks() {
           </div>
 
           {deliveries.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center bg-[var(--color-surface)]">
+            <div className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] p-8 text-center bg-[var(--color-surface)]">
               <p className="text-sm text-[var(--color-ink-muted)]">No delivery logs recorded yet.</p>
             </div>
           ) : (
-            <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden shadow-2xs">
+            <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden shadow-2xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-[var(--color-page)] border-b border-[var(--color-border)] text-[var(--color-ink-muted)] uppercase text-3xs font-semibold tracking-wider">
@@ -414,7 +414,7 @@ export function Webhooks() {
                             {d.status_code ? `HTTP ${d.status_code}` : 'TIMEOUT'}
                           </span>
                         </td>
-                        <td className="px-4 py-2.5 font-mono text-slate-800 font-medium">
+                        <td className="px-4 py-2.5 font-mono text-[var(--color-ink)] font-medium">
                           {d.event}
                         </td>
                         <td className="px-4 py-2.5 text-[var(--color-ink-muted)]">
@@ -435,7 +435,7 @@ export function Webhooks() {
                           </button>
                           <button
                             onClick={() => handleResend(d.id)}
-                            className="text-xs font-medium text-[var(--color-ink-muted)] hover:text-slate-800 inline-flex items-center gap-1"
+                            className="text-xs font-medium text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] inline-flex items-center gap-1"
                           >
                             <Repeat className="h-3 w-3 inline text-[var(--color-ink-muted)]" />
                             <span>Resend</span>
@@ -454,7 +454,7 @@ export function Webhooks() {
       {/* Tab 3: Catalog & HMAC Guide */}
       {activeTab === 'catalog' && (
         <div className="space-y-6">
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-2xs">
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-2xs">
             <h2 className="text-base font-semibold text-[var(--color-ink)] mb-2">Supported Event Types Catalog</h2>
             <p className="text-xs text-[var(--color-ink-muted)] mb-4">
               Your endpoints can subscribe to any subset of these events, or use <code className="text-[var(--color-accent)] font-bold">*</code> to receive all events.
@@ -462,9 +462,9 @@ export function Webhooks() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {catalog.map((item) => (
-                <div key={item.event} className="rounded-md border border-[var(--color-border)] bg-[var(--color-page)] p-3 text-xs">
+                <div key={item.event} className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-page)] p-3 text-xs">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-mono font-semibold text-slate-800">{item.event}</span>
+                    <span className="font-mono font-semibold text-[var(--color-ink)]">{item.event}</span>
                     <span className="rounded bg-[var(--color-accent-soft)] text-[var(--color-accent)] px-1.5 py-0.5 text-3xs font-medium border border-indigo-100">
                       {item.category}
                     </span>
@@ -475,14 +475,14 @@ export function Webhooks() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-2xs">
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-2xs">
             <h2 className="text-base font-semibold text-[var(--color-ink)] mb-2">Payload Verification Guide (HMAC-SHA256)</h2>
             <p className="text-xs text-[var(--color-ink-muted)] mb-3">
-              Every webhook request includes an <code className="text-slate-800 font-mono">X-Communicator-Signature</code> header.
+              Every webhook request includes an <code className="text-[var(--color-ink)] font-mono">X-Communicator-Signature</code> header.
               Calculate the HMAC-SHA256 digest of the raw request body using your endpoint secret to verify authenticity.
             </p>
 
-            <div className="rounded-md bg-[var(--color-accent)] p-4 text-slate-100 font-mono text-2xs overflow-x-auto space-y-2">
+            <div className="rounded-[var(--radius-sm)] bg-[var(--color-accent)] p-4 text-[var(--color-surface)] font-mono text-2xs overflow-x-auto space-y-2">
               <div className="text-[var(--color-ink-faint)]"># Python Example (FastAPI / Flask)</div>
               <div>import hmac, hashlib</div>
               <div>expected_sig = &quot;sha256=&quot; + hmac.new(WEBHOOK_SECRET.encode(), raw_body, hashlib.sha256).hexdigest()</div>
@@ -603,7 +603,7 @@ function AddEditWebhookModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-accent)]/40 p-4 backdrop-blur-xs">
-      <div className="w-full max-w-lg rounded-xl bg-[var(--color-surface)] shadow-xl border border-[var(--color-border)] overflow-hidden max-h-[90vh] flex flex-col text-xs">
+      <div className="w-full max-w-lg rounded-[var(--radius-lg)] bg-[var(--color-surface)] shadow-xl border border-[var(--color-border)] overflow-hidden max-h-[90vh] flex flex-col text-xs">
         <div className="border-b border-[var(--color-border)] px-5 py-3.5 flex items-center justify-between bg-[var(--color-page)]">
           <h2 className="text-sm font-semibold text-[var(--color-ink)]">
             {endpoint ? 'Edit Webhook Endpoint' : 'Add Webhook Endpoint'}
@@ -620,7 +620,7 @@ function AddEditWebhookModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Data Warehouse Sync"
-              className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+              className="w-full rounded border border-[var(--color-border)] px-3 py-1.5 text-xs"
             />
           </div>
 
@@ -632,7 +632,7 @@ function AddEditWebhookModal({
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://api.company.com/webhooks/incoming"
-              className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+              className="w-full rounded border border-[var(--color-border)] px-3 py-1.5 text-xs"
             />
           </div>
 
@@ -655,17 +655,17 @@ function AddEditWebhookModal({
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 border border-[var(--color-border)] rounded-md p-3 max-h-36 overflow-y-auto bg-[var(--color-page)]/50">
+            <div className="grid grid-cols-2 gap-2 border border-[var(--color-border)] rounded-[var(--radius-sm)] p-3 max-h-36 overflow-y-auto bg-[var(--color-page)]/50">
               {catalog.map((item) => (
                 <label key={item.event} className="flex items-start gap-1.5 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={selectedEvents.includes(item.event)}
                     onChange={() => toggleEvent(item.event)}
-                    className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-[var(--color-accent)]"
+                    className="mt-0.5 h-3.5 w-3.5 rounded border-[var(--color-border)] text-[var(--color-accent)]"
                   />
                   <div className="min-w-0">
-                    <span className="font-mono text-3xs text-slate-800 block truncate">{item.event}</span>
+                    <span className="font-mono text-3xs text-[var(--color-ink)] block truncate">{item.event}</span>
                   </div>
                 </label>
               ))}
@@ -681,19 +681,19 @@ function AddEditWebhookModal({
                 placeholder="Header Name (e.g. Authorization)"
                 value={headerKey}
                 onChange={(e) => setHeaderKey(e.target.value)}
-                className="flex-1 rounded border border-slate-300 px-2 py-1 text-2xs"
+                className="flex-1 rounded border border-[var(--color-border)] px-2 py-1 text-2xs"
               />
               <input
                 type="text"
                 placeholder="Value (e.g. Bearer token)"
                 value={headerVal}
                 onChange={(e) => setHeaderVal(e.target.value)}
-                className="flex-1 rounded border border-slate-300 px-2 py-1 text-2xs"
+                className="flex-1 rounded border border-[var(--color-border)] px-2 py-1 text-2xs"
               />
               <button
                 type="button"
                 onClick={handleAddHeader}
-                className="rounded bg-slate-100 hover:bg-slate-200 px-2.5 py-1 text-2xs font-medium text-[var(--color-ink)]"
+                className="rounded bg-[var(--color-accent-muted)] hover:bg-[var(--color-border)] px-2.5 py-1 text-2xs font-medium text-[var(--color-ink)]"
               >
                 + Add
               </button>
@@ -718,7 +718,7 @@ function AddEditWebhookModal({
           </div>
 
           {endpoint && (
-            <div className="p-3 rounded-lg border border-indigo-200 bg-indigo-50/50 flex items-start gap-2.5">
+            <div className="p-3 rounded-[var(--radius-md)] border border-indigo-200 bg-indigo-50/50 flex items-start gap-2.5">
               <KeyRound className="h-4 w-4 text-indigo-600 shrink-0 mt-0.5" />
               <div className="flex-1">
                 <label className="flex items-center gap-2 cursor-pointer font-medium text-indigo-900">
@@ -747,7 +747,7 @@ function AddEditWebhookModal({
                 value={customSecret}
                 onChange={(e) => setCustomSecret(e.target.value)}
                 placeholder="Leave blank to auto-generate high-entropy secret"
-                className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
+                className="w-full rounded border border-[var(--color-border)] px-3 py-1.5 text-xs"
               />
             </div>
           )}
@@ -761,7 +761,7 @@ function AddEditWebhookModal({
                 max={5}
                 value={retryCount}
                 onChange={(e) => setRetryCount(Number(e.target.value))}
-                className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                className="w-full rounded border border-[var(--color-border)] px-2 py-1 text-xs"
               />
             </div>
             <div>
@@ -772,7 +772,7 @@ function AddEditWebhookModal({
                 max={30}
                 value={timeoutSeconds}
                 onChange={(e) => setTimeoutSeconds(Number(e.target.value))}
-                className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                className="w-full rounded border border-[var(--color-border)] px-2 py-1 text-xs"
               />
             </div>
           </div>
@@ -782,7 +782,7 @@ function AddEditWebhookModal({
               type="checkbox"
               checked={isActive}
               onChange={(e) => setIsActive(e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-[var(--color-accent)]"
+              className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-accent)]"
             />
             <span>Active (Receive real-time event dispatches)</span>
           </label>
@@ -791,7 +791,7 @@ function AddEditWebhookModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded border border-slate-300 px-3 py-1.5 text-[var(--color-ink)] hover:bg-[var(--color-page)]"
+              className="rounded border border-[var(--color-border)] px-3 py-1.5 text-[var(--color-ink)] hover:bg-[var(--color-page)]"
             >
               Cancel
             </button>
@@ -818,7 +818,7 @@ function InspectPayloadModal({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-accent)]/40 p-4 backdrop-blur-xs">
-      <div className="w-full max-w-xl rounded-xl bg-[var(--color-surface)] shadow-xl border border-[var(--color-border)] overflow-hidden max-h-[90vh] flex flex-col text-xs">
+      <div className="w-full max-w-xl rounded-[var(--radius-lg)] bg-[var(--color-surface)] shadow-xl border border-[var(--color-border)] overflow-hidden max-h-[90vh] flex flex-col text-xs">
         <div className="border-b border-[var(--color-border)] px-5 py-3.5 flex items-center justify-between bg-[var(--color-page)]">
           <div>
             <h3 className="text-sm font-semibold text-[var(--color-ink)]">
@@ -830,7 +830,7 @@ function InspectPayloadModal({
         </div>
 
         <div className="p-5 space-y-4 overflow-y-auto flex-1">
-          <div className="grid grid-cols-3 gap-2 bg-[var(--color-page)] p-3 rounded-md border border-[var(--color-border)]">
+          <div className="grid grid-cols-3 gap-2 bg-[var(--color-page)] p-3 rounded-[var(--radius-sm)] border border-[var(--color-border)]">
             <div>
               <span className="text-3xs text-[var(--color-ink-faint)] uppercase font-semibold block">Status</span>
               <span className={`font-bold ${log.status_code >= 200 && log.status_code < 300 ? 'text-emerald-600' : 'text-red-600'}`}>
@@ -839,23 +839,23 @@ function InspectPayloadModal({
             </div>
             <div>
               <span className="text-3xs text-[var(--color-ink-faint)] uppercase font-semibold block">Duration</span>
-              <span className="font-semibold text-slate-800">{log.duration_ms}ms</span>
+              <span className="font-semibold text-[var(--color-ink)]">{log.duration_ms}ms</span>
             </div>
             <div>
               <span className="text-3xs text-[var(--color-ink-faint)] uppercase font-semibold block">Attempt</span>
-              <span className="font-semibold text-slate-800">#{log.attempt}</span>
+              <span className="font-semibold text-[var(--color-ink)]">#{log.attempt}</span>
             </div>
           </div>
 
           <div>
-            <h4 className="font-semibold text-slate-800 mb-1">Dispatched JSON Payload</h4>
+            <h4 className="font-semibold text-[var(--color-ink)] mb-1">Dispatched JSON Payload</h4>
             <pre className="rounded bg-[var(--color-accent)] p-3 text-emerald-400 font-mono text-2xs overflow-x-auto max-h-52">
               {JSON.stringify(log.payload, null, 2)}
             </pre>
           </div>
 
           <div>
-            <h4 className="font-semibold text-slate-800 mb-1">Response Body</h4>
+            <h4 className="font-semibold text-[var(--color-ink)] mb-1">Response Body</h4>
             <pre className="rounded bg-[var(--color-page)] border border-[var(--color-border)] p-3 text-[var(--color-ink)] font-mono text-2xs overflow-x-auto max-h-36">
               {log.response_body || log.error_message || '(Empty response body)'}
             </pre>
@@ -880,5 +880,5 @@ function Banner({ tone, children }: { tone: 'error' | 'success'; children: React
     tone === 'error'
       ? 'border-red-200 bg-red-50 text-red-700'
       : 'border-emerald-200 bg-emerald-50 text-emerald-700'
-  return <div className={`rounded-md border px-4 py-2.5 text-xs ${cls}`}>{children}</div>
+  return <div className={`rounded-[var(--radius-sm)] border px-4 py-2.5 text-xs ${cls}`}>{children}</div>
 }

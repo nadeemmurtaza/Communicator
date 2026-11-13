@@ -591,7 +591,7 @@ async fn http_post_form(
 fn truncate(text: &str) -> String {
     let trimmed = text.trim();
     if trimmed.len() > 400 {
-        format!("{}…[truncated]", &trimmed[..400])
+        format!("{}—[truncated]", &trimmed[..400])
     } else {
         trimmed.to_string()
     }
@@ -4380,6 +4380,662 @@ pub async fn send_line_test_message(
 
 pub async fn list_line_events(State(state): State<AppState>) -> impl IntoResponse {
     match query_channel_events(&state.db, &["line"]).await {
+        Ok(events) => Json(events).into_response(),
+        Err(err) => read_failure_response("messages", MESSAGE_EVENTS_QUERY, &err),
+    }
+}
+
+// ---------------------------------------------------------
+// 6b. Discord
+// ---------------------------------------------------------
+
+pub async fn get_discord_channel(State(state): State<AppState>) -> Json<Value> {
+    let mut warnings: Vec<String> = Vec::new();
+    let (inbox, inbox_warning) = inbox_row_for_view(&state.db, &["discord"]).await;
+    if let Some(w) = inbox_warning {
+        warnings.push(w);
+    }
+    let creds = inbox.as_ref().map(|i| parse_json_obj(&i.credentials)).unwrap_or_default();
+    let token = cred(&creds, &["botToken", "bot_token"]);
+    let client_id = cred(&creds, &["clientId", "client_id", "applicationId", "application_id"]);
+
+    // Fetch bot profile from Discord API
+    let live = match &token {
+        Some(t) => Some(
+            reqwest::Client::new()
+                .get("https://discord.com/api/v10/@me")
+                .header("Authorization", format!("Bot {t}"))
+                .send()
+                .await,
+        ),
+        None => None,
+    };
+    let bot_profile = live
+        .as_ref()
+        .and_then(|r| r.as_ref().ok())
+        .and_then(|r| r.json::<serde_json::Value>().await.ok());
+    let live_error = live
+        .as_ref()
+        .and_then(|r| r.as_ref().err())
+        .map(|e| e.to_string());
+
+    let bot_username = bot_profile
+        .as_ref()
+        .and_then(|b| b.get("username").and_then(|v| v.as_str()))
+        .map(String::from);
+    let bot_discriminator = bot_profile
+        .as_ref()
+        .and_then(|b| b.get("discriminator").and_then(|v| v.as_str()))
+        .map(String::from);
+    let bot_avatar = bot_profile
+        .as_ref()
+        .and_then(|b| b.get("avatar").and_then(|v| v.as_str()))
+        .map(String::from);
+    let bot_id = bot_profile
+        .as_ref()
+        .and_then(|b| b.get("id").and_then(|v| v.as_str()))
+        .map(String::from);
+
+    // Load commands
+    let commands = sqlx::query(
+        "SELECT id, name, description, is_active FROM discord_commands WHERE organization_id = 'org-default' ORDER BY name"
+    )
+    .fetch_all(&state.db)
+    .await
+    .unwrap_or_default();
+    let commands_json: Vec<serde_json::Value> = commands
+        .iter()
+        .map(|row| {
+            json!({
+                "id": row.try_get::<String, _>(0).unwrap_or_default(),
+                "name": row.try_get::<String, _>(1).unwrap_or_default(),
+                "description": row.try_get::<String, _>(2).unwrap_or_default(),
+                "isActive": row.try_get::<bool, _>(3).unwrap_or(true),
+            })
+        })
+        .collect();
+
+    // Load settings
+    let settings_row = sqlx::query(
+        "SELECT auto_respond, greeting_message, away_message, allowed_channels, blocked_words, log_events \
+         FROM discord_settings WHERE organization_id = 'org-default' LIMIT 1"
+    )
+    .fetch_optional(&state.db)
+    .await
+    .ok()
+    .flatten();
+
+    let auto_respond = settings_row
+        .as_ref()
+        .and_then(|r| r.try_get::<bool, _>(0).ok())
+        .unwrap_or(true);
+    let greeting_message = settings_row
+        .as_ref()
+        .and_then(|r| r.try_get::<String, _>(1).ok())
+        .unwrap_or_else(|| "Hello! How can we help you today?".to_string());
+    let away_message = settings_row
+        .as_ref()
+        .and_then(|r| r.try_get::<String, _>(2).ok())
+        .unwrap_or_else(|| "We are currently away. We will respond when we return.".to_string());
+    let allowed_channels = settings_row
+        .as_ref()
+        .and_then(|r| r.try_get::<String, _>(3).ok())
+        .unwrap_or_else(|| "[]".to_string());
+    let blocked_words = settings_row
+        .as_ref()
+        .and_then(|r| r.try_get::<String, _>(4).ok())
+        .unwrap_or_else(|| "[]".to_string());
+    let log_events = settings_row
+        .as_ref()
+        .and_then(|r| r.try_get::<bool, _>(5).ok())
+        .unwrap_or(true);
+
+    let active = inbox.as_ref().map(|i| i.is_active).unwrap_or(false);
+    let configured = token.is_some() && client_id.is_some();
+
+    let callback_url = public_base_url(&state)
+        .as_ref()
+        .map(|host| format!("{host}/api/v1/webhooks/discord"));
+
+    Json(json!({
+        "channel": "discord",
+        "inbox": inbox.as_ref().map(|i| serialize_inbox(i)).unwrap_or(Value::Null),
+        "warnings": warnings,
+        "webhookConfig": {
+            "callbackUrl": value_or_null(callback_url.clone()),
+            "callbackUrlNote": if callback_url.is_some() { "" } else { "PUBLIC_URL is not configured." },
+            "interactionSecret": value_or_null(cred(&creds, &["interactionSecret", "interaction_secret"])),
+        },
+        "botProfile": {
+            "botToken": if token.is_some() { "————" } else { null },
+            "clientId": value_or_null(client_id.clone()),
+            "botUsername": value_or_null(bot_username),
+            "botDiscriminator": value_or_null(bot_discriminator),
+            "botAvatar": value_or_null(bot_avatar),
+            "botId": value_or_null(bot_id),
+            "source": if bot_profile.is_some() { "live /@me" } else { "stored credentials only" }
+        },
+        "commands": commands_json,
+        "settings": {
+            "autoRespond": auto_respond,
+            "greetingMessage": greeting_message,
+            "awayMessage": away_message,
+            "allowedChannels": allowed_channels,
+            "blockedWords": blocked_words,
+            "logEvents": log_events,
+        },
+        "health": {
+            "isConnected": bot_profile.is_some(),
+            "configured": configured,
+            "inboxActive": active,
+            "botId": value_or_null(bot_id),
+            "status": if bot_profile.is_some() { "CONNECTED" } else if configured { "UNVERIFIED" } else { "NOT_CONFIGURED" },
+            "statusLabel": if bot_profile.is_some() {
+                "Bot identity confirmed by Discord"
+            } else {
+                honest_label(active, configured)
+            },
+            "missingCredentials": if configured { vec![] } else { vec!["botToken", "clientId"] },
+            "connectionError": value_or_null(live_error),
+        }
+    }))
+}
+
+pub async fn update_discord_channel(
+    State(state): State<AppState>,
+    Json(payload): Json<serde_json::Value>,
+) -> impl IntoResponse {
+    let write = update_inbox_record(
+        &state.db,
+        &["discord"],
+        &payload,
+        &[
+            ("bot_token", "botToken"),
+            ("client_id", "clientId"),
+            ("application_id", "applicationId"),
+            ("interaction_secret", "interactionSecret"),
+        ],
+    )
+    .await;
+
+    // Update settings if provided
+    if let Some(settings) = payload.get("settings") {
+        if let Some(greeting) = settings.get("greetingMessage").and_then(|v| v.as_str()) {
+            let safe = greeting.replace('\'', "''");
+            let _ = sqlx::query(&format!(
+                "UPDATE discord_settings SET greeting_message = '{}', updated_at = (NOW()) WHERE organization_id = 'org-default'",
+                safe
+            ))
+            .execute(&state.db)
+            .await;
+        }
+        if let Some(away) = settings.get("awayMessage").and_then(|v| v.as_str()) {
+            let safe = away.replace('\'', "''");
+            let _ = sqlx::query(&format!(
+                "UPDATE discord_settings SET away_message = '{}', updated_at = (NOW()) WHERE organization_id = 'org-default'",
+                safe
+            ))
+            .execute(&state.db)
+            .await;
+        }
+        if let Some(auto) = settings.get("autoRespond").and_then(|v| v.as_bool()) {
+            let _ = sqlx::query(&format!(
+                "UPDATE discord_settings SET auto_respond = {}, updated_at = (NOW()) WHERE organization_id = 'org-default'",
+                if auto { 1 } else { 0 }
+            ))
+            .execute(&state.db)
+            .await;
+        }
+    }
+
+    write_response("discord", write, get_discord_channel(State(state)).await.0)
+}
+
+pub async fn verify_discord_connection(State(state): State<AppState>) -> impl IntoResponse {
+    let inbox = match inbox_row_checked(&state.db, &["discord"]).await {
+        Ok(v) => v,
+        Err(err) => return err_response(StatusCode::BAD_REQUEST, &err),
+    };
+    let creds = parse_json_obj(&inbox.credentials);
+    let token = match cred(&creds, &["botToken", "bot_token"]) {
+        Some(t) => t,
+        None => {
+            return err_response(
+                StatusCode::BAD_REQUEST,
+                "Discord bot token is not configured. Set botToken in inbox credentials.",
+            )
+        }
+    };
+
+    match reqwest::Client::new()
+        .get("https://discord.com/api/v10/@me")
+        .header("Authorization", format!("Bot {token}"))
+        .send()
+        .await
+    {
+        Ok(response) => {
+            let status = response.status();
+            if status.is_success() {
+                let body = response.json::<serde_json::Value>().await.unwrap_or(Value::Null);
+                Json(json!({
+                    "verified": true,
+                    "status": "CONNECTED",
+                    "bot": body,
+                    "message": "Discord bot connection verified successfully."
+                }))
+                .into_response()
+            } else {
+                let body = response.text().await.unwrap_or_default();
+                err_response(
+                    StatusCode::BAD_GATEWAY,
+                    &format!("Discord API returned HTTP {}: {}", status, body),
+                )
+            }
+        }
+        Err(err) => err_response(
+            StatusCode::BAD_GATEWAY,
+            &format!("Could not reach Discord API: {}", err),
+        ),
+    }
+}
+
+pub async fn send_discord_test_message(
+    State(state): State<AppState>,
+    Json(payload): Json<serde_json::Value>,
+) -> impl IntoResponse {
+    let inbox = match inbox_row_checked(&state.db, &["discord"]).await {
+        Ok(v) => v,
+        Err(err) => return err_response(StatusCode::BAD_REQUEST, &err),
+    };
+    let creds = parse_json_obj(&inbox.credentials);
+    let token = match cred(&creds, &["botToken", "bot_token"]) {
+        Some(t) => t,
+        None => {
+            return err_response(
+                StatusCode::BAD_REQUEST,
+                "Discord bot token is not configured.",
+            )
+        }
+    };
+    let channel_id = payload
+        .get("channelId")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    let message = payload
+        .get("message")
+        .and_then(|v| v.as_str())
+        .unwrap_or("Test message from Communicator Discord integration.");
+
+    if channel_id.is_empty() {
+        return err_response(StatusCode::BAD_REQUEST, "channelId is required.");
+    }
+
+    let url = format!("https://discord.com/api/v10/channels/{}/messages", channel_id);
+    match reqwest::Client::new()
+        .post(&url)
+        .header("Authorization", format!("Bot {token}"))
+        .json(&json!({ "content": message }))
+        .send()
+        .await
+    {
+        Ok(response) => {
+            let status = response.status();
+            if status.is_success() {
+                let body = response.json::<serde_json::Value>().await.unwrap_or(Value::Null);
+                Json(json!({
+                    "sent": true,
+                    "status": "SENT",
+                    "messageId": body.get("id").and_then(|v| v.as_str()),
+                    "channelId": channel_id,
+                    "providerResponse": body
+                }))
+                .into_response()
+            } else {
+                let body = response.text().await.unwrap_or_default();
+                err_response(
+                    StatusCode::BAD_GATEWAY,
+                    &format!("Discord API returned HTTP {}: {}", status, body),
+                )
+            }
+        }
+        Err(err) => err_response(
+            StatusCode::BAD_GATEWAY,
+            &format!("Could not reach Discord API: {}", err),
+        ),
+    }
+}
+
+pub async fn list_discord_events(State(state): State<AppState>) -> impl IntoResponse {
+    match query_channel_events(&state.db, &["discord"]).await {
+        Ok(events) => Json(events).into_response(),
+        Err(err) => read_failure_response("messages", MESSAGE_EVENTS_QUERY, &err),
+    }
+}
+
+// ---------------------------------------------------------
+// 6c. Slack
+// ---------------------------------------------------------
+
+pub async fn get_slack_channel(State(state): State<AppState>) -> Json<Value> {
+    let mut warnings: Vec<String> = Vec::new();
+    let (inbox, inbox_warning) = inbox_row_for_view(&state.db, &["slack"]).await;
+    if let Some(w) = inbox_warning {
+        warnings.push(w);
+    }
+    let creds = inbox.as_ref().map(|i| parse_json_obj(&i.credentials)).unwrap_or_default();
+    let bot_token = cred(&creds, &["botToken", "bot_token", "xoxb_token"]);
+    let app_token = cred(&creds, &["appToken", "app_token", "xapp_token"]);
+    let signing_secret = cred(&creds, &["signingSecret", "signing_secret"]);
+    let app_id = cred(&creds, &["appId", "app_id"]);
+
+    // Fetch bot info from Slack API
+    let live = match &bot_token {
+        Some(t) => Some(
+            reqwest::Client::new()
+                .get("https://slack.com/api/api.test")
+                .header("Authorization", format!("Bearer {t}"))
+                .send()
+                .await,
+        ),
+        None => None,
+    };
+    let api_test = live
+        .as_ref()
+        .and_then(|r| r.as_ref().ok())
+        .and_then(|r| r.json::<serde_json::Value>().await.ok());
+    let live_error = live
+        .as_ref()
+        .and_then(|r| r.as_ref().err())
+        .map(|e| e.to_string());
+
+    let bot_connected = api_test.as_ref().and_then(|v| v.get("ok")).and_then(|v| v.as_bool()).unwrap_or(false);
+    let bot_user_id = api_test
+        .as_ref()
+        .and_then(|v| v.get("user_id").and_then(|v| v.as_str()))
+        .map(String::from);
+
+    // Load commands
+    let commands = sqlx::query(
+        "SELECT id, name, description, is_active FROM slack_commands WHERE organization_id = 'org-default' ORDER BY name"
+    )
+    .fetch_all(&state.db)
+    .await
+    .unwrap_or_default();
+    let commands_json: Vec<serde_json::Value> = commands
+        .iter()
+        .map(|row| {
+            json!({
+                "id": row.try_get::<String, _>(0).unwrap_or_default(),
+                "name": row.try_get::<String, _>(1).unwrap_or_default(),
+                "description": row.try_get::<String, _>(2).unwrap_or_default(),
+                "isActive": row.try_get::<bool, _>(3).unwrap_or(true),
+            })
+        })
+        .collect();
+
+    // Load settings
+    let settings_row = sqlx::query(
+        "SELECT auto_respond, greeting_message, away_message, allowed_channels, blocked_words, log_events \
+         FROM slack_settings WHERE organization_id = 'org-default' LIMIT 1"
+    )
+    .fetch_optional(&state.db)
+    .await
+    .ok()
+    .flatten();
+
+    let auto_respond = settings_row
+        .as_ref()
+        .and_then(|r| r.try_get::<bool, _>(0).ok())
+        .unwrap_or(true);
+    let greeting_message = settings_row
+        .as_ref()
+        .and_then(|r| r.try_get::<String, _>(1).ok())
+        .unwrap_or_else(|| "Hello! How can we help you today?".to_string());
+    let away_message = settings_row
+        .as_ref()
+        .and_then(|r| r.try_get::<String, _>(2).ok())
+        .unwrap_or_else(|| "We are currently away. We will respond when we return.".to_string());
+    let allowed_channels = settings_row
+        .as_ref()
+        .and_then(|r| r.try_get::<String, _>(3).ok())
+        .unwrap_or_else(|| "[]".to_string());
+    let blocked_words = settings_row
+        .as_ref()
+        .and_then(|r| r.try_get::<String, _>(4).ok())
+        .unwrap_or_else(|| "[]".to_string());
+    let log_events = settings_row
+        .as_ref()
+        .and_then(|r| r.try_get::<bool, _>(5).ok())
+        .unwrap_or(true);
+
+    let active = inbox.as_ref().map(|i| i.is_active).unwrap_or(false);
+    let configured = bot_token.is_some() && signing_secret.is_some();
+
+    let callback_url = public_base_url(&state)
+        .as_ref()
+        .map(|host| format!("{host}/api/v1/webhooks/slack"));
+
+    Json(json!({
+        "channel": "slack",
+        "inbox": inbox.as_ref().map(|i| serialize_inbox(i)).unwrap_or(Value::Null),
+        "warnings": warnings,
+        "webhookConfig": {
+            "callbackUrl": value_or_null(callback_url.clone()),
+            "callbackUrlNote": if callback_url.is_some() { "" } else { "PUBLIC_URL is not configured." },
+            "signingSecret": value_or_null(signing_secret.clone()),
+        },
+        "botProfile": {
+            "botToken": if bot_token.is_some() { "••••" } else { null },
+            "appToken": value_or_null(app_token.clone()),
+            "appId": value_or_null(app_id.clone()),
+            "botUserId": value_or_null(bot_user_id),
+            "source": if bot_connected { "live api.test" } else { "stored credentials only" }
+        },
+        "commands": commands_json,
+        "settings": {
+            "autoRespond": auto_respond,
+            "greetingMessage": greeting_message,
+            "awayMessage": away_message,
+            "allowedChannels": allowed_channels,
+            "blockedWords": blocked_words,
+            "logEvents": log_events,
+        },
+        "health": {
+            "isConnected": bot_connected,
+            "configured": configured,
+            "inboxActive": active,
+            "botUserId": value_or_null(bot_user_id),
+            "status": if bot_connected { "CONNECTED" } else if configured { "UNVERIFIED" } else { "NOT_CONFIGURED" },
+            "statusLabel": if bot_connected {
+                "Bot connection confirmed by Slack API"
+            } else {
+                honest_label(active, configured)
+            },
+            "missingCredentials": if configured { vec![] } else { vec!["botToken", "signingSecret"] },
+            "connectionError": value_or_null(live_error),
+        }
+    }))
+}
+
+pub async fn update_slack_channel(
+    State(state): State<AppState>,
+    Json(payload): Json<serde_json::Value>,
+) -> impl IntoResponse {
+    let write = update_inbox_record(
+        &state.db,
+        &["slack"],
+        &payload,
+        &[
+            ("bot_token", "botToken"),
+            ("app_token", "appToken"),
+            ("signing_secret", "signingSecret"),
+            ("app_id", "appId"),
+        ],
+    )
+    .await;
+
+    // Update settings if provided
+    if let Some(settings) = payload.get("settings") {
+        if let Some(greeting) = settings.get("greetingMessage").and_then(|v| v.as_str()) {
+            let safe = greeting.replace('\'', "''");
+            let _ = sqlx::query(&format!(
+                "UPDATE slack_settings SET greeting_message = '{}', updated_at = (NOW()) WHERE organization_id = 'org-default'",
+                safe
+            ))
+            .execute(&state.db)
+            .await;
+        }
+        if let Some(away) = settings.get("awayMessage").and_then(|v| v.as_str()) {
+            let safe = away.replace('\'', "''");
+            let _ = sqlx::query(&format!(
+                "UPDATE slack_settings SET away_message = '{}', updated_at = (NOW()) WHERE organization_id = 'org-default'",
+                safe
+            ))
+            .execute(&state.db)
+            .await;
+        }
+        if let Some(auto) = settings.get("autoRespond").and_then(|v| v.as_bool()) {
+            let _ = sqlx::query(&format!(
+                "UPDATE slack_settings SET auto_respond = {}, updated_at = (NOW()) WHERE organization_id = 'org-default'",
+                if auto { 1 } else { 0 }
+            ))
+            .execute(&state.db)
+            .await;
+        }
+    }
+
+    write_response("slack", write, get_slack_channel(State(state)).await.0)
+}
+
+pub async fn verify_slack_connection(State(state): State<AppState>) -> impl IntoResponse {
+    let inbox = match inbox_row_checked(&state.db, &["slack"]).await {
+        Ok(v) => v,
+        Err(err) => return err_response(StatusCode::BAD_REQUEST, &err),
+    };
+    let creds = parse_json_obj(&inbox.credentials);
+    let bot_token = match cred(&creds, &["botToken", "bot_token", "xoxb_token"]) {
+        Some(t) => t,
+        None => {
+            return err_response(
+                StatusCode::BAD_REQUEST,
+                "Slack bot token is not configured. Set botToken in inbox credentials.",
+            )
+        }
+    };
+
+    match reqwest::Client::new()
+        .get("https://slack.com/api/api.test")
+        .header("Authorization", format!("Bearer {bot_token}"))
+        .send()
+        .await
+    {
+        Ok(response) => {
+            let status = response.status();
+            if status.is_success() {
+                let body = response.json::<serde_json::Value>().await.unwrap_or(Value::Null);
+                let ok = body.get("ok").and_then(|v| v.as_bool()).unwrap_or(false);
+                if ok {
+                    Json(json!({
+                        "verified": true,
+                        "status": "CONNECTED",
+                        "bot": body,
+                        "message": "Slack bot connection verified successfully."
+                    }))
+                    .into_response()
+                } else {
+                    err_response(StatusCode::BAD_GATEWAY, "Slack API returned ok=false.")
+                }
+            } else {
+                let body = response.text().await.unwrap_or_default();
+                err_response(
+                    StatusCode::BAD_GATEWAY,
+                    &format!("Slack API returned HTTP {}: {}", status, body),
+                )
+            }
+        }
+        Err(err) => err_response(
+            StatusCode::BAD_GATEWAY,
+            &format!("Could not reach Slack API: {}", err),
+        ),
+    }
+}
+
+pub async fn send_slack_test_message(
+    State(state): State<AppState>,
+    Json(payload): Json<serde_json::Value>,
+) -> impl IntoResponse {
+    let inbox = match inbox_row_checked(&state.db, &["slack"]).await {
+        Ok(v) => v,
+        Err(err) => return err_response(StatusCode::BAD_REQUEST, &err),
+    };
+    let creds = parse_json_obj(&inbox.credentials);
+    let bot_token = match cred(&creds, &["botToken", "bot_token", "xoxb_token"]) {
+        Some(t) => t,
+        None => {
+            return err_response(
+                StatusCode::BAD_REQUEST,
+                "Slack bot token is not configured.",
+            )
+        }
+    };
+    let channel_id = payload
+        .get("channelId")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    let message = payload
+        .get("message")
+        .and_then(|v| v.as_str())
+        .unwrap_or("Test message from Communicator Slack integration.");
+
+    if channel_id.is_empty() {
+        return err_response(StatusCode::BAD_REQUEST, "channelId is required.");
+    }
+
+    let form = serde_urlencoded::to_string([("channel", channel_id), ("text", message)])
+        .unwrap_or_default();
+    match reqwest::Client::new()
+        .post("https://slack.com/api/chat.postMessage")
+        .header("Authorization", format!("Bearer {bot_token}"))
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .body(form)
+        .send()
+        .await
+    {
+        Ok(response) => {
+            let status = response.status();
+            if status.is_success() {
+                let body = response.json::<serde_json::Value>().await.unwrap_or(Value::Null);
+                let ok = body.get("ok").and_then(|v| v.as_bool()).unwrap_or(false);
+                if ok {
+                    Json(json!({
+                        "sent": true,
+                        "status": "SENT",
+                        "timestamp": body.get("ts").and_then(|v| v.as_str()),
+                        "channelId": channel_id,
+                        "providerResponse": body
+                    }))
+                    .into_response()
+                } else {
+                    let err = body.get("error").and_then(|v| v.as_str()).unwrap_or("unknown");
+                    err_response(StatusCode::BAD_GATEWAY, &format!("Slack API error: {}", err))
+                }
+            } else {
+                let body = response.text().await.unwrap_or_default();
+                err_response(
+                    StatusCode::BAD_GATEWAY,
+                    &format!("Slack API returned HTTP {}: {}", status, body),
+                )
+            }
+        }
+        Err(err) => err_response(
+            StatusCode::BAD_GATEWAY,
+            &format!("Could not reach Slack API: {}", err),
+        ),
+    }
+}
+
+pub async fn list_slack_events(State(state): State<AppState>) -> impl IntoResponse {
+    match query_channel_events(&state.db, &["slack"]).await {
         Ok(events) => Json(events).into_response(),
         Err(err) => read_failure_response("messages", MESSAGE_EVENTS_QUERY, &err),
     }

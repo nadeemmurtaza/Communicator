@@ -1,0 +1,18 @@
+﻿cargo :     Checking backend-rs v0.1.0 (C:\Users\nommi\Downloads\scraper\communicator\backend-rs)
+At line:1 char:74
++ ... \Downloads\scraper\communicator\backend-rs"; cargo check 2>&1 | Out-F ...
++                                                  ~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Checking ba...tor\backend-rs):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+warning: unused variable: `q`
+    --> src\routes\brands.rs:1596:17
+     |
+1596 |     if let Some(ref q) = params.q {
+     |                 ^^^^^ help: if this is intentional, prefix it with an underscore: `_q`
+     |
+     = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: `backend-rs` (bin "backend-rs") generated 1 warning (run `cargo fix --bin "backend-rs" -p backend-rs` to 
+apply 1 suggestion)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2m 52s

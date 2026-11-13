@@ -1,0 +1,133 @@
+// The org tree: offices, regions, departments — whatever shape a client's
+// own org chart takes (hr-people-org/19-org-structure-offices-departments.md).
+//
+// Deliberately orthogonal to the deployment topology (Organization ->
+// RetailBrand -> Node, organization.prisma): that hierarchy is
+// infrastructure, re-shaped by a migration; this one is re-drawn on a
+// Tuesday when somebody reorganises. AdminScopeLevel is untouched — see
+// DECISIONS.md ADR-044. No organizationId anywhere in this file: the
+// Organization model is optional even when its own module is on, and that
+// module is off by default in every deployment today, so a required
+// organizationId here would make this file unusable on the deployment
+// shape this repository actually ships (ADR-044, the same reasoning
+// ADR-040 already applies to receivables.prisma/settlements.prisma).
+
+/// What kinds of unit this deployment's org chart has. Rows, not an enum —
+/// one client says Head Office / Region / Branch / Department, the next
+/// says Division / Cluster / Store / Function. `isOffice` marks the types
+/// that can hold a posting address and a cost centre; a department
+/// typically cannot.
+model OrgUnitType {
+  id       String  @id @default(cuid())
+  /// Stable key for seeds and code that must name one — 'head_office',
+  /// 'region', 'department'.
+  key      String  @unique
+  label    String
+  /// Ordering hint for the picker only. NOT a depth constraint.
+  rank     Int     @default(0)
+  isOffice Boolean @default(false)
+
+  units OrgUnit[]
+}
+
+model OrgUnit {
+  id       String  @id @default(cuid())
+  /// Human key used on imports and in the URL — 'hq', 'north', 'hr'.
+  code     String
+  name     String
+  typeId   String
+  parentId String?
+
+  /// Materialised ancestor path, root first, INCLUDING this unit's own id.
+  /// Denormalised on purpose: every access check and every report filter is
+  /// "this unit and everything under it", and an adjacency list alone
+  /// cannot answer that without a recursive CTE per request. Maintained by
+  /// `OrgUnitService.move()` and nothing else — see the single-writer rule.
+  path  String[]
+  /// Depth from the root, 0-based. Derived from `path.length - 1`, stored
+  /// so a list screen can indent without loading ancestors.
+  depth Int      @default(0)
+
+  /// Where this unit's data physically lives, when that is a separate
+  /// deployment. NULL is the common case and means "the deployment reading
+  /// this row" — a Solo shop, or a head-office department in the same
+  /// database. Never assume one unit per node or one node per unit.
+  nodeId        String?
+  /// The brand this unit belongs to, when the group runs several. NULL
+  /// means group-wide — a head office serving every brand.
+  retailBrandId String?
+
+  isActive Boolean   @default(true)
+  /// Closed, not deleted. An org unit is referenced by attendance rows,
+  /// journal lines and completed tasks that must still explain themselves
+  /// years later; deleting one rewrites history.
+  closedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  type              OrgUnitType        @relation(fields: [typeId], references: [id])
+  parent            OrgUnit?           @relation("OrgUnitTree", fields: [parentId], references: [id])
+  children          OrgUnit[]          @relation("OrgUnitTree")
+  node              Node?              @relation(fields: [nodeId], references: [id])
+  retailBrand       RetailBrand?       @relation(fields: [retailBrandId], references: [id])
+  positions         Position[]
+  grants            OrgUnitGrant[]
+  /// attendance-workforce/22-attendance-shifts-leave.md — devices, punches
+  /// and shifts scoped to this unit.
+  attendanceDevices AttendanceDevice[]
+  attendanceEvents  AttendanceEvent[]
+  shifts            Shift[]
+  geofenceZones     AttendanceGeofenceZone[]
+  workCenters       WorkCenter[]
+
+  @@unique([retailBrandId, code])
+  @@index([parentId])
+  @@index([path])
+  @@index([nodeId])
+}
+
+/// access-control-identity/21-access-over-the-org-tree.md — an explicit,
+/// time-boxed grant of authority over a subtree. Derived access from a
+/// `Posting` is NOT stored here — it is computed by GrantService from the
+/// open Posting rows themselves, so it cannot outlive the post. `expiresAt`
+/// is NOT NULL, deliberately: a grant with no end date is the thing every
+/// access review finds three years later, held by someone who changed jobs
+/// twice. A permanent need is a posting, not a grant — change the org chart.
+model OrgUnitGrant {
+  id             String    @id @default(cuid())
+  /// The principal receiving it. A User, because this is an access grant and
+  /// only a principal can hold one — an employee with no login gets nothing
+  /// here (hr-people-org/20-people-positions-ranks.md).
+  userId         String
+  orgUnitId      String
+  /// What the grant confers, as PERMISSION_CATALOG keys — a subset, never a
+  /// role name: roles change membership underneath a grant and would
+  /// silently widen it.
+  permissionKeys String[]
+  /// READ or ACTING. ACTING additionally lets the holder approve at the
+  /// target post's rank, which is why it needs the countersignature below.
+  mode           GrantMode @default(READ)
+
+  expiresAt             DateTime
+  /// Who granted it, and — when `mode` is ACTING — who countersigned.
+  grantedByUserId       String
+  countersignedByUserId String?
+  reason                String
+
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user            User    @relation("OrgUnitGrantHolder", fields: [userId], references: [id], onDelete: Cascade)
+  grantedBy       User    @relation("OrgUnitGrantGranter", fields: [grantedByUserId], references: [id])
+  countersignedBy User?   @relation("OrgUnitGrantCountersigner", fields: [countersignedByUserId], references: [id])
+  orgUnit         OrgUnit @relation(fields: [orgUnitId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([orgUnitId])
+}
+
+enum GrantMode {
+  READ
+  ACTING
+}

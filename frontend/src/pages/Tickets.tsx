@@ -102,7 +102,7 @@ function DeliveryRow({ delivery }: { delivery: BroadcastDelivery }) {
       : status ?? 'no status reported'
 
   return (
-    <li className={`rounded-lg border px-2.5 py-1.5 text-[11px] ${tone}`}>
+    <li className={`rounded-[var(--radius-md)] border px-2.5 py-1.5 text-[11px] ${tone}`}>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         {status === 'sent' ? (
           <Check className="h-3 w-3 shrink-0" />
@@ -517,7 +517,7 @@ export function Tickets() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[var(--color-accent-hover)] transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[var(--color-accent-hover)] transition-colors"
           >
             <Plus className="h-4 w-4" />
             Create Ticket
@@ -528,7 +528,7 @@ export function Tickets() {
       {/* KPI Stats Cards */}
       {stats ? (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="text-xs font-medium text-[var(--color-ink-muted)] uppercase tracking-wider">
                 Active Tickets
@@ -546,7 +546,7 @@ export function Tickets() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-4 shadow-sm">
+          <div className="rounded-[var(--radius-lg)] border border-rose-200 bg-rose-50/50 p-4 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="text-xs font-medium text-rose-700 uppercase tracking-wider">
                 Tracker Incidents
@@ -564,7 +564,7 @@ export function Tickets() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-violet-200 bg-violet-50/50 p-4 shadow-sm">
+          <div className="rounded-[var(--radius-lg)] border border-violet-200 bg-violet-50/50 p-4 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="text-xs font-medium text-violet-700 uppercase tracking-wider">
                 Back-Office Load
@@ -580,7 +580,7 @@ export function Tickets() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 shadow-sm">
+          <div className="rounded-[var(--radius-lg)] border border-emerald-200 bg-emerald-50/50 p-4 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="text-xs font-medium text-emerald-700 uppercase tracking-wider">
                 Customer Issues
@@ -603,7 +603,7 @@ export function Tickets() {
         </div>
       ) : (
         !loading && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+          <div className="rounded-[var(--radius-md)] border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
             Ticket totals are not shown because the stats read did not return
             {error ? ` (${error})` : ' — they are not reported as zero.'}
           </div>
@@ -612,7 +612,7 @@ export function Tickets() {
 
       {/* Broadcast outcome: what the provider actually accepted, refused, or never sent */}
       {broadcastOutcome && (
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm space-y-3">
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm space-y-3">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="flex items-center gap-2 text-sm font-bold text-[var(--color-ink)]">
@@ -627,7 +627,7 @@ export function Tickets() {
             <button
               onClick={() => setBroadcastOutcome(null)}
               aria-label="Dismiss broadcast outcome"
-              className="rounded-lg p-1 text-[var(--color-ink-faint)] hover:bg-slate-100 hover:text-[var(--color-ink-muted)]"
+              className="rounded-[var(--radius-md)] p-1 text-[var(--color-ink-faint)] hover:bg-[var(--color-accent-muted)] hover:text-[var(--color-ink-muted)]"
             >
               <X className="h-4 w-4" />
             </button>
@@ -694,7 +694,7 @@ export function Tickets() {
           </div>
 
           {broadcastOutcome.activity_errors.length > 0 && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900">
+            <div className="rounded-[var(--radius-md)] border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900">
               <span className="font-semibold">Audit rows that were not written:</span>
               <ul className="mt-1 list-disc space-y-0.5 pl-4">
                 {broadcastOutcome.activity_errors.map((err, i) => (
@@ -733,10 +733,10 @@ export function Tickets() {
               setActiveTab('all')
               setSelectedDept('all')
             }}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`rounded-[var(--radius-md)] px-3 py-1.5 text-xs font-medium transition-colors ${
               activeTab === 'all'
                 ? 'bg-[var(--color-accent)] text-white'
-                : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
+                : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-[var(--color-accent-muted)]'
             }`}
           >
             All Tickets ({tabCount(tickets.length)})
@@ -746,10 +746,10 @@ export function Tickets() {
               setActiveTab('tracker')
               setSelectedDept('all')
             }}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
+            className={`rounded-[var(--radius-md)] px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
               activeTab === 'tracker'
                 ? 'bg-rose-600 text-white'
-                : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
+                : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-[var(--color-accent-muted)]'
             }`}
           >
             <span className={`h-2 w-2 rounded-full bg-rose-500 ${!loading && !error && openTrackerCount > 0 ? 'animate-pulse' : ''}`}></span>
@@ -760,10 +760,10 @@ export function Tickets() {
               setActiveTab('customer_issue')
               setSelectedDept('all')
             }}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`rounded-[var(--radius-md)] px-3 py-1.5 text-xs font-medium transition-colors ${
               activeTab === 'customer_issue'
                 ? 'bg-emerald-700 text-white'
-                : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
+                : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-[var(--color-accent-muted)]'
             }`}
           >
             Customer Issues ({tabCount(customerIssueCount)})
@@ -773,10 +773,10 @@ export function Tickets() {
               setActiveTab('back_office')
               setSelectedDept('all')
             }}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`rounded-[var(--radius-md)] px-3 py-1.5 text-xs font-medium transition-colors ${
               activeTab === 'back_office'
                 ? 'bg-indigo-700 text-white'
-                : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
+                : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-[var(--color-accent-muted)]'
             }`}
           >
             Back-Office Collaboration ({tabCount(backOfficeCount)})
@@ -786,10 +786,10 @@ export function Tickets() {
               setActiveTab('resolved')
               setSelectedDept('all')
             }}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`rounded-[var(--radius-md)] px-3 py-1.5 text-xs font-medium transition-colors ${
               activeTab === 'resolved'
-                ? 'bg-slate-700 text-white'
-                : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
+                ? 'bg-[var(--color-ink-muted)] text-white'
+                : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-[var(--color-accent-muted)]'
             }`}
           >
             Resolved ({tabCount(resolvedCount)})
@@ -801,7 +801,7 @@ export function Tickets() {
           <select
             value={selectedDept}
             onChange={(e) => setSelectedDept(e.target.value)}
-            className="rounded-lg border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-ink)] shadow-sm focus:border-indigo-500 focus:outline-none"
+            className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-ink)] shadow-sm focus:border-indigo-500 focus:outline-none"
           >
             <option value="all">All Departments ({tabCount(tickets.length)})</option>
             {departmentsInData.map((dept) => (
@@ -815,7 +815,7 @@ export function Tickets() {
           <select
             value={selectedPriority}
             onChange={(e) => setSelectedPriority(e.target.value)}
-            className="rounded-lg border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-ink)] shadow-sm focus:border-indigo-500 focus:outline-none"
+            className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-ink)] shadow-sm focus:border-indigo-500 focus:outline-none"
           >
             <option value="all">All Priorities</option>
             <option value="urgent">Urgent</option>
@@ -832,7 +832,7 @@ export function Tickets() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search tickets, IDs, contacts..."
-              className="w-48 sm:w-60 rounded-lg border border-slate-300 bg-[var(--color-surface)] pl-8 pr-3 py-1.5 text-xs placeholder:text-[var(--color-ink-faint)] focus:border-indigo-500 focus:outline-none"
+              className="w-48 sm:w-60 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] pl-8 pr-3 py-1.5 text-xs placeholder:text-[var(--color-ink-faint)] focus:border-indigo-500 focus:outline-none"
             />
           </div>
         </div>
@@ -842,9 +842,9 @@ export function Tickets() {
       {loading ? (
         <div className="py-12 text-center text-sm text-[var(--color-ink-muted)]">Loading tickets...</div>
       ) : error ? (
-        <div className="rounded-lg bg-rose-50 p-4 text-sm text-rose-700">{error}</div>
+        <div className="rounded-[var(--radius-md)] bg-rose-50 p-4 text-sm text-rose-700">{error}</div>
       ) : filteredTickets.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 p-12 text-center">
+        <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border)] p-12 text-center">
           <p className="text-sm text-[var(--color-ink-muted)]">
             {tickets.length === 0
               ? 'The ticket list came back with no rows -- there are no tickets stored yet.'
@@ -864,7 +864,7 @@ export function Tickets() {
             <div
               key={t.id}
               onClick={() => openTicketDetail(t.id)}
-              className={`cursor-pointer rounded-xl border p-4 transition-all hover:shadow-md ${
+              className={`cursor-pointer rounded-[var(--radius-lg)] border p-4 transition-all hover:shadow-md ${
                 t.ticket_type === 'tracker'
                   ? 'border-rose-300 bg-rose-50/30'
                   : t.ticket_type === 'back_office'
@@ -880,38 +880,38 @@ export function Tickets() {
 
                   {/* Type Badge */}
                   {t.ticket_type === 'tracker' ? (
-                    <span className="rounded-md bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-800">
+                    <span className="rounded-[var(--radius-sm)] bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-800">
                       Tracker Ticket
                     </span>
                   ) : t.ticket_type === 'back_office' ? (
-                    <span className="rounded-md bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-800">
+                    <span className="rounded-[var(--radius-sm)] bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-800">
                       Back-Office
                     </span>
                   ) : t.ticket_type === 'customer_issue' ? (
-                    <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+                    <span className="rounded-[var(--radius-sm)] bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
                       Customer Issue
                     </span>
                   ) : (
-                    <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-[var(--color-ink-muted)]">
+                    <span className="rounded-[var(--radius-sm)] bg-[var(--color-accent-muted)] px-2 py-0.5 text-xs font-semibold text-[var(--color-ink-muted)]">
                       type not stored
                     </span>
                   )}
 
                   {/* Department Badge */}
-                  <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-[var(--color-ink-muted)] uppercase">
+                  <span className="rounded-[var(--radius-sm)] bg-[var(--color-accent-muted)] px-2 py-0.5 text-xs font-medium text-[var(--color-ink-muted)] uppercase">
                     {textOrMissing(t.department, 'no department')}
                   </span>
 
                   {/* Priority Badge */}
                   <span
-                    className={`rounded-md px-2 py-0.5 text-xs font-medium ${
+                    className={`rounded-[var(--radius-sm)] px-2 py-0.5 text-xs font-medium ${
                       t.priority === 'urgent'
                         ? 'bg-red-100 text-red-800 font-bold'
                         : t.priority === 'high'
                         ? 'bg-amber-100 text-amber-800'
                         : t.priority
-                        ? 'bg-slate-100 text-[var(--color-ink)]'
-                        : 'bg-slate-100 text-[var(--color-ink-faint)] italic'
+                        ? 'bg-[var(--color-accent-muted)] text-[var(--color-ink)]'
+                        : 'bg-[var(--color-accent-muted)] text-[var(--color-ink-faint)] italic'
                     }`}
                   >
                     {t.priority ? t.priority.toUpperCase() : 'priority not stored'}
@@ -930,7 +930,7 @@ export function Tickets() {
                         ? 'bg-purple-100 text-purple-800'
                         : t.status
                         ? 'bg-amber-100 text-amber-800'
-                        : 'bg-slate-100 text-[var(--color-ink-faint)]'
+                        : 'bg-[var(--color-accent-muted)] text-[var(--color-ink-faint)]'
                     }`}
                   >
                     {t.status ? t.status.replace(/_/g, ' ') : 'status not stored'}
@@ -960,7 +960,7 @@ export function Tickets() {
                         ? `${t.child_count} linked issues`
                         : 'linked-issue count not returned'}
                     </span>
-                    <span className="text-slate-300">•</span>
+                    <span className="text-[var(--color-ink-faint)]">•</span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
@@ -1034,20 +1034,20 @@ export function Tickets() {
                       ? 'bg-indigo-100 text-indigo-800'
                       : selectedTicket.ticket_type === 'customer_issue'
                       ? 'bg-emerald-100 text-emerald-800'
-                      : 'bg-slate-100 text-[var(--color-ink-muted)]'
+                      : 'bg-[var(--color-accent-muted)] text-[var(--color-ink-muted)]'
                   }`}
                 >
                   {selectedTicket.ticket_type
                     ? selectedTicket.ticket_type.replace(/_/g, ' ').toUpperCase()
                     : 'TYPE NOT STORED'}
                 </span>
-                <span className="rounded bg-slate-200 px-2 py-0.5 text-xs font-semibold text-[var(--color-ink)] uppercase">
+                <span className="rounded bg-[var(--color-border)] px-2 py-0.5 text-xs font-semibold text-[var(--color-ink)] uppercase">
                   {textOrMissing(selectedTicket.department, 'no department stored')}
                 </span>
               </div>
               <button
                 onClick={() => setSelectedTicket(null)}
-                className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] p-1 rounded-lg hover:bg-slate-100"
+                className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] p-1 rounded-[var(--radius-md)] hover:bg-[var(--color-accent-muted)]"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1071,7 +1071,7 @@ export function Tickets() {
                     <select
                       value={selectedTicket.status ?? ''}
                       onChange={(e) => handleUpdateStatus(selectedTicket.id, e.target.value)}
-                      className="rounded-lg border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1 text-xs font-medium text-slate-800 shadow-sm focus:border-indigo-500 focus:outline-none"
+                      className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-xs font-medium text-[var(--color-ink)] shadow-sm focus:border-indigo-500 focus:outline-none"
                     >
                       {!STATUS_CHOICES.includes(selectedTicket.status) && (
                         <option value={selectedTicket.status}>
@@ -1092,7 +1092,7 @@ export function Tickets() {
                     <select
                       value={selectedTicket.priority ?? ''}
                       onChange={(e) => handleUpdatePriority(selectedTicket.id, e.target.value)}
-                      className="rounded-lg border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1 text-xs font-medium text-slate-800 shadow-sm focus:border-indigo-500 focus:outline-none"
+                      className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-xs font-medium text-[var(--color-ink)] shadow-sm focus:border-indigo-500 focus:outline-none"
                     >
                       {!PRIORITY_CHOICES.includes(selectedTicket.priority) && (
                         <option value={selectedTicket.priority}>
@@ -1109,27 +1109,27 @@ export function Tickets() {
               </div>
 
               {/* Description */}
-              <div className="rounded-xl bg-[var(--color-page)] p-4 text-xs text-[var(--color-ink)] leading-relaxed border border-[var(--color-border)]">
+              <div className="rounded-[var(--radius-lg)] bg-[var(--color-page)] p-4 text-xs text-[var(--color-ink)] leading-relaxed border border-[var(--color-border)]">
                 <span className="font-semibold block mb-1 text-[var(--color-ink)]">Description:</span>
                 {textOrMissing(selectedTicket.description, 'No description stored on this ticket.')}
               </div>
 
               {/* Resolution Summary Banner if Resolved */}
               {selectedTicket.resolution_summary ? (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-800">
+                <div className="rounded-[var(--radius-lg)] border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-800">
                   <span className="font-semibold block mb-1">Resolution Summary:</span>
                   {selectedTicket.resolution_summary}
                   {selectedTicket.resolved_at ? ` — resolved ${dateTimeOrMissing(selectedTicket.resolved_at)}` : ' — no resolution timestamp stored'}
                 </div>
               ) : selectedTicket.status === 'resolved' || selectedTicket.status === 'closed' ? (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">
+                <div className="rounded-[var(--radius-lg)] border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">
                   This ticket is marked {selectedTicket.status} but no resolution summary is stored.
                 </div>
               ) : null}
 
               {/* Tracker Widespread Management Banner */}
               {selectedTicket.ticket_type === 'tracker' && (
-                <div className="rounded-xl border border-rose-200 bg-rose-50/70 p-4 space-y-3">
+                <div className="rounded-[var(--radius-lg)] border border-rose-200 bg-rose-50/70 p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-bold text-rose-900 flex items-center gap-2">
@@ -1148,7 +1148,7 @@ export function Tickets() {
                     </div>
                     <button
                       onClick={() => openBroadcastModal(selectedTicket)}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-rose-700 transition-colors"
+                      className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-rose-700 transition-colors"
                     >
                       <Radio className="h-3.5 w-3.5" />
                       Broadcast & Resolve All
@@ -1169,7 +1169,7 @@ export function Tickets() {
                               <span className="font-mono font-bold text-[var(--color-ink)]">
                                 {textOrMissing(child.ticket_number, 'no number stored')}
                               </span>
-                              <span className="text-slate-800">
+                              <span className="text-[var(--color-ink)]">
                                 {textOrMissing(child.title, 'no title stored')}
                               </span>
                               {child.contact_name && (
@@ -1177,7 +1177,7 @@ export function Tickets() {
                               )}
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-[var(--color-ink-muted)]">
+                              <span className="rounded bg-[var(--color-accent-muted)] px-1.5 py-0.5 text-[10px] text-[var(--color-ink-muted)]">
                                 {textOrMissing(child.status, 'status not stored')}
                               </span>
                               {child.conversation_id ? (
@@ -1197,7 +1197,7 @@ export function Tickets() {
                       </div>
                     </div>
                   ) : (
-                    <p className="mt-2 rounded-lg border border-dashed border-rose-300 bg-[var(--color-surface)] p-2 text-xs text-rose-800">
+                    <p className="mt-2 rounded-[var(--radius-md)] border border-dashed border-rose-300 bg-[var(--color-surface)] p-2 text-xs text-rose-800">
                       {selectedTicket.child_tickets
                         ? 'No customer ticket is linked to this tracker, so a broadcast has no recipient to message and no ticket to resolve.'
                         : 'The linked tickets were not returned by the detail read, so this broadcast may reach fewer tickets than the tracker reports.'}
@@ -1208,12 +1208,12 @@ export function Tickets() {
 
               {/* Link to Tracker for Child/Customer Tickets */}
               {selectedTicket.ticket_type !== 'tracker' && (
-                <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+                <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
                   <h4 className="text-xs font-semibold text-[var(--color-ink)] mb-2">
                     Tracker Incident Link
                   </h4>
                   {selectedTicket.tracker_id ? (
-                    <div className="flex items-center justify-between text-xs bg-rose-50 p-2.5 rounded-lg border border-rose-200 text-rose-800">
+                    <div className="flex items-center justify-between text-xs bg-rose-50 p-2.5 rounded-[var(--radius-md)] border border-rose-200 text-rose-800">
                       <div>
                         <span className="font-semibold">Linked to: </span>
                         <span className="font-mono">
@@ -1234,7 +1234,7 @@ export function Tickets() {
                         <select
                           value={linkTrackerId}
                           onChange={(e) => setLinkTrackerId(e.target.value)}
-                          className="flex-1 rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
+                          className="flex-1 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
                         >
                           <option value="">
                             {trackers.length > 0
@@ -1250,7 +1250,7 @@ export function Tickets() {
                         <button
                           onClick={handleLinkTracker}
                           disabled={!linkTrackerId || linkingTracker}
-                          className="rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50 transition-colors"
+                          className="rounded-[var(--radius-md)] bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50 transition-colors"
                         >
                           {linkingTracker ? 'Linking...' : 'Link to Tracker'}
                         </button>
@@ -1266,14 +1266,14 @@ export function Tickets() {
               )}
 
               {/* External Issue Trackers (Linear / GitHub / Jira) */}
-              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 space-y-3">
+              <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Link2 className="h-4 w-4 text-[var(--color-accent)]" />
                     <h4 className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">
                       External Issue Trackers (Linear / GitHub / Jira)
                     </h4>
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-[var(--color-ink-muted)]">
+                    <span className="rounded-full bg-[var(--color-accent-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-ink-muted)]">
                       {linkedIssuesError ? 'read failed' : `${linkedIssues.length} linked`}
                     </span>
                   </div>
@@ -1285,7 +1285,7 @@ export function Tickets() {
                       setNewLinkedPriority(selectedTicket.priority || '')
                       setShowCreateLinkedIssue(!showCreateLinkedIssue)
                     }}
-                    className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-xs font-medium text-[var(--color-ink)] hover:bg-slate-50 transition-colors"
+                    className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-xs font-medium text-[var(--color-ink)] hover:bg-[var(--color-accent-muted)] transition-colors"
                   >
                     <Plus className="h-3 w-3" />
                     {showCreateLinkedIssue ? 'Cancel' : 'Link / Create Issue'}
@@ -1294,7 +1294,7 @@ export function Tickets() {
 
                 {/* Create linked issue inline form */}
                 {showCreateLinkedIssue && (
-                  <form onSubmit={handleCreateLinkedIssue} className="rounded-xl border border-indigo-200 bg-[var(--color-accent-soft)]/30 p-3 space-y-3">
+                  <form onSubmit={handleCreateLinkedIssue} className="rounded-[var(--radius-lg)] border border-indigo-200 bg-[var(--color-accent-soft)]/30 p-3 space-y-3">
                     <div className="text-xs font-semibold text-indigo-950">
                       Create & Link Issue to External Tracker
                     </div>
@@ -1312,7 +1312,7 @@ export function Tickets() {
                         <select
                           value={newLinkedProvider}
                           onChange={(e) => setNewLinkedProvider(e.target.value as any)}
-                          className="w-full rounded-md border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
+                          className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
                         >
                           <option value="linear">Linear (Engineering)</option>
                           <option value="github">GitHub Issues (Repo)</option>
@@ -1326,7 +1326,7 @@ export function Tickets() {
                         <select
                           value={newLinkedPriority}
                           onChange={(e) => setNewLinkedPriority(e.target.value)}
-                          className="w-full rounded-md border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
+                          className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
                         >
                           <option value="">Not specified on the ticket</option>
                           <option value="low">Low</option>
@@ -1346,7 +1346,7 @@ export function Tickets() {
                         value={newLinkedTitle}
                         onChange={(e) => setNewLinkedTitle(e.target.value)}
                         placeholder="Issue title in external tracker..."
-                        className="w-full rounded-md border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
+                        className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
                       />
                     </div>
                     <div>
@@ -1358,21 +1358,21 @@ export function Tickets() {
                         value={newLinkedDescription}
                         onChange={(e) => setNewLinkedDescription(e.target.value)}
                         placeholder="Additional context or repro steps..."
-                        className="w-full rounded-md border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
+                        className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
                       />
                     </div>
                     <div className="flex justify-end gap-2">
                       <button
                         type="button"
                         onClick={() => setShowCreateLinkedIssue(false)}
-                        className="rounded-md px-2.5 py-1 text-xs font-medium text-[var(--color-ink-muted)] hover:bg-slate-200"
+                        className="rounded-[var(--radius-sm)] px-2.5 py-1 text-xs font-medium text-[var(--color-ink-muted)] hover:bg-[var(--color-border)]"
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
                         disabled={creatingLinkedIssue || !newLinkedTitle.trim()}
-                        className="inline-flex items-center gap-1 rounded-md bg-[var(--color-accent)] px-3 py-1 text-xs font-semibold text-white shadow-sm hover:bg-[var(--color-accent-hover)] disabled:opacity-50 transition-colors"
+                        className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-3 py-1 text-xs font-semibold text-white shadow-sm hover:bg-[var(--color-accent-hover)] disabled:opacity-50 transition-colors"
                       >
                         {creatingLinkedIssue ? 'Creating & Linking...' : 'Create in Tracker'}
                       </button>
@@ -1384,7 +1384,7 @@ export function Tickets() {
                 {loadingLinkedIssues ? (
                   <div className="py-2 text-center text-xs text-[var(--color-ink-muted)]">Loading linked issues...</div>
                 ) : linkedIssues.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-slate-200 py-3 text-center text-xs text-[var(--color-ink-faint)]">
+                  <div className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] py-3 text-center text-xs text-[var(--color-ink-faint)]">
                     {linkedIssuesError
                       ? 'The linked-issue read failed, so this list is unknown rather than empty.'
                       : 'No external issues are linked to this ticket.'}
@@ -1394,7 +1394,7 @@ export function Tickets() {
                     {linkedIssues.map((issue) => (
                       <div
                         key={issue.id}
-                        className="flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-[var(--color-page)] p-2.5 text-xs"
+                        className="flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-page)] p-2.5 text-xs"
                       >
                         <div className="flex items-center gap-2">
                           <span
@@ -1402,10 +1402,10 @@ export function Tickets() {
                               issue.provider === 'linear'
                                 ? 'bg-purple-100 text-purple-800'
                                 : issue.provider === 'github'
-                                ? 'bg-slate-200 text-slate-800'
+                                ? 'bg-[var(--color-border)] text-[var(--color-ink)]'
                                 : issue.provider === 'jira'
                                 ? 'bg-blue-100 text-blue-800'
-                                : 'bg-slate-100 text-[var(--color-ink-faint)]'
+                                : 'bg-[var(--color-accent-muted)] text-[var(--color-ink-faint)]'
                             }`}
                           >
                             {textOrMissing(issue.provider, 'provider not stored')}
@@ -1441,8 +1441,8 @@ export function Tickets() {
                                   ? 'bg-amber-50 border-amber-200 text-amber-800'
                                   : /closed|done|complete|resolved|merged/i.test(issue.status)
                                   ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                                  : 'bg-slate-50 border-slate-200 text-slate-700'
-                                : 'bg-slate-50 border-dashed border-slate-300 text-[var(--color-ink-faint)]'
+                                  : 'bg-[var(--color-accent-muted)] border-[var(--color-border)] text-[var(--color-ink)]'
+                                : 'bg-[var(--color-accent-muted)] border-dashed border-[var(--color-border)] text-[var(--color-ink-faint)]'
                             }`}
                           >
                             {textOrMissing(issue.status, 'status not returned')}
@@ -1460,7 +1460,7 @@ export function Tickets() {
                             onClick={() => handleSyncIssue(issue.id)}
                             disabled={syncingIssueId === issue.id}
                             title="Sync status with external tracker"
-                            className="rounded p-1 text-[var(--color-ink-muted)] hover:bg-slate-200 hover:text-[var(--color-ink)] transition-colors"
+                            className="rounded p-1 text-[var(--color-ink-muted)] hover:bg-[var(--color-border)] hover:text-[var(--color-ink)] transition-colors"
                           >
                             <RefreshCw className={`h-3.5 w-3.5 ${syncingIssueId === issue.id ? 'animate-spin' : ''}`} />
                           </button>
@@ -1480,7 +1480,7 @@ export function Tickets() {
                 )}
 
                 {linkedIssuesError && (
-                  <div role="alert" className="rounded-lg bg-rose-50 p-3 text-xs text-rose-700">
+                  <div role="alert" className="rounded-[var(--radius-md)] bg-rose-50 p-3 text-xs text-rose-700">
                     External issues could not be read: {linkedIssuesError}
                   </div>
                 )}
@@ -1499,12 +1499,12 @@ export function Tickets() {
                   <span className="text-xs text-[var(--color-ink-faint)]">Teammate & Back-Office Notes</span>
                 </div>
 
-                <div className="space-y-2 max-h-60 overflow-y-auto border border-[var(--color-border)] rounded-xl p-3 bg-[var(--color-page)]/50">
+                <div className="space-y-2 max-h-60 overflow-y-auto border border-[var(--color-border)] rounded-[var(--radius-lg)] p-3 bg-[var(--color-page)]/50">
                   {selectedTicket.activities && selectedTicket.activities.length > 0 ? (
                     selectedTicket.activities.map((act) => (
                       <div
                         key={act.id}
-                        className={`rounded-lg p-2.5 text-xs ${
+                        className={`rounded-[var(--radius-md)] p-2.5 text-xs ${
                           act.activity_type === 'back_office_note'
                             ? 'bg-[var(--color-accent-soft)] border border-[var(--color-border)] text-indigo-950'
                             : act.activity_type === 'broadcast'
@@ -1513,7 +1513,7 @@ export function Tickets() {
                             ? 'bg-purple-50 border border-purple-200 text-purple-950 font-medium'
                             : act.activity_type === 'tracker_link'
                             ? 'bg-amber-50 border border-amber-200 text-amber-950 font-medium'
-                            : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-slate-800'
+                            : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-ink)]'
                         }`}
                       >
                         <div className="flex items-center justify-between text-[11px] text-[var(--color-ink-muted)] mb-1">
@@ -1531,11 +1531,11 @@ export function Tickets() {
                             ) : act.activity_type === 'creation' ? (
                               <Plus className="h-3 w-3 text-emerald-600" />
                             ) : (
-                              <MessageSquare className="h-3 w-3 text-slate-500" />
+                              <MessageSquare className="h-3 w-3 text-[var(--color-ink-faint)]" />
                             )}
                             <span
                               className={`font-semibold ${
-                                act.author_name ? 'text-slate-800' : 'text-[var(--color-ink-faint)] italic'
+                                act.author_name ? 'text-[var(--color-ink)]' : 'text-[var(--color-ink-faint)] italic'
                               }`}
                             >
                               {textOrMissing(act.author_name, 'no stored author')}
@@ -1568,7 +1568,7 @@ export function Tickets() {
                       value={newNoteAuthor}
                       onChange={(e) => setNewNoteAuthor(e.target.value)}
                       placeholder="Optional override; blank records the signed-in email"
-                      className="w-64 rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
+                      className="w-64 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
                     />
                     <span className="text-xs text-[var(--color-ink-faint)]">
                       Adding to{' '}
@@ -1585,12 +1585,12 @@ export function Tickets() {
                       value={newNoteMessage}
                       onChange={(e) => setNewNoteMessage(e.target.value)}
                       placeholder="Write an internal note or update for teammates..."
-                      className="flex-1 rounded-lg border border-slate-300 bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
+                      className="flex-1 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
                     />
                     <button
                       type="submit"
                       disabled={!newNoteMessage.trim() || submittingNote}
-                      className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[var(--color-accent-hover)] disabled:opacity-50 transition-colors"
+                      className="inline-flex items-center gap-1 rounded-[var(--radius-md)] bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[var(--color-accent-hover)] disabled:opacity-50 transition-colors"
                     >
                       <Send className="h-3 w-3" />
                       {submittingNote ? 'Posting...' : 'Post Note'}
@@ -1629,7 +1629,7 @@ export function Tickets() {
             </div>
 
             {typeof broadcastTargetTracker.child_count === 'number' && broadcastTargetTracker.child_count === 0 && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900">
+              <div className="rounded-[var(--radius-md)] border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900">
                 This tracker reports 0 linked tickets right now, so a broadcast would message nobody and resolve
                 nothing. Link the impacted customer tickets first.
               </div>
@@ -1644,11 +1644,11 @@ export function Tickets() {
                 value={broadcastMessage}
                 onChange={(e) => setBroadcastMessage(e.target.value)}
                 placeholder="e.g. The payment gateway outage has been resolved. All pending transactions are now processing normally."
-                className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
+                className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
               />
             </div>
 
-            <div className="space-y-2 rounded-xl bg-[var(--color-page)] p-3 border border-[var(--color-border)]">
+            <div className="space-y-2 rounded-[var(--radius-lg)] bg-[var(--color-page)] p-3 border border-[var(--color-border)]">
               <label className="flex items-center gap-2 text-xs text-[var(--color-ink)] cursor-pointer">
                 <input
                   type="checkbox"
@@ -1676,7 +1676,7 @@ export function Tickets() {
             </div>
 
             {broadcastFailure && (
-              <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
+              <div role="alert" className="rounded-[var(--radius-md)] border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
                 <span className="font-semibold block">The broadcast did not complete:</span>
                 {broadcastFailure}
               </div>
@@ -1685,14 +1685,14 @@ export function Tickets() {
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 onClick={closeBroadcastModal}
-                className="rounded-lg px-3 py-1.5 text-xs font-semibold text-[var(--color-ink-muted)] hover:bg-slate-100 transition-colors"
+                className="rounded-[var(--radius-md)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink-muted)] hover:bg-[var(--color-accent-muted)] transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleExecuteBroadcast}
                 disabled={!broadcastMessage.trim() || submittingBroadcast}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-rose-700 disabled:opacity-50 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-rose-600 px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-rose-700 disabled:opacity-50 transition-colors"
               >
                 <Radio className="h-3.5 w-3.5" />
                 {submittingBroadcast ? 'Dispatching...' : 'Dispatch Broadcast'}
@@ -1710,7 +1710,7 @@ export function Tickets() {
               <h3 className="text-lg font-bold text-[var(--color-ink)]">Create New Ticket</h3>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] p-1 rounded-lg hover:bg-slate-100"
+                className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] p-1 rounded-[var(--radius-md)] hover:bg-[var(--color-accent-muted)]"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1732,7 +1732,7 @@ export function Tickets() {
                   <button
                     type="button"
                     onClick={() => setNewType('customer_issue')}
-                    className={`rounded-lg p-2 text-center text-xs font-medium border transition-colors ${
+                    className={`rounded-[var(--radius-md)] p-2 text-center text-xs font-medium border transition-colors ${
                       newType === 'customer_issue'
                         ? 'border-emerald-600 bg-emerald-50 text-emerald-800 font-bold'
                         : 'border-[var(--color-border)] text-[var(--color-ink-muted)] hover:bg-[var(--color-page)]'
@@ -1743,7 +1743,7 @@ export function Tickets() {
                   <button
                     type="button"
                     onClick={() => setNewType('back_office')}
-                    className={`rounded-lg p-2 text-center text-xs font-medium border transition-colors ${
+                    className={`rounded-[var(--radius-md)] p-2 text-center text-xs font-medium border transition-colors ${
                       newType === 'back_office'
                         ? 'border-indigo-600 bg-[var(--color-accent-soft)] text-indigo-800 font-bold'
                         : 'border-[var(--color-border)] text-[var(--color-ink-muted)] hover:bg-[var(--color-page)]'
@@ -1754,7 +1754,7 @@ export function Tickets() {
                   <button
                     type="button"
                     onClick={() => setNewType('tracker')}
-                    className={`rounded-lg p-2 text-center text-xs font-medium border transition-colors ${
+                    className={`rounded-[var(--radius-md)] p-2 text-center text-xs font-medium border transition-colors ${
                       newType === 'tracker'
                         ? 'border-rose-600 bg-rose-50 text-rose-800 font-bold'
                         : 'border-[var(--color-border)] text-[var(--color-ink-muted)] hover:bg-[var(--color-page)]'
@@ -1775,7 +1775,7 @@ export function Tickets() {
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   placeholder="Summary of the issue or task..."
-                  className="w-full rounded-lg border border-slate-300 p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
                 />
               </div>
 
@@ -1789,7 +1789,7 @@ export function Tickets() {
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
                   placeholder="Detailed breakdown of the issue or instructions for teammates..."
-                  className="w-full rounded-lg border border-slate-300 p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
                 />
               </div>
 
@@ -1801,7 +1801,7 @@ export function Tickets() {
                   <select
                     value={newDept}
                     onChange={(e) => setNewDept(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-[var(--color-surface)] p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
                   >
                     {departmentOptions.map((dept) => (
                       <option key={dept} value={dept}>
@@ -1818,7 +1818,7 @@ export function Tickets() {
                   <select
                     value={newPriority}
                     onChange={(e) => setNewPriority(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-[var(--color-surface)] p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -1836,7 +1836,7 @@ export function Tickets() {
                   <select
                     value={newTrackerId}
                     onChange={(e) => setNewTrackerId(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-[var(--color-surface)] p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
                   >
                     <option value="">None (Standalone ticket)</option>
                     {trackers.map((tr) => (
@@ -1852,14 +1852,14 @@ export function Tickets() {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-[var(--color-ink-muted)] hover:bg-slate-100 transition-colors"
+                  className="rounded-[var(--radius-md)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink-muted)] hover:bg-[var(--color-accent-muted)] transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={creatingTicket}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[var(--color-accent-hover)] disabled:opacity-50 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[var(--color-accent-hover)] disabled:opacity-50 transition-colors"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   {creatingTicket ? 'Creating...' : 'Create Ticket'}

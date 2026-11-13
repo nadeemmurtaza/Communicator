@@ -199,7 +199,7 @@ export function TelegramIntegration() {
     return (
       <div className="flex items-center justify-center min-h-[500px]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-500"></div>
-        <span className="ml-3 text-sm text-gray-500 font-medium">Loading Telegram configuration...</span>
+        <span className="ml-3 text-sm text-[var(--color-ink-faint)] font-medium">Loading Telegram configuration...</span>
       </div>
     )
   }
@@ -209,23 +209,23 @@ export function TelegramIntegration() {
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6">
       {/* Top Banner Navigation */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-gray-200">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-[var(--color-border)]">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Link to="/channels" className="text-sm font-medium text-sky-600 hover:text-sky-800">
               <ArrowLeft className="h-4 w-4 inline mr-1" />
               <span>Back to Channels Hub</span>
             </Link>
-            <span className="text-gray-300">/</span>
-            <span className="text-sm font-medium text-gray-500">Telegram Bot</span>
+            <span className="text-[var(--color-ink-faint)]">/</span>
+            <span className="text-sm font-medium text-[var(--color-ink-faint)]">Telegram Bot</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-400 to-blue-600 flex items-center justify-center text-white shadow-sm">
+            <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-gradient-to-tr from-sky-400 to-blue-600 flex items-center justify-center text-white shadow-sm">
               <TelegramIcon className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Telegram Bot Integration</h1>
-              <p className="text-sm text-gray-500">
+              <h1 className="text-2xl font-bold text-[var(--color-ink)] tracking-tight">Telegram Bot Integration</h1>
+              <p className="text-sm text-[var(--color-ink-faint)]">
                 Official Telegram Bot API connector with webhook streaming, secret token authentication, and interactive bot commands.
               </p>
             </div>
@@ -236,14 +236,14 @@ export function TelegramIntegration() {
           <button
             onClick={handleVerifyConnection}
             disabled={verifying}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 shadow-sm transition disabled:opacity-50"
+            className="px-4 py-2 text-sm font-medium text-[var(--color-ink)] bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] hover:bg-[var(--color-accent-muted)] shadow-sm transition disabled:opacity-50"
           >
             {verifying ? 'Checking Telegram...' : <span className="flex items-center gap-1"><Zap className="h-3.5 w-3.5 text-amber-500" /> Test Connection</span>}
           </button>
           <button
             onClick={handleSaveSettings}
             disabled={saving}
-            className="px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700 shadow-sm transition disabled:opacity-50 flex items-center gap-2"
+            className="px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-[var(--radius-md)] hover:bg-sky-700 shadow-sm transition disabled:opacity-50 flex items-center gap-2"
           >
             {saving ? 'Saving...' : 'Save Configuration'}
           </button>
@@ -252,7 +252,7 @@ export function TelegramIntegration() {
 
       {/* Real Connection Status Banner */}
       {!isConnected && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 flex items-start gap-3">
+        <div className="rounded-[var(--radius-lg)] border border-amber-200 bg-amber-50 p-4 text-amber-900 flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
           <div>
             <h4 className="text-sm font-semibold text-amber-900">Channel Not Connected</h4>
@@ -265,7 +265,7 @@ export function TelegramIntegration() {
 
       {/* Alert Notices */}
       {success && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-sm flex items-center justify-between">
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-[var(--radius-lg)] text-emerald-800 text-sm flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             <span>{success}</span>
@@ -277,7 +277,7 @@ export function TelegramIntegration() {
       )}
 
       {error && (
-        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-sm flex items-center justify-between">
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-[var(--radius-lg)] text-rose-800 text-sm flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AlertCircle className="h-4 w-4 text-rose-600" />
             <span>{error}</span>
@@ -290,55 +290,55 @@ export function TelegramIntegration() {
 
       {/* KPI & Status Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
-          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Bot Username</div>
+        <div className="p-4 bg-white border border-[var(--color-border)] rounded-[var(--radius-lg)] shadow-sm">
+          <div className="text-xs font-semibold text-[var(--color-ink-faint)] uppercase tracking-wider mb-1">Bot Username</div>
           <div className="flex items-center justify-between">
-            <span className="text-lg font-bold text-gray-900">{botUsername || 'Not Configured'}</span>
+            <span className="text-lg font-bold text-[var(--color-ink)]">{botUsername || 'Not Configured'}</span>
             <span className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${
               isConnected ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
             }`}>
               {isConnected ? 'Connected' : 'Not Configured'}
             </span>
           </div>
-          <p className="text-xs text-gray-500 mt-1">Direct bot handle</p>
+          <p className="text-xs text-[var(--color-ink-faint)] mt-1">Direct bot handle</p>
         </div>
 
-        <div className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
-          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Webhook Security</div>
+        <div className="p-4 bg-white border border-[var(--color-border)] rounded-[var(--radius-lg)] shadow-sm">
+          <div className="text-xs font-semibold text-[var(--color-ink-faint)] uppercase tracking-wider mb-1">Webhook Security</div>
           <div className="flex items-center justify-between">
-            <span className="text-lg font-bold text-gray-900">Secret Token</span>
+            <span className="text-lg font-bold text-[var(--color-ink)]">Secret Token</span>
             <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-sky-50 text-sky-700 border border-sky-200">
               Header Verified
             </span>
           </div>
-          <p className="text-xs text-gray-500 mt-1">X-Telegram-Bot-Api-Secret-Token</p>
+          <p className="text-xs text-[var(--color-ink-faint)] mt-1">X-Telegram-Bot-Api-Secret-Token</p>
         </div>
 
-        <div className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
-          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Bot Commands</div>
+        <div className="p-4 bg-white border border-[var(--color-border)] rounded-[var(--radius-lg)] shadow-sm">
+          <div className="text-xs font-semibold text-[var(--color-ink-faint)] uppercase tracking-wider mb-1">Bot Commands</div>
           <div className="flex items-center justify-between">
-            <span className="text-lg font-bold text-gray-900">{commands.length} Commands</span>
+            <span className="text-lg font-bold text-[var(--color-ink)]">{commands.length} Commands</span>
             <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-50 text-purple-700 border border-purple-200">
               Menu Active
             </span>
           </div>
-          <p className="text-xs text-gray-500 mt-1">Interactive Telegram menu</p>
+          <p className="text-xs text-[var(--color-ink-faint)] mt-1">Interactive Telegram menu</p>
         </div>
 
-        <div className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
-          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">API Throughput</div>
+        <div className="p-4 bg-white border border-[var(--color-border)] rounded-[var(--radius-lg)] shadow-sm">
+          <div className="text-xs font-semibold text-[var(--color-ink-faint)] uppercase tracking-wider mb-1">API Throughput</div>
           <div className="flex items-center justify-between">
-            <span className="text-lg font-bold text-gray-900">30 msgs/sec</span>
+            <span className="text-lg font-bold text-[var(--color-ink)]">30 msgs/sec</span>
             <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
               High
             </span>
           </div>
-          <p className="text-xs text-gray-500 mt-1">Official Telegram Bot API</p>
+          <p className="text-xs text-[var(--color-ink-faint)] mt-1">Official Telegram Bot API</p>
         </div>
       </div>
 
       {/* Navigation Tabs */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-[var(--color-border)]">
         <nav className="flex space-x-8">
           {[
             { id: 'credentials', label: 'Bot Credentials & Setup', icon: Key },
@@ -353,7 +353,7 @@ export function TelegramIntegration() {
               className={`py-4 px-1 inline-flex items-center gap-2 border-b-2 font-medium text-sm transition ${
                 activeTab === tab.id
                   ? 'border-sky-600 text-sky-600 font-semibold'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] hover:border-[var(--color-border)]'
               }`}
             >
               <tab.icon className="h-4 w-4" />
@@ -365,50 +365,50 @@ export function TelegramIntegration() {
 
       {/* Tab 1: Credentials */}
       {activeTab === 'credentials' && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm space-y-6">
+        <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] p-6 shadow-sm space-y-6">
           <div>
-            <h3 className="text-base font-semibold text-gray-900">Telegram Bot Credentials</h3>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <h3 className="text-base font-semibold text-[var(--color-ink)]">Telegram Bot Credentials</h3>
+            <p className="text-sm text-[var(--color-ink-faint)] mt-0.5">
               Obtain your Bot Token from Telegram's official <strong>@BotFather</strong> by creating a new bot.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-[var(--color-border)]">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Inbox Display Name</label>
+              <label className="block text-sm font-medium text-[var(--color-ink)] mb-1">Inbox Display Name</label>
               <input
                 type="text"
                 value={inboxName}
                 onChange={(e) => setInboxName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none"
                 placeholder="e.g. Telegram Support"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Telegram Bot Username</label>
+              <label className="block text-sm font-medium text-[var(--color-ink)] mb-1">Telegram Bot Username</label>
               <input
                 type="text"
                 value={botUsername}
                 onChange={(e) => setBotUsername(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm font-mono focus:ring-2 focus:ring-sky-500 focus:outline-none"
                 placeholder="e.g. @your_bot_name"
               />
-              <p className="text-xs text-gray-400 mt-1">Must end in 'bot' as required by Telegram.</p>
+              <p className="text-xs text-[var(--color-ink-faint)] mt-1">Must end in 'bot' as required by Telegram.</p>
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[var(--color-ink)] mb-1">
                 Telegram Bot Token
               </label>
               <input
                 type="password"
                 value={botToken}
                 onChange={(e) => setBotToken(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm font-mono focus:ring-2 focus:ring-sky-500 focus:outline-none"
                 placeholder="••••••••••••••••••••••••"
               />
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-[var(--color-ink-faint)] mt-1">
                 Format: <code className="text-sky-600">123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ</code>. Leave blank to keep existing.
               </p>
             </div>
@@ -418,23 +418,23 @@ export function TelegramIntegration() {
 
       {/* Tab 2: Webhooks & Secret Token */}
       {activeTab === 'webhooks' && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm space-y-6">
+        <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] p-6 shadow-sm space-y-6">
           <div>
-            <h3 className="text-base font-semibold text-gray-900">Telegram Webhook Configuration</h3>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <h3 className="text-base font-semibold text-[var(--color-ink)]">Telegram Webhook Configuration</h3>
+            <p className="text-sm text-[var(--color-ink-faint)] mt-0.5">
               Set this webhook URL via Telegram's <code className="text-sky-600">setWebhook</code> API method or our automatic connector.
             </p>
           </div>
 
-          <div className="space-y-4 pt-4 border-t border-gray-100">
+          <div className="space-y-4 pt-4 border-t border-[var(--color-border)]">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Webhook Endpoint URL</label>
+              <label className="block text-sm font-medium text-[var(--color-ink)] mb-1">Webhook Endpoint URL</label>
               <div className="flex gap-2">
                 <input
                   type="text"
                   readOnly
                   value={data?.webhookConfig.callbackUrl || 'https://api.yourdomain.com/api/v1/webhooks/telegram'}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm font-mono text-gray-600"
+                  className="w-full px-3 py-2 bg-[var(--color-accent-muted)] border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm font-mono text-[var(--color-ink-muted)]"
                 />
                 <button
                   onClick={() =>
@@ -443,7 +443,7 @@ export function TelegramIntegration() {
                       'callback'
                     )
                   }
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 transition"
+                  className="px-4 py-2 bg-[var(--color-accent-muted)] hover:bg-[var(--color-border)] border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm font-medium text-[var(--color-ink)] transition"
                 >
                   {copiedKey === 'callback' ? <span className="inline-flex items-center gap-1"><Check className="h-4 w-4 text-emerald-600" /> Copied</span> : 'Copy'}
                 </button>
@@ -451,22 +451,22 @@ export function TelegramIntegration() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Webhook Secret Token</label>
+              <label className="block text-sm font-medium text-[var(--color-ink)] mb-1">Webhook Secret Token</label>
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={secretToken}
                   onChange={(e) => setSecretToken(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm font-mono focus:ring-2 focus:ring-sky-500 focus:outline-none"
                 />
                 <button
                   onClick={() => copyToClipboard(secretToken, 'secretToken')}
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 transition"
+                  className="px-4 py-2 bg-[var(--color-accent-muted)] hover:bg-[var(--color-border)] border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm font-medium text-[var(--color-ink)] transition"
                 >
                   {copiedKey === 'secretToken' ? <span className="inline-flex items-center gap-1"><Check className="h-4 w-4 text-emerald-600" /> Copied</span> : 'Copy'}
                 </button>
               </div>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-[var(--color-ink-faint)] mt-1">
                 Passed in <code className="text-sky-600">X-Telegram-Bot-Api-Secret-Token</code> to prevent webhook spoofing.
               </p>
             </div>
@@ -476,25 +476,25 @@ export function TelegramIntegration() {
 
       {/* Tab 3: Bot Commands & Menus */}
       {activeTab === 'commands' && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm space-y-6">
+        <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] p-6 shadow-sm space-y-6">
           <div>
-            <h3 className="text-base font-semibold text-gray-900">Telegram Bot Menu Commands</h3>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <h3 className="text-base font-semibold text-[var(--color-ink)]">Telegram Bot Menu Commands</h3>
+            <p className="text-sm text-[var(--color-ink-faint)] mt-0.5">
               Commands registered here appear in the Telegram command auto-complete menu when users type '/' or tap the Menu button.
             </p>
           </div>
 
-          <div className="space-y-4 pt-4 border-t border-gray-100">
+          <div className="space-y-4 pt-4 border-t border-[var(--color-border)]">
             <div className="space-y-3">
               {commands.map((cmd, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3.5 bg-gray-50 border border-gray-200 rounded-xl">
+                <div key={idx} className="flex items-center justify-between p-3.5 bg-[var(--color-accent-muted)] border border-[var(--color-border)] rounded-[var(--radius-lg)]">
                   <div className="flex items-center gap-3">
-                    <span className="w-8 h-8 rounded-lg bg-sky-100 text-sky-700 font-mono font-bold text-xs flex items-center justify-center">
+                    <span className="w-8 h-8 rounded-[var(--radius-md)] bg-sky-100 text-sky-700 font-mono font-bold text-xs flex items-center justify-center">
                       /
                     </span>
                     <div>
-                      <div className="text-sm font-bold font-mono text-gray-900">{cmd.command}</div>
-                      <div className="text-xs text-gray-500">{cmd.description}</div>
+                      <div className="text-sm font-bold font-mono text-[var(--color-ink)]">{cmd.command}</div>
+                      <div className="text-xs text-[var(--color-ink-faint)]">{cmd.description}</div>
                     </div>
                   </div>
                   <button
@@ -507,7 +507,7 @@ export function TelegramIntegration() {
               ))}
             </div>
 
-            <div className="p-4 bg-sky-50 border border-sky-100 rounded-xl space-y-3">
+            <div className="p-4 bg-sky-50 border border-sky-100 rounded-[var(--radius-lg)] space-y-3">
               <h4 className="text-xs font-semibold text-sky-900 uppercase tracking-wider">Register New Bot Command</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <input
@@ -515,20 +515,20 @@ export function TelegramIntegration() {
                   placeholder="Command (e.g. /pricing)"
                   value={newCommand}
                   onChange={(e) => setNewCommand(e.target.value)}
-                  className="px-3 py-2 border border-sky-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono"
+                  className="px-3 py-2 border border-sky-200 rounded-[var(--radius-md)] text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono"
                 />
                 <input
                   type="text"
                   placeholder="Description (e.g. View enterprise pricing tiers)"
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
-                  className="px-3 py-2 border border-sky-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  className="px-3 py-2 border border-sky-200 rounded-[var(--radius-md)] text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
               </div>
               <button
                 onClick={handleAddCommand}
                 disabled={!newCommand.trim() || !newDescription.trim()}
-                className="px-4 py-1.5 text-xs font-semibold text-white bg-sky-600 rounded-lg hover:bg-sky-700 disabled:opacity-50 transition"
+                className="px-4 py-1.5 text-xs font-semibold text-white bg-sky-600 rounded-[var(--radius-md)] hover:bg-sky-700 disabled:opacity-50 transition"
               >
                 + Add Command to Menu
               </button>
@@ -539,27 +539,27 @@ export function TelegramIntegration() {
 
       {/* Tab 4: Automations & Schedule */}
       {activeTab === 'automations' && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm space-y-6">
+        <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] p-6 shadow-sm space-y-6">
           <div>
-            <h3 className="text-base font-semibold text-gray-900">Telegram Automations & Working Hours</h3>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <h3 className="text-base font-semibold text-[var(--color-ink)]">Telegram Automations & Working Hours</h3>
+            <p className="text-sm text-[var(--color-ink-faint)] mt-0.5">
               Automated greetings, after-hours responses, and CSAT customer satisfaction surveys.
             </p>
           </div>
 
-          <div className="space-y-6 pt-4 border-t border-gray-100">
+          <div className="space-y-6 pt-4 border-t border-[var(--color-border)]">
             {/* Welcome Greeting */}
-            <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-3">
+            <div className="p-4 bg-[var(--color-accent-muted)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-900">Welcome Greeting</h4>
-                  <p className="text-xs text-gray-500">Sent immediately when a user sends /start or their first message.</p>
+                  <h4 className="text-sm font-semibold text-[var(--color-ink)]">Welcome Greeting</h4>
+                  <p className="text-xs text-[var(--color-ink-faint)]">Sent immediately when a user sends /start or their first message.</p>
                 </div>
                 <input
                   type="checkbox"
                   checked={greetingEnabled}
                   onChange={(e) => setGreetingEnabled(e.target.checked)}
-                  className="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500"
+                  className="h-4 w-4 text-sky-600 rounded border-[var(--color-border)] focus:ring-sky-500"
                 />
               </div>
               {greetingEnabled && (
@@ -567,23 +567,23 @@ export function TelegramIntegration() {
                   rows={2}
                   value={greetingMessage}
                   onChange={(e) => setGreetingMessage(e.target.value)}
-                  className="w-full p-2.5 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  className="w-full p-2.5 bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none"
                 />
               )}
             </div>
 
             {/* Out of Office */}
-            <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-3">
+            <div className="p-4 bg-[var(--color-accent-muted)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-900">After-Hours Away Message</h4>
-                  <p className="text-xs text-gray-500">Sent to messages received outside scheduled support hours.</p>
+                  <h4 className="text-sm font-semibold text-[var(--color-ink)]">After-Hours Away Message</h4>
+                  <p className="text-xs text-[var(--color-ink-faint)]">Sent to messages received outside scheduled support hours.</p>
                 </div>
                 <input
                   type="checkbox"
                   checked={outOfOfficeEnabled}
                   onChange={(e) => setOutOfOfficeEnabled(e.target.checked)}
-                  className="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500"
+                  className="h-4 w-4 text-sky-600 rounded border-[var(--color-border)] focus:ring-sky-500"
                 />
               </div>
               {outOfOfficeEnabled && (
@@ -591,71 +591,71 @@ export function TelegramIntegration() {
                   rows={2}
                   value={outOfOfficeMessage}
                   onChange={(e) => setOutOfOfficeMessage(e.target.value)}
-                  className="w-full p-2.5 bg-white border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  className="w-full p-2.5 bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none"
                 />
               )}
             </div>
 
             {/* CSAT Survey */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-xl">
+            <div className="flex items-center justify-between p-4 bg-[var(--color-accent-muted)] border border-[var(--color-border)] rounded-[var(--radius-lg)]">
               <div>
-                <h4 className="text-sm font-semibold text-gray-900">CSAT Customer Rating</h4>
-                <p className="text-xs text-gray-500">Sends 1-5 inline rating buttons when conversation is marked resolved.</p>
+                <h4 className="text-sm font-semibold text-[var(--color-ink)]">CSAT Customer Rating</h4>
+                <p className="text-xs text-[var(--color-ink-faint)]">Sends 1-5 inline rating buttons when conversation is marked resolved.</p>
               </div>
               <input
                 type="checkbox"
                 checked={csatEnabled}
                 onChange={(e) => setCsatEnabled(e.target.checked)}
-                className="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500"
+                className="h-4 w-4 text-sky-600 rounded border-[var(--color-border)] focus:ring-sky-500"
               />
             </div>
 
             {/* Working Hours Schedule */}
-            <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-4">
+            <div className="p-4 bg-[var(--color-accent-muted)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-900">Working Hours Schedule</h4>
-                  <p className="text-xs text-gray-500">Enforce team availability hours and automate away responses.</p>
+                  <h4 className="text-sm font-semibold text-[var(--color-ink)]">Working Hours Schedule</h4>
+                  <p className="text-xs text-[var(--color-ink-faint)]">Enforce team availability hours and automate away responses.</p>
                 </div>
                 <input
                   type="checkbox"
                   checked={workingHoursEnabled}
                   onChange={(e) => setWorkingHoursEnabled(e.target.checked)}
-                  className="h-4 w-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500"
+                  className="h-4 w-4 text-sky-600 rounded border-[var(--color-border)] focus:ring-sky-500"
                 />
               </div>
 
               {workingHoursEnabled && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Start Hour (24h)</label>
+                    <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">Start Hour (24h)</label>
                     <input
                       type="number"
                       min={0}
                       max={23}
                       value={workingHoursStart}
                       onChange={(e) => setWorkingHoursStart(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm"
+                      className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">End Hour (24h)</label>
+                    <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">End Hour (24h)</label>
                     <input
                       type="number"
                       min={0}
                       max={23}
                       value={workingHoursEnd}
                       onChange={(e) => setWorkingHoursEnd(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm"
+                      className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Timezone</label>
+                    <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">Timezone</label>
                     <input
                       type="text"
                       value={timezone}
                       onChange={(e) => setTimezone(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm"
+                      className="w-full px-3 py-2 bg-white border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm"
                     />
                   </div>
                 </div>
@@ -668,44 +668,44 @@ export function TelegramIntegration() {
       {/* Tab 5: Diagnostic Sender & Events */}
       {activeTab === 'diagnostics' && (
         <div className="space-y-6">
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm space-y-4">
+          <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] p-6 shadow-sm space-y-4">
             <div>
-              <h3 className="text-base font-semibold text-gray-900">Live Diagnostic Message Dispatcher</h3>
-              <p className="text-sm text-gray-500 mt-0.5">
+              <h3 className="text-base font-semibold text-[var(--color-ink)]">Live Diagnostic Message Dispatcher</h3>
+              <p className="text-sm text-[var(--color-ink-faint)] mt-0.5">
                 Dispatch a test outbound message to a Telegram Chat ID to verify Bot API connectivity and delivery.
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Recipient Chat ID</label>
+                <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">Recipient Chat ID</label>
                 <input
                   type="text"
                   value={testChatId}
                   onChange={(e) => setTestChatId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm font-mono focus:ring-2 focus:ring-sky-500 focus:outline-none"
                   placeholder="e.g. 987654321"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Recipient Name</label>
+                <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">Recipient Name</label>
                 <input
                   type="text"
                   value={testRecipientName}
                   onChange={(e) => setTestRecipientName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none"
                   placeholder="e.g. Dmitri Rostov"
                 />
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-xs font-medium text-gray-700 mb-1">Test Message Body</label>
+                <label className="block text-xs font-medium text-[var(--color-ink)] mb-1">Test Message Body</label>
                 <textarea
                   rows={2}
                   value={testMessage}
                   onChange={(e) => setTestMessage(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-[var(--radius-md)] text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none"
                 />
               </div>
             </div>
@@ -714,7 +714,7 @@ export function TelegramIntegration() {
               <button
                 onClick={handleSendTestMessage}
                 disabled={sendingTest || !testChatId.trim() || !testMessage.trim()}
-                className="px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-lg hover:bg-sky-700 shadow-sm transition disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-[var(--radius-md)] hover:bg-sky-700 shadow-sm transition disabled:opacity-50 flex items-center gap-2"
               >
                 {sendingTest ? 'Dispatching...' : <span className="inline-flex items-center gap-1.5"><Rocket className="h-4 w-4" /> Send Diagnostic Message</span>}
               </button>
@@ -728,28 +728,28 @@ export function TelegramIntegration() {
           </div>
 
           {/* Live Events Table */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm space-y-4">
+          <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--color-border)] p-6 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-base font-semibold text-gray-900">Recent Telegram Message Events</h3>
-                <p className="text-sm text-gray-500">Live feed of inbound commands, agent responses, and button clicks.</p>
+                <h3 className="text-base font-semibold text-[var(--color-ink)]">Recent Telegram Message Events</h3>
+                <p className="text-sm text-[var(--color-ink-faint)]">Live feed of inbound commands, agent responses, and button clicks.</p>
               </div>
               <button
                 onClick={async () => setEvents(await api.listTelegramEvents())}
-                className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+                className="px-3 py-1.5 text-xs font-medium text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] bg-[var(--color-accent-muted)] hover:bg-[var(--color-border)] rounded-[var(--radius-md)] transition"
               >
                 <span className="inline-flex items-center gap-1"><RefreshCw className="h-3.5 w-3.5" /> Refresh</span>
               </button>
             </div>
 
             {events.length === 0 ? (
-              <div className="py-12 text-center text-sm text-gray-500">
+              <div className="py-12 text-center text-sm text-[var(--color-ink-faint)]">
                 No recent Telegram events recorded yet. Dispatch a diagnostic message above to verify.
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-gray-600">
-                  <thead className="bg-gray-50 text-xs font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-200">
+                <table className="w-full text-left text-sm text-[var(--color-ink-muted)]">
+                  <thead className="bg-[var(--color-accent-muted)] text-xs font-semibold text-[var(--color-ink-faint)] uppercase tracking-wider border-b border-[var(--color-border)]">
                     <tr>
                       <th className="py-3 px-4">Direction</th>
                       <th className="py-3 px-4">Sender</th>
@@ -761,7 +761,7 @@ export function TelegramIntegration() {
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {events.map((ev) => (
-                      <tr key={ev.id} className="hover:bg-gray-50/60 transition">
+                      <tr key={ev.id} className="hover:bg-[var(--color-accent-muted)]/60 transition">
                         <td className="py-3 px-4">
                           <span
                             className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
@@ -773,15 +773,15 @@ export function TelegramIntegration() {
                             {ev.direction === 'inbound' ? 'Inbound' : 'Outbound'}
                           </span>
                         </td>
-                        <td className="py-3 px-4 font-medium text-gray-900">{ev.senderName}</td>
-                        <td className="py-3 px-4 text-gray-700 max-w-xs truncate">{ev.body}</td>
+                        <td className="py-3 px-4 font-medium text-[var(--color-ink)]">{ev.senderName}</td>
+                        <td className="py-3 px-4 text-[var(--color-ink)] max-w-xs truncate">{ev.body}</td>
                         <td className="py-3 px-4">
                           <span className="text-xs font-medium text-emerald-600 inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />{ev.status}</span>
                         </td>
-                        <td className="py-3 px-4 font-mono text-xs text-gray-400">
+                        <td className="py-3 px-4 font-mono text-xs text-[var(--color-ink-faint)]">
                           {ev.providerMessageId ? ev.providerMessageId.slice(0, 16) + '...' : '—'}
                         </td>
-                        <td className="py-3 px-4 text-xs text-gray-400">
+                        <td className="py-3 px-4 text-xs text-[var(--color-ink-faint)]">
                           {new Date(ev.sentAt).toLocaleTimeString()}
                         </td>
                       </tr>

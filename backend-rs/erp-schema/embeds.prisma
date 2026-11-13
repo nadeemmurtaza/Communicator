@@ -1,0 +1,18 @@
+// Embedding a third-party dashboard: a narrow iframe pattern, not a
+// micro-frontend architecture (architecture-patterns/113-micro-frontend-
+// embedding.md, WO-113.1). No organizationId (ADR-044/ADR-040): this
+// deployment IS the tenant.
+
+model EmbeddedWidget {
+  id        String   @id @default(cuid())
+  /// Stable, admin-chosen slug — what the embedding screen and the token
+  /// issuer both key off. Never derived from the vendor's own name in code.
+  key       String   @unique
+  label     String
+  targetUrl String
+  isActive  Boolean  @default(true)
+  createdByUserId String?
+  createdBy       User?    @relation("EmbeddedWidgetCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

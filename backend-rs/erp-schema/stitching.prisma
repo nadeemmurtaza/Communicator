@@ -1,0 +1,201 @@
+// Stitching: the style options a customer picks, standalone stitching orders
+// (customer's own fabric), and the tailor production queue.
+//
+// A StitchingJob attaches to EITHER an OrderItem (stitching bought with fabric)
+// OR a StitchingOrder (customer sent their own cloth). One model, one queue,
+// two entry points — the tailor screen does not care which door a job came in.
+
+enum StitchingSelectionType {
+  SINGLE
+  MULTI
+}
+
+model StitchingOptionGroup {
+  id            String                 @id @default(cuid())
+  key           String                 @unique // "neckline", "sleeve_style"
+  labelEn       String
+  labelUr       String
+  garmentTypeId String?
+  /// Body region the group styles: "neck", "sleeves", "upper_front",
+  /// "lower_front", "back", "trouser", "finishing". The storefront groups the
+  /// picker by this; null lands under "other".
+  area          String?
+  selectionType StitchingSelectionType @default(SINGLE)
+  required      Boolean                @default(false)
+  order         Int                    @default(0)
+  isActive      Boolean                @default(true)
+
+  /// Some styles cannot be enumerated — let the customer describe theirs.
+  allowCustomText Boolean @default(false)
+  helpEn          String?
+  helpUr          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  garmentType GarmentType?      @relation(fields: [garmentTypeId], references: [id], onDelete: Cascade)
+  options     StitchingOption[]
+
+  @@index([garmentTypeId, order])
+  @@index([area, order])
+}
+
+model StitchingOption {
+  id         String  @id @default(cuid())
+  groupId    String
+  key        String
+  labelEn    String
+  labelUr    String
+  /// Added to the stitching fee, in paisa. May be negative for a cheaper style.
+  priceDelta Int     @default(0)
+  imageUrl   String?
+  order      Int     @default(0)
+  isActive   Boolean @default(true)
+
+  group          StitchingOptionGroup      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  cartSelections CartItemStitchingOption[]
+
+  @@unique([groupId, key])
+  @@index([groupId, order])
+}
+
+enum StitchingOrderStatus {
+  DRAFT
+  AWAITING_FABRIC
+  FABRIC_RECEIVED
+  IN_PRODUCTION
+  READY
+  COMPLETED
+  CANCELLED
+}
+
+/// A tailoring booking where the customer supplies the cloth.
+model StitchingOrder {
+  id        String               @id @default(cuid())
+  number    String               @unique // "STO-2026-0001"
+  userId    String?
+  contactId String?
+  status    StitchingOrderStatus @default(DRAFT)
+
+  guestName  String?
+  guestPhone String?
+  guestEmail String?
+
+  /// Snapshot; the customer may edit their address book afterwards.
+  pickupAddress    Json?
+  deliveryAddress  Json?
+  fabricNotes      String?
+  staffNotes       String?
+  quotedFee        Int? // paisa
+  fabricReceivedAt DateTime?
+  promisedAt       DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  // `contactId` is a plain scalar, not a Prisma relation to Contact (core) —
+  // B7, MULTI-SECTOR.md. A pack referencing core is allowed, but Prisma
+  // requires a typed relation to be declared on BOTH models, which would put
+  // a `StitchingOrder` field back on core's Contact. Losing the relation
+  // means losing onDelete: SetNull here; nothing in this codebase deletes a
+  // Contact today. Look it up with `prisma.contact.findUnique()` if needed.
+  jobs             StitchingJob[]
+
+  @@index([status])
+  @@index([userId])
+  @@index([contactId])
+}
+
+enum StitchingStage {
+  RECEIVED
+  CUTTING
+  STITCHING
+  QC
+  READY
+  DISPATCHED
+}
+
+model StitchingJob {
+  id               String  @id @default(cuid())
+  number           String  @unique // "JOB-2026-0001"
+  /// Exactly one of these two is set. Enforced in the stitching service.
+  orderItemId      String? @unique
+  stitchingOrderId String?
+
+  garmentTypeId       String
+  /// Measurements as they were when the order was placed. Profiles change;
+  /// a job in production must not.
+  measurementSnapshot Json
+  /// The chosen style options, denormalised for the tailor's worksheet.
+  optionsSnapshot     Json?
+  instructions        String?
+
+  stage            StitchingStage @default(RECEIVED)
+  assignedTailorId String?
+  priority         Int            @default(0)
+  dueAt            DateTime?
+  startedAt        DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  // `orderItemId` is a plain scalar, not a Prisma relation to OrderItem
+  // (core) — see the note on StitchingOrder.contactId above; same reason,
+  // same trade-off (no onDelete: Cascade at the DB level any more). Order
+  // items are snapshots that are never hard-deleted (House Rule 7), so this
+  // costs nothing in practice. Joined manually where needed — see
+  // StitchingJobsService.attachOrderContext() and
+  // EntityEnrichmentRegistry's "orderItem.stitchingJob" point.
+  stitchingOrder StitchingOrder?     @relation(fields: [stitchingOrderId], references: [id], onDelete: Cascade)
+  garmentType    GarmentType         @relation(fields: [garmentTypeId], references: [id], onDelete: Restrict)
+  events         StitchingJobEvent[]
+
+  @@index([stage, dueAt])
+  @@index([assignedTailorId, stage])
+  @@index([stitchingOrderId])
+}
+
+/// Every stage transition, appended and never updated. The customer's progress
+/// timeline and the admin queue both read this.
+model StitchingJobEvent {
+  id        String          @id @default(cuid())
+  jobId     String
+  fromStage StitchingStage?
+  toStage   StitchingStage
+  note      String?
+  photoUrl  String?
+  actorId   String?
+  createdAt DateTime        @default(now())
+
+  job StitchingJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, createdAt])
+}
+
+model TailorProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  displayName     String
+  phone           String?
+  specialties     String[] @default([])
+  capacityPerWeek Int      @default(20)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+/// Backing store for sequential per-year STO-2026-0001 numbers. Same shape
+/// and same reason as OrderNumberCounter (orders.prisma): one row per year,
+/// incremented via a single atomic INSERT ... ON CONFLICT DO UPDATE ...
+/// RETURNING rather than a MAX(StitchingOrder.number) read, which is a
+/// read-then-write race between two concurrent bookings.
+model StitchingOrderNumberCounter {
+  year    Int @id
+  counter Int @default(0)
+}
+
+/// Same as StitchingOrderNumberCounter, for JOB-2026-0001 numbers. Shared by
+/// both places a job is born — see nextJobNumber() in
+/// stitching/jobs.service.ts.
+model StitchingJobNumberCounter {
+  year    Int @id
+  counter Int @default(0)
+}

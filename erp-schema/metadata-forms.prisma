@@ -1,0 +1,25 @@
+// A general metadata-driven UI engine, built by explicit owner override
+// (ADR-026) — architecture-patterns/141-general-metadata-driven-ui-engine.md
+// (WO-141.1). No organizationId (ADR-044/ADR-040): this deployment IS the
+// tenant.
+//
+// `fields` is the FieldMetadata[] shape the renderer consumes; it is stored
+// as JSON because its own shape (a list of field descriptors) has no useful
+// relational structure of its own, matching this repository's own JSONB
+// idiom (doc 104's own `customFields` column) rather than a five-table join
+// to describe "a list of fields." This model describes the FORM only — it
+// stores no values of its own; a screen that renders one decides where its
+// own values live (the one built here reuses doc 140's own EntityAttribute
+// rows, never a second, parallel value-storage mechanism).
+
+model FormMetadata {
+  id         String   @id @default(cuid())
+  /// Which entity this form describes — validated against Prisma.ModelName
+  /// at write time (FormMetadataService's own check), the same mitigation
+  /// doc 140 already established for the identical typo risk.
+  entityType String   @unique
+  /// FieldMetadata[]: { key, label, valueType, isRequired, options?, helpText? }
+  fields     Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}

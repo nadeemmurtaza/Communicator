@@ -1,0 +1,106 @@
+// Measurements: garment types, their measurement fields, and saved customer
+// profiles.
+//
+// Measurement fields are ROWS, not code. Staff add "cuff width" from the admin
+// dashboard and every measurement form picks it up without a deploy. The Zod
+// validator is built from these rows by packages/shared, so the API, the
+// website and the mobile app enforce exactly the same rules.
+
+enum MeasurementUnit {
+  INCH
+  CM
+}
+
+model GarmentType {
+  id       String  @id @default(cuid())
+  key      String  @unique // "kameez", "shalwar"
+  labelEn  String
+  labelUr  String
+  order    Int     @default(0)
+  isActive Boolean @default(true)
+
+  /// The garment list IS the stitching price list, in paisa. A
+  /// STITCHING_SERVICE product only overrides this when the customer picks one.
+  stitchingPrice   Int     @default(0)
+  /// Withdraws the garment from the stitching flow without hiding it from
+  /// measurements or from jobs already in production.
+  stitchingEnabled Boolean @default(true)
+
+  /// Base fabric requirement in Gaz (36" width) from the tailoring reference table; null when unknown.
+  baseFabricGaz Float?
+  /// Regional/synonym display names, e.g. ["Anarkali", "Panel Dress", "Gown"].
+  aliasesEn     String[] @default([])
+  aliasesUr     String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fields        MeasurementField[]
+  profiles      MeasurementProfile[]
+  optionGroups  StitchingOptionGroup[]
+  stitchingJobs StitchingJob[]
+  /// Cart lines waiting to be made into this garment.
+  /// STITCHING_SERVICE products that stitch this garment.
+  /// Unstitched fabrics that can be made into this garment.
+  sizeChart     GarmentSizeChart[]
+
+  @@index([isActive, order])
+}
+
+model MeasurementField {
+  id            String          @id @default(cuid())
+  garmentTypeId String
+  key           String // "chest", "sleeve_length"
+  labelEn       String
+  labelUr       String
+  unit          MeasurementUnit @default(INCH)
+  /// Inclusive bounds in `unit`; they reject fat-fingered entry (38 vs 380).
+  min           Float
+  max           Float
+  required      Boolean         @default(true)
+  order         Int             @default(0)
+  helpEn        String?
+  helpUr        String?
+  isActive      Boolean         @default(true)
+
+  garmentType GarmentType @relation(fields: [garmentTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([garmentTypeId, key])
+  @@index([garmentTypeId, order])
+}
+
+/// A saved set of measurements: "Ammi – kameez", "Self – shalwar".
+model MeasurementProfile {
+  id            String      @id @default(cuid())
+  userId        String
+  garmentTypeId String
+  label         String
+  /// field key -> value, validated against the garment's MeasurementFields.
+  values        Json
+  notes         String?
+  isDefault     Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  garmentType   GarmentType @relation(fields: [garmentTypeId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, garmentTypeId, label])
+  @@index([userId])
+}
+
+/// A standard RTW size row (XS-XXL) for a garment, offered as a shortcut
+/// alongside the "type your own measurements" flow.
+model GarmentSizeChart {
+  id            String   @id @default(cuid())
+  garmentTypeId String
+  sizeToken     String // "XS" | "S" | "M" | "L" | "XL" | "XXL"
+  /// field key -> value, same shape as MeasurementProfile.values, validated against the garment's active MeasurementFields.
+  values        Json
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  garmentType GarmentType @relation(fields: [garmentTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([garmentTypeId, sizeToken])
+  @@index([garmentTypeId, order])
+}

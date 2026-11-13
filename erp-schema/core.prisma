@@ -1,0 +1,691 @@
+// Core: identity, addresses, runtime settings, audit trail and the event outbox.
+// Every other module may reference these; they reference no module.
+
+enum UserRole {
+  CUSTOMER
+  STAFF
+  TAILOR
+  ADMIN
+}
+
+/// Which tier a FACT belongs to (RETAIL-ERP.md R8/R13, ADR-021). Lives here,
+/// not in organization.prisma, so a scopeLevel column never makes an
+/// always-on module (purchasing, bom, finance) schema-depend on the
+/// off-by-default organization module. Same values as organization.prisma's
+/// AdminScopeLevel (a GRANT's own scope) by design, deliberately not merged
+/// with it — a grant and a fact's recorded scope are different concepts
+/// that happen to share a vocabulary.
+enum ScopeLevel {
+  ORG
+  BRAND
+  BRANCH
+}
+
+model User {
+  id                   String    @id @default(cuid())
+  email                String?   @unique
+  phone                String?   @unique // normalised E.164
+  passwordHash         String?
+  firstName            String?
+  lastName             String?
+  /// Free text, not an enum — never a fixed set a person has to fit into.
+  gender               String?
+  dateOfBirth          DateTime?
+  avatarUrl            String?
+  /// The old fixed-enum role. Superseded by `roleAssignments` (Role/
+  /// UserRoleAssignment, below) — a user's *effective* permissions come
+  /// from the roles they are assigned there, unioned, never from this
+  /// column. Kept, unremoved, only as the seed's one-time migration source
+  /// and as the default new signups get assigned into (`Customer`) — see
+  /// role.service.ts. Nothing in PermissionsResolverService reads it.
+  role                 UserRole  @default(CUSTOMER)
+  isActive             Boolean   @default(true)
+  emailVerifiedAt      DateTime?
+  /// Set by GET /email/unsubscribe (a one-click, no-login link every
+  /// automated marketing send carries). Checked before any marketing-purpose
+  /// automation (MarketingAutomationCron) sends; never checked for
+  /// transactional mail (order/payment/account), which isn't marketing.
+  marketingEmailOptOut Boolean   @default(false)
+  lastLoginAt          DateTime?
+  /// The single sign-on identity linked to this account
+  /// (access-control-identity/161-sso-identity-federation.md) —
+  /// `<issuer>#<sub>`, because an OIDC `sub` is only unique within its own
+  /// issuer. Null for a password-only account, which SSO leaves untouched.
+  /// Indexed, not unique: sign-in resolves by email first; the index serves
+  /// SsoService's refusal to link one external identity to a second account.
+  ssoExternalId        String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  addresses                         Address[]
+  refreshTokens                     RefreshToken[]
+  passwordResetTokens               PasswordResetToken[]
+  emailVerificationTokens           EmailVerificationToken[]
+  /// Personal API keys this person issued — each one acts as them, capped
+  /// live by their permissions (access-control-identity/163-personal-api-keys.md).
+  apiKeys                           ApiKey[]                    @relation("ApiKeyOwner")
+  /// Keys this person revoked as someone else's administrator, or by
+  /// deactivating their owner.
+  apiKeysRevoked                    ApiKey[]                    @relation("ApiKeyRevoker")
+  carts                             Cart[]
+  orders                            Order[]
+  orderStatusEvents                 OrderStatusEvent[]
+  auditLogs                         AuditLog[]
+  contact                           Contact?                    @relation("ContactUser")
+  identityVerification              IdentityVerification?
+  ownedContacts                     Contact[]                   @relation("ContactOwner")
+  ownedLeads                        Lead[]                      @relation("LeadOwner")
+  interactions                      Interaction[]
+  inboundEmailReplies               InboundEmailReply[]
+  assignedFollowUps                 FollowUpTask[]              @relation("FollowUpAssignee")
+  approvedPayments                  Payment[]                   @relation("PaymentApprover")
+  segments                          Segment[]
+  devices                           DeviceToken[]
+  stockAdjustments                  StockAdjustment[]
+  stockMovements                    StockMovement[]             @relation("StockMovementActor")
+  permissionOverrides               UserPermission[]
+  /// What this user's admin access is scoped to (RETAIL-ERP.md R10, WO-18.3)
+  /// — empty for every deployment today. Model lives in organization.prisma
+  /// (a togglable module), not here: this back-relation is the only mention
+  /// of it core.prisma needs.
+  adminScopes                       AdminScope[]
+  /// Which named `Role` rows this user holds — plural, unioned (roles.ts).
+  roleAssignments                   UserRoleAssignment[]
+  purchaseOrdersCreated             PurchaseOrder[]             @relation("PurchaseOrderCreator")
+  embeddedWidgetsCreated            EmbeddedWidget[]            @relation("EmbeddedWidgetCreator")
+  microFrontendFragmentsRegistered  MicroFrontendFragment[]     @relation("MicroFrontendFragmentRegisteredBy")
+  goodsReceiptsReceived             GoodsReceipt[]              @relation("GoodsReceiptReceiver")
+  requisitionsRequested             PurchaseRequisition[]       @relation("RequisitionRequester")
+  approvalStepsDecided              ApprovalStep[]              @relation("ApprovalStepDecider")
+  stockCountsCreated                StockCount[]                @relation("StockCountCreator")
+  stockCountsAssigned               StockCount[]                @relation("StockCountAssignee")
+  workOrdersCreated                 WorkOrder[]                 @relation("WorkOrderCreator")
+  expensesCreated                   Expense[]                   @relation("ExpenseCreator")
+  bomRecipesCreated                 BomRecipe[]                 @relation("BomRecipeCreator")
+  bomProductionRuns                 BomProductionRun[]          @relation("BomProductionOperator")
+  policyQuarantinesResolved         PolicyQuarantine[]          @relation("PolicyQuarantineResolver")
+  /// Payroll (docs/implementation/payroll/19-payroll.md) — one User is both the
+  /// payee (compensationRates, leaveBalances, ...) and, for an ADMIN,
+  /// possibly the actor who set a rate or decided a leave request; the two
+  /// relation names below keep those two roles distinct on the same model.
+  compensationRates                 CompensationRate[]
+  compensationRatesCreated          CompensationRate[]          @relation("CompensationRateCreator")
+  payrollBankAccount                PayrollBankAccount?
+  dottedLineReportsAsReport          DottedLineReport[]           @relation("DottedLineReportUser")
+  dottedLineReportsAsManager         DottedLineReport[]           @relation("DottedLineReportManager")
+  lifecycleChecklists                LifecycleChecklist[]
+  leaveBalances                     LeaveBalance[]
+  leaveRequests                     LeaveRequest[]              @relation("LeaveRequestUser")
+  leaveRequestsDecided              LeaveRequest[]              @relation("LeaveRequestDecider")
+  payRunsApproved                   PayRun[]                    @relation("PayRunApprover")
+  payRunsCreated                    PayRun[]                    @relation("PayRunCreator")
+  payRunLines                       PayRunLine[]
+  payRunAdjustments                 PayRunAdjustment[]
+  payRunAdjustmentsCreated          PayRunAdjustment[]          @relation("PayRunAdjustmentCreator")
+  /// hr.prisma (hr-people-org/79-employee-asset-management.md) — one User is
+  /// both a possible asset holder and, for an ADMIN, the actor who issued or
+  /// took back someone else's asset; three relation names for three distinct
+  /// roles on the same model, same idiom as the payroll block above.
+  assetAssignments                  AssetAssignment[]           @relation("AssetAssignmentHolder")
+  assetAssignmentsIssued            AssetAssignment[]           @relation("AssetAssignmentIssuer")
+  assetAssignmentsReturned          AssetAssignment[]           @relation("AssetAssignmentReturner")
+  /// hr.prisma (hr-people-org/20-people-positions-ranks.md, ADR-044) — no
+  /// separate Employee model; this User IS the employee when it holds a
+  /// Posting. employeeProfile is optional supplementary detail, never a
+  /// gate on whether a posting is possible.
+  employeeProfile                   EmployeeProfile?
+  postings                          Posting[]
+  /// org-structure.prisma (access-control-identity/21-access-over-the-org-tree.md)
+  /// — one User can hold a grant, issue one, and countersign a third at
+  /// once; three relation names for three distinct roles on the same model,
+  /// same idiom as the payroll and asset-assignment blocks above.
+  orgUnitGrantsHeld                 OrgUnitGrant[]              @relation("OrgUnitGrantHolder")
+  orgUnitGrantsIssued               OrgUnitGrant[]              @relation("OrgUnitGrantGranter")
+  orgUnitGrantsCountersigned        OrgUnitGrant[]              @relation("OrgUnitGrantCountersigner")
+  /// attendance.prisma (attendance-workforce/22-attendance-shifts-leave.md)
+  /// — this User's own punches and shifts, plus, for someone who reconciles
+  /// exceptions, the exceptions they resolved; three relation names for
+  /// three distinct roles on the same model, same idiom as the blocks above.
+  attendanceEvents                  AttendanceEvent[]
+  shifts                            Shift[]
+  attendanceExceptions              AttendanceException[]       @relation("AttendanceExceptionUser")
+  attendanceExceptionsResolved      AttendanceException[]       @relation("AttendanceExceptionResolver")
+  /// accounting.prisma (finance-accounting/147-fixed-asset-depreciation.md)
+  /// — who set up a depreciation schedule, a real accounting-policy decision.
+  assetDepreciationSchedulesCreated AssetDepreciationSchedule[]
+  /// fulfilment.prisma (WO-6.4/6.6) — both core, same idiom as auditLogs above.
+  manifestsCreated                  Manifest[]
+  returnRequests                    ReturnRequest[]
+  /// content.prisma (WO-8.1) — a staff account authoring a blog post.
+  blogPosts                         BlogPost[]
+  /// marketing.prisma (WO-8.4) — a staff account authoring a campaign.
+  campaignsCreated                  Campaign[]
+  /// giftcards.prisma (WO-5.5). SUM(StoreCreditTransaction.delta) — a cache,
+  /// never written outside StoreCreditService's own conditional update; the
+  /// ledger is the source of truth (see StoreCreditTransaction's own note).
+  storeCreditBalance                Int                         @default(0)
+  storeCreditTransactions           StoreCreditTransaction[]
+  giftCardsPurchased                GiftCard[]                  @relation("GiftCardPurchaser")
+
+  /// wallet.prisma (doc 155) — 1:1, distinct from storeCreditBalance above:
+  /// a Wallet is Newax-issued PURCHASED credit with its own RESERVE/REDEEM
+  /// lifecycle, never the goodwill/refund ledger StoreCreditTransaction is.
+  /// Module ships off by default — see DECISIONS.md.
+  walletAccount WalletAccount?
+
+  /// Phase 7 (docs/implementation/customer-portal-loyalty/07-customer-portal.md).
+  reviews                 Review[]
+  wishlistItems           WishlistItem[]
+  backInStockRequests     BackInStockRequest[]
+  /// WO-5.5's own cache pattern, reused: SUM(LoyaltyTransaction.points) — a
+  /// cache, never written outside LoyaltyService's own conditional update.
+  loyaltyPoints           Int                      @default(0)
+  loyaltyTransactions     LoyaltyTransaction[]
+  /// Generated lazily on first request (human-code.ts, WO-5's own helper) —
+  /// most customers never ask for a referral code, so most rows stay null.
+  referralCode            String?                  @unique
+  referralsMade           Referral[]               @relation("ReferralReferrer")
+  referredBy              Referral?                @relation("ReferralReferee")
+  notificationPreferences NotificationPreference[]
+
+  @@index([role])
+  @@index([createdAt])
+  @@index([ssoExternalId])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  ip        String?
+  createdAt DateTime  @default(now())
+  /// Every token descended from one sign-in shares its familyId: a fresh
+  /// value at login, inherited on every rotation. Reuse of a rotated token
+  /// outside the grace window revokes the whole family at once
+  /// (206-rate-limiting-caching-compression-hardening.md §2.2). Tokens issued
+  /// before WO-206.3 were backfilled with their own id — each its own family.
+  familyId     String
+  /// When this token was exchanged for its successor. Null for a token that
+  /// was never rotated — live, or revoked some other way (logout, password
+  /// change, deactivation), which is never treated as reuse.
+  rotatedAt    DateTime?
+  /// The token that superseded this one. Set in the same transaction as
+  /// rotatedAt, so a replay inside the grace window can hand back the very
+  /// same successor instead of minting a second one.
+  replacedById String?       @unique
+  replacedBy   RefreshToken? @relation("RefreshTokenRotation", fields: [replacedById], references: [id], onDelete: SetNull)
+  replaces     RefreshToken? @relation("RefreshTokenRotation")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([familyId])
+}
+
+/**
+ * A one-time token mailed to reset a forgotten password.
+ * Mirrors RefreshToken: only a SHA-256 hash is stored, so a leaked database
+ * dump cannot be replayed as a reset link.
+ */
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/**
+ * A one-time token mailed to confirm an email address. Same shape and reasoning as PasswordResetToken.
+ */
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// Which request surface a personal API key acts on — two separate scope
+/// catalogues, never mixed (163-personal-api-keys.md §2). ADMIN keys carry
+/// `PERMISSION_CATALOG` keys (`permissionKeys`); STOREFRONT keys carry
+/// `CUSTOMER_SCOPE_CATALOG` keys (`customerScopes`).
+enum ApiKeySurface {
+  ADMIN
+  STOREFRONT
+}
+
+/// Why a key stopped working — kept on the row so the owner's own list can
+/// say it, not only the audit trail.
+enum ApiKeyRevocationReason {
+  /// The owner revoked it from their own list.
+  OWNER
+  /// A `users.manage` holder revoked it from the oversight list.
+  ADMINISTRATOR
+  /// UsersAdminService.update() deactivated the owner (canonical ruling 6).
+  OWNER_DEACTIVATED
+}
+
+/// A personal API key: a credential that acts as `user`, never as anyone more
+/// powerful. Its effective access on every request is
+/// `(permissionKeys or customerScopes) ∩ (user's live permissions) −
+/// NON_DELEGATABLE_PERMISSIONS`, recomputed by ApiKeyAuthService — nothing
+/// here is a snapshot of what the owner could do when it was made.
+///
+/// Written only by ApiKeysService. Node-local: deliberately not registered
+/// with ReplicationRegistry, so a credential never leaves the node that
+/// minted it. The migration adds what this DSL cannot say: a CHECK tying each
+/// row to exactly one catalogue, and a trigger making revocation final.
+model ApiKey {
+  id             String                  @id @default(cuid())
+  userId         String
+  surface        ApiKeySurface
+  /// Chosen by the owner. Shown to the owner and to `users.manage`, never
+  /// put in the security email (it is text the minting person chose).
+  name           String
+  /// SHA-256 of the raw secret (core/security/api-token.ts) — the raw value
+  /// is in exactly one HTTP response, the one that created or rotated it.
+  /// Same discipline as TradingPartner.inboundApiKeyHash. Never selected by
+  /// any read path.
+  keyHash        String                  @unique
+  /// The secret's last four characters, so a list can tell keys apart. The
+  /// other 252 bits of the secret stay unknown.
+  lastFour       String
+  /// `PERMISSION_CATALOG` keys chosen at create/edit — ADMIN keys only; the
+  /// CHECK keeps it empty on a STOREFRONT key.
+  permissionKeys String[]                @default([])
+  /// `CUSTOMER_SCOPE_CATALOG` keys — STOREFRONT keys only; the CHECK keeps it
+  /// empty on an ADMIN key.
+  customerScopes String[]                @default([])
+  /// Mandatory, at most API_KEY_MAX_LIFETIME_DAYS after create or rotate.
+  expiresAt      DateTime
+  /// Best-effort, written at most once a minute per key — operational, not
+  /// evidence; never fails a request.
+  lastUsedAt     DateTime?
+  /// Set by every rotate; null until the first.
+  rotatedAt      DateTime?
+  /// Null while the key is live. Once set, the row is final (trigger).
+  revokedAt      DateTime?
+  /// Set with revokedAt, never without it (CHECK).
+  revokedReason  ApiKeyRevocationReason?
+  /// Who revoked it: the owner, an administrator, or the admin who
+  /// deactivated the owner. Null while the key is live — and null again if
+  /// that person's own account is later erased (SetNull); revokedReason still
+  /// says which kind of actor it was.
+  revokedById    String?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  user      User  @relation("ApiKeyOwner", fields: [userId], references: [id], onDelete: Cascade)
+  revokedBy User? @relation("ApiKeyRevoker", fields: [revokedById], references: [id], onDelete: SetNull)
+
+  // The owner's own list (WHERE userId ORDER BY createdAt DESC), and the
+  // deactivation revoke (WHERE userId AND revokedAt IS NULL).
+  @@index([userId, createdAt])
+  // The `users.manage` oversight list, newest first, paginated.
+  @@index([createdAt])
+}
+
+model Address {
+  id         String   @id @default(cuid())
+  userId     String?
+  label      String? // "Home", "Office"
+  fullName   String
+  phone      String
+  line1      String
+  line2      String?
+  city       String
+  province   String
+  postalCode String?
+  country    String   @default("PK")
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Runtime configuration edited from the admin dashboard: store name, shipping
+/// zones, COD fee, stitching lead times. Business rules are data, not constants.
+model Setting {
+  key         String   @id
+  value       Json
+  description String?
+  updatedAt   DateTime @updatedAt
+}
+
+/// What an EmailAccount is for, so EmailChannel can route an outgoing message
+/// to the right mailbox instead of every email leaving from one address.
+/// TRANSACTIONAL is the fallback purpose — order, payment and account mail
+/// always has somewhere to send from even if only one account exists.
+enum EmailAccountPurpose {
+  TRANSACTIONAL
+  MARKETING
+  SUPPORT
+}
+
+/// A connected mailbox: SMTP to send, optionally IMAP to receive. Multiple
+/// accounts may share a purpose (e.g. two marketing senders); the one with
+/// isDefault wins, then the most recently updated. Secrets are stored as
+/// AES-256-GCM ciphertext (@newax/shared's secret-crypto.ts) — never plaintext,
+/// never returned by the API once saved.
+model EmailAccount {
+  id        String              @id @default(cuid())
+  label     String // "Orders", "Support Inbox", "Marketing PK"
+  purpose   EmailAccountPurpose @default(TRANSACTIONAL)
+  isActive  Boolean             @default(true)
+  /// The account EmailChannel prefers for its purpose when more than one is active.
+  isDefault Boolean             @default(false)
+
+  fromName  String
+  fromEmail String
+  replyTo   String?
+
+  smtpHost              String
+  smtpPort              Int       @default(587)
+  /// True for implicit TLS (port 465). Port 587 upgrades with STARTTLS instead.
+  smtpSecure            Boolean   @default(false)
+  smtpUser              String
+  smtpPasswordEncrypted String
+  smtpVerifiedAt        DateTime?
+
+  /// IMAP is optional per account. When configured, the mailbox poller
+  /// (modules/customers/crm/email-inbox) logs in on a schedule and pulls new mail —
+  /// see imapLastPolledAt/imapLastUid below for its resume cursor.
+  imapHost              String?
+  imapPort              Int?
+  imapSecure            Boolean   @default(true)
+  imapUser              String?
+  imapPasswordEncrypted String?
+  imapVerifiedAt        DateTime?
+
+  /// Set after each poll, purely for the admin UI ("last checked 3 min ago").
+  imapLastPolledAt DateTime?
+  /// Highest UID the poller has seen for this mailbox, so a run does not
+  /// rescan everything — not the idempotency guard itself (InboundEmail's
+  /// unique constraint is), just a resume point.
+  imapLastUid      Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inboundEmails InboundEmail[]
+
+  @@index([purpose, isActive])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String // "product.updated", "order.status_changed"
+  entity    String // "Product", "Order"
+  entityId  String?
+  data      Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entity, entityId])
+  @@index([actorId])
+  @@index([createdAt])
+}
+
+/// A single grantable capability, e.g. "orders.manage". The key is what
+/// guards check and what @RequirePermission(...) call sites reference —
+/// label/category are display-only, for the Settings → Roles &amp; Permissions
+/// screen.
+model Permission {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  label     String
+  category  String
+  createdAt DateTime @default(now())
+
+  rolePermissions RolePermission[]
+  userOverrides   UserPermission[]
+  /// The new, dynamic-role successor to `rolePermissions` above.
+  roleGrants      RoleGrant[]
+}
+
+/// Which roles currently hold a given permission. This mapping is data, not
+/// code — it starts seeded to reproduce the old RBAC role checks exactly, and
+/// is then editable from the admin Settings screen.
+model RolePermission {
+  id           String   @id @default(cuid())
+  role         UserRole
+  permissionId String
+  createdAt    DateTime @default(now())
+
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([role, permissionId])
+  @@index([role])
+}
+
+enum PermissionEffect {
+  GRANT
+  REVOKE
+}
+
+/// A per-user adjustment layered on top of their role's grants: GRANT adds a
+/// permission their role doesn't have, REVOKE takes one away that it does.
+/// Resolution is role grants first, then these overrides applied on top —
+/// @see PermissionsResolverService.resolveForUser.
+model UserPermission {
+  id           String           @id @default(cuid())
+  userId       String
+  permissionId String
+  effect       PermissionEffect
+  createdAt    DateTime         @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId])
+  @@index([userId])
+}
+
+/// A named, reusable bundle of permissions a super admin defines — "roles
+/// are data, not code" (House Rule 9) taken to its actual conclusion. Until
+/// now only which permissions a role holds was data (RolePermission,
+/// keyed by the fixed UserRole enum); the roles themselves were still a
+/// hardcoded enum. This table is the role itself: seeded once with four
+/// rows matching today's enum (Customer, Tailor, Staff, Admin) so a fresh
+/// deployment behaves identically, and freely renameable, deletable, or
+/// joined by new custom roles from there — nothing in application code
+/// depends on any particular row existing, the same guarantee House Rule 9
+/// already gives every permission check.
+///
+/// A user may hold several roles at once (`UserRoleAssignment`, below);
+/// their effective permissions are every held role's grants, unioned, with
+/// their own `UserPermission` overrides applied on top — same order as
+/// always, just merging more than one role's grants first.
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  grants      RoleGrant[]
+  assignments UserRoleAssignment[]
+}
+
+/// Which permissions a `Role` holds — the direct successor to the old
+/// enum-keyed `RolePermission`, just pointing at a real `Role` row instead
+/// of a fixed enum value.
+model RoleGrant {
+  id           String   @id @default(cuid())
+  roleId       String
+  permissionId String
+  createdAt    DateTime @default(now())
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+}
+
+/// Which `Role` rows a user holds. Plural on purpose — see `Role`'s own
+/// comment: permissions from every assigned role union together.
+model UserRoleAssignment {
+  id        String   @id @default(cuid())
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+}
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+}
+
+/// Transactional outbox. Domain events are written in the same transaction as
+/// the state change that produced them, then dispatched to subscribers by a
+/// background worker — so a failing subscriber retries instead of losing the
+/// event, and never blocks checkout.
+model OutboxEvent {
+  id          String       @id @default(cuid())
+  name        String // "order.placed"
+  payload     Json
+  status      OutboxStatus @default(PENDING)
+  attempts    Int          @default(0)
+  lastError   String?
+  availableAt DateTime     @default(now())
+  processedAt DateTime?
+  createdAt   DateTime     @default(now())
+
+  @@index([status, availableAt])
+  @@index([name])
+}
+
+enum DevicePlatform {
+  IOS
+  ANDROID
+  WEB
+}
+
+/// A push notification target: one installation of the mobile app.
+///
+/// Keyed on the token itself, because reinstalling the app or restoring a
+/// backup can hand the same token to a different account — registering simply
+/// moves it, rather than leaving the old owner receiving someone else's
+/// garments.
+model DeviceToken {
+  id         String         @id @default(cuid())
+  userId     String
+  token      String         @unique
+  platform   DevicePlatform @default(ANDROID)
+  appVersion String?
+  locale     String?
+  lastSeenAt DateTime       @default(now())
+  createdAt  DateTime       @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Anonymous, aggregate first-party analytics — page views, add-to-cart,
+/// checkout-started. sessionId is an opaque client-generated id, never a raw
+/// IP or User-Agent, and this table is intentionally NOT related to User or
+/// Contact: do not add a userId column here, it would join anonymous session
+/// activity to a real identity.
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  type      String // "page_view" | "add_to_cart" | "checkout_started"
+  path      String? // for page_view: the route, e.g. "/en/product/lawn-suit-42"
+  source    String   @default("direct") // "direct" | "organic" | "social" | "referral" | "email"
+  sessionId String // opaque, anonymous, client-generated — never joined to a user
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([type, createdAt])
+  @@index([sessionId, createdAt])
+}
+
+/// Phase 9 (docs/implementation/ai-layer/09-ai-layer.md). Every AiProvider
+/// call, whichever feature triggered it — the doc's own non-negotiable
+/// ("Log tokens and cost per call, per feature") plus what AiService reads
+/// to enforce the monthly budget cap. Never deleted by a feature; only
+/// AiService writes here.
+enum AiFeature {
+  ALT_TEXT
+  SEO_COPY
+  SIZE_RECOMMENDATION
+  DEMAND_FORECAST
+  COD_RISK
+  SEMANTIC_SEARCH
+  VISUAL_SEARCH
+  RECOMMENDATIONS
+  WHATSAPP_ASSISTANT
+  MARKDOWN_SUGGESTION
+  REVIEW_SUMMARY
+  IMPORT_CLEANUP
+  // WO-35 (rag.prisma) — one AiCallKind each: EMBEDDING for both ingestion
+  // and a retrieval query's own embedding, VISION for the scanned-page OCR
+  // fallback, COMPLETION for generation.
+  RAG_INGESTION
+  RAG_RETRIEVAL
+  RAG_GENERATION
+  // 144-supply-chain-resilience-planning-engine.md (R23) — narrating an
+  // already-computed propagation/ranking result; the model writes prose
+  // around figures it is handed, never originates one of its own.
+  PLANNING_NARRATION
+}
+
+enum AiCallKind {
+  COMPLETION
+  EMBEDDING
+  VISION
+}
+
+model AiUsageLog {
+  id           String     @id @default(cuid())
+  feature      AiFeature
+  kind         AiCallKind
+  /// Matches the calling AiProvider's own `key` — "anthropic" | "openai".
+  provider     String
+  model        String
+  inputTokens  Int        @default(0)
+  outputTokens Int        @default(0)
+  /// Estimated from the provider's published per-token rate at call time —
+  /// see ai.service.ts's own PRICING table. Paisa, so it sums cleanly with
+  /// every other money figure in this codebase.
+  costPaisa    Int        @default(0)
+  succeeded    Boolean    @default(true)
+  errorMessage String?
+  createdAt    DateTime   @default(now())
+
+  @@index([feature, createdAt])
+  @@index([createdAt])
+}

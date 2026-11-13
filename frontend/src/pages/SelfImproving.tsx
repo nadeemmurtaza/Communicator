@@ -306,7 +306,7 @@ export function SelfImproving() {
           {activeView === 'model_hub' ? (
             <button
               onClick={() => setShowConnectModal(true)}
-              className="inline-flex items-center justify-center rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-accent-hover)]"
+              className="inline-flex items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-accent-hover)]"
             >
               + Connect Any AI Model
             </button>
@@ -314,7 +314,7 @@ export function SelfImproving() {
             <button
               onClick={handleTriggerScan}
               disabled={scanning}
-              className="inline-flex items-center justify-center rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
+              className="inline-flex items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
             >
               {scanning ? 'Scanning Conversations...' : 'Scan Conversations for Learnings'}
             </button>
@@ -325,7 +325,7 @@ export function SelfImproving() {
       {/* KPI Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-accent-soft)]/50 p-4 shadow-sm">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-accent-soft)]/50 p-4 shadow-sm">
             <div className="text-xs font-medium text-indigo-800 uppercase tracking-wider">
               Cumulative Resolution Lift
             </div>
@@ -342,7 +342,7 @@ export function SelfImproving() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 shadow-sm">
+          <div className="rounded-[var(--radius-lg)] border border-emerald-200 bg-emerald-50/50 p-4 shadow-sm">
             <div className="text-xs font-medium text-emerald-800 uppercase tracking-wider">
               Active Agent Model
             </div>
@@ -357,7 +357,7 @@ export function SelfImproving() {
             <div className="mt-2 text-xs text-emerald-700">Connected & Configurable</div>
           </div>
 
-          <div className="rounded-xl border border-purple-200 bg-purple-50/50 p-4 shadow-sm">
+          <div className="rounded-[var(--radius-lg)] border border-purple-200 bg-purple-50/50 p-4 shadow-sm">
             <div className="text-xs font-medium text-purple-800 uppercase tracking-wider">
               Human Rep Exemplars
             </div>
@@ -370,7 +370,7 @@ export function SelfImproving() {
             <div className="mt-2 text-xs text-purple-700">Extracted from 5-star human threads</div>
           </div>
 
-          <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm">
+          <div className="rounded-[var(--radius-lg)] border border-amber-200 bg-amber-50/50 p-4 shadow-sm">
             <div className="text-xs font-medium text-amber-800 uppercase tracking-wider">
               Open AI Suggestions
             </div>
@@ -392,7 +392,7 @@ export function SelfImproving() {
           className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
             activeView === 'insights'
               ? 'border-indigo-600 text-[var(--color-accent)]'
-              : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
           <span className="flex items-center gap-1.5"><Lightbulb className="h-4 w-4" /> <span>AI Insights & Rep Exemplars ({insights.length})</span></span>
@@ -402,7 +402,7 @@ export function SelfImproving() {
           className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
             activeView === 'model_hub'
               ? 'border-indigo-600 text-[var(--color-accent)]'
-              : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
           <span className="flex items-center gap-1.5"><Settings className="h-4 w-4" /> <span>Model Hub & Custom Policies ({connections.length})</span></span>
@@ -412,7 +412,7 @@ export function SelfImproving() {
           className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
             activeView === 'history'
               ? 'border-indigo-600 text-[var(--color-accent)]'
-              : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
           <span className="flex items-center gap-1.5"><TrendingUp className="h-4 w-4" /> <span>Retraining Timeline ({history.length})</span></span>
@@ -422,7 +422,7 @@ export function SelfImproving() {
           className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 flex items-center gap-2 ${
             activeView === 'coaching'
               ? 'border-indigo-600 text-[var(--color-accent)]'
-              : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
           <span className="flex items-center gap-1.5"><Users className="h-4 w-4" /> <span>Team Coaching ({coachingInsights.length})</span></span>
@@ -434,7 +434,7 @@ export function SelfImproving() {
           Loading self-improving suite...
         </div>
       ) : error ? (
-        <div className="rounded-lg bg-rose-50 p-4 text-sm text-rose-700">{error}</div>
+        <div className="rounded-[var(--radius-md)] bg-rose-50 p-4 text-sm text-rose-700">{error}</div>
       ) : (
         <>
           {/* VIEW: MODEL HUB & CUSTOM POLICIES */}
@@ -493,7 +493,7 @@ export function SelfImproving() {
                     return (
                       <div
                         key={job.key}
-                        className="rounded-xl border border-[var(--color-border)] bg-[var(--color-page)] p-3.5 space-y-2"
+                        className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-page)] p-3.5 space-y-2"
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-bold text-[var(--color-ink)] flex items-center">{job.icon}{job.label}</span>
@@ -507,7 +507,7 @@ export function SelfImproving() {
                           <select
                             value={current?.connection_id || ''}
                             onChange={(e) => handleAssignJobModel(job.key, e.target.value)}
-                            className="w-full rounded-lg border border-slate-300 bg-[var(--color-surface)] px-2.5 py-1.5 text-xs text-slate-800 focus:border-indigo-500 focus:outline-none"
+                            className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
                           >
                             {connections.map((c) => (
                               <option key={c.id} value={c.id}>
@@ -535,7 +535,7 @@ export function SelfImproving() {
                   </div>
                   <button
                     onClick={() => setShowConnectModal(true)}
-                    className="rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[var(--color-accent-hover)]"
+                    className="rounded-[var(--radius-md)] bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[var(--color-accent-hover)]"
                   >
                     + Connect New Model
                   </button>
@@ -545,11 +545,11 @@ export function SelfImproving() {
                   {connections.map((c) => (
                     <div
                       key={c.id}
-                      className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-2xs space-y-3"
+                      className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-2xs space-y-3"
                     >
                       <div className="flex items-start justify-between">
                         <div>
-                          <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-[var(--color-ink)] uppercase">
+                          <span className="rounded bg-[var(--color-accent-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-ink)] uppercase">
                             {c.provider}
                           </span>
                           <h4 className="text-sm font-bold text-[var(--color-ink)] mt-1">{c.name}</h4>
@@ -561,7 +561,7 @@ export function SelfImproving() {
                           className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                             c.test_status === 'connected'
                               ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-slate-100 text-[var(--color-ink-muted)]'
+                              : 'bg-[var(--color-accent-muted)] text-[var(--color-ink-muted)]'
                           }`}
                         >
                           {c.test_status === 'connected' ? (
@@ -603,7 +603,7 @@ export function SelfImproving() {
                         <button
                           onClick={() => handleTestConnection(c.id)}
                           disabled={testingConnId === c.id}
-                          className="rounded bg-slate-100 hover:bg-slate-200 px-2 py-1 text-[11px] font-semibold text-[var(--color-ink)] transition-colors disabled:opacity-50"
+                          className="rounded bg-[var(--color-accent-muted)] hover:bg-[var(--color-border)] px-2 py-1 text-[11px] font-semibold text-[var(--color-ink)] transition-colors disabled:opacity-50"
                         >
                           {testingConnId === c.id ? 'Testing...' : 'Test Connection'}
                         </button>
@@ -636,10 +636,10 @@ export function SelfImproving() {
                       <button
                         key={j.key}
                         onClick={() => setSelectedPolicyJob(j.key)}
-                        className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors ${
+                        className={`rounded-[var(--radius-md)] px-2.5 py-1 text-xs font-semibold transition-colors ${
                           selectedPolicyJob === j.key
                             ? 'bg-[var(--color-accent)] text-white'
-                            : 'bg-slate-100 text-[var(--color-ink-muted)] hover:bg-slate-200'
+                            : 'bg-[var(--color-accent-muted)] text-[var(--color-ink-muted)] hover:bg-[var(--color-border)]'
                         }`}
                       >
                         {j.label}
@@ -663,7 +663,7 @@ export function SelfImproving() {
                           onChange={(e) =>
                             setCurrentCustomPolicy({ ...currentCustomPolicy, tone: e.target.value })
                           }
-                          className="w-full rounded-lg border border-slate-300 bg-[var(--color-surface)] p-2 text-xs text-slate-800 focus:border-indigo-500 focus:outline-none"
+                          className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
                         >
                           <option value="empathetic, helpful & professional">
                             Empathetic & Professional (Recommended)
@@ -698,7 +698,7 @@ export function SelfImproving() {
                                   min_csat_learning_threshold: parseFloat(e.target.value) || 4.0,
                                 })
                               }
-                              className="w-full rounded-lg border border-slate-300 p-2 text-xs focus:border-indigo-500 focus:outline-none"
+                              className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs focus:border-indigo-500 focus:outline-none"
                             />
                           </div>
 
@@ -714,7 +714,7 @@ export function SelfImproving() {
                                   auto_approval_mode: e.target.value,
                                 })
                               }
-                              className="w-full rounded-lg border border-slate-300 bg-[var(--color-surface)] p-2 text-xs text-slate-800 focus:border-indigo-500 focus:outline-none"
+                              className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-2 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
                             >
                               <option value="require_manager_review">
                                 Require Manager Review (Recommended)
@@ -742,7 +742,7 @@ export function SelfImproving() {
                             guidelines: e.target.value,
                           })
                         }
-                        className="w-full rounded-xl border border-slate-300 p-2.5 text-xs text-slate-800 focus:border-indigo-500 focus:outline-none"
+                        className="w-full rounded-[var(--radius-lg)] border border-[var(--color-border)] p-2.5 text-xs text-[var(--color-ink)] focus:border-indigo-500 focus:outline-none"
                         placeholder="Define operational guidelines for this AI job..."
                       />
                     </div>
@@ -758,11 +758,11 @@ export function SelfImproving() {
                         </span>
                       </div>
 
-                      <div className="space-y-1.5 max-h-48 overflow-y-auto rounded-xl border border-[var(--color-border)] p-3 bg-[var(--color-page)]">
+                      <div className="space-y-1.5 max-h-48 overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--color-border)] p-3 bg-[var(--color-page)]">
                         {(currentCustomPolicy.rules || []).map((rule) => (
                           <div
                             key={rule.id}
-                            className="flex items-center justify-between rounded-lg bg-[var(--color-surface)] p-2 border border-[var(--color-border)]"
+                            className="flex items-center justify-between rounded-[var(--radius-md)] bg-[var(--color-surface)] p-2 border border-[var(--color-border)]"
                           >
                             <div className="flex items-center gap-2">
                               <input
@@ -773,7 +773,7 @@ export function SelfImproving() {
                               />
                               <span
                                 className={`text-xs ${
-                                  rule.enabled ? 'text-slate-800' : 'text-[var(--color-ink-faint)] line-through'
+                                  rule.enabled ? 'text-[var(--color-ink)]' : 'text-[var(--color-ink-faint)] line-through'
                                 }`}
                               >
                                 {rule.rule}
@@ -795,12 +795,12 @@ export function SelfImproving() {
                           value={newRuleText}
                           onChange={(e) => setNewRuleText(e.target.value)}
                           placeholder="Type a new custom rule (e.g. Always address customer by first name)..."
-                          className="flex-1 rounded-lg border border-slate-300 p-2 text-xs focus:border-indigo-500 focus:outline-none"
+                          className="flex-1 rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs focus:border-indigo-500 focus:outline-none"
                         />
                         <button
                           type="button"
                           onClick={handleAddCustomRule}
-                          className="rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)]"
+                          className="rounded-[var(--radius-md)] bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)]"
                         >
                           + Add Rule
                         </button>
@@ -812,11 +812,11 @@ export function SelfImproving() {
                       <label className="font-semibold text-[var(--color-ink)] block">
                         Forbidden Actions & Guardrails ({currentCustomPolicy.guardrails.length}):
                       </label>
-                      <div className="space-y-1.5 max-h-40 overflow-y-auto rounded-xl border border-rose-200 p-3 bg-rose-50/30">
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto rounded-[var(--radius-lg)] border border-rose-200 p-3 bg-rose-50/30">
                         {(currentCustomPolicy.guardrails || []).map((g, idx) => (
                           <div
                             key={idx}
-                            className="flex items-center justify-between rounded-lg bg-[var(--color-surface)] p-2 border border-rose-200 text-xs text-rose-950 font-medium"
+                            className="flex items-center justify-between rounded-[var(--radius-md)] bg-[var(--color-surface)] p-2 border border-rose-200 text-xs text-rose-950 font-medium"
                           >
                             <span className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-rose-600 shrink-0" /><span>{g}</span></span>
                             <button
@@ -835,12 +835,12 @@ export function SelfImproving() {
                           value={newGuardrailText}
                           onChange={(e) => setNewGuardrailText(e.target.value)}
                           placeholder="Type a guardrail (e.g. Never disclose internal supplier costs)..."
-                          className="flex-1 rounded-lg border border-slate-300 p-2 text-xs focus:border-indigo-500 focus:outline-none"
+                          className="flex-1 rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs focus:border-indigo-500 focus:outline-none"
                         />
                         <button
                           type="button"
                           onClick={handleAddGuardrail}
-                          className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700"
+                          className="rounded-[var(--radius-md)] bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700"
                         >
                           + Add Guardrail
                         </button>
@@ -851,7 +851,7 @@ export function SelfImproving() {
                       <button
                         onClick={handleSavePolicy}
                         disabled={savingPolicy}
-                        className="rounded-xl bg-[var(--color-accent)] px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
+                        className="rounded-[var(--radius-lg)] bg-[var(--color-accent)] px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
                       >
                         {savingPolicy ? 'Saving Policy...' : 'Save Policy & Recompile Prompt'}
                       </button>
@@ -869,50 +869,50 @@ export function SelfImproving() {
               <div className="flex flex-wrap items-center gap-1.5">
                 <button
                   onClick={() => setActiveCategory('all')}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                  className={`rounded-[var(--radius-md)] px-3 py-1.5 text-xs font-medium transition-colors ${
                     activeCategory === 'all'
                       ? 'bg-[var(--color-accent)] text-white'
-                      : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
+                      : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-[var(--color-accent-muted)]'
                   }`}
                 >
                   All Suggestions ({insights.length})
                 </button>
                 <button
                   onClick={() => setActiveCategory('human_exemplar')}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1 ${
+                  className={`rounded-[var(--radius-md)] px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1 ${
                     activeCategory === 'human_exemplar'
                       ? 'bg-purple-700 text-white'
-                      : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
+                      : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-[var(--color-accent-muted)]'
                   }`}
                 >
                   <span className="flex items-center gap-1.5"><Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" /><span>Human Rep Exemplars</span></span>
                 </button>
                 <button
                   onClick={() => setActiveCategory('trend')}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                  className={`rounded-[var(--radius-md)] px-3 py-1.5 text-xs font-medium transition-colors ${
                     activeCategory === 'trend'
                       ? 'bg-blue-700 text-white'
-                      : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
+                      : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-[var(--color-accent-muted)]'
                   }`}
                 >
                   Emerging Customer Trends
                 </button>
                 <button
                   onClick={() => setActiveCategory('policy_refinement')}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                  className={`rounded-[var(--radius-md)] px-3 py-1.5 text-xs font-medium transition-colors ${
                     activeCategory === 'policy_refinement'
                       ? 'bg-emerald-700 text-white'
-                      : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
+                      : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-[var(--color-accent-muted)]'
                   }`}
                 >
                   Policy Refinements
                 </button>
                 <button
                   onClick={() => setActiveCategory('team_coaching')}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                  className={`rounded-[var(--radius-md)] px-3 py-1.5 text-xs font-medium transition-colors ${
                     activeCategory === 'team_coaching'
                       ? 'bg-amber-700 text-white'
-                      : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-slate-100'
+                      : 'bg-[var(--color-surface)] text-[var(--color-ink-muted)] border border-[var(--color-border)] hover:bg-[var(--color-accent-muted)]'
                   }`}
                 >
                   Team Coaching
@@ -935,27 +935,27 @@ export function SelfImproving() {
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex items-center gap-2">
                         {ins.category === 'human_exemplar' ? (
-                          <span className="rounded-md bg-purple-100 px-2 py-0.5 text-xs font-bold text-purple-800 flex items-center gap-1">
+                          <span className="rounded-[var(--radius-sm)] bg-purple-100 px-2 py-0.5 text-xs font-bold text-purple-800 flex items-center gap-1">
                             <Star className="h-3 w-3 fill-purple-700 text-purple-700 inline" />
                             <span>Human Rep Exemplar</span>
                           </span>
                         ) : ins.category === 'trend' ? (
-                          <span className="rounded-md bg-blue-100 px-2 py-0.5 text-xs font-bold text-blue-800 flex items-center gap-1">
+                          <span className="rounded-[var(--radius-sm)] bg-blue-100 px-2 py-0.5 text-xs font-bold text-blue-800 flex items-center gap-1">
                             <BarChart2 className="h-3 w-3 inline" />
                             <span>Emerging Trend</span>
                           </span>
                         ) : ins.category === 'team_coaching' ? (
-                          <span className="rounded-md bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800 flex items-center gap-1">
+                          <span className="rounded-[var(--radius-sm)] bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800 flex items-center gap-1">
                             <Users className="h-3 w-3 inline" />
                             <span>Team Coaching</span>
                           </span>
                         ) : (
-                          <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800">
+                          <span className="rounded-[var(--radius-sm)] bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800">
                             Policy Refinement
                           </span>
                         )}
 
-                        <span className="rounded-md bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+                        <span className="rounded-[var(--radius-sm)] bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-semibold text-emerald-800">
                           +{ins.estimated_resolution_lift}% Est. Resolution Lift
                         </span>
 
@@ -971,7 +971,7 @@ export function SelfImproving() {
                             <span>Retrained into Agent</span>
                           </span>
                         ) : ins.status === 'dismissed' ? (
-                          <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-[var(--color-ink-muted)]">
+                          <span className="rounded-full bg-[var(--color-accent-muted)] px-2.5 py-0.5 text-xs font-medium text-[var(--color-ink-muted)]">
                             Dismissed
                           </span>
                         ) : (
@@ -985,7 +985,7 @@ export function SelfImproving() {
                             <button
                               onClick={() => handleApplyRetraining(ins.id)}
                               disabled={applyingId === ins.id}
-                              className="rounded-lg bg-[var(--color-accent)] px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
+                              className="rounded-[var(--radius-md)] bg-[var(--color-accent)] px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
                             >
                               {applyingId === ins.id
                                 ? 'Retraining...'
@@ -1007,7 +1007,7 @@ export function SelfImproving() {
 
                     {/* Human Rep Exemplar Highlight Quote Box */}
                     {ins.exemplar_content && (
-                      <div className="rounded-xl border border-purple-200 bg-purple-50/70 p-3.5 text-xs space-y-1.5">
+                      <div className="rounded-[var(--radius-lg)] border border-purple-200 bg-purple-50/70 p-3.5 text-xs space-y-1.5">
                         <div className="flex items-center justify-between text-purple-900 font-semibold text-[11px]">
                           <span>
                             Top Rep Winning Response (from {ins.human_rep_name || 'Top Human Rep'}):
@@ -1046,7 +1046,7 @@ export function SelfImproving() {
               <div className="relative border-l-2 border-[var(--color-border)] ml-4 space-y-6 pl-6 py-2">
                 {history.map((ev) => (
                   <div key={ev.id} className="relative space-y-2">
-                    <div className="absolute -left-[31px] top-1.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-[var(--color-accent)] shadow-xs"></div>
+                    <div className="absolute -left-[31px] top-1.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-[var(--color-accent)] shadow-none"></div>
 
                     <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-sm space-y-3">
                       <div className="flex items-center justify-between">
@@ -1063,7 +1063,7 @@ export function SelfImproving() {
                         </span>
                       </div>
 
-                      <div className="rounded-xl bg-[var(--color-page)] border border-[var(--color-border)] p-3 flex items-center justify-between text-xs">
+                      <div className="rounded-[var(--radius-lg)] bg-[var(--color-page)] border border-[var(--color-border)] p-3 flex items-center justify-between text-xs">
                         <div className="flex items-center gap-4">
                           <div>
                             <span className="text-[var(--color-ink-faint)] block text-[11px]">
@@ -1073,7 +1073,7 @@ export function SelfImproving() {
                               {ev.baseline_resolution_rate}%
                             </span>
                           </div>
-                          <ArrowRight className="h-4 w-4 text-slate-400" />
+                          <ArrowRight className="h-4 w-4 text-[var(--color-ink-faint)]" />
                           <div>
                             <span className="text-[var(--color-ink-faint)] block text-[11px]">
                               Post-Retraining Resolution Rate:
@@ -1148,7 +1148,7 @@ export function SelfImproving() {
                     <h4 className="text-sm font-bold text-[var(--color-ink)]">{c.title}</h4>
                     <p className="text-xs text-[var(--color-ink-muted)] leading-relaxed">{c.description}</p>
 
-                    <div className="rounded-xl bg-[var(--color-surface)] border border-amber-200 p-3 text-xs text-slate-800">
+                    <div className="rounded-[var(--radius-lg)] bg-[var(--color-surface)] border border-amber-200 p-3 text-xs text-[var(--color-ink)]">
                       <span className="font-semibold text-amber-900 block mb-1">
                         Coaching Action for Reps:
                       </span>
@@ -1187,7 +1187,7 @@ export function SelfImproving() {
                   value={newConnName}
                   onChange={(e) => setNewConnName(e.target.value)}
                   placeholder="e.g. DeepSeek R1 via OpenRouter, Groq Llama 3.3 70B"
-                  className="w-full rounded-lg border border-slate-300 p-2 text-xs focus:border-indigo-500 focus:outline-none"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs focus:border-indigo-500 focus:outline-none"
                 />
               </div>
 
@@ -1199,7 +1199,7 @@ export function SelfImproving() {
                   <select
                     value={newConnProvider}
                     onChange={(e) => setNewConnProvider(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-[var(--color-surface)] p-2 text-xs focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-2 text-xs focus:border-indigo-500 focus:outline-none"
                   >
                     <option value="anthropic">Anthropic Claude</option>
                     <option value="openai">OpenAI (GPT-4o / o1 / o3)</option>
@@ -1221,7 +1221,7 @@ export function SelfImproving() {
                     value={newConnModelId}
                     onChange={(e) => setNewConnModelId(e.target.value)}
                     placeholder="e.g. deepseek-reasoner, gpt-4o, llama3.3:70b"
-                    className="w-full rounded-lg border border-slate-300 p-2 text-xs focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs focus:border-indigo-500 focus:outline-none"
                   />
                 </div>
               </div>
@@ -1235,7 +1235,7 @@ export function SelfImproving() {
                   value={newConnApiKey}
                   onChange={(e) => setNewConnApiKey(e.target.value)}
                   placeholder="sk-..."
-                  className="w-full rounded-lg border border-slate-300 p-2 text-xs focus:border-indigo-500 focus:outline-none font-mono"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs focus:border-indigo-500 focus:outline-none font-mono"
                 />
               </div>
 
@@ -1248,7 +1248,7 @@ export function SelfImproving() {
                   value={newConnBaseUrl}
                   onChange={(e) => setNewConnBaseUrl(e.target.value)}
                   placeholder="e.g. http://localhost:11434/v1 or https://openrouter.ai/api/v1"
-                  className="w-full rounded-lg border border-slate-300 p-2 text-xs focus:border-indigo-500 focus:outline-none font-mono"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs focus:border-indigo-500 focus:outline-none font-mono"
                 />
               </div>
 
@@ -1271,14 +1271,14 @@ export function SelfImproving() {
                 <button
                   type="button"
                   onClick={() => setShowConnectModal(false)}
-                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-[var(--color-ink-muted)] hover:bg-slate-100"
+                  className="rounded-[var(--radius-md)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink-muted)] hover:bg-[var(--color-accent-muted)]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={connectingModel}
-                  className="rounded-lg bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
+                  className="rounded-[var(--radius-md)] bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
                 >
                   {connectingModel ? 'Connecting...' : 'Connect Model'}
                 </button>

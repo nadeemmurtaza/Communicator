@@ -372,28 +372,28 @@ export function ContactProfile() {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-2 text-xs text-[var(--color-ink-muted)]">
-          <div className="h-4 w-12 bg-slate-200 animate-pulse rounded" />
-          <div className="h-4 w-4 bg-slate-200 animate-pulse rounded" />
-          <div className="h-4 w-16 bg-slate-200 animate-pulse rounded" />
+          <div className="h-4 w-12 bg-[var(--color-border)] animate-pulse rounded" />
+          <div className="h-4 w-4 bg-[var(--color-border)] animate-pulse rounded" />
+          <div className="h-4 w-16 bg-[var(--color-border)] animate-pulse rounded" />
         </div>
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-xs animate-pulse space-y-4">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-none animate-pulse space-y-4">
           <div className="flex items-center gap-4">
-            <div className="h-16 w-16 rounded-full bg-slate-200" />
+            <div className="h-16 w-16 rounded-full bg-[var(--color-border)]" />
             <div className="space-y-2 flex-1">
-              <div className="h-6 w-48 bg-slate-200 rounded" />
-              <div className="h-4 w-32 bg-slate-100 rounded" />
+              <div className="h-6 w-48 bg-[var(--color-border)] rounded" />
+              <div className="h-4 w-32 bg-[var(--color-accent-muted)] rounded" />
             </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-[var(--color-border)]/20">
-            <div className="h-12 bg-slate-100 rounded-lg" />
-            <div className="h-12 bg-slate-100 rounded-lg" />
-            <div className="h-12 bg-slate-100 rounded-lg" />
-            <div className="h-12 bg-slate-100 rounded-lg" />
+            <div className="h-12 bg-[var(--color-accent-muted)] rounded-[var(--radius-md)]" />
+            <div className="h-12 bg-[var(--color-accent-muted)] rounded-[var(--radius-md)]" />
+            <div className="h-12 bg-[var(--color-accent-muted)] rounded-[var(--radius-md)]" />
+            <div className="h-12 bg-[var(--color-accent-muted)] rounded-[var(--radius-md)]" />
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="h-64 bg-slate-100 rounded-2xl animate-pulse md:col-span-2" />
-          <div className="h-64 bg-slate-100 rounded-2xl animate-pulse" />
+          <div className="h-64 bg-[var(--color-accent-muted)] rounded-2xl animate-pulse md:col-span-2" />
+          <div className="h-64 bg-[var(--color-accent-muted)] rounded-2xl animate-pulse" />
         </div>
       </div>
     )
@@ -412,14 +412,14 @@ export function ContactProfile() {
           <button
             type="button"
             onClick={() => navigate('/contacts')}
-            className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)]"
+            className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)]"
           >
             Back to Contacts
           </button>
           <button
             type="button"
             onClick={loadProfile}
-            className="rounded-lg bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)]"
+            className="rounded-[var(--radius-md)] bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)]"
           >
             Retry
           </button>
@@ -443,11 +443,11 @@ export function ContactProfile() {
       {/* Toast Notice */}
       {notice && (
         <div
-          className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl px-4 py-3 text-xs font-semibold shadow-lg transition-all ${
+          className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-[var(--radius-lg)] px-4 py-3 text-xs font-semibold shadow-lg transition-all ${
             notice.type === 'error'
               ? 'bg-rose-900 text-white'
               : notice.type === 'info'
-                ? 'bg-slate-900 text-white'
+                ? 'bg-[var(--color-accent)] text-white'
                 : 'bg-emerald-900 text-white'
           }`}
         >
@@ -484,7 +484,7 @@ export function ContactProfile() {
           <button
             type="button"
             onClick={() => navigate('/contacts')}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] transition-colors shadow-xs"
+            className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] transition-colors shadow-none"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             <span>Back to Contacts</span>
@@ -493,7 +493,7 @@ export function ContactProfile() {
             type="button"
             onClick={loadProfile}
             title="Refresh Data"
-            className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] transition-colors shadow-xs"
+            className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] transition-colors shadow-none"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -503,7 +503,7 @@ export function ContactProfile() {
       {/* ========================================================================= */}
       {/* QUICK ACTION BAR */}
       {/* ========================================================================= */}
-      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-xs">
+      <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-none">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">
@@ -520,7 +520,7 @@ export function ContactProfile() {
             <button
               type="button"
               onClick={handleOpenConversation}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] transition-colors shadow-xs"
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] transition-colors shadow-none"
             >
               <MessageSquare className="h-3.5 w-3.5" />
               <span>Open Conversation</span>
@@ -535,7 +535,7 @@ export function ContactProfile() {
             <button
               type="button"
               onClick={() => setShowSendModal(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 transition-colors shadow-xs"
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 transition-colors shadow-none"
             >
               <Send className="h-3.5 w-3.5 text-emerald-600" />
               <span>Send WhatsApp Message</span>
@@ -546,7 +546,7 @@ export function ContactProfile() {
               type="button"
               onClick={handleSyncMeta}
               disabled={syncingMeta}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] transition-colors shadow-xs disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] transition-colors shadow-none disabled:opacity-50"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${syncingMeta ? 'animate-spin text-indigo-600' : ''}`} />
               <span>{syncingMeta ? 'Syncing...' : 'Sync Meta Data'}</span>
@@ -556,7 +556,7 @@ export function ContactProfile() {
             <button
               type="button"
               onClick={openEditAttributes}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50/70 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors shadow-xs"
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-indigo-200 bg-indigo-50/70 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors shadow-none"
             >
               <Pencil className="h-3.5 w-3.5 text-indigo-600" />
               <span>Edit Attributes</span>
@@ -567,7 +567,7 @@ export function ContactProfile() {
               type="button"
               onClick={handleToggleConsent}
               disabled={togglingConsent}
-              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors shadow-xs disabled:opacity-50 ${
+              className={`inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border px-3 py-1.5 text-xs font-semibold transition-colors shadow-none disabled:opacity-50 ${
                 isOptedIn
                   ? 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
                   : 'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100'
@@ -587,7 +587,7 @@ export function ContactProfile() {
       {/* ========================================================================= */}
       {/* TOP HERO CARD / IDENTITY CARD */}
       {/* ========================================================================= */}
-      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-xs relative overflow-hidden">
+      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-none relative overflow-hidden">
         {/* Subtle decorative background gradient */}
         <div className="absolute top-0 right-0 h-40 w-40 bg-gradient-to-bl from-emerald-100/40 via-transparent to-transparent pointer-events-none" />
 
@@ -600,7 +600,7 @@ export function ContactProfile() {
                 {personName !== 'Unnamed Contact' ? personName.slice(0, 2) : displayPhone.slice(-2)}
               </div>
               <div
-                className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center text-white shadow-xs"
+                className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center text-white shadow-none"
                 title="Active WhatsApp Channel"
               >
                 <Phone className="h-3 w-3" />
@@ -616,8 +616,8 @@ export function ContactProfile() {
                   <BadgeCheck className="h-3.5 w-3.5 text-emerald-600" />
                   <span>Meta WhatsApp Verified</span>
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 border border-[var(--color-border)] px-2 py-0.5 text-[10px] font-medium text-[var(--color-ink-muted)]">
-                  <Shield className="h-3 w-3 text-slate-500" />
+                <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-accent-muted)] border border-[var(--color-border)] px-2 py-0.5 text-[10px] font-medium text-[var(--color-ink-muted)]">
+                  <Shield className="h-3 w-3 text-[var(--color-ink-faint)]" />
                   <span>Standard Cloud API</span>
                 </span>
               </div>
@@ -666,7 +666,7 @@ export function ContactProfile() {
 
                 <div className="flex items-center gap-1">
                   <Languages className="h-3.5 w-3.5 text-[var(--color-ink-faint)]" />
-                  <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono uppercase text-[var(--color-ink)]">
+                  <span className="rounded bg-[var(--color-accent-muted)] px-1.5 py-0.5 text-[10px] font-mono uppercase text-[var(--color-ink)]">
                     {language}
                   </span>
                 </div>
@@ -675,14 +675,14 @@ export function ContactProfile() {
               {/* Badges Strip */}
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 {/* Channel Badge */}
-                <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
+                <span className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
                   <Phone className="h-3 w-3 text-emerald-600" />
                   <span className="uppercase">{channel} Cloud API</span>
                 </span>
 
                 {/* Consent Badge */}
                 <span
-                  className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold ${
+                  className={`inline-flex items-center gap-1 rounded-[var(--radius-sm)] border px-2 py-0.5 text-[11px] font-semibold ${
                     isOptedIn
                       ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
                       : 'bg-amber-50 border-amber-200 text-amber-800'
@@ -697,7 +697,7 @@ export function ContactProfile() {
                 </span>
 
                 {/* Quality Rating */}
-                <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 border border-[var(--color-border)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-ink)]">
+                <span className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--color-accent-muted)] border border-[var(--color-border)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-ink)]">
                   <span
                     className={`h-2 w-2 rounded-full ${
                       qualityRating === 'GREEN'
@@ -712,10 +712,10 @@ export function ContactProfile() {
 
                 {/* 24-Hour Messaging Window Badge */}
                 <span
-                  className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold ${
+                  className={`inline-flex items-center gap-1 rounded-[var(--radius-sm)] border px-2 py-0.5 text-[11px] font-semibold ${
                     windowActive
                       ? 'bg-sky-50 border-sky-200 text-sky-800'
-                      : 'bg-slate-100 border-[var(--color-border)] text-[var(--color-ink-muted)]'
+                      : 'bg-[var(--color-accent-muted)] border-[var(--color-border)] text-[var(--color-ink-muted)]'
                   }`}
                 >
                   <Clock className="h-3 w-3" />
@@ -789,18 +789,18 @@ export function ContactProfile() {
                 className={`inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3.5 py-2.5 text-xs font-semibold transition-colors ${
                   active
                     ? 'border-[var(--color-ink)] text-[var(--color-ink)]'
-                    : 'border-transparent text-[var(--color-ink-muted)] hover:border-slate-300 hover:text-[var(--color-ink)]'
+                    : 'border-transparent text-[var(--color-ink-muted)] hover:border-[var(--color-border)] hover:text-[var(--color-ink)]'
                 }`}
               >
                 <Icon className={`h-3.5 w-3.5 ${active ? 'text-[var(--color-ink)]' : 'text-[var(--color-ink-faint)]'}`} />
                 <span>{tab.label}</span>
                 {tab.key === 'tags' && profile?.tags && profile.tags.length > 0 && (
-                  <span className="rounded-full bg-slate-100 px-1.5 py-0.2 text-[10px] text-[var(--color-ink)] font-mono">
+                  <span className="rounded-full bg-[var(--color-accent-muted)] px-1.5 py-0.2 text-[10px] text-[var(--color-ink)] font-mono">
                     {profile.tags.length}
                   </span>
                 )}
                 {tab.key === 'messages' && profile?.recentMessages && profile.recentMessages.length > 0 && (
-                  <span className="rounded-full bg-slate-100 px-1.5 py-0.2 text-[10px] text-[var(--color-ink)] font-mono">
+                  <span className="rounded-full bg-[var(--color-accent-muted)] px-1.5 py-0.2 text-[10px] text-[var(--color-ink)] font-mono">
                     {profile.recentMessages.length}
                   </span>
                 )}
@@ -814,10 +814,10 @@ export function ContactProfile() {
       {/* SECTION A: META CLOUD API TELEMETRY & IDENTIFIERS */}
       {/* ========================================================================= */}
       {(activeTab === 'all' || activeTab === 'meta') && (
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-xs space-y-4">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-none space-y-4">
           <div className="flex items-center justify-between border-b border-[var(--color-border)]/40 pb-3">
             <div className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700">
+              <div className="h-7 w-7 rounded-[var(--radius-md)] bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700">
                 <Activity className="h-4 w-4" />
               </div>
               <div>
@@ -842,7 +842,7 @@ export function ContactProfile() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* WhatsApp ID */}
-            <div className="rounded-xl border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-3.5 space-y-1">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-3.5 space-y-1">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">
                   WhatsApp ID (wa_id)
@@ -859,7 +859,7 @@ export function ContactProfile() {
                   <button
                     type="button"
                     onClick={() => copyText(waId, 'wa_id')}
-                    className="p-1 hover:bg-slate-200 rounded text-[var(--color-ink-muted)]"
+                    className="p-1 hover:bg-[var(--color-border)] rounded text-[var(--color-ink-muted)]"
                   >
                     {copiedKey === 'wa_id' ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
                   </button>
@@ -871,7 +871,7 @@ export function ContactProfile() {
             </div>
 
             {/* E.164 Phone Number */}
-            <div className="rounded-xl border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-3.5 space-y-1">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-3.5 space-y-1">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">
                   Phone Number (E.164)
@@ -885,7 +885,7 @@ export function ContactProfile() {
                 <button
                   type="button"
                   onClick={() => copyText(displayPhone, 'phone')}
-                  className="p-1 hover:bg-slate-200 rounded text-[var(--color-ink-muted)]"
+                  className="p-1 hover:bg-[var(--color-border)] rounded text-[var(--color-ink-muted)]"
                 >
                   {copiedKey === 'phone' ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
                 </button>
@@ -896,7 +896,7 @@ export function ContactProfile() {
             </div>
 
             {/* Display Name Status */}
-            <div className="rounded-xl border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-3.5 space-y-1">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-3.5 space-y-1">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">
                   Display Name Status
@@ -915,7 +915,7 @@ export function ContactProfile() {
             </div>
 
             {/* Quality Rating */}
-            <div className="rounded-xl border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-3.5 space-y-1">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-3.5 space-y-1">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">
                   Quality Rating
@@ -934,12 +934,12 @@ export function ContactProfile() {
             </div>
 
             {/* Language & Locale */}
-            <div className="rounded-xl border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-3.5 space-y-1">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-3.5 space-y-1">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">
                   Language &amp; Locale
                 </span>
-                <span className="text-[10px] font-mono text-[var(--color-ink-muted)] bg-slate-100 px-1.5 py-0.2 rounded">
+                <span className="text-[10px] font-mono text-[var(--color-ink-muted)] bg-[var(--color-accent-muted)] px-1.5 py-0.2 rounded">
                   BCP-47
                 </span>
               </div>
@@ -953,7 +953,7 @@ export function ContactProfile() {
             </div>
 
             {/* Opt-In / Consent Timestamp */}
-            <div className="rounded-xl border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-3.5 space-y-1">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-3.5 space-y-1">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">
                   Opt-In Timestamp
@@ -983,7 +983,7 @@ export function ContactProfile() {
           </div>
 
           {/* Dynamic Meta Custom Fields & Metadata Viewer */}
-          <div className="rounded-xl border border-[var(--color-border)]/60 bg-slate-50/60 p-3.5 space-y-2">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)]/60 bg-[var(--color-accent-muted)]/60 p-3.5 space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
@@ -998,7 +998,7 @@ export function ContactProfile() {
                 <button
                   type="button"
                   onClick={openEditAttributes}
-                  className="rounded-md border border-indigo-200 bg-white px-2 py-0.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 shadow-2xs flex items-center gap-1 transition-colors"
+                  className="rounded-[var(--radius-sm)] border border-indigo-200 bg-white px-2 py-0.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 shadow-2xs flex items-center gap-1 transition-colors"
                 >
                   <Pencil className="h-3 w-3" />
                   <span>Edit</span>
@@ -1011,7 +1011,7 @@ export function ContactProfile() {
                 {Object.entries(profile.customFields).map(([key, value]) => (
                   <div
                     key={key}
-                    className="flex flex-col rounded-lg border border-[var(--color-border)]/50 bg-white p-2 text-xs"
+                    className="flex flex-col rounded-[var(--radius-md)] border border-[var(--color-border)]/50 bg-white p-2 text-xs"
                   >
                     <span className="text-[10px] font-mono font-semibold text-[var(--color-ink-muted)] uppercase">
                       {key}
@@ -1035,10 +1035,10 @@ export function ContactProfile() {
       {/* SECTION B: CONVERSATION & MESSAGING STATS */}
       {/* ========================================================================= */}
       {(activeTab === 'all' || activeTab === 'conversation') && (
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-xs space-y-4">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-none space-y-4">
           <div className="flex items-center justify-between border-b border-[var(--color-border)]/40 pb-3">
             <div className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-700">
+              <div className="h-7 w-7 rounded-[var(--radius-md)] bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-700">
                 <MessageCircle className="h-4 w-4" />
               </div>
               <div>
@@ -1064,7 +1064,7 @@ export function ContactProfile() {
 
           {/* Metric cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="rounded-xl border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-3.5 space-y-1">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-3.5 space-y-1">
               <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">
                 <span>Total Messages</span>
                 <MessageSquare className="h-3.5 w-3.5" />
@@ -1075,7 +1075,7 @@ export function ContactProfile() {
               <div className="text-[10px] text-[var(--color-ink-muted)]">Across active thread</div>
             </div>
 
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-3.5 space-y-1">
+            <div className="rounded-[var(--radius-lg)] border border-emerald-200 bg-emerald-50/50 p-3.5 space-y-1">
               <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-emerald-800">
                 <span>Inbound Received</span>
                 <ArrowDownLeft className="h-3.5 w-3.5 text-emerald-600" />
@@ -1086,7 +1086,7 @@ export function ContactProfile() {
               <div className="text-[10px] text-emerald-700">Messages from customer</div>
             </div>
 
-            <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-3.5 space-y-1">
+            <div className="rounded-[var(--radius-lg)] border border-indigo-200 bg-indigo-50/50 p-3.5 space-y-1">
               <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-indigo-800">
                 <span>Outbound Dispatched</span>
                 <ArrowUpRight className="h-3.5 w-3.5 text-indigo-600" />
@@ -1097,7 +1097,7 @@ export function ContactProfile() {
               <div className="text-[10px] text-indigo-700">Bot &amp; Agent responses</div>
             </div>
 
-            <div className="rounded-xl border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-3.5 space-y-1">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-3.5 space-y-1">
               <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">
                 <span>CSAT Score</span>
                 <Star className="h-3.5 w-3.5 text-amber-500" />
@@ -1119,7 +1119,7 @@ export function ContactProfile() {
           {/* Detailed Conversation Context */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
             {/* Active Thread State */}
-            <div className="rounded-xl border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-4 space-y-3">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-4 space-y-3">
               <div className="text-xs font-bold text-[var(--color-ink)] flex items-center justify-between">
                 <span>Conversation Pipeline Status</span>
                 {profile?.conversation?.state && (
@@ -1162,12 +1162,12 @@ export function ContactProfile() {
             </div>
 
             {/* Last Activity Preview */}
-            <div className="rounded-xl border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-4 space-y-3">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-4 space-y-3">
               <div className="text-xs font-bold text-[var(--color-ink)]">Last Interaction Details</div>
 
               <div className="space-y-2 text-xs">
                 {/* Last Inbound */}
-                <div className="p-2.5 rounded-lg bg-white border border-[var(--color-border)]/40 space-y-1">
+                <div className="p-2.5 rounded-[var(--radius-md)] bg-white border border-[var(--color-border)]/40 space-y-1">
                   <div className="flex items-center justify-between text-[10px]">
                     <span className="font-bold text-emerald-800 flex items-center gap-1">
                       <ArrowDownLeft className="h-3 w-3" /> Last Inbound Message
@@ -1184,14 +1184,14 @@ export function ContactProfile() {
                 </div>
 
                 {/* Last Outbound */}
-                <div className="p-2.5 rounded-lg bg-white border border-[var(--color-border)]/40 space-y-1">
+                <div className="p-2.5 rounded-[var(--radius-md)] bg-white border border-[var(--color-border)]/40 space-y-1">
                   <div className="flex items-center justify-between text-[10px]">
                     <span className="font-bold text-indigo-800 flex items-center gap-1">
                       <ArrowUpRight className="h-3 w-3" /> Last Outbound Message
                     </span>
                     <div className="flex items-center gap-1.5">
                       {profile?.conversation?.lastOutboundStatus && (
-                        <span className="rounded bg-slate-100 px-1 py-0.2 font-mono uppercase text-[9px] text-[var(--color-ink-muted)]">
+                        <span className="rounded bg-[var(--color-accent-muted)] px-1 py-0.2 font-mono uppercase text-[9px] text-[var(--color-ink-muted)]">
                           {profile.conversation.lastOutboundStatus}
                         </span>
                       )}
@@ -1216,10 +1216,10 @@ export function ContactProfile() {
       {/* SECTION C: CRM & LEAD INTELLIGENCE */}
       {/* ========================================================================= */}
       {(activeTab === 'all' || activeTab === 'crm') && (
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-xs space-y-4">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-none space-y-4">
           <div className="flex items-center justify-between border-b border-[var(--color-border)]/40 pb-3">
             <div className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-lg bg-purple-50 border border-purple-200 flex items-center justify-center text-purple-700">
+              <div className="h-7 w-7 rounded-[var(--radius-md)] bg-purple-50 border border-purple-200 flex items-center justify-center text-purple-700">
                 <Building2 className="h-4 w-4" />
               </div>
               <div>
@@ -1235,7 +1235,7 @@ export function ContactProfile() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Institution / Lead Card */}
-            <div className="rounded-xl border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-4 space-y-3">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">
                   Linked Institution / Organization
@@ -1271,12 +1271,12 @@ export function ContactProfile() {
             </div>
 
             {/* Qualification Rationale */}
-            <div className="rounded-xl border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-4 space-y-3">
+            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-4 space-y-3">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-ink-faint)]">
                 Qualification Rationale &amp; Sourcing
               </span>
 
-              <div className="rounded-lg bg-white border border-[var(--color-border)]/40 p-3 text-xs text-[var(--color-ink)] min-h-[90px] flex items-center">
+              <div className="rounded-[var(--radius-md)] bg-white border border-[var(--color-border)]/40 p-3 text-xs text-[var(--color-ink)] min-h-[90px] flex items-center">
                 {profile?.lead?.qualificationRationale ? (
                   <p className="leading-relaxed">{profile.lead.qualificationRationale}</p>
                 ) : (
@@ -1299,11 +1299,11 @@ export function ContactProfile() {
       {/* SECTION D: TAGS & PREFERENCES ("REMEMBERS") */}
       {/* ========================================================================= */}
       {(activeTab === 'all' || activeTab === 'tags') && (
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-xs space-y-6">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-none space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-[var(--color-border)]/40 pb-3">
             <div className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700">
+              <div className="h-7 w-7 rounded-[var(--radius-md)] bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700">
                 <Brain className="h-4 w-4" />
               </div>
               <div>
@@ -1319,7 +1319,7 @@ export function ContactProfile() {
             <button
               type="button"
               onClick={() => setShowAddMemoryModal(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] transition-colors shadow-xs"
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] transition-colors shadow-none"
             >
               <Plus className="h-3.5 w-3.5" />
               <span>Add Memory</span>
@@ -1338,12 +1338,12 @@ export function ContactProfile() {
               </span>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 p-3 rounded-xl border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 min-h-[48px]">
+            <div className="flex flex-wrap items-center gap-2 p-3 rounded-[var(--radius-lg)] border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 min-h-[48px]">
               {profile?.tags && profile.tags.length > 0 ? (
                 profile.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="inline-flex items-center gap-1.5 rounded-md bg-white border border-[var(--color-border)] px-2.5 py-1 text-xs font-semibold text-[var(--color-ink)] shadow-2xs"
+                    className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-white border border-[var(--color-border)] px-2.5 py-1 text-xs font-semibold text-[var(--color-ink)] shadow-2xs"
                   >
                     <span className="text-[var(--color-ink-faint)]">#</span>
                     <span>{tag}</span>
@@ -1376,20 +1376,20 @@ export function ContactProfile() {
                     }}
                     placeholder="tag-name"
                     autoFocus
-                    className="h-7 w-28 rounded-md border border-slate-300 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                    className="h-7 w-28 rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
                   />
                   <button
                     type="button"
                     onClick={handleAddTag}
                     disabled={savingTag || !newTagInput.trim()}
-                    className="h-7 rounded-md bg-emerald-600 px-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                    className="h-7 rounded-[var(--radius-sm)] bg-emerald-600 px-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
                   >
                     {savingTag ? '...' : 'Add'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsAddingTag(false)}
-                    className="h-7 rounded-md border border-[var(--color-border)] bg-white px-1.5 text-xs text-[var(--color-ink-muted)]"
+                    className="h-7 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-1.5 text-xs text-[var(--color-ink-muted)]"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -1398,7 +1398,7 @@ export function ContactProfile() {
                 <button
                   type="button"
                   onClick={() => setIsAddingTag(true)}
-                  className="inline-flex items-center gap-1 rounded-md border border-dashed border-[var(--color-border)] bg-white/60 px-2.5 py-1 text-xs font-semibold text-[var(--color-ink-muted)] hover:border-slate-400 hover:text-[var(--color-ink)] transition-colors"
+                  className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] border border-dashed border-[var(--color-border)] bg-white/60 px-2.5 py-1 text-xs font-semibold text-[var(--color-ink-muted)] hover:border-[var(--color-border)] hover:text-[var(--color-ink)] transition-colors"
                 >
                   <Plus className="h-3 w-3" />
                   <span>New Tag</span>
@@ -1424,7 +1424,7 @@ export function ContactProfile() {
                 {profile.memories.map((mem) => (
                   <div
                     key={mem.id}
-                    className="rounded-xl border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-3.5 space-y-2 flex flex-col justify-between"
+                    className="rounded-[var(--radius-lg)] border border-[var(--color-border)]/60 bg-[var(--color-page)]/40 p-3.5 space-y-2 flex flex-col justify-between"
                   >
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
@@ -1459,7 +1459,7 @@ export function ContactProfile() {
                 ))}
               </div>
             ) : (
-              <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-page)]/20 p-6 text-center space-y-2">
+              <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border)] bg-[var(--color-page)]/20 p-6 text-center space-y-2">
                 <Brain className="h-8 w-8 text-[var(--color-ink-faint)] mx-auto" />
                 <p className="text-xs font-semibold text-[var(--color-ink)]">
                   No remembered preferences recorded yet
@@ -1470,7 +1470,7 @@ export function ContactProfile() {
                 <button
                   type="button"
                   onClick={() => setShowAddMemoryModal(true)}
-                  className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] transition-colors mt-1"
+                  className="inline-flex items-center gap-1 rounded-[var(--radius-md)] bg-[var(--color-accent)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] transition-colors mt-1"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   <span>Add First Memory</span>
@@ -1485,10 +1485,10 @@ export function ContactProfile() {
       {/* SECTION E: RECENT MESSAGE HISTORY */}
       {/* ========================================================================= */}
       {(activeTab === 'all' || activeTab === 'messages') && (
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-xs space-y-4">
+        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-none space-y-4">
           <div className="flex items-center justify-between border-b border-[var(--color-border)]/40 pb-3">
             <div className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700">
+              <div className="h-7 w-7 rounded-[var(--radius-md)] bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700">
                 <Clock className="h-4 w-4" />
               </div>
               <div>
@@ -1505,7 +1505,7 @@ export function ContactProfile() {
               <button
                 type="button"
                 onClick={handleOpenConversation}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] transition-colors shadow-xs"
+                className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] transition-colors shadow-none"
               >
                 <span>View Full Chat in Inbox</span>
                 <ExternalLink className="h-3.5 w-3.5" />
@@ -1540,7 +1540,7 @@ export function ContactProfile() {
                     <div
                       className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-xs shadow-2xs leading-relaxed ${
                         isInbound
-                          ? 'bg-slate-100 text-[var(--color-ink)] rounded-tl-sm border border-[var(--color-border)]/40'
+                          ? 'bg-[var(--color-accent-muted)] text-[var(--color-ink)] rounded-tl-sm border border-[var(--color-border)]/40'
                           : 'bg-[var(--color-accent)] text-white rounded-tr-sm'
                       }`}
                     >
@@ -1574,13 +1574,13 @@ export function ContactProfile() {
                     handleSendMessage()
                   }
                 }}
-                className="flex-1 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                className="flex-1 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-white px-3.5 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
               />
               <button
                 type="button"
                 onClick={() => handleSendMessage()}
                 disabled={sendingMessage || !messageDraft.trim()}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] transition-colors shadow-xs disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-[var(--radius-lg)] bg-[var(--color-accent)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] transition-colors shadow-none disabled:opacity-50"
               >
                 <Send className="h-3.5 w-3.5" />
                 <span>{sendingMessage ? 'Sending...' : 'Send'}</span>
@@ -1604,7 +1604,7 @@ export function ContactProfile() {
           <div className="w-full max-w-lg rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl overflow-hidden flex flex-col">
             <div className="flex items-center justify-between border-b border-[var(--color-border)] p-4">
               <div className="flex items-center gap-2">
-                <div className="h-7 w-7 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-800">
+                <div className="h-7 w-7 rounded-[var(--radius-md)] bg-emerald-100 flex items-center justify-center text-emerald-800">
                   <Send className="h-4 w-4" />
                 </div>
                 <div>
@@ -1635,7 +1635,7 @@ export function ContactProfile() {
                   value={messageDraft}
                   onChange={(e) => setMessageDraft(e.target.value)}
                   placeholder="Hello, thank you for reaching out..."
-                  className="w-full rounded-xl border border-slate-300 p-3 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                  className="w-full rounded-[var(--radius-lg)] border border-[var(--color-border)] p-3 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
                 />
               </div>
 
@@ -1645,11 +1645,11 @@ export function ContactProfile() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 border-t border-[var(--color-border)] bg-slate-50 p-3">
+            <div className="flex items-center justify-end gap-2 border-t border-[var(--color-border)] bg-[var(--color-accent-muted)] p-3">
               <button
                 type="button"
                 onClick={() => setShowSendModal(false)}
-                className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-slate-100"
+                className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-accent-muted)]"
               >
                 Cancel
               </button>
@@ -1657,7 +1657,7 @@ export function ContactProfile() {
                 type="button"
                 onClick={() => handleSendMessage()}
                 disabled={sendingMessage || !messageDraft.trim()}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
               >
                 <Send className="h-3.5 w-3.5" />
                 <span>{sendingMessage ? 'Sending...' : 'Send Message'}</span>
@@ -1675,7 +1675,7 @@ export function ContactProfile() {
           <div className="w-full max-w-lg rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl overflow-hidden flex flex-col">
             <div className="flex items-center justify-between border-b border-[var(--color-border)] p-4">
               <div className="flex items-center gap-2">
-                <div className="h-7 w-7 rounded-lg bg-teal-100 flex items-center justify-center text-teal-800">
+                <div className="h-7 w-7 rounded-[var(--radius-md)] bg-teal-100 flex items-center justify-center text-teal-800">
                   <Brain className="h-4 w-4" />
                 </div>
                 <div>
@@ -1704,7 +1704,7 @@ export function ContactProfile() {
                 <select
                   value={memoryCategory}
                   onChange={(e) => setMemoryCategory(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 p-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
                 >
                   <option value="preference">Preference (communication style, tone, channel)</option>
                   <option value="constraint">Constraint (budget, timeline, non-negotiable)</option>
@@ -1723,16 +1723,16 @@ export function ContactProfile() {
                   value={memoryFact}
                   onChange={(e) => setMemoryFact(e.target.value)}
                   placeholder="e.g. Prefers outreach in the afternoon via WhatsApp rather than email."
-                  className="w-full rounded-xl border border-slate-300 p-3 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                  className="w-full rounded-[var(--radius-lg)] border border-[var(--color-border)] p-3 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 border-t border-[var(--color-border)] bg-slate-50 p-3">
+            <div className="flex items-center justify-end gap-2 border-t border-[var(--color-border)] bg-[var(--color-accent-muted)] p-3">
               <button
                 type="button"
                 onClick={() => setShowAddMemoryModal(false)}
-                className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-slate-100"
+                className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-accent-muted)]"
               >
                 Cancel
               </button>
@@ -1740,7 +1740,7 @@ export function ContactProfile() {
                 type="button"
                 onClick={handleAddMemory}
                 disabled={savingMemory || !memoryFact.trim()}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
               >
                 <Plus className="h-3.5 w-3.5" />
                 <span>{savingMemory ? 'Saving...' : 'Save to Memory Vault'}</span>
@@ -1754,11 +1754,11 @@ export function ContactProfile() {
       {/* MODAL: Edit Dynamic Custom Attributes */}
       {/* ========================================================================= */}
       {showEditAttributesModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-accent)]/40 p-4 backdrop-blur-xs">
           <div className="w-full max-w-lg rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between border-b border-[var(--color-border)] p-4 bg-[var(--color-page)]">
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700">
+                <div className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] bg-indigo-50 border border-indigo-200 text-indigo-700">
                   <Sparkles className="h-4 w-4" />
                 </div>
                 <div>
@@ -1773,7 +1773,7 @@ export function ContactProfile() {
               <button
                 type="button"
                 onClick={() => setShowEditAttributesModal(false)}
-                className="rounded-lg p-1 text-[var(--color-ink-muted)] hover:bg-slate-100"
+                className="rounded-[var(--radius-md)] p-1 text-[var(--color-ink-muted)] hover:bg-[var(--color-accent-muted)]"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -1786,7 +1786,7 @@ export function ContactProfile() {
                   Configured Attributes ({Object.keys(attributeDrafts).length})
                 </label>
                 {Object.keys(attributeDrafts).length === 0 ? (
-                  <p className="text-xs text-[var(--color-ink-faint)] italic p-3 bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                  <p className="text-xs text-[var(--color-ink-faint)] italic p-3 bg-[var(--color-accent-muted)] rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)]">
                     No custom fields configured yet. Add fields below.
                   </p>
                 ) : (
@@ -1796,7 +1796,7 @@ export function ContactProfile() {
                       return (
                         <div
                           key={key}
-                          className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] p-2.5 bg-[var(--color-surface)] shadow-2xs"
+                          className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] p-2.5 bg-[var(--color-surface)] shadow-2xs"
                         >
                           <div className="w-1/3 shrink-0">
                             <span className="font-mono text-[11px] font-bold text-[var(--color-ink)] truncate block" title={key}>
@@ -1818,7 +1818,7 @@ export function ContactProfile() {
                                     [key]: e.target.value,
                                   })
                                 }
-                                className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-slate-900"
+                                className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-slate-900"
                               >
                                 <option value="">Select an option...</option>
                                 {matchedDef.options.map((opt) => (
@@ -1838,7 +1838,7 @@ export function ContactProfile() {
                                   })
                                 }
                                 placeholder="Value..."
-                                className="w-full rounded-md border border-slate-300 px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
+                                className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-slate-900"
                               />
                             )}
                           </div>
@@ -1846,7 +1846,7 @@ export function ContactProfile() {
                             type="button"
                             onClick={() => handleRemoveAttribute(key)}
                             title="Remove attribute"
-                            className="rounded p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                            className="rounded p-1 text-[var(--color-ink-faint)] hover:text-rose-600 hover:bg-rose-50 transition-colors"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -1858,7 +1858,7 @@ export function ContactProfile() {
               </div>
 
               {/* Add New Field Section */}
-              <div className="rounded-xl border border-[var(--color-border)] bg-slate-50/70 p-3 space-y-2.5">
+              <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-accent-muted)]/70 p-3 space-y-2.5">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-ink)]">
                   Add Attribute
                 </span>
@@ -1880,7 +1880,7 @@ export function ContactProfile() {
                           setNewFieldValue('')
                         }
                       }}
-                      className="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-slate-900"
+                      className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2.5 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-slate-900"
                     >
                       <option value="">Select schema attribute or enter custom below...</option>
                       {availableDefinitions
@@ -1904,7 +1904,7 @@ export function ContactProfile() {
                       placeholder="e.g. account_tier"
                       value={newFieldKey}
                       onChange={(e) => setNewFieldKey(e.target.value)}
-                      className="w-full rounded-md border border-slate-300 px-2.5 py-1 text-xs bg-white font-mono focus:outline-none focus:ring-1 focus:ring-slate-900"
+                      className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2.5 py-1 text-xs bg-white font-mono focus:outline-none focus:ring-1 focus:ring-slate-900"
                     />
                   </div>
                   <div>
@@ -1922,7 +1922,7 @@ export function ContactProfile() {
                           handleAddDraftField()
                         }
                       }}
-                      className="w-full rounded-md border border-slate-300 px-2.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-slate-900"
+                      className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-slate-900"
                     />
                   </div>
                 </div>
@@ -1932,7 +1932,7 @@ export function ContactProfile() {
                     type="button"
                     onClick={handleAddDraftField}
                     disabled={!newFieldKey.trim()}
-                    className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                    className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-2.5 py-1 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-accent-muted)] disabled:opacity-50"
                   >
                     <Plus className="h-3 w-3" />
                     <span>Add to List</span>
@@ -1949,7 +1949,7 @@ export function ContactProfile() {
                 <button
                   type="button"
                   onClick={() => setShowEditAttributesModal(false)}
-                  className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-slate-100"
+                  className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-accent-muted)]"
                 >
                   Cancel
                 </button>
@@ -1957,7 +1957,7 @@ export function ContactProfile() {
                   type="button"
                   onClick={handleSaveAttributes}
                   disabled={savingAttributes}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] shadow-xs disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] shadow-none disabled:opacity-50"
                 >
                   <Check className="h-3.5 w-3.5" />
                   <span>{savingAttributes ? 'Saving...' : 'Save Custom Fields'}</span>

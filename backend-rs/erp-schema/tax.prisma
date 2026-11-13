@@ -1,0 +1,37 @@
+// Tax: rate/class definitions and the pricing-mode setting. Universal
+// capability, pack `core` (MULTI-SECTOR.md) -- every shop, every sector,
+// every business model needs a tax answer, not just B2B's "tax exemption."
+// See docs/implementation/tax-compliance/15-tax-module.md for the full design and the
+// reasoning behind the inclusive/exclusive split.
+
+model TaxClass {
+  id        String   @id @default(cuid())
+  key       String   @unique // "standard", "zero_rated", "exempt"
+  name      String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rates    TaxRate[]
+  variants ProductVariant[]
+
+  @@index([isDefault])
+}
+
+/// One row per rate that has ever applied to a class. Effective-dated so a
+/// GST rate change doesn't rewrite history -- an order snapshots the rate it
+/// was charged (House Rule 7) and never looks this table up again after
+/// placement.
+model TaxRate {
+  id          String    @id @default(cuid())
+  taxClassId  String
+  /// Basis points, not a float -- 1700 = 17%. Never a percentage as a Float.
+  rateBps     Int
+  effectiveAt DateTime  @default(now())
+  endedAt     DateTime?
+  createdAt   DateTime  @default(now())
+
+  taxClass TaxClass @relation(fields: [taxClassId], references: [id], onDelete: Cascade)
+
+  @@index([taxClassId, effectiveAt])
+}

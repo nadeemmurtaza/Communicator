@@ -1,7 +1,7 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 use crate::db::AppState;
-use crate::services::nid_client::{NidError, SessionClaims};
+use crate::services::nid_client::{NidError, SessionClaims, SignUpResult};
 use axum::extract::{FromRequestParts, Query, State};
 use axum::http::{header::AUTHORIZATION, request::Parts, HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
@@ -44,6 +44,10 @@ impl From<NidError> for AuthError {
             NidError::MissingIdentity => (
                 StatusCode::BAD_GATEWAY,
                 "nID response did not carry an account identity or access token.".to_string(),
+            ),
+            NidError::OtpFailed(detail) => (
+                StatusCode::BAD_REQUEST,
+                format!("Sign-up failed: {detail}"),
             ),
         };
         Self(status, detail)
@@ -196,6 +200,74 @@ pub async fn get_current_user_profile(
         "phone": claims.phone,
         "phone_verified": claims.phone_verified,
         "phoneVerified": claims.phone_verified,
+        "provider": "nID",
+    })))
+}
+
+// ===========================================================================
+// Sign Up — Account creation via nID phone + OTP
+// ===========================================================================
+
+#[derive(serde::Deserialize)]
+pub struct SignUpStartBody {
+    phone: String,
+}
+
+/// Starts the sign-up flow by sending an OTP code to the given phone number.
+/// The account is created in nID when the OTP is verified (verify_sign_up).
+pub async fn sign_up_start(
+    State(state): State<AppState>,
+    Json(body): Json<SignUpStartBody>,
+) -> Result<impl IntoResponse, AuthError> {
+    let phone = body.phone.trim();
+    if phone.is_empty() {
+        return Err(AuthError(
+            StatusCode::BAD_REQUEST,
+            "Phone number is required.".to_string(),
+        ));
+    }
+    state.nid.start_sign_up(phone).await?;
+    Ok(Json(json!({
+        "status": "otp_sent",
+        "phone": phone,
+        "message": "Verification code sent. Call /auth/sign-up/verify with the code.",
+    })))
+}
+
+#[derive(serde::Deserialize)]
+pub struct SignUpVerifyBody {
+    phone: String,
+    code: String,
+}
+
+/// Verifies the OTP code, creating the nID account if it doesn't exist.
+/// Returns a session token that can be used as a Bearer token for auth.
+pub async fn sign_up_verify(
+    State(state): State<AppState>,
+    Json(body): Json<SignUpVerifyBody>,
+) -> Result<impl IntoResponse, AuthError> {
+    let phone = body.phone.trim();
+    let code = body.code.trim();
+    if phone.is_empty() {
+        return Err(AuthError(
+            StatusCode::BAD_REQUEST,
+            "Phone number is required.".to_string(),
+        ));
+    }
+    if code.is_empty() {
+        return Err(AuthError(
+            StatusCode::BAD_REQUEST,
+            "Verification code is required.".to_string(),
+        ));
+    }
+
+    let result: SignUpResult = state.nid.verify_sign_up(phone, code).await?;
+    Ok(Json(json!({
+        "status": "signed_up",
+        "token": result.session_token,
+        "account_id": result.account_id,
+        "accountId": result.account_id,
+        "phone": result.phone,
         "provider": "nID",
     })))
 }

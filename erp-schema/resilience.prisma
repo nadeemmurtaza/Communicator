@@ -1,0 +1,52 @@
+// Resilience engineering (resilience-scalability/38-resilience-engineering.md,
+// WO-38.3). Additive only; no existing table altered.
+//
+// A durable record of success/failure/latency for the three named critical
+// paths (checkout, POS sale completion, till -> parent sync), so the error
+// budget for "99.9% success over the trailing 30 days" survives a process
+// restart — an in-memory counter cannot answer "over the trailing 30 days"
+// once the process that was counting is gone.
+//
+/// SloRecorderService.record() is the one writer (core/slo/) — never a raw
+/// `prisma.requestOutcome` write from a controller or another service, the
+/// same "one writer per invariant" discipline CLAUDE.md already states for
+/// stock. Writes are fire-and-forget/best-effort from the caller's own
+/// point of view: a failure to record an outcome never fails or slows the
+/// checkout/POS-sale/sync path it is observing (doc 38's own "never let
+/// observability become a new failure mode" implicit rule).
+///
+/// This is an operational log, not a business record — the "hundred-
+/// thousandth row" lens applies directly: it grows with request volume, so
+/// `RequestOutcomePruneCron` (nightly) deletes rows past the 30-day window
+/// this table exists to serve plus a few days' buffer, and every read goes
+/// through `(path, occurredAt)`, the one index this table has.
+model RequestOutcome {
+  id String @id @default(cuid())
+
+  /// One of core/slo/slo-paths.ts's SLO_PATHS keys ('checkout', 'pos.sale',
+  /// 'replication.sync') — a plain string, not a Prisma enum, so adding a
+  /// fourth critical path later is an entry in that one TypeScript file,
+  /// never a migration.
+  path String
+
+  /// For 'checkout'/'pos.sale': whether the request completed without
+  /// throwing. For 'replication.sync': whether the tick's own backlog age
+  /// was within the 4-hour bound stated in doc 38 §3 — there is no
+  /// separate percentage SLO stated for that path, only the hard bound, so
+  /// "succeeded" IS that bound-check, not "the tick ran without error."
+  succeeded Boolean
+
+  /// For 'checkout'/'pos.sale': the request's own wall-clock latency, for
+  /// the p95 figure doc 38 §3 names. For 'replication.sync': the backlog
+  /// age (now minus the oldest still-unpushed record's occurredAt) at the
+  /// moment of this tick, in milliseconds — the number the 4-hour bound is
+  /// actually measured against.
+  latencyMs Int
+
+  /// The event's own time — always `new Date()` at record time here
+  /// (unlike a replicated business FACT, this is observability data with
+  /// no earlier "true" time to preserve).
+  occurredAt DateTime @default(now())
+
+  @@index([path, occurredAt])
+}

@@ -295,7 +295,7 @@ export function MacrosManagement() {
             macros.map((m) => {
               const acts = Array.isArray(m.actions) ? m.actions : []
               return (
-                <div key={m.id} className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-black/5 transition-colors">
+                <div key={m.id} className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[var(--color-accent-muted)] transition-colors">
                   <div className="space-y-1 flex-1 min-w-0">
                     <p className="font-semibold text-[var(--color-ink)] truncate">{m.name}</p>
                     <p className="text-xs text-[var(--color-ink-muted)] line-clamp-2">{m.description || 'No description'}</p>
@@ -325,7 +325,7 @@ export function MacrosManagement() {
                     <button
                       type="button"
                       onClick={() => startEdit(m)}
-                      className="flex items-center gap-1 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] px-2.5 py-1 rounded hover:bg-black/5 transition-colors"
+                      className="flex items-center gap-1 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] px-2.5 py-1 rounded hover:bg-[var(--color-accent-muted)] transition-colors"
                       title="Edit Macro"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
@@ -418,7 +418,7 @@ export function MacrosManagement() {
               <button
                 type="button"
                 onClick={() => setEditingMacro(null)}
-                className="px-3 py-1.5 text-xs rounded border border-[var(--color-border)] hover:bg-black/5"
+                className="px-3 py-1.5 text-xs rounded border border-[var(--color-border)] hover:bg-[var(--color-accent-muted)]"
               >
                 Cancel
               </button>
@@ -500,7 +500,7 @@ export function MacrosManagement() {
               <button
                 type="button"
                 onClick={() => setExecutingMacro(null)}
-                className="px-3 py-1.5 text-xs rounded border border-[var(--color-border)] hover:bg-black/5"
+                className="px-3 py-1.5 text-xs rounded border border-[var(--color-border)] hover:bg-[var(--color-accent-muted)]"
               >
                 Close
               </button>

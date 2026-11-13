@@ -1,4 +1,4 @@
-//! Phase 4 scheduled background runners (port of `api/routes/scheduler.py`).
+﻿//! Phase 4 scheduled background runners (port of `api/routes/scheduler.py`).
 //!
 //! The Python module is honest about one thing: nothing in this repo owns a
 //! task queue, so an external cron is expected to POST here. This port keeps
@@ -112,7 +112,7 @@ fn now_iso() -> String {
 /// single row expected -- so the caller can put it in the response's `notes`
 /// and stop claiming the work succeeded.
 fn write_failure(
-    result: Result<sqlx::sqlite::SqliteQueryResult, sqlx::Error>,
+    result: Result<sqlx::postgres::PgQueryResult, sqlx::Error>,
     context: &str,
 ) -> Option<String> {
     match result {
@@ -178,7 +178,7 @@ fn parse_ts(raw: Option<&str>) -> Option<DateTime<Utc>> {
 }
 
 async fn table_exists(state: &AppState, table: &str) -> Option<bool> {
-    match sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?")
+    match sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public' AND table_name=$1")
         .bind(table)
         .fetch_one(&state.db)
         .await
@@ -1115,7 +1115,7 @@ async fn dispatch_drafts_inner(state: &AppState, opts: &RunQuery, tenant_key: &s
         // Not being able to ask the question is not an answer that the table is
         // absent, so the response says which of the two happened.
         None => notes.push(
-            "table `drafts` could not be checked (the sqlite_master read failed); only copilot_approvals rows were considered"
+            "table `drafts` could not be checked (the information_schema read failed); only copilot_approvals rows were considered"
                 .to_string(),
         ),
         Some(true) => {}
@@ -2386,7 +2386,7 @@ pub async fn scheduler_status(
     }
     match table_exists(&state, "drafts").await {
         Some(false) => warnings.push("table `drafts` has no DDL in db/mod.rs; auto-approved dispatch reads copilot_approvals only".to_string()),
-        None => warnings.push("the existence of table `drafts` could not be checked (the sqlite_master read failed)".to_string()),
+        None => warnings.push("the existence of table `drafts` could not be checked (the information_schema read failed)".to_string()),
         Some(true) => {}
     }
     warnings.push(format!(

@@ -61,7 +61,7 @@ export function IssueModal(props: IssueModalProps) {
 
             {issueNotice && (
               <div
-                className={`rounded-lg p-2.5 text-xs font-medium ${
+                className={`rounded-[var(--radius-md)] p-2.5 text-xs font-medium ${
                   issueNotice.includes('Failed')
                     ? 'bg-rose-50 text-rose-800 border border-rose-200'
                     : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
@@ -94,7 +94,7 @@ export function IssueModal(props: IssueModalProps) {
                     : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
                 }`}
               >
-                <GitPullRequest className="h-3.5 w-3.5 text-slate-800" />
+                <GitPullRequest className="h-3.5 w-3.5 text-[var(--color-ink)]" />
                 <span>GitHub Issues</span>
               </button>
               <button
@@ -118,7 +118,7 @@ export function IssueModal(props: IssueModalProps) {
                   type="text"
                   value={issueTitle}
                   onChange={(e) => setIssueTitle(e.target.value)}
-                  className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs text-[var(--color-ink)] focus:border-purple-500 focus:outline-hidden font-medium"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs text-[var(--color-ink)] focus:border-purple-500 focus:outline-hidden font-medium"
                 />
               </div>
 
@@ -128,7 +128,7 @@ export function IssueModal(props: IssueModalProps) {
                   <select
                     value={issuePriority}
                     onChange={(e) => setIssuePriority(e.target.value)}
-                    className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs text-[var(--color-ink)] focus:border-purple-500 focus:outline-hidden"
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs text-[var(--color-ink)] focus:border-purple-500 focus:outline-hidden"
                   >
                     <option value="urgent">Urgent</option>
                     <option value="high">High</option>
@@ -142,7 +142,7 @@ export function IssueModal(props: IssueModalProps) {
                   <select
                     value={issueType}
                     onChange={(e) => setIssueType(e.target.value)}
-                    className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs text-[var(--color-ink)] focus:border-purple-500 focus:outline-hidden"
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs text-[var(--color-ink)] focus:border-purple-500 focus:outline-hidden"
                   >
                     <option value="bug">Bug</option>
                     <option value="feature">Feature Request</option>
@@ -159,7 +159,7 @@ export function IssueModal(props: IssueModalProps) {
                   rows={4}
                   value={issueDescription}
                   onChange={(e) => setIssueDescription(e.target.value)}
-                  className="w-full rounded-lg border border-[var(--color-border)] p-2 text-xs text-[var(--color-ink)] focus:border-purple-500 focus:outline-hidden font-mono"
+                  className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] p-2 text-xs text-[var(--color-ink)] focus:border-purple-500 focus:outline-hidden font-mono"
                 />
               </div>
             </div>
@@ -176,7 +176,7 @@ export function IssueModal(props: IssueModalProps) {
                 type="button"
                 onClick={handleCreateLinkedIssue}
                 disabled={issueSubmitting || !issueTitle.trim()}
-                className="px-4 py-1.5 text-xs bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold shadow-xs transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-1.5 text-xs bg-purple-600 hover:bg-purple-700 text-white rounded-[var(--radius-md)] font-bold shadow-none transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
               >
                 {issueSubmitting ? 'Creating...' : `Create in ${issueProvider.toUpperCase()}`}
               </button>

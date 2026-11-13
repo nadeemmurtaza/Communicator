@@ -1,11 +1,11 @@
-use crate::db::AppState;
+﻿use crate::db::AppState;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde::Deserialize;
 use serde_json::{json, Value};
-use sqlx::{Row, SqlitePool};
+use sqlx::{Row, PgPool};
 
 /// The catalog the product actually claims support for. `curated` marks the
 /// codes that have more behind them than a name: script-level detection, or an
@@ -375,7 +375,7 @@ pub struct TranslateQuery {
 
 const SETTINGS_ID: &str = "translation_settings_default";
 
-async fn load_settings(pool: &SqlitePool) -> Result<Value, sqlx::Error> {
+async fn load_settings(pool: &PgPool) -> Result<Value, sqlx::Error> {
     let row = sqlx::query(
         "SELECT id, is_enabled, auto_translate_inbound, auto_translate_outbound,
                 agent_primary_language, preferred_engine, confidence_threshold,

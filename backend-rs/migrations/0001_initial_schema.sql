@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS tenants (
     tenant_key TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL,
     owner_account_id TEXT NOT NULL DEFAULT '',
-    created_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_tenants_tenant_key ON tenants(tenant_key);
 
@@ -22,8 +22,8 @@ CREATE TABLE IF NOT EXISTS leads (
     institution_type TEXT NOT NULL DEFAULT '',
     city TEXT NOT NULL DEFAULT '',
     qualification_rationale TEXT NOT NULL DEFAULT '',
-    synced_at TEXT NOT NULL,
-    created_at TEXT NOT NULL
+    synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_harvester_id ON leads(harvester_institution_id);
 CREATE INDEX IF NOT EXISTS idx_leads_tenant_key ON leads(tenant_key);
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS customers (
     tenant_key TEXT NOT NULL DEFAULT 'newax',
     lead_id TEXT,
     display_name TEXT NOT NULL DEFAULT '',
-    created_at TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (lead_id) REFERENCES leads(id)
 );
 CREATE INDEX IF NOT EXISTS idx_customers_tenant_key ON customers(tenant_key);
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS contacts (
     role TEXT NOT NULL DEFAULT '',
     language TEXT NOT NULL DEFAULT 'en',
     custom_fields TEXT NOT NULL DEFAULT '{}',
-    created_at TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (lead_id) REFERENCES leads(id),
     FOREIGN KEY (customer_id) REFERENCES customers(id)
 );
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS consent_records (
     status TEXT NOT NULL,
     source TEXT NOT NULL DEFAULT '',
     note TEXT NOT NULL DEFAULT '',
-    recorded_at TEXT NOT NULL,
+    recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (contact_id) REFERENCES contacts(id)
 );
 CREATE INDEX IF NOT EXISTS idx_consent_contact_id ON consent_records(contact_id);
@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS contact_memories (
     confidence REAL NOT NULL DEFAULT 1.0,
     source_message_id TEXT,
     noted_at TEXT NOT NULL,
-    created_at TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (contact_id) REFERENCES contacts(id),
     FOREIGN KEY (source_message_id) REFERENCES messages(id)
 );
@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS contact_notes (
     contact_id TEXT NOT NULL,
     author_name TEXT NOT NULL DEFAULT 'Agent',
     body TEXT NOT NULL,
-    created_at TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (contact_id) REFERENCES contacts(id)
 );
 CREATE INDEX IF NOT EXISTS idx_contact_notes_contact_id ON contact_notes(contact_id);
@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS tags (
     id TEXT PRIMARY KEY,
     tenant_key TEXT NOT NULL DEFAULT 'newax',
     name TEXT NOT NULL,
-    created_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_tags_tenant_name ON tags(tenant_key, name);
 
@@ -125,20 +125,20 @@ CREATE TABLE IF NOT EXISTS inboxes (
     channel_type TEXT NOT NULL,
     phone_number TEXT NOT NULL DEFAULT '',
     avatar_url TEXT NOT NULL DEFAULT '',
-    is_active INTEGER NOT NULL DEFAULT 1,
+    is_active BOOLEAN NOT NULL DEFAULT true,
     credentials TEXT NOT NULL DEFAULT '{}',
-    greeting_enabled INTEGER NOT NULL DEFAULT 1,
+    greeting_enabled BOOLEAN NOT NULL DEFAULT true,
     greeting_message TEXT NOT NULL DEFAULT '',
-    out_of_office_enabled INTEGER NOT NULL DEFAULT 0,
+    out_of_office_enabled BOOLEAN NOT NULL DEFAULT false,
     out_of_office_message TEXT NOT NULL DEFAULT '',
-    csat_enabled INTEGER NOT NULL DEFAULT 1,
-    auto_read_receipts INTEGER NOT NULL DEFAULT 1,
-    working_hours_enabled INTEGER NOT NULL DEFAULT 0,
+    csat_enabled BOOLEAN NOT NULL DEFAULT true,
+    auto_read_receipts BOOLEAN NOT NULL DEFAULT true,
+    working_hours_enabled BOOLEAN NOT NULL DEFAULT false,
     working_hours_start INTEGER NOT NULL DEFAULT 9,
     working_hours_end INTEGER NOT NULL DEFAULT 18,
     timezone TEXT NOT NULL DEFAULT 'UTC',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_inboxes_channel_type ON inboxes(channel_type);
 
@@ -162,18 +162,18 @@ CREATE TABLE IF NOT EXISTS conversations (
     team_id TEXT,
     team_name TEXT,
     csat_score INTEGER,
-    human_takeover INTEGER NOT NULL DEFAULT 0,
+    human_takeover BOOLEAN NOT NULL DEFAULT false,
     assigned_to_id TEXT,
     assigned_to_name TEXT,
     snoozed_until TEXT,
     language TEXT,
     sequence_id TEXT,
-    sequence_step INTEGER NOT NULL DEFAULT 0,
+    sequence_step BOOLEAN NOT NULL DEFAULT false,
     sequence_variant TEXT DEFAULT 'control',
     next_followup_at TEXT,
     custom_attributes TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (contact_id) REFERENCES contacts(id),
     FOREIGN KEY (inbox_id) REFERENCES inboxes(id),
     FOREIGN KEY (sequence_id) REFERENCES follow_up_sequences(id)
@@ -214,8 +214,8 @@ CREATE TABLE IF NOT EXISTS drafts (
     status TEXT NOT NULL DEFAULT 'pending',
     reviewer TEXT NOT NULL DEFAULT '',
     reviewer_feedback TEXT NOT NULL DEFAULT '',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (conversation_id) REFERENCES conversations(id)
 );
 CREATE INDEX IF NOT EXISTS idx_drafts_conversation_id ON drafts(conversation_id);
@@ -228,7 +228,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     action TEXT NOT NULL,
     actor TEXT NOT NULL DEFAULT 'system',
     details TEXT NOT NULL DEFAULT '{}',
-    created_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_audit_logs_entity_id ON audit_logs(entity_id);
 
@@ -242,8 +242,8 @@ CREATE TABLE IF NOT EXISTS services (
     target_institution_types TEXT NOT NULL DEFAULT '[]',
     faq TEXT NOT NULL DEFAULT '[]',
     pricing_notes TEXT NOT NULL DEFAULT '',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_services_tenant_key ON services(tenant_key);
 
@@ -252,8 +252,8 @@ CREATE TABLE IF NOT EXISTS follow_up_sequences (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
-    is_active INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS sequence_steps (
@@ -277,11 +277,11 @@ CREATE TABLE IF NOT EXISTS automation_rules (
     match_type TEXT NOT NULL,
     action_type TEXT NOT NULL,
     action_value TEXT NOT NULL,
-    priority INTEGER NOT NULL DEFAULT 0,
-    is_active INTEGER NOT NULL DEFAULT 1,
+    priority BOOLEAN NOT NULL DEFAULT false,
+    is_active BOOLEAN NOT NULL DEFAULT true,
     execution_count INTEGER,
     last_triggered_at TEXT,
-    created_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Canned Responses
@@ -290,7 +290,7 @@ CREATE TABLE IF NOT EXISTS canned_responses (
     short_code TEXT NOT NULL,
     content TEXT NOT NULL,
     category TEXT,
-    created_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Macros
@@ -299,8 +299,8 @@ CREATE TABLE IF NOT EXISTS macros (
     name TEXT NOT NULL UNIQUE,
     description TEXT NOT NULL DEFAULT '',
     actions TEXT NOT NULL DEFAULT '[]',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Team Members & Teams
@@ -334,10 +334,10 @@ CREATE TABLE IF NOT EXISTS role_definitions (
     name TEXT NOT NULL UNIQUE,
     display_name TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
-    is_system_role INTEGER NOT NULL DEFAULT 0,
+    is_system_role BOOLEAN NOT NULL DEFAULT false,
     permissions TEXT NOT NULL DEFAULT '[]',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- SLA Policies
@@ -350,9 +350,9 @@ CREATE TABLE IF NOT EXISTS sla_policies (
     only_during_business_hours INTEGER,
     priorities TEXT,
     inbox_ids TEXT,
-    is_active INTEGER DEFAULT 1,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Tickets & Activities
@@ -368,8 +368,8 @@ CREATE TABLE IF NOT EXISTS tickets (
     conversation_id TEXT,
     contact_id TEXT,
     assigned_to_id TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (conversation_id) REFERENCES conversations(id),
     FOREIGN KEY (contact_id) REFERENCES contacts(id)
 );
@@ -382,7 +382,7 @@ CREATE TABLE IF NOT EXISTS ticket_activities (
     activity_type TEXT NOT NULL,
     actor_name TEXT NOT NULL,
     content TEXT NOT NULL,
-    created_at TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (ticket_id) REFERENCES tickets(id)
 );
 CREATE INDEX IF NOT EXISTS idx_ticket_activities_ticket_id ON ticket_activities(ticket_id);
@@ -400,11 +400,11 @@ CREATE TABLE IF NOT EXISTS knowledge_base_entries (
     target_touchpoints TEXT NOT NULL DEFAULT '["agent","copilot","help_center"]',
     status TEXT NOT NULL DEFAULT 'published',
     resolution_rate REAL NOT NULL DEFAULT 85.0,
-    usage_count INTEGER NOT NULL DEFAULT 0,
-    helpful_count INTEGER NOT NULL DEFAULT 0,
-    unhelpful_count INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    usage_count BOOLEAN NOT NULL DEFAULT false,
+    helpful_count BOOLEAN NOT NULL DEFAULT false,
+    unhelpful_count BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_kb_entries_tenant_key ON knowledge_base_entries(tenant_key);
 CREATE INDEX IF NOT EXISTS idx_kb_entries_topic ON knowledge_base_entries(topic);
@@ -415,9 +415,9 @@ CREATE TABLE IF NOT EXISTS knowledge_gaps (
     question TEXT NOT NULL,
     suggested_answer TEXT NOT NULL DEFAULT '',
     source_query TEXT NOT NULL DEFAULT '',
-    frequency INTEGER NOT NULL DEFAULT 1,
+    frequency BOOLEAN NOT NULL DEFAULT true,
     status TEXT NOT NULL DEFAULT 'suggested',
-    created_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Knowledge Recommendations
@@ -431,8 +431,8 @@ CREATE TABLE IF NOT EXISTS knowledge_recommendations (
     suggested_action TEXT NOT NULL DEFAULT '',
     suggested_content TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL DEFAULT 'open',
-    created_at TEXT NOT NULL,
-    resolved_at TEXT
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    resolved_at TIMESTAMPTZ
 );
 CREATE INDEX IF NOT EXISTS idx_kb_recommendations_status ON knowledge_recommendations(status);
 
@@ -445,9 +445,9 @@ CREATE TABLE IF NOT EXISTS broadcasts (
     objective TEXT NOT NULL DEFAULT '',
     campaign_template_id TEXT,
     parent_campaign_id TEXT,
-    step_index INTEGER NOT NULL DEFAULT 0,
-    step_delay_days INTEGER NOT NULL DEFAULT 0,
-    stop_on_reply INTEGER NOT NULL DEFAULT 1,
+    step_index BOOLEAN NOT NULL DEFAULT false,
+    step_delay_days BOOLEAN NOT NULL DEFAULT false,
+    stop_on_reply BOOLEAN NOT NULL DEFAULT true,
     template_name TEXT NOT NULL,
     template_language TEXT NOT NULL DEFAULT 'en_US',
     body_preview TEXT NOT NULL DEFAULT '',
@@ -455,13 +455,13 @@ CREATE TABLE IF NOT EXISTS broadcasts (
     tag_name TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'draft',
     scheduled_at TEXT,
-    audience_count INTEGER NOT NULL DEFAULT 0,
-    sent_count INTEGER NOT NULL DEFAULT 0,
-    delivered_count INTEGER NOT NULL DEFAULT 0,
-    read_count INTEGER NOT NULL DEFAULT 0,
-    failed_count INTEGER NOT NULL DEFAULT 0,
-    skipped_count INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL,
+    audience_count BOOLEAN NOT NULL DEFAULT false,
+    sent_count BOOLEAN NOT NULL DEFAULT false,
+    delivered_count BOOLEAN NOT NULL DEFAULT false,
+    read_count BOOLEAN NOT NULL DEFAULT false,
+    failed_count BOOLEAN NOT NULL DEFAULT false,
+    skipped_count BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (campaign_template_id) REFERENCES campaign_templates(id),
     FOREIGN KEY (parent_campaign_id) REFERENCES broadcasts(id)
 );
@@ -497,9 +497,9 @@ CREATE TABLE IF NOT EXISTS campaign_templates (
     meta_status TEXT NOT NULL DEFAULT 'PENDING',
     body_preview TEXT NOT NULL DEFAULT '',
     variables TEXT NOT NULL DEFAULT '[]',
-    is_active INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_campaign_templates_tenant_key ON campaign_templates(tenant_key);
 
@@ -519,13 +519,13 @@ CREATE TABLE IF NOT EXISTS integration_settings (
     business_name TEXT NOT NULL DEFAULT '',
     business_description TEXT NOT NULL DEFAULT '',
     agent_guidelines TEXT NOT NULL DEFAULT '',
-    auto_reply_enabled INTEGER NOT NULL DEFAULT 1,
-    business_hours_enabled INTEGER NOT NULL DEFAULT 0,
+    auto_reply_enabled BOOLEAN NOT NULL DEFAULT true,
+    business_hours_enabled BOOLEAN NOT NULL DEFAULT false,
     business_hours_start INTEGER NOT NULL DEFAULT 9,
     business_hours_end INTEGER NOT NULL DEFAULT 18,
     business_timezone TEXT NOT NULL DEFAULT 'UTC',
     away_message TEXT NOT NULL DEFAULT '',
-    updated_at TEXT NOT NULL
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_integration_settings_tenant ON integration_settings(tenant_key);
 
@@ -535,15 +535,15 @@ CREATE TABLE IF NOT EXISTS channel_gateway_connections (
     gateway_type TEXT NOT NULL,
     provider TEXT NOT NULL,
     name TEXT NOT NULL,
-    is_default INTEGER NOT NULL DEFAULT 0,
-    is_active INTEGER NOT NULL DEFAULT 1,
+    is_default BOOLEAN NOT NULL DEFAULT false,
+    is_active BOOLEAN NOT NULL DEFAULT true,
     credentials TEXT NOT NULL DEFAULT '{}',
     config TEXT NOT NULL DEFAULT '{}',
     test_status TEXT NOT NULL DEFAULT 'untested',
-    latency_ms INTEGER NOT NULL DEFAULT 0,
+    latency_ms BOOLEAN NOT NULL DEFAULT false,
     last_tested_at TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- AI Connections
@@ -556,13 +556,13 @@ CREATE TABLE IF NOT EXISTS ai_connections (
     base_url TEXT,
     temperature REAL NOT NULL DEFAULT 0.7,
     max_tokens INTEGER NOT NULL DEFAULT 1024,
-    is_active INTEGER NOT NULL DEFAULT 1,
+    is_active BOOLEAN NOT NULL DEFAULT true,
     assigned_jobs TEXT NOT NULL DEFAULT '[]',
     last_tested_at TEXT,
     test_status TEXT NOT NULL DEFAULT 'untested',
     latency_ms INTEGER,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_ai_connections_provider ON ai_connections(provider);
 
@@ -577,8 +577,8 @@ CREATE TABLE IF NOT EXISTS ai_custom_policies (
     auto_approval_mode TEXT NOT NULL DEFAULT 'require_manager_review',
     min_csat_learning_threshold REAL NOT NULL DEFAULT 4.0,
     max_autonomous_refund REAL NOT NULL DEFAULT 50.0,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_ai_custom_policies_job_type ON ai_custom_policies(job_type);
 
@@ -600,9 +600,9 @@ CREATE TABLE IF NOT EXISTS copilot_approvals (
     reviewer_name TEXT,
     reviewer_feedback TEXT,
     dispatched_message_id TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    resolved_at TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    resolved_at TIMESTAMPTZ,
     FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
     FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE SET NULL,
     FOREIGN KEY (assigned_to_id) REFERENCES team_members(id) ON DELETE SET NULL,
@@ -616,7 +616,7 @@ CREATE TABLE IF NOT EXISTS discovery_flow_templates (
     id TEXT PRIMARY KEY,
     tenant_key TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL,
-    is_active INTEGER NOT NULL DEFAULT 1,
+    is_active BOOLEAN NOT NULL DEFAULT true,
     steps TEXT NOT NULL DEFAULT '[]',
     problem_category_keywords TEXT NOT NULL DEFAULT '{}',
     capability_keywords TEXT NOT NULL DEFAULT '{}',
@@ -624,8 +624,8 @@ CREATE TABLE IF NOT EXISTS discovery_flow_templates (
     scoring_weights TEXT NOT NULL DEFAULT '{}',
     intro_message TEXT NOT NULL DEFAULT '',
     closing_message TEXT NOT NULL DEFAULT '',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Inquiries
@@ -660,8 +660,8 @@ CREATE TABLE IF NOT EXISTS inquiries (
     status TEXT NOT NULL DEFAULT 'discovery_in_progress',
     assigned_owner TEXT NOT NULL DEFAULT '',
     next_action TEXT NOT NULL DEFAULT '',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (conversation_id) REFERENCES conversations(id),
     FOREIGN KEY (contact_id) REFERENCES contacts(id),
     FOREIGN KEY (lead_id) REFERENCES leads(id)
@@ -682,13 +682,13 @@ CREATE TABLE IF NOT EXISTS live_proof_sessions (
     status TEXT NOT NULL DEFAULT 'pending',
     anti_spoof_nonce TEXT NOT NULL,
     max_video_seconds INTEGER NOT NULL DEFAULT 45,
-    require_video INTEGER NOT NULL DEFAULT 1,
-    require_photos INTEGER NOT NULL DEFAULT 1,
-    expires_at TEXT NOT NULL,
+    require_video BOOLEAN NOT NULL DEFAULT true,
+    require_photos BOOLEAN NOT NULL DEFAULT true,
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     completed_at TEXT,
     rejection_reason TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (conversation_id) REFERENCES conversations(id),
     FOREIGN KEY (contact_id) REFERENCES contacts(id)
 );
@@ -708,7 +708,7 @@ CREATE TABLE IF NOT EXISTS live_proof_evidences (
     duration_seconds REAL,
     resolution TEXT,
     device_fingerprint TEXT,
-    watermark_verified INTEGER NOT NULL DEFAULT 1,
+    watermark_verified BOOLEAN NOT NULL DEFAULT true,
     verification_score REAL NOT NULL DEFAULT 1.0,
     captured_at TEXT NOT NULL,
     FOREIGN KEY (session_id) REFERENCES live_proof_sessions(id)
@@ -723,8 +723,8 @@ CREATE TABLE IF NOT EXISTS contact_segments (
     name TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
     filters TEXT NOT NULL DEFAULT '{}',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_segments_tenant_name ON contact_segments(tenant_key, name);
 
@@ -738,11 +738,11 @@ CREATE TABLE IF NOT EXISTS custom_attribute_definitions (
     attribute_type TEXT NOT NULL DEFAULT 'text',
     default_value TEXT,
     options TEXT NOT NULL DEFAULT '[]',
-    is_required INTEGER NOT NULL DEFAULT 0,
+    is_required BOOLEAN NOT NULL DEFAULT false,
     regex_pattern TEXT,
     regex_cue TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_custom_attr_name_model ON custom_attribute_definitions(name, attribute_model);
 
@@ -757,8 +757,8 @@ CREATE TABLE IF NOT EXISTS agent_policies (
     process_steps TEXT NOT NULL DEFAULT '[]',
     rules TEXT NOT NULL DEFAULT '{}',
     guardrails TEXT NOT NULL DEFAULT '[]',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_agent_policies_category ON agent_policies(category);
 CREATE INDEX IF NOT EXISTS idx_agent_policies_status ON agent_policies(status);
@@ -772,7 +772,7 @@ CREATE TABLE IF NOT EXISTS simulation_scenarios (
     customer_persona TEXT NOT NULL DEFAULT '{}',
     expected_outcome TEXT NOT NULL DEFAULT 'resolve_autonomous',
     customer_messages TEXT NOT NULL DEFAULT '[]',
-    created_at TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (policy_id) REFERENCES agent_policies(id) ON DELETE SET NULL
 );
 CREATE INDEX IF NOT EXISTS idx_sim_scenarios_category ON simulation_scenarios(category);
@@ -791,7 +791,7 @@ CREATE TABLE IF NOT EXISTS simulation_runs (
     transcript TEXT NOT NULL DEFAULT '[]',
     evaluation_summary TEXT NOT NULL DEFAULT '',
     recommendations TEXT NOT NULL DEFAULT '[]',
-    created_at TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (scenario_id) REFERENCES simulation_scenarios(id) ON DELETE CASCADE,
     FOREIGN KEY (policy_id) REFERENCES agent_policies(id) ON DELETE SET NULL
 );
@@ -812,8 +812,8 @@ CREATE TABLE IF NOT EXISTS agent_insights (
     action_payload TEXT NOT NULL DEFAULT '{}',
     status TEXT NOT NULL DEFAULT 'open',
     applied_at TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (human_rep_id) REFERENCES team_members(id) ON DELETE SET NULL
 );
 CREATE INDEX IF NOT EXISTS idx_agent_insights_category ON agent_insights(category);
@@ -831,14 +831,14 @@ CREATE TABLE IF NOT EXISTS agent_retraining_events (
     baseline_resolution_rate REAL NOT NULL DEFAULT 86.4,
     post_training_resolution_rate REAL NOT NULL DEFAULT 91.2,
     resolution_lift REAL NOT NULL DEFAULT 4.8,
-    created_at TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (insight_id) REFERENCES agent_insights(id) ON DELETE SET NULL
 );
 
 -- SSO Config (singleton)
 CREATE TABLE IF NOT EXISTS sso_configs (
     id TEXT PRIMARY KEY,
-    is_enabled INTEGER NOT NULL DEFAULT 0,
+    is_enabled BOOLEAN NOT NULL DEFAULT false,
     provider_type TEXT NOT NULL DEFAULT 'saml',
     idp_entity_id TEXT NOT NULL DEFAULT '',
     idp_sso_url TEXT NOT NULL DEFAULT '',
@@ -846,15 +846,15 @@ CREATE TABLE IF NOT EXISTS sso_configs (
     sp_entity_id TEXT NOT NULL DEFAULT 'urn:communicator:sp',
     sp_acs_url TEXT NOT NULL DEFAULT '/api/v1/sso/saml/acs',
     enforced_domains TEXT NOT NULL DEFAULT '[]',
-    allow_unlinked_passwords INTEGER NOT NULL DEFAULT 1,
-    jit_provisioning_enabled INTEGER NOT NULL DEFAULT 1,
+    allow_unlinked_passwords BOOLEAN NOT NULL DEFAULT true,
+    jit_provisioning_enabled BOOLEAN NOT NULL DEFAULT true,
     default_role TEXT NOT NULL DEFAULT 'agent',
     attribute_mapping TEXT NOT NULL DEFAULT '{}',
     last_tested_at TEXT,
     last_test_status TEXT NOT NULL DEFAULT 'untested',
     last_test_message TEXT NOT NULL DEFAULT '',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Stripe Config & Billing Logs
@@ -864,13 +864,13 @@ CREATE TABLE IF NOT EXISTS stripe_configs (
     api_key TEXT NOT NULL DEFAULT '',
     publishable_key TEXT NOT NULL DEFAULT '',
     webhook_secret TEXT NOT NULL DEFAULT '',
-    is_enabled INTEGER NOT NULL DEFAULT 1,
-    test_mode INTEGER NOT NULL DEFAULT 1,
+    is_enabled BOOLEAN NOT NULL DEFAULT true,
+    test_mode BOOLEAN NOT NULL DEFAULT true,
     default_currency TEXT NOT NULL DEFAULT 'usd',
     last_tested_at TEXT,
     last_test_status TEXT NOT NULL DEFAULT 'untested',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS stripe_billing_action_logs (
@@ -878,14 +878,14 @@ CREATE TABLE IF NOT EXISTS stripe_billing_action_logs (
     contact_id TEXT,
     customer_identifier TEXT NOT NULL DEFAULT '',
     action_type TEXT NOT NULL,
-    amount_cents INTEGER NOT NULL DEFAULT 0,
+    amount_cents BOOLEAN NOT NULL DEFAULT false,
     currency TEXT NOT NULL DEFAULT 'usd',
     status TEXT NOT NULL DEFAULT 'succeeded',
     stripe_id TEXT NOT NULL DEFAULT '',
     actor_email TEXT NOT NULL DEFAULT 'agent@newax.com',
     reason TEXT NOT NULL DEFAULT '',
     details TEXT NOT NULL DEFAULT '{}',
-    created_at TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE SET NULL
 );
 CREATE INDEX IF NOT EXISTS idx_stripe_logs_customer ON stripe_billing_action_logs(customer_identifier);
@@ -893,15 +893,15 @@ CREATE INDEX IF NOT EXISTS idx_stripe_logs_customer ON stripe_billing_action_log
 -- Translation Settings (singleton)
 CREATE TABLE IF NOT EXISTS translation_settings (
     id TEXT PRIMARY KEY,
-    is_enabled INTEGER NOT NULL DEFAULT 1,
-    auto_translate_inbound INTEGER NOT NULL DEFAULT 1,
-    auto_translate_outbound INTEGER NOT NULL DEFAULT 1,
+    is_enabled BOOLEAN NOT NULL DEFAULT true,
+    auto_translate_inbound BOOLEAN NOT NULL DEFAULT true,
+    auto_translate_outbound BOOLEAN NOT NULL DEFAULT true,
     agent_primary_language TEXT NOT NULL DEFAULT 'en',
     preferred_engine TEXT NOT NULL DEFAULT 'ai_gateway',
     confidence_threshold REAL NOT NULL DEFAULT 0.6,
     enabled_languages TEXT NOT NULL DEFAULT '[]',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Webhook Endpoints & Delivery Logs
@@ -912,15 +912,15 @@ CREATE TABLE IF NOT EXISTS webhook_endpoints (
     secret TEXT NOT NULL,
     events TEXT NOT NULL DEFAULT '[]',
     headers TEXT NOT NULL DEFAULT '{}',
-    is_active INTEGER NOT NULL DEFAULT 1,
+    is_active BOOLEAN NOT NULL DEFAULT true,
     retry_count INTEGER NOT NULL DEFAULT 3,
     timeout_seconds INTEGER NOT NULL DEFAULT 10,
-    total_delivered INTEGER NOT NULL DEFAULT 0,
-    total_failed INTEGER NOT NULL DEFAULT 0,
+    total_delivered BOOLEAN NOT NULL DEFAULT false,
+    total_failed BOOLEAN NOT NULL DEFAULT false,
     last_status_code INTEGER,
     last_delivered_at TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS webhook_delivery_logs (
@@ -928,14 +928,14 @@ CREATE TABLE IF NOT EXISTS webhook_delivery_logs (
     endpoint_id TEXT NOT NULL,
     event TEXT NOT NULL,
     payload TEXT NOT NULL DEFAULT '{}',
-    status_code INTEGER NOT NULL DEFAULT 0,
+    status_code BOOLEAN NOT NULL DEFAULT false,
     response_headers TEXT NOT NULL DEFAULT '{}',
     response_body TEXT NOT NULL DEFAULT '',
-    duration_ms INTEGER NOT NULL DEFAULT 0,
-    attempt INTEGER NOT NULL DEFAULT 1,
-    success INTEGER NOT NULL DEFAULT 0,
+    duration_ms BOOLEAN NOT NULL DEFAULT false,
+    attempt BOOLEAN NOT NULL DEFAULT true,
+    success BOOLEAN NOT NULL DEFAULT false,
     error_message TEXT,
-    created_at TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (endpoint_id) REFERENCES webhook_endpoints(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_webhook_logs_endpoint ON webhook_delivery_logs(endpoint_id);
@@ -946,14 +946,14 @@ CREATE TABLE IF NOT EXISTS issue_tracker_configs (
     id TEXT PRIMARY KEY,
     provider TEXT NOT NULL UNIQUE,
     account_name TEXT NOT NULL DEFAULT '',
-    is_enabled INTEGER NOT NULL DEFAULT 1,
-    test_mode INTEGER NOT NULL DEFAULT 1,
+    is_enabled BOOLEAN NOT NULL DEFAULT true,
+    test_mode BOOLEAN NOT NULL DEFAULT true,
     credentials TEXT NOT NULL DEFAULT '{}',
     config TEXT NOT NULL DEFAULT '{}',
     last_tested_at TEXT,
     last_test_status TEXT NOT NULL DEFAULT 'untested',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Linked Issues
@@ -972,8 +972,8 @@ CREATE TABLE IF NOT EXISTS linked_issues (
     created_by_email TEXT NOT NULL DEFAULT 'agent@newax.com',
     sync_status TEXT NOT NULL DEFAULT 'synced',
     metadata_json TEXT NOT NULL DEFAULT '{}',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
     FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
 );
@@ -986,9 +986,9 @@ CREATE TABLE IF NOT EXISTS slack_conversation_syncs (
     slack_channel_id TEXT NOT NULL,
     slack_channel_name TEXT NOT NULL DEFAULT '#customer-support',
     slack_thread_ts TEXT NOT NULL,
-    is_synced INTEGER NOT NULL DEFAULT 1,
-    last_synced_at TEXT NOT NULL,
-    created_at TEXT NOT NULL,
+    is_synced BOOLEAN NOT NULL DEFAULT true,
+    last_synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
 );
 
@@ -1000,7 +1000,7 @@ CREATE TABLE IF NOT EXISTS crypto_mesh_outbox (
     encrypted_payload TEXT NOT NULL,
     recipient TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending',
-    created_at TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     sent_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_crypto_mesh_outbox_status ON crypto_mesh_outbox(status);
@@ -1010,11 +1010,11 @@ CREATE TABLE IF NOT EXISTS scheduler_jobs (
     key TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     cron_expression TEXT NOT NULL DEFAULT '0 * * * *',
-    is_enabled INTEGER NOT NULL DEFAULT 1,
+    is_enabled BOOLEAN NOT NULL DEFAULT true,
     last_run_at TEXT,
     next_run_at TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- WhatsApp Pricing Rates (operator-entered Meta conversation rates)
@@ -1024,7 +1024,7 @@ CREATE TABLE IF NOT EXISTS whatsapp_pricing_rates (
     currency TEXT NOT NULL,
     rate_per_conversation REAL NOT NULL,
     source TEXT NOT NULL DEFAULT '',
-    updated_at TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (region, category)
 );
 
@@ -1039,14 +1039,14 @@ CREATE TABLE IF NOT EXISTS widget_sessions (
     origin TEXT,
     client_ip TEXT,
     state TEXT NOT NULL DEFAULT 'open',
-    last_cursor INTEGER NOT NULL DEFAULT 0,
+    last_cursor BOOLEAN NOT NULL DEFAULT false,
     visitor_presence TEXT NOT NULL DEFAULT 'unknown',
     last_presence_at TEXT,
     last_typing_at TEXT,
     closed_at TEXT,
     close_reason TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_widget_sessions_conversation ON widget_sessions(conversation_id, state);
 
@@ -1059,7 +1059,7 @@ CREATE TABLE IF NOT EXISTS agent_presence (
     agent_avatar TEXT,
     action TEXT NOT NULL,
     last_seen_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_presence_key ON agent_presence(conversation_id, agent_name);
 
@@ -1085,9 +1085,9 @@ CREATE TABLE IF NOT EXISTS ecosystem_egress_outbox (
     correlation_id TEXT NOT NULL DEFAULT '',
     envelope TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending',
-    attempts INTEGER NOT NULL DEFAULT 0,
+    attempts BOOLEAN NOT NULL DEFAULT false,
     last_error TEXT NOT NULL DEFAULT '',
-    created_at TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     sent_at TEXT
 );
 

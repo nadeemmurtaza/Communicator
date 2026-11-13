@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 //! Business / working hours, computed from the row the operator actually saved.
 //!
@@ -325,7 +325,7 @@ fn parse_sign_offset(text: &str) -> Option<FixedOffset> {
 // Real data access
 // ---------------------------------------------------------------------------
 
-fn int_flag(row: &sqlx::sqlite::SqliteRow, column: &str) -> Option<i64> {
+fn int_flag(row: &sqlx::postgres::PgRow, column: &str) -> Option<i64> {
     if let Ok(value) = row.try_get::<i64, _>(column) {
         return Some(value);
     }
@@ -345,7 +345,7 @@ fn int_flag(row: &sqlx::sqlite::SqliteRow, column: &str) -> Option<i64> {
     None
 }
 
-fn opt_text(row: &sqlx::sqlite::SqliteRow, column: &str) -> String {
+fn opt_text(row: &sqlx::postgres::PgRow, column: &str) -> String {
     row.try_get::<String, _>(column)
         .or_else(|_| row.try_get::<Option<String>, _>(column).map(|v| v.unwrap_or_default()))
         .unwrap_or_default()

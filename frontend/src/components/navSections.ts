@@ -3,16 +3,29 @@
  * (icon rail), their secondary items (labeled sidebar), and the labels
  * Breadcrumbs reads to build the trail. Adding a page is adding one row
  * here, not touching layout markup.
+ *
+ * Navigation structure (7 top-level sections):
+ *  1. Dashboard    — overview and quick actions
+ *  2. Workspace    — organization + brand hierarchy management
+ *  3. Inbox        — conversations, drafts, tickets, SLA, approvals
+ *  4. Audience     — contacts, clients, broadcasts, sequences, automation
+ *  5. Channels     — all channel integrations
+ *  6. Intelligence — knowledge base, services, AI, simulations
+ *  7. Reports      — analytics and reports
+ *  8. Settings     — team, connections, webhooks, audit, macros
  */
 import type { ComponentType, SVGProps } from 'react'
 import {
   LayoutDashboard,
+  Rocket,
   Inbox,
   Users,
   Radio,
   Sparkles,
   BarChart3,
   Settings,
+  Building2,
+  ShoppingCart,
 } from './icons'
 
 export interface NavChild {
@@ -20,6 +33,7 @@ export interface NavChild {
   label: string
   end?: boolean
   channel?: string
+  group?: string // visual group label for sectioned nav
 }
 
 export interface NavSection {
@@ -34,13 +48,20 @@ export interface NavSection {
 export const NAV_SECTIONS: NavSection[] = [
   { id: 'dashboard', label: 'Dashboard', to: '/', end: true, icon: LayoutDashboard },
   {
+    id: 'launchpad',
+    label: 'Launchpad',
+    to: '/launchpad',
+    end: true,
+    icon: Rocket,
+  },
+  {
     id: 'inbox',
     label: 'Inbox',
     to: '/conversations',
     icon: Inbox,
     children: [
       { to: '/conversations', label: 'Conversations' },
-      { to: '/drafts', label: 'Draft review' },
+      { to: '/drafts', label: 'Draft Review' },
       { to: '/tickets', label: 'Tickets' },
       { to: '/sla', label: 'SLA Monitoring' },
       { to: '/approvals', label: 'Approvals Queue' },
@@ -53,7 +74,7 @@ export const NAV_SECTIONS: NavSection[] = [
     icon: Users,
     children: [
       { to: '/contacts', label: 'Contacts' },
-      { to: '/broadcasts', label: 'Broadcasts' },
+      { to: '/clients', label: 'Client Profiles' },
       { to: '/sequences', label: 'Sequences' },
       { to: '/automation', label: 'Automation' },
     ],
@@ -64,8 +85,9 @@ export const NAV_SECTIONS: NavSection[] = [
     to: '/channels',
     icon: Radio,
     children: [
-      { to: '/channels', label: 'All channels', end: true },
+      { to: '/channels', label: 'All Channels', end: true },
       { to: '/channels/whatsapp', label: 'WhatsApp', channel: 'whatsapp' },
+      { to: '/channels/whatsapp/campaigns', label: 'WhatsApp Campaigns', channel: 'whatsapp' },
       { to: '/channels/instagram', label: 'Instagram', channel: 'instagram' },
       { to: '/channels/facebook', label: 'Facebook', channel: 'facebook' },
       { to: '/channels/sms', label: 'SMS', channel: 'sms' },
@@ -74,6 +96,8 @@ export const NAV_SECTIONS: NavSection[] = [
       { to: '/channels/telegram', label: 'Telegram', channel: 'telegram' },
       { to: '/channels/line', label: 'LINE', channel: 'line' },
       { to: '/channels/tiktok', label: 'TikTok', channel: 'tiktok' },
+      { to: '/channels/discord', label: 'Discord', channel: 'discord' },
+      { to: '/channels/slack', label: 'Slack', channel: 'slack' },
       { to: '/channels/live-chat', label: 'Live Chat', channel: 'live-chat' },
     ],
   },
@@ -83,28 +107,111 @@ export const NAV_SECTIONS: NavSection[] = [
     to: '/knowledge-base',
     icon: Sparkles,
     children: [
-      { to: '/knowledge-base', label: 'Knowledge base' },
-      { to: '/services', label: 'Service catalog' },
-      { to: '/simulations', label: 'AI Simulations' },
-      { to: '/self-improving', label: 'Self-Improving AI' },
+      // Knowledge & Content
+      { to: '/knowledge-base', label: 'Knowledge Base', group: 'Knowledge' },
+      { to: '/services', label: 'Service Catalog', group: 'Knowledge' },
+      { to: '/help-center', label: 'Help Center', group: 'Knowledge' },
+      { to: '/kb-import', label: 'KB Import', group: 'Knowledge' },
+      { to: '/audience-kb', label: 'Audience KB Scoping', group: 'Knowledge' },
+      // AI Engine
+      { to: '/ai-agent', label: 'AI Agent', group: 'AI Engine' },
+      { to: '/autonomous-resolution', label: 'Autonomous Resolution', group: 'AI Engine' },
+      { to: '/tone-of-voice', label: 'Tone of Voice', group: 'AI Engine' },
+      { to: '/reply-integration', label: 'Reply Integration', group: 'AI Engine' },
+      { to: '/fin-vision', label: 'Fin Vision', group: 'AI Engine' },
+      { to: '/ab-testing', label: 'A/B Testing', group: 'AI Engine' },
+      { to: '/simulations', label: 'AI Simulations', group: 'AI Engine' },
+      // Analytics
+      { to: '/unified-analytics', label: 'Unified Analytics', group: 'Analytics' },
+      { to: '/monitoring', label: 'Monitoring & Alerts', group: 'Analytics' },
+      { to: '/cx-qa', label: 'CX Score & QA', group: 'Analytics' },
+      { to: '/csat', label: 'CSAT Surveys', group: 'Analytics' },
+      { to: '/topic-categorization', label: 'Topic Categorization', group: 'Analytics' },
+      { to: '/agent-performance', label: 'Agent Performance', group: 'Analytics' },
+      // Operations
+      { to: '/operator', label: 'Fin Operator', group: 'Operations' },
+      { to: '/suggestions', label: 'AI Suggestions', group: 'Operations' },
+      { to: '/self-improving', label: 'Self-Improving AI', group: 'Operations' },
+      { to: '/procedures', label: 'Procedures & Actions', group: 'Operations' },
+      { to: '/workflows', label: 'Workflow Builder', group: 'Operations' },
+      { to: '/scheduled-tasks', label: 'Scheduled Tasks', group: 'Operations' },
+      // Inbox
+      { to: '/unified-inbox', label: 'Unified Inbox', group: 'Inbox' },
+      { to: '/conversation-search', label: 'Conversation Search', group: 'Inbox' },
+      // Outreach
+      { to: '/broadcast', label: 'Omni-Channel Broadcast', group: 'Outreach' },
+      { to: '/inapp-messaging', label: 'In-App Messaging', group: 'Outreach' },
+      { to: '/notifications', label: 'Notifications', group: 'Outreach' },
+      { to: '/embed-widget', label: 'Embed Widget', group: 'Outreach' },
+      // Integrations
+      { to: '/crm-sync', label: 'CRM Sync', group: 'Integrations' },
+      { to: '/mcp', label: 'MCP Protocol', group: 'Integrations' },
+      { to: '/brand-overrides', label: 'Brand Overrides', group: 'Integrations' },
+      // System
+      { to: '/translation', label: 'Translation', group: 'System' },
+      { to: '/compliance', label: 'Compliance & Privacy', group: 'System' },
+      { to: '/fulfillment', label: 'Fulfillment', group: 'System' },
+      { to: '/email-templates', label: 'Email Templates & SMTP', group: 'System' },
+      { to: '/system-health', label: 'System Health & Onboarding', group: 'System' },
     ],
   },
-  { id: 'reports', label: 'Reports', to: '/reports', icon: BarChart3 },
   {
-    id: 'admin',
-    label: 'Admin',
-    to: '/team',
+    id: 'workspace',
+    label: 'Workspace',
+    to: '/workspace/organization',
+    icon: Building2,
+    children: [
+      { to: '/workspace/organization', label: 'Organization Profile' },
+      { to: '/workspace/organization/keys', label: 'Organization Keys' },
+      { to: '/workspace/brands', label: 'Brands' },
+      { to: '/workspace/brand/profile', label: 'Brand Profile' },
+      { to: '/workspace/brand/keys', label: 'Brand Keys (BYOK)' },
+      { to: '/workspace/brand/ai-config', label: 'Brand AI Config' },
+      { to: '/workspace/brand/knowledge', label: 'Brand Knowledge Base' },
+    ],
+  },
+  {
+    id: 'commerce',
+    label: 'Commerce',
+    to: '/commerce',
+    icon: ShoppingCart,
+    children: [
+      { to: '/commerce', label: 'Dashboard', end: true },
+      { to: '/commerce/catalog', label: 'Catalog' },
+      { to: '/commerce/carts', label: 'Carts' },
+      { to: '/commerce/orders', label: 'Orders' },
+      { to: '/commerce/analytics', label: 'Analytics' },
+      { to: '/commerce/coupons', label: 'Coupons' },
+      { to: '/commerce/shipping', label: 'Shipping' },
+      { to: '/commerce/inventory', label: 'Inventory' },
+      { to: '/commerce/storefront', label: 'Storefront' },
+      { to: '/commerce/sync', label: 'Sync Settings' },
+    ],
+  },
+  {
+    id: 'reports',
+    label: 'Reports',
+    to: '/reports',
+    icon: BarChart3,
+    children: [
+      { to: '/reports', label: 'Overview' },
+      { to: '/reports/analytics', label: 'Analytics' },
+    ],
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    to: '/settings/team',
     icon: Settings,
     children: [
-      { to: '/business-profile', label: 'Business Profile' },
-      { to: '/team', label: 'Team' },
-      { to: '/connections', label: 'Connections' },
-      { to: '/webhooks', label: 'Webhooks' },
-      { to: '/audit-logs', label: 'Audit logs' },
-      { to: '/custom-attributes', label: 'CRM schema' },
-      { to: '/routing-capacity', label: 'Routing & Capacity' },
-      { to: '/macros', label: 'Macros' },
-      { to: '/canned-responses', label: 'Canned Responses' },
+      { to: '/settings/team', label: 'Team' },
+      { to: '/settings/connections', label: 'Connections' },
+      { to: '/settings/webhooks', label: 'Webhooks' },
+      { to: '/settings/audit-logs', label: 'Audit Logs' },
+      { to: '/settings/custom-attributes', label: 'CRM Schema' },
+      { to: '/settings/routing-capacity', label: 'Routing & Capacity' },
+      { to: '/settings/macros', label: 'Macros' },
+      { to: '/settings/canned-responses', label: 'Canned Responses' },
     ],
   },
 ]

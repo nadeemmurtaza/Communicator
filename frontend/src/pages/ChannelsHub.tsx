@@ -209,17 +209,17 @@ export function ChannelsHub() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-slate-900">Channels &amp; Inboxes</h1>
-            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+            <h1 className="text-xl font-bold text-[var(--color-ink)]">Channels &amp; Inboxes</h1>
+            <span className="rounded-full bg-[var(--color-accent-muted)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-ink)]">
               Omnichannel Hub
             </span>
             {loading && (
-              <span className="flex items-center gap-1 text-xs text-slate-400">
+              <span className="flex items-center gap-1 text-xs text-[var(--color-ink-faint)]">
                 <RefreshCw className="h-3 w-3 animate-spin" /> Syncing channels...
               </span>
             )}
           </div>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-[var(--color-ink-faint)]">
             Connect all customer support channels and manage all conversations from a single, unified inbox.
           </p>
         </div>
@@ -227,7 +227,7 @@ export function ChannelsHub() {
         <div className="flex items-center gap-2">
           <Link
             to="/channels/whatsapp"
-            className="rounded-md bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 shadow-xs flex items-center gap-1.5"
+            className="btn-primary"
           >
             <CHANNEL_ICONS.whatsapp className="h-3.5 w-3.5" /> Configure WhatsApp
           </Link>
@@ -235,53 +235,53 @@ export function ChannelsHub() {
       </div>
 
       {/* Grid of Channels */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {channels.map((ch) => {
           const Icon = CHANNEL_ICONS[ch.icon]
           const isConnected = ch.status === 'connected'
           return (
             <div
               key={ch.id}
-              className={`glass-card p-5 transition-all flex flex-col justify-between ${
-                isConnected ? 'ring-1 ring-emerald-200' : 'ring-1 ring-slate-100'
+              className={`rounded-[var(--radius-lg)] border bg-[var(--color-surface)] p-5 transition-all duration-150 flex flex-col justify-between hover:border-[var(--color-accent)] ${
+                isConnected ? 'border-emerald-200' : 'border-[var(--color-border)]'
               }`}
             >
               <div>
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-accent-soft)] text-[var(--color-accent)]">
-                      <Icon className="h-6 w-6" />
+                    <span className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-page)] text-[var(--color-ink)]">
+                      <Icon className="h-5 w-5" />
                     </span>
                     <div>
-                      <h3 className="text-sm font-bold text-slate-900">{ch.name}</h3>
-                      <span className="text-[11px] text-slate-400 font-mono">{ch.stats}</span>
+                      <h3 className="text-sm font-bold text-[var(--color-ink)]">{ch.name}</h3>
+                      <span className="text-[11px] text-[var(--color-ink-faint)]">{ch.stats}</span>
                     </div>
                   </div>
                   <span
-                    className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${ch.statusColor}`}
+                    className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.5px] ${ch.statusColor}`}
                   >
                     {ch.statusLabel}
                   </span>
                 </div>
 
-                <p className="mt-3 text-xs text-slate-600 leading-relaxed">{ch.description}</p>
+                <p className="mt-3 text-xs text-[var(--color-ink-muted)] leading-relaxed">{ch.description}</p>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-[11px] text-slate-400">
-                  {isConnected ? 'Primary Active Channel' : 'Setup Required'}
+              <div className="mt-4 pt-3 border-t border-[var(--color-border)] flex items-center justify-between">
+                <span className="text-[11px] text-[var(--color-ink-faint)]">
+                  {isConnected ? 'Active' : 'Setup required'}
                 </span>
                 {ch.link && ch.link !== '#' ? (
                   <Link
                     to={ch.link}
-                    className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 shadow-xs flex items-center gap-1"
+                    className="btn-primary"
                   >
                     Configure <ArrowRight className="h-3 w-3" />
                   </Link>
                 ) : (
                   <button
                     disabled
-                    className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-400 cursor-not-allowed"
+                    className="btn-ghost disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Configure
                   </button>

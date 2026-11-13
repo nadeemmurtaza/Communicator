@@ -239,7 +239,7 @@ export function VoiceIntegration() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <div className="flex items-center gap-2 text-slate-500">
+        <div className="flex items-center gap-2 text-[var(--color-ink-faint)]">
           <span className="loading loading-spinner loading-md"></span>
           <span>Loading Voice &amp; WebRTC settings...</span>
         </div>
@@ -259,20 +259,20 @@ export function VoiceIntegration() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <Link to="/channels" className="text-xs font-medium text-slate-500 hover:text-slate-800">
+            <Link to="/channels" className="text-xs font-medium text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]">
               Channels Hub
             </Link>
-            <span className="text-slate-400">/</span>
-            <span className="text-xs font-semibold text-slate-700">Voice &amp; WebRTC Calling</span>
+            <span className="text-[var(--color-ink-faint)]">/</span>
+            <span className="text-xs font-semibold text-[var(--color-ink)]">Voice &amp; WebRTC Calling</span>
           </div>
           <div className="mt-1 flex items-center gap-2">
-            <h1 className="text-xl font-bold text-slate-900">Phone Calls Inside Inbox</h1>
+            <h1 className="text-xl font-bold text-[var(--color-ink)]">Phone Calls Inside Inbox</h1>
             <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 border border-emerald-200 flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
               Live &amp; Active
             </span>
           </div>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-[var(--color-ink-faint)]">
             Handle phone calls directly inside your agent inbox via Twilio Voice, SIP Trunking, and browser WebRTC softphone.
           </p>
         </div>
@@ -281,14 +281,14 @@ export function VoiceIntegration() {
           <button
             onClick={handleVerify}
             disabled={verifying}
-            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs flex items-center gap-1.5"
+            className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-accent-muted)] shadow-none flex items-center gap-1.5"
           >
             <RefreshCw className="h-4 w-4" /> {verifying ? 'Pinging Trunk...' : 'Verify SIP Trunk'}
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="rounded-md bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 shadow-xs flex items-center gap-1.5"
+            className="rounded-[var(--radius-sm)] bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 shadow-none flex items-center gap-1.5"
           >
             <Save className="h-4 w-4" /> {saving ? 'Saving...' : 'Save Settings'}
           </button>
@@ -299,7 +299,7 @@ export function VoiceIntegration() {
 
       {!isConnected && (
 
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 flex items-start gap-3">
+        <div className="rounded-[var(--radius-lg)] border border-amber-200 bg-amber-50 p-4 text-amber-900 flex items-start gap-3">
 
           <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
 
@@ -324,7 +324,7 @@ export function VoiceIntegration() {
       {/* Feedback Alert */}
       {feedback && (
         <div
-          className={`flex items-center justify-between rounded-md p-3 text-xs ${
+          className={`flex items-center justify-between rounded-[var(--radius-sm)] p-3 text-xs ${
             feedback.type === 'success'
               ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
               : 'bg-rose-50 text-rose-800 border border-rose-200'
@@ -334,13 +334,13 @@ export function VoiceIntegration() {
             {feedback.type === 'success' ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertTriangle className="h-4 w-4 text-amber-500" />}
             <span>{feedback.message}</span>
           </div>
-          <button onClick={() => setFeedback(null)} className="text-slate-400 hover:text-slate-600 font-bold"><X className="h-4 w-4" /></button>
+          <button onClick={() => setFeedback(null)} className="text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] font-bold"><X className="h-4 w-4" /></button>
         </div>
       )}
 
       {/* In-Call Active Floating Controller Bar */}
       {activeCall && (
-        <div className="rounded-xl bg-slate-900 text-white p-4 shadow-xl border border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in slide-in-from-top-2">
+        <div className="rounded-[var(--radius-lg)] bg-[var(--color-accent)] text-white p-4 shadow-xl border border-[var(--color-ink-muted)] flex flex-col sm:flex-row items-center justify-between gap-4 animate-in slide-in-from-top-2">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center animate-pulse">
               <VoiceIcon className="h-6 w-6" />
@@ -352,7 +352,7 @@ export function VoiceIntegration() {
                   {activeCall.status === 'calling' ? 'Ringing...' : 'Connected · WebRTC'}
                 </span>
               </div>
-              <div className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
+              <div className="text-xs text-[var(--color-ink-faint)] flex items-center gap-2 mt-0.5">
                 <span>Duration: <strong className="text-white font-mono">{formatSeconds(activeCall.duration)}</strong></span>
                 <span>·</span>
                 <span>Dual-Channel Audio</span>
@@ -363,8 +363,8 @@ export function VoiceIntegration() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveCall({ ...activeCall, isMuted: !activeCall.isMuted })}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-                activeCall.isMuted ? 'bg-amber-500 text-slate-900' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
+              className={`rounded-[var(--radius-sm)] px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                activeCall.isMuted ? 'bg-amber-500 text-[var(--color-ink)]' : 'bg-[var(--color-ink)] text-[var(--color-ink-faint)] hover:bg-[var(--color-ink-muted)]'
               }`}
             >
               {activeCall.isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
@@ -372,8 +372,8 @@ export function VoiceIntegration() {
             </button>
             <button
               onClick={() => setActiveCall({ ...activeCall, status: activeCall.status === 'on_hold' ? 'connected' : 'on_hold' })}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 transition-colors ${
-                activeCall.status === 'on_hold' ? 'bg-blue-500 text-white' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
+              className={`rounded-[var(--radius-sm)] px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 transition-colors ${
+                activeCall.status === 'on_hold' ? 'bg-blue-500 text-white' : 'bg-[var(--color-ink)] text-[var(--color-ink-faint)] hover:bg-[var(--color-ink-muted)]'
               }`}
             >
               <Pause className="h-4 w-4" />
@@ -381,7 +381,7 @@ export function VoiceIntegration() {
             </button>
             <button
               onClick={handleHangup}
-              className="rounded-md bg-rose-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-rose-700 shadow-md flex items-center gap-1.5"
+              className="rounded-[var(--radius-sm)] bg-rose-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-rose-700 shadow-md flex items-center gap-1.5"
             >
               <PhoneOff className="h-4 w-4" /> End Call
             </button>
@@ -390,14 +390,14 @@ export function VoiceIntegration() {
       )}
 
       {/* Tabs Header */}
-      <div className="border-b border-slate-200">
+      <div className="border-b border-[var(--color-border)]">
         <nav className="flex space-x-6">
           <button
             onClick={() => setActiveTab('credentials')}
             className={`pb-3 text-xs font-semibold border-b-2 flex items-center gap-1.5 ${
               activeTab === 'credentials'
                 ? 'border-emerald-600 text-emerald-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
+                : 'border-transparent text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]'
             }`}
           >
             <Lock className="h-4 w-4" /> Credentials &amp; SIP Trunk
@@ -407,7 +407,7 @@ export function VoiceIntegration() {
             className={`pb-3 text-xs font-semibold border-b-2 flex items-center gap-1.5 ${
               activeTab === 'dialpad'
                 ? 'border-emerald-600 text-emerald-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
+                : 'border-transparent text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]'
             }`}
           >
             <PhoneCall className="h-4 w-4" /> In-Inbox Softphone &amp; Dialer
@@ -417,7 +417,7 @@ export function VoiceIntegration() {
             className={`pb-3 text-xs font-semibold border-b-2 flex items-center gap-1.5 ${
               activeTab === 'ivr'
                 ? 'border-emerald-600 text-emerald-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
+                : 'border-transparent text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]'
             }`}
           >
             <Sliders className="h-4 w-4" /> IVR &amp; Routing
@@ -427,7 +427,7 @@ export function VoiceIntegration() {
             className={`pb-3 text-xs font-semibold border-b-2 flex items-center gap-1.5 ${
               activeTab === 'recordings'
                 ? 'border-emerald-600 text-emerald-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
+                : 'border-transparent text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]'
             }`}
           >
             <Mic className="h-4 w-4" /> Recordings &amp; AI Transcripts
@@ -437,7 +437,7 @@ export function VoiceIntegration() {
             className={`pb-3 text-xs font-semibold border-b-2 flex items-center gap-1.5 ${
               activeTab === 'logs'
                 ? 'border-emerald-600 text-emerald-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
+                : 'border-transparent text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]'
             }`}
           >
             <PhoneCall className="h-4 w-4 inline mr-1.5 text-indigo-600" /> Call History &amp; Diagnostics ({callLogs.length})
@@ -449,31 +449,31 @@ export function VoiceIntegration() {
       {activeTab === 'credentials' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-5 shadow-none space-y-4">
+              <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
                 <Phone className="h-4 w-4" /> Twilio Voice &amp; SIP Trunk Configuration
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[var(--color-ink-faint)]">
                 Connect your Twilio Voice account or SIP trunking provider to send and receive phone calls inside the agent workspace.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700">Inbox Display Name</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink)]">Inbox Display Name</label>
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs shadow-xs focus:border-emerald-500 focus:outline-hidden"
+                    className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs shadow-none focus:border-emerald-500 focus:outline-hidden"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-700">Voice Phone Number</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink)]">Voice Phone Number</label>
                   <input
                     type="text"
                     value={voiceNumber}
                     onChange={(e) => setVoiceNumber(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs shadow-xs focus:border-emerald-500 focus:outline-hidden"
+                    className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs shadow-none focus:border-emerald-500 focus:outline-hidden"
                     placeholder="+14155550199"
                   />
                 </div>
@@ -481,22 +481,22 @@ export function VoiceIntegration() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700">Twilio Account SID</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink)]">Twilio Account SID</label>
                   <input
                     type="text"
                     value={accountSid}
                     onChange={(e) => setAccountSid(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs font-mono shadow-xs focus:border-emerald-500 focus:outline-hidden"
+                    className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-mono shadow-none focus:border-emerald-500 focus:outline-hidden"
                     placeholder="AC_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-700">Auth Token</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink)]">Auth Token</label>
                   <input
                     type="password"
                     value={authToken}
                     onChange={(e) => setAuthToken(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs font-mono shadow-xs focus:border-emerald-500 focus:outline-hidden"
+                    className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-mono shadow-none focus:border-emerald-500 focus:outline-hidden"
                     placeholder="••••••••••••••••••••••••••••••••"
                   />
                 </div>
@@ -504,59 +504,59 @@ export function VoiceIntegration() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700">Outbound Caller ID</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink)]">Outbound Caller ID</label>
                   <input
                     type="text"
                     value={callerId}
                     onChange={(e) => setCallerId(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs shadow-xs focus:border-emerald-500 focus:outline-hidden"
+                    className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs shadow-none focus:border-emerald-500 focus:outline-hidden"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-700">TwiML Application SID</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink)]">TwiML Application SID</label>
                   <input
                     type="text"
                     value={twimlAppSid}
                     onChange={(e) => setTwimlAppSid(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs font-mono shadow-xs focus:border-emerald-500 focus:outline-hidden"
+                    className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-mono shadow-none focus:border-emerald-500 focus:outline-hidden"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700">SIP Domain Trunk</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink)]">SIP Domain Trunk</label>
                   <input
                     type="text"
                     value={sipDomain}
                     onChange={(e) => setSipDomain(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs shadow-xs focus:border-emerald-500 focus:outline-hidden"
+                    className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs shadow-none focus:border-emerald-500 focus:outline-hidden"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-700">After-Hours Fallback Forwarding Phone</label>
+                  <label className="block text-xs font-medium text-[var(--color-ink)]">After-Hours Fallback Forwarding Phone</label>
                   <input
                     type="text"
                     value={fallbackNumber}
                     onChange={(e) => setFallbackNumber(e.target.value)}
-                    className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs shadow-xs focus:border-emerald-500 focus:outline-hidden"
+                    className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs shadow-none focus:border-emerald-500 focus:outline-hidden"
                   />
                 </div>
               </div>
             </div>
 
             {/* Webhook Endpoints Box */}
-            <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-5 shadow-none space-y-4">
+              <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
                 <Globe className="h-4 w-4" /> Twilio Voice Webhook Configuration
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[var(--color-ink-faint)]">
                 Configure these endpoints in your Twilio Console Phone Number configuration under Voice &amp; Fax:
               </p>
 
               <div className="space-y-3 pt-1">
                 <div>
-                  <div className="flex items-center justify-between text-xs text-slate-700 mb-1">
+                  <div className="flex items-center justify-between text-xs text-[var(--color-ink)] mb-1">
                     <span className="font-semibold">A Call Comes In (Inbound TwiML Webhook):</span>
                     <button
                       onClick={() => handleCopy(`${webhookBaseUrl}/api/v1/webhooks/voice/inbound`, 'inbound_url')}
@@ -568,12 +568,12 @@ export function VoiceIntegration() {
                   <input
                     readOnly
                     value={`${webhookBaseUrl}/api/v1/webhooks/voice/inbound`}
-                    className="block w-full rounded-md bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs font-mono text-slate-700"
+                    className="block w-full rounded-[var(--radius-sm)] bg-[var(--color-accent-muted)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-mono text-[var(--color-ink)]"
                   />
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between text-xs text-slate-700 mb-1">
+                  <div className="flex items-center justify-between text-xs text-[var(--color-ink)] mb-1">
                     <span className="font-semibold">Call Status Callback URL:</span>
                     <button
                       onClick={() => handleCopy(`${webhookBaseUrl}/api/v1/webhooks/voice/status`, 'status_url')}
@@ -585,12 +585,12 @@ export function VoiceIntegration() {
                   <input
                     readOnly
                     value={`${webhookBaseUrl}/api/v1/webhooks/voice/status`}
-                    className="block w-full rounded-md bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs font-mono text-slate-700"
+                    className="block w-full rounded-[var(--radius-sm)] bg-[var(--color-accent-muted)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-mono text-[var(--color-ink)]"
                   />
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between text-xs text-slate-700 mb-1">
+                  <div className="flex items-center justify-between text-xs text-[var(--color-ink)] mb-1">
                     <span className="font-semibold">Call Recording &amp; Audio URL:</span>
                     <button
                       onClick={() => handleCopy(`${webhookBaseUrl}/api/v1/webhooks/voice/recording`, 'rec_url')}
@@ -602,7 +602,7 @@ export function VoiceIntegration() {
                   <input
                     readOnly
                     value={`${webhookBaseUrl}/api/v1/webhooks/voice/recording`}
-                    className="block w-full rounded-md bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs font-mono text-slate-700"
+                    className="block w-full rounded-[var(--radius-sm)] bg-[var(--color-accent-muted)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-mono text-[var(--color-ink)]"
                   />
                 </div>
               </div>
@@ -611,35 +611,35 @@ export function VoiceIntegration() {
 
           {/* Right Rail: Health & WebRTC Status */}
           <div className="space-y-6">
-            <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Trunk Telemetry</h3>
+            <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-5 shadow-none space-y-4">
+              <h3 className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">Trunk Telemetry</h3>
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500">Channel Status:</span>
+                  <span className="text-[var(--color-ink-faint)]">Channel Status:</span>
                   <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-800">
                     Active &amp; Configured
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500">WebRTC Client:</span>
-                  <span className="font-semibold text-slate-900">Twilio WebRTC / Opus</span>
+                  <span className="text-[var(--color-ink-faint)]">WebRTC Client:</span>
+                  <span className="font-semibold text-[var(--color-ink)]">Twilio WebRTC / Opus</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500">Concurrent Channels:</span>
-                  <span className="font-semibold text-slate-900">25 Trunks</span>
+                  <span className="text-[var(--color-ink-faint)]">Concurrent Channels:</span>
+                  <span className="font-semibold text-[var(--color-ink)]">25 Trunks</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500">Audio Codec:</span>
-                  <span className="font-mono text-slate-700">Opus 48kHz / PCMU</span>
+                  <span className="text-[var(--color-ink-faint)]">Audio Codec:</span>
+                  <span className="font-mono text-[var(--color-ink)]">Opus 48kHz / PCMU</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500">ICE / STUN Server:</span>
-                  <span className="font-mono text-[11px] text-slate-700">global.stun.twilio.com</span>
+                  <span className="text-[var(--color-ink-faint)]">ICE / STUN Server:</span>
+                  <span className="font-mono text-[11px] text-[var(--color-ink)]">global.stun.twilio.com</span>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-5 shadow-xs space-y-2">
+            <div className="rounded-[var(--radius-md)] border border-blue-200 bg-blue-50/50 p-5 shadow-none space-y-2">
               <h4 className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
                 <Lightbulb className="h-4 w-4 text-amber-500" /> Omnichannel Voice Benefits
               </h4>
@@ -655,9 +655,9 @@ export function VoiceIntegration() {
       {activeTab === 'dialpad' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1">
-            <div className="rounded-2xl border border-slate-300 bg-white p-6 shadow-md max-w-sm mx-auto space-y-4">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-white p-6 shadow-md max-w-sm mx-auto space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Browser Softphone</span>
+                <span className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">Browser Softphone</span>
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-200" title="Microphone Active"></span>
               </div>
 
@@ -668,12 +668,12 @@ export function VoiceIntegration() {
                   value={dialNumber}
                   onChange={(e) => setDialNumber(e.target.value)}
                   placeholder="+1 (555) 000-0000"
-                  className="w-full rounded-xl bg-slate-50 border border-slate-300 px-4 py-3 text-lg font-mono font-bold text-slate-900 text-center tracking-wider focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                  className="w-full rounded-[var(--radius-lg)] bg-[var(--color-accent-muted)] border border-[var(--color-border)] px-4 py-3 text-lg font-mono font-bold text-[var(--color-ink)] text-center tracking-wider focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
                 />
                 {dialNumber && (
                   <button
                     onClick={() => setDialNumber(dialNumber.slice(0, -1))}
-                    className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 font-bold"
+                    className="absolute right-3 top-3 text-[var(--color-ink-faint)] hover:text-[var(--color-ink-muted)] font-bold"
                   >
                     <Delete className="h-4 w-4" />
                   </button>
@@ -700,10 +700,10 @@ export function VoiceIntegration() {
                     key={item.key}
                     type="button"
                     onClick={() => handleDialKeyPress(item.key)}
-                    className="flex flex-col items-center justify-center h-14 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 transition-colors shadow-2xs"
+                    className="flex flex-col items-center justify-center h-14 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-accent-muted)] hover:bg-[var(--color-accent-muted)] active:bg-[var(--color-border)] transition-colors shadow-2xs"
                   >
-                    <span className="text-lg font-bold text-slate-800">{item.key}</span>
-                    <span className="text-[9px] font-semibold text-slate-400 tracking-wider">{item.sub}</span>
+                    <span className="text-lg font-bold text-[var(--color-ink)]">{item.key}</span>
+                    <span className="text-[9px] font-semibold text-[var(--color-ink-faint)] tracking-wider">{item.sub}</span>
                   </button>
                 ))}
               </div>
@@ -714,7 +714,7 @@ export function VoiceIntegration() {
                   type="button"
                   onClick={() => handleStartCall()}
                   disabled={!dialNumber || !!activeCall}
-                  className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:opacity-50 py-3 text-sm font-bold text-white shadow-md flex items-center justify-center gap-2 transition-all"
+                  className="w-full rounded-[var(--radius-lg)] bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:opacity-50 py-3 text-sm font-bold text-white shadow-md flex items-center justify-center gap-2 transition-all"
                 >
                   <span className="flex items-center gap-1.5"><PhoneCall className="h-4 w-4" /> Call Customer</span>
                 </button>
@@ -723,11 +723,11 @@ export function VoiceIntegration() {
           </div>
 
           <div className="lg:col-span-2 space-y-6">
-            <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-5 shadow-none space-y-4">
+              <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
                 <Zap className="h-4 w-4 inline mr-1.5 text-amber-500" /> Quick Click-To-Call Hotlist
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[var(--color-ink-faint)]">
                 Click any contact to instantly initiate an outbound voice call from your agent workspace.
               </p>
 
@@ -739,16 +739,16 @@ export function VoiceIntegration() {
                 ].map((c) => (
                   <div key={c.phone} className="py-3 flex items-center justify-between">
                     <div>
-                      <div className="font-semibold text-xs text-slate-900 flex items-center gap-1.5">
+                      <div className="font-semibold text-xs text-[var(--color-ink)] flex items-center gap-1.5">
                         <span>{c.name}</span>
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">{c.type}</span>
+                        <span className="rounded-full bg-[var(--color-accent-muted)] px-2 py-0.5 text-[10px] text-[var(--color-ink-muted)]">{c.type}</span>
                       </div>
-                      <div className="text-[11px] text-slate-500">{c.company} · {c.phone}</div>
+                      <div className="text-[11px] text-[var(--color-ink-faint)]">{c.company} · {c.phone}</div>
                     </div>
                     <button
                       onClick={() => handleStartCall(c.phone)}
                       disabled={!!activeCall}
-                      className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 flex items-center gap-1"
+                      className="rounded-[var(--radius-sm)] border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 flex items-center gap-1"
                     >
                       <Phone className="h-3.5 w-3.5" /> Dial
                     </button>
@@ -757,24 +757,24 @@ export function VoiceIntegration() {
               </div>
             </div>
 
-            <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-3">
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Browser WebRTC Diagnostics</h3>
+            <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-5 shadow-none space-y-3">
+              <h3 className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">Browser WebRTC Diagnostics</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="rounded-md bg-slate-50 p-3 border border-slate-200">
-                  <div className="text-[11px] text-slate-500">Microphone Input</div>
+                <div className="rounded-[var(--radius-sm)] bg-[var(--color-accent-muted)] p-3 border border-[var(--color-border)]">
+                  <div className="text-[11px] text-[var(--color-ink-faint)]">Microphone Input</div>
                   <div className="text-xs font-bold text-emerald-700 mt-0.5 flex items-center gap-1">
                     <Check className="h-3.5 w-3.5 text-emerald-600 inline" /> Permitted &amp; Ready
                   </div>
                 </div>
-                <div className="rounded-md bg-slate-50 p-3 border border-slate-200">
-                  <div className="text-[11px] text-slate-500">WebRTC Capability Token</div>
+                <div className="rounded-[var(--radius-sm)] bg-[var(--color-accent-muted)] p-3 border border-[var(--color-border)]">
+                  <div className="text-[11px] text-[var(--color-ink-faint)]">WebRTC Capability Token</div>
                   <div className="text-xs font-bold text-emerald-700 mt-0.5 flex items-center gap-1">
                     <Check className="h-3.5 w-3.5 text-emerald-600 inline" /> Generated &amp; Signed
                   </div>
                 </div>
-                <div className="rounded-md bg-slate-50 p-3 border border-slate-200">
-                  <div className="text-[11px] text-slate-500">Network Latency (STUN)</div>
-                  <div className="text-xs font-bold text-slate-800 mt-0.5">28 ms</div>
+                <div className="rounded-[var(--radius-sm)] bg-[var(--color-accent-muted)] p-3 border border-[var(--color-border)]">
+                  <div className="text-[11px] text-[var(--color-ink-faint)]">Network Latency (STUN)</div>
+                  <div className="text-xs font-bold text-[var(--color-ink)] mt-0.5">28 ms</div>
                 </div>
               </div>
             </div>
@@ -785,13 +785,13 @@ export function VoiceIntegration() {
       {/* TAB 3: IVR & Call Routing */}
       {activeTab === 'ivr' && (
         <div className="space-y-6">
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-5 shadow-none space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
                   <Sliders className="h-4 w-4" /> Interactive Voice Response (IVR) Auto-Attendant
                 </h2>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-[var(--color-ink-faint)]">
                   Greet callers with customized voice prompts and route calls to specific team queues or voicemail based on DTMF keypad digits.
                 </p>
               </div>
@@ -802,49 +802,49 @@ export function VoiceIntegration() {
                   onChange={(e) => setIvrEnabled(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-9 h-5 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
-                <span className="ml-2 text-xs font-semibold text-slate-700">IVR Enabled</span>
+                <div className="w-9 h-5 bg-[var(--color-border)] peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[var(--color-border)] after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                <span className="ml-2 text-xs font-semibold text-[var(--color-ink)]">IVR Enabled</span>
               </label>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-700">Spoken Speech Greeting Prompt (TTS)</label>
+              <label className="block text-xs font-medium text-[var(--color-ink)]">Spoken Speech Greeting Prompt (TTS)</label>
               <textarea
                 rows={3}
                 value={ivrPrompt}
                 onChange={(e) => setIvrPrompt(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-slate-300 p-2.5 text-xs shadow-xs focus:border-emerald-500 focus:outline-hidden"
+                className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] p-2.5 text-xs shadow-none focus:border-emerald-500 focus:outline-hidden"
               />
-              <p className="text-[11px] text-slate-400 mt-1">Rendered with Amazon Polly Joanna (Neural Text-to-Speech Engine).</p>
+              <p className="text-[11px] text-[var(--color-ink-faint)] mt-1">Rendered with Amazon Polly Joanna (Neural Text-to-Speech Engine).</p>
             </div>
 
             <div className="pt-2">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Keypad Digit Mappings</h3>
+                <h3 className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">Keypad Digit Mappings</h3>
                 <button
                   type="button"
                   onClick={handleAddIvrOption}
-                  className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-2.5 py-1 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-accent-muted)]"
                 >
                   + Add Keypress Option
                 </button>
               </div>
 
-              <div className="rounded-md border border-slate-200 overflow-hidden">
-                <table className="min-w-full divide-y divide-slate-200 text-xs">
-                  <thead className="bg-slate-50">
+              <div className="rounded-[var(--radius-sm)] border border-[var(--color-border)] overflow-hidden">
+                <table className="min-w-full divide-y divide-[var(--color-border)] text-xs">
+                  <thead className="bg-[var(--color-accent-muted)]">
                     <tr>
-                      <th className="px-4 py-2 text-left font-semibold text-slate-700">Digit</th>
-                      <th className="px-4 py-2 text-left font-semibold text-slate-700">Option Label</th>
-                      <th className="px-4 py-2 text-left font-semibold text-slate-700">Action Type</th>
-                      <th className="px-4 py-2 text-left font-semibold text-slate-700">Target Queue / Destination</th>
-                      <th className="px-4 py-2 text-right font-semibold text-slate-700">Actions</th>
+                      <th className="px-4 py-2 text-left font-semibold text-[var(--color-ink)]">Digit</th>
+                      <th className="px-4 py-2 text-left font-semibold text-[var(--color-ink)]">Option Label</th>
+                      <th className="px-4 py-2 text-left font-semibold text-[var(--color-ink)]">Action Type</th>
+                      <th className="px-4 py-2 text-left font-semibold text-[var(--color-ink)]">Target Queue / Destination</th>
+                      <th className="px-4 py-2 text-right font-semibold text-[var(--color-ink)]">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 bg-white">
                     {ivrMenu.map((opt, idx) => (
                       <tr key={idx}>
-                        <td className="px-4 py-2.5 font-bold font-mono text-slate-900 w-16">
+                        <td className="px-4 py-2.5 font-bold font-mono text-[var(--color-ink)] w-16">
                           <input
                             type="text"
                             value={opt.digit}
@@ -853,10 +853,10 @@ export function VoiceIntegration() {
                               updated[idx].digit = e.target.value
                               setIvrMenu(updated)
                             }}
-                            className="w-10 rounded-md border border-slate-300 px-2 py-1 text-center font-bold text-xs"
+                            className="w-10 rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-1 text-center font-bold text-xs"
                           />
                         </td>
-                        <td className="px-4 py-2.5 font-medium text-slate-800">
+                        <td className="px-4 py-2.5 font-medium text-[var(--color-ink)]">
                           <input
                             type="text"
                             value={opt.label}
@@ -865,10 +865,10 @@ export function VoiceIntegration() {
                               updated[idx].label = e.target.value
                               setIvrMenu(updated)
                             }}
-                            className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs"
+                            className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-1 text-xs"
                           />
                         </td>
-                        <td className="px-4 py-2.5 text-slate-600">
+                        <td className="px-4 py-2.5 text-[var(--color-ink-muted)]">
                           <select
                             value={opt.action}
                             onChange={(e) => {
@@ -876,7 +876,7 @@ export function VoiceIntegration() {
                               updated[idx].action = e.target.value
                               setIvrMenu(updated)
                             }}
-                            className="rounded-md border border-slate-300 px-2 py-1 text-xs"
+                            className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-1 text-xs"
                           >
                             <option value="queue">Route to Team Queue</option>
                             <option value="agent">Direct to Agent</option>
@@ -884,7 +884,7 @@ export function VoiceIntegration() {
                             <option value="forward">Forward Phone Number</option>
                           </select>
                         </td>
-                        <td className="px-4 py-2.5 text-slate-600">
+                        <td className="px-4 py-2.5 text-[var(--color-ink-muted)]">
                           <input
                             type="text"
                             value={opt.target}
@@ -893,7 +893,7 @@ export function VoiceIntegration() {
                               updated[idx].target = e.target.value
                               setIvrMenu(updated)
                             }}
-                            className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs font-mono"
+                            className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-2 py-1 text-xs font-mono"
                           />
                         </td>
                         <td className="px-4 py-2.5 text-right">
@@ -918,11 +918,11 @@ export function VoiceIntegration() {
       {/* TAB 4: Recordings & AI Transcriptions */}
       {activeTab === 'recordings' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-5 shadow-none space-y-4">
+            <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
               <Mic className="h-4 w-4" /> Dual-Channel Call Recording
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[var(--color-ink-faint)]">
               Record conversations in high fidelity dual-track audio to isolate the agent voice and customer voice for compliance and review.
             </p>
 
@@ -932,17 +932,17 @@ export function VoiceIntegration() {
                   type="checkbox"
                   checked={recordingEnabled}
                   onChange={(e) => setRecordingEnabled(e.target.checked)}
-                  className="rounded-sm border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  className="rounded-sm border-[var(--color-border)] text-emerald-600 focus:ring-emerald-500"
                 />
-                <span className="text-xs font-semibold text-slate-800">Record all inbound and outbound calls</span>
+                <span className="text-xs font-semibold text-[var(--color-ink)]">Record all inbound and outbound calls</span>
               </label>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700">Audio Recording Channels</label>
+                <label className="block text-xs font-medium text-[var(--color-ink)]">Audio Recording Channels</label>
                 <select
                   value={recordingChannels}
                   onChange={(e) => setRecordingChannels(e.target.value)}
-                  className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs shadow-xs"
+                  className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs shadow-none"
                 >
                   <option value="dual">Dual-Channel (Agent &amp; Customer separated)</option>
                   <option value="mono">Mono (Single mixed channel)</option>
@@ -950,8 +950,8 @@ export function VoiceIntegration() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700">Storage Retention Period</label>
-                <select defaultValue="365" className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs shadow-xs">
+                <label className="block text-xs font-medium text-[var(--color-ink)]">Storage Retention Period</label>
+                <select defaultValue="365" className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs shadow-none">
                   <option value="90">90 Days</option>
                   <option value="180">180 Days</option>
                   <option value="365">1 Year (Compliant standard)</option>
@@ -961,11 +961,11 @@ export function VoiceIntegration() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-5 shadow-none space-y-4">
+            <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
               <FileText className="h-4 w-4" /> Automated AI Speech-To-Text Transcriptions
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[var(--color-ink-faint)]">
               Convert every recorded call into a timestamped, searchable text transcript and extract key action items automatically.
             </p>
 
@@ -975,14 +975,14 @@ export function VoiceIntegration() {
                   type="checkbox"
                   checked={transcriptionEnabled}
                   onChange={(e) => setTranscriptionEnabled(e.target.checked)}
-                  className="rounded-sm border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  className="rounded-sm border-[var(--color-border)] text-emerald-600 focus:ring-emerald-500"
                 />
-                <span className="text-xs font-semibold text-slate-800">Enable automatic call transcription</span>
+                <span className="text-xs font-semibold text-[var(--color-ink)]">Enable automatic call transcription</span>
               </label>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700">Speech Recognition Engine</label>
-                <select defaultValue="whisper" className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs shadow-xs">
+                <label className="block text-xs font-medium text-[var(--color-ink)]">Speech Recognition Engine</label>
+                <select defaultValue="whisper" className="mt-1 block w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-xs shadow-none">
                   <option value="whisper">OpenAI Whisper Large-v3 (Multi-lingual)</option>
                   <option value="deepgram">Deepgram Nova-2 (Ultra-fast real-time)</option>
                   <option value="google">Google Cloud Speech-to-Text</option>
@@ -993,9 +993,9 @@ export function VoiceIntegration() {
                 <input
                   type="checkbox"
                   defaultChecked
-                  className="rounded-sm border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  className="rounded-sm border-[var(--color-border)] text-emerald-600 focus:ring-emerald-500"
                 />
-                <span className="text-xs font-semibold text-slate-800">Generate Captain AI Summary &amp; Sentiment on call end</span>
+                <span className="text-xs font-semibold text-[var(--color-ink)]">Generate Captain AI Summary &amp; Sentiment on call end</span>
               </label>
             </div>
           </div>
@@ -1005,9 +1005,9 @@ export function VoiceIntegration() {
       {/* TAB 5: Call History & Diagnostics */}
       {activeTab === 'logs' && (
         <div className="space-y-6">
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-5 shadow-none space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <h2 className="text-sm font-bold text-[var(--color-ink)] flex items-center gap-2">
                 <PhoneCall className="h-4 w-4 inline mr-1.5 text-indigo-600" /> Recent Voice Call Logs
               </h2>
               <button
@@ -1022,7 +1022,7 @@ export function VoiceIntegration() {
             </div>
 
             {callLogs.length === 0 ? (
-              <div className="py-8 text-center text-xs text-slate-500">
+              <div className="py-8 text-center text-xs text-[var(--color-ink-faint)]">
                 No voice calls recorded yet. Use the dialpad or incoming call webhook to test!
               </div>
             ) : (
@@ -1036,18 +1036,18 @@ export function VoiceIntegration() {
                         }`}>
                           {log.direction}
                         </span>
-                        <span className="font-semibold text-xs text-slate-900 font-mono">{log.from} &rarr; {log.to}</span>
-                        <span className="text-slate-400 text-xs">·</span>
-                        <span className="text-xs text-slate-600">Duration: <strong>{log.duration}s</strong></span>
+                        <span className="font-semibold text-xs text-[var(--color-ink)] font-mono">{log.from} &rarr; {log.to}</span>
+                        <span className="text-[var(--color-ink-faint)] text-xs">·</span>
+                        <span className="text-xs text-[var(--color-ink-muted)]">Duration: <strong>{log.duration}s</strong></span>
                         <span className={`px-2 py-0.2 rounded-full text-[10px] font-semibold ${
-                          log.status === 'completed' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'
+                          log.status === 'completed' ? 'bg-emerald-100 text-emerald-800' : 'bg-[var(--color-accent-muted)] text-[var(--color-ink)]'
                         }`}>
                           {log.status}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-600">{log.summary}</p>
+                      <p className="text-xs text-[var(--color-ink-muted)]">{log.summary}</p>
                       {log.transcriptionText && (
-                        <div className="bg-slate-50 border border-slate-200 rounded-md p-2 text-xs text-slate-700 italic">
+                        <div className="bg-[var(--color-accent-muted)] border border-[var(--color-border)] rounded-[var(--radius-sm)] p-2 text-xs text-[var(--color-ink)] italic">
                           "{log.transcriptionText}"
                         </div>
                       )}
@@ -1065,14 +1065,14 @@ export function VoiceIntegration() {
           </div>
 
           {/* Webhook Events Stream */}
-          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Live Webhook Events Stream</h3>
-            <div className="rounded-md bg-slate-900 text-slate-200 p-4 font-mono text-xs max-h-60 overflow-y-auto space-y-1.5">
+          <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white p-5 shadow-none space-y-4">
+            <h3 className="text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">Live Webhook Events Stream</h3>
+            <div className="rounded-[var(--radius-sm)] bg-[var(--color-accent)] text-[var(--color-ink-faint)] p-4 font-mono text-xs max-h-60 overflow-y-auto space-y-1.5">
               {events.length === 0 ? (
-                <div className="text-slate-500">No events received yet. Listening on /api/v1/webhooks/voice/*</div>
+                <div className="text-[var(--color-ink-faint)]">No events received yet. Listening on /api/v1/webhooks/voice/*</div>
               ) : (
                 events.map((ev) => (
-                  <div key={ev.id} className="text-slate-300">
+                  <div key={ev.id} className="text-[var(--color-ink-faint)]">
                     <span className="text-emerald-400">[{ev.sentAt}]</span>{' '}
                     <span className="text-blue-300">[{ev.direction.toUpperCase()}]</span>{' '}
                     <span className="text-amber-300">({ev.provider})</span>:{' '}

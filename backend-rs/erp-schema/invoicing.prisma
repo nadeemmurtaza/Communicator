@@ -1,0 +1,87 @@
+// Trading-partner invoices and quotes (WO-18.3's remaining "forth"
+// documents, 18-trading-partner-network.md) — a bounded MVP, not
+// RETAIL-ERP.md's full R18 `invoicing` module. R18 asks for a legal,
+// gapless-per-fiscal-year number allocated at the brand tier, CreditNote,
+// payment terms and AR aging across every customer; that needs the
+// accounting module's FiscalYear/FiscalPeriod machinery and is its own,
+// much larger tranche. This is smaller: a document a connected
+// TradingPartner receives when staff choose to issue or send one, numbered
+// the same R6-style way a PurchaseOrder is (advisory lock + MAX scan, see
+// invoice.service.ts / quote.service.ts). `tradingPartnerId` and `orderId`
+// are bare scalars, not relations — mirrors Supplier.tradingPartnerId
+// (purchasing.prisma) — so this file adds no coupling to any other module,
+// and "one order invoiced in parts" style linking stays out of scope.
+
+enum QuoteStatus {
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+model Quote {
+  id               String      @id @default(cuid())
+  number           String      @unique
+  tradingPartnerId String
+  status           QuoteStatus @default(SENT)
+  currency         String
+  validUntil       DateTime?
+  lines            QuoteLine[]
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([tradingPartnerId])
+  @@index([status])
+}
+
+model QuoteLine {
+  id             String @id @default(cuid())
+  quoteId        String
+  quote          Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  sku            String
+  nameEn         String
+  quantity       Int
+  unitPriceMinor Int
+
+  @@index([quoteId])
+}
+
+enum InvoiceStatus {
+  ISSUED
+  PAID
+  VOID
+}
+
+model Invoice {
+  id               String        @id @default(cuid())
+  number           String        @unique
+  tradingPartnerId String
+  /// Trace-back only — see file header. Never joined for financial totals.
+  orderId          String?
+  status           InvoiceStatus @default(ISSUED)
+  currency         String
+  issueDate        DateTime      @default(now())
+  dueDate          DateTime?
+  subtotalMinor    Int
+  taxMinor         Int           @default(0)
+  totalMinor       Int
+  lines            InvoiceLine[]
+  createdAt        DateTime      @default(now())
+
+  @@index([tradingPartnerId])
+  @@index([status])
+  @@index([orderId])
+}
+
+model InvoiceLine {
+  id             String  @id @default(cuid())
+  invoiceId      String
+  invoice        Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  sku            String
+  nameEn         String
+  quantity       Int
+  unitPriceMinor Int
+  lineTotalMinor Int
+
+  @@index([invoiceId])
+}

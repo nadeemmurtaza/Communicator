@@ -1,0 +1,72 @@
+// SSO / identity federation
+// (access-control-identity/161-sso-identity-federation.md, WO-161.1).
+//
+// One row per identity provider this deployment's own staff may sign in
+// through — more than one is allowed (say, a Google Workspace and an Entra
+// ID tenant for the same shop). No organizationId, deliberately: this
+// codebase's tenant boundary is the deployment itself (DECISIONS.md
+// ADR-040, receivables.prisma's own header), and `Organization` is the
+// optional multi-brand grouping inside ONE deployment, not a tenant. An SSO
+// connection belongs to the deployment, like every other sign-in setting.
+//
+// Always admin-authored (`settings.sso.manage`), never self-service — which
+// is what keeps `allowedEmailDomains` a trustworthy gate (doc 161 §2).
+
+/// OIDC only. SAML is WO-161.2b, added once a real client names a SAML-only
+/// identity provider — never pre-built for a protocol nobody has asked for.
+enum SsoProtocol {
+  OIDC
+}
+
+/// SUSPENDED stops new sign-ins through the connection at once, and touches
+/// no already-provisioned or linked `User` — "revoke the method, not the
+/// account" (doc 161, "The grant that ends itself").
+enum SsoConnectionStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+model SsoConnection {
+  id                  String              @id @default(cuid())
+  protocol            SsoProtocol
+  /// Shown on the sign-in screen as "Sign in with <label>".
+  label               String
+  /// The issuer identifier; its /.well-known/openid-configuration is read at
+  /// sign-in. https, or http on a loopback host only (SsoService refuses
+  /// anything else — a discovery document fetched in clear text names the
+  /// keys every ID token is checked against).
+  issuerUrl           String
+  clientId            String
+  /// The OIDC client secret, AES-256-GCM via @newax/shared's secret-crypto
+  /// under APP_ENCRYPTION_KEY — the discipline
+  /// TradingPartner.outboundApiKeyEncrypted already follows. Write-only:
+  /// never selected by a read that leaves SsoService.
+  credentialEncrypted String
+  /// The hard gate (doc 161 §2): an ID token for an email at any other
+  /// domain is refused before any `User` lookup. Stored lowercased and
+  /// matched exactly — a subdomain is not the domain.
+  allowedEmailDomains String[]
+  /// The `Role` a brand-new sign-in is provisioned into. It must exist and
+  /// hold no NON_DELEGATABLE_PERMISSIONS entry — checked on every write and
+  /// again at provisioning, so least privilege survives a later role edit.
+  defaultRoleName     String
+  status              SsoConnectionStatus @default(ACTIVE)
+  /// WO-165.6 (165-cross-tenant-marketplace-directory.md §3, piece one):
+  /// "login should remain with SSO only". When true, `AuthController`'s
+  /// password route refuses sign-in for every STAFF/TAILOR/ADMIN account
+  /// (`User.role !== 'CUSTOMER'` — a plain customer is never affected) with
+  /// a message pointing at the SSO button — except `createdByUserId` below,
+  /// so the admin who turned enforcement on can never lock themselves out of
+  /// undoing it. Additive, default false: with every connection at the
+  /// default, erp-1's login screen is byte-identical to today's (doc 161's
+  /// own acceptance, restated in doc 165's own Acceptance section).
+  enforceSso          Boolean             @default(false)
+  /// A plain id, not a relation — the audit rows carry the actor of every
+  /// later change, and this survives that person's own erasure as an id.
+  createdByUserId     String
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  /// The sign-in screen's list of ACTIVE connections.
+  @@index([status])
+}

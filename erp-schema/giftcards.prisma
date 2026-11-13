@@ -1,0 +1,91 @@
+// Phase 5 WO-5.4/5.5 (docs/implementation/promotions-giftcards/05-promotions-giftcards.md).
+//
+// Same ledger discipline as the stock ledger (Phase 1): balance is DERIVED,
+// never edited directly, every change is a row, and redemption is a
+// conditional update (`WHERE balance >= amount`) so two simultaneous
+// checkouts against the same balance cannot both succeed.
+//
+// A gift card is NOT a discount — it is tender, applied after tax and
+// shipping against the final total (orders.service.ts's placeOrder), and it
+// is a liability until redeemed (Phase 4's "gift card breakage").
+
+enum GiftCardStatus {
+  ACTIVE
+  REDEEMED
+  EXPIRED
+  CANCELLED
+}
+
+model GiftCard {
+  id           String         @id @default(cuid())
+  /// Human-readable, unambiguous: no O/0, no I/1/l (giftcard-code.ts). Stored uppercase.
+  code         String         @unique
+  initialValue Int
+  /// DERIVED from `transactions` below. Never written directly outside GiftCardsService's own conditional updates.
+  balance      Int
+  status       GiftCardStatus @default(ACTIVE)
+  currency     String         @default("PKR")
+
+  purchasedByUserId String?
+  /// Who it was bought for.
+  recipientName     String?
+  recipientEmail    String?
+  recipientPhone    String?
+  message           String?
+  /// Order that bought it, when it was sold rather than issued by staff.
+  sourceOrderId     String?
+
+  expiresAt DateTime?
+  issuedAt  DateTime  @default(now())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  purchasedBy  User?                 @relation("GiftCardPurchaser", fields: [purchasedByUserId], references: [id], onDelete: SetNull)
+  sourceOrder  Order?                @relation("GiftCardSourceOrder", fields: [sourceOrderId], references: [id], onDelete: SetNull)
+  transactions GiftCardTransaction[]
+
+  @@index([status])
+  @@index([purchasedByUserId])
+}
+
+model GiftCardTransaction {
+  id           String   @id @default(cuid())
+  giftCardId   String
+  /// Negative = spent, positive = issued or topped up. Never zero.
+  delta        Int
+  balanceAfter Int
+  reason       String // "issue" | "redeem" | "refund" | "expire" | "adjust" | "cancel"
+  orderId      String?
+  actorId      String?
+  createdAt    DateTime @default(now())
+
+  giftCard GiftCard @relation(fields: [giftCardId], references: [id], onDelete: Cascade)
+  order    Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([giftCardId, createdAt])
+  @@index([orderId])
+}
+
+/// Same ledger shape, attached to a User rather than a code — refunds, RTO
+/// goodwill and service recovery all land here. `User.storeCreditBalance` is
+/// a CACHE of SUM(delta), kept only so a checkout redemption can use the same
+/// atomic conditional-update idiom as GiftCard.balance; StoreCreditReconcileCron
+/// re-derives it from this ledger nightly (WO-5.5's own "add a reconciliation
+/// check" note) — this table, not the cached column, is the source of truth.
+model StoreCreditTransaction {
+  id           String   @id @default(cuid())
+  userId       String
+  delta        Int
+  balanceAfter Int
+  reason       String // "refund" | "goodwill" | "redeem" | "expire" | "adjust" | "referral" (WO-7.7)
+  orderId      String?
+  actorId      String?
+  note         String?
+  createdAt    DateTime @default(now())
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([orderId])
+}

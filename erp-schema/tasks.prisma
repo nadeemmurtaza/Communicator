@@ -1,0 +1,160 @@
+// Task allotment, status and tracking
+// (tasks-notifications-support/23-tasks-allotment-tracking.md, DECISIONS.md
+// ADR-049).
+//
+// Three decisions, per the doc's own text:
+//   1. Work is assigned to a post (Position, required), and OPTIONALLY to a
+//      person (assigneeUserId, nullable). The post is the durable address;
+//      the person is who currently holds it. A leaver's open tasks are left
+//      at the post, marked unclaimed — see hr's PostingEnded event and this
+//      module's own task-leaver.listener.ts. No automatic reassignment.
+//   2. Status is a small, fixed enum (TaskState) plus a per-deployment
+//      workflow stage (TaskStageDefinition) inside IN_PROGRESS.
+//   3. A transition is an event (TaskTransition), never an overwrite of
+//      Task.state — cycle time in each state must be computable from
+//      TaskTransition alone.
+//
+// ADR-049's three deviations from the doc's own literal text, applied here:
+//   - `assigneeUserId`, not `assigneeEmployeeId` — ADR-044 already resolved
+//     docs 19/20 with no Employee model; every actor is a User.
+//   - `TaskStageDefinition.organizationId` dropped, `key` unique alone — the
+//     same correction ADR-040/ADR-044/ADR-046 already make three times: this
+//     deployment IS the tenant boundary, and `organization` is off by
+//     default everywhere today (modules.registry.ts).
+//   - The tasks.assign/tasks.close toxic pair is a per-instance check inside
+//     TaskService.close(), not a TOXIC_PERMISSION_PAIRS entry — see that
+//     file's own header comment and ADR-049.
+
+enum TaskState {
+  OPEN
+  IN_PROGRESS
+  BLOCKED
+  DONE
+  CANCELLED
+}
+
+model Task {
+  id String @id @default(cuid())
+
+  /// Human reference, per deployment. Gapless is NOT required here — a task
+  /// number is not a legal document (doc 25 is where gapless matters) — so
+  /// it is derived straight from `id` (TaskService.reference()) rather than
+  /// a shared counter. This is deliberate: a shared max()+1 counter is
+  /// exactly the "adoption test" trap CLAUDE.md names — two branch nodes
+  /// creating tasks offline (this module's own "Four hours down" answer:
+  /// tasks are branch-authoritative and replicate up) would collide on the
+  /// same next number. Deriving from `id` needs no counter and cannot
+  /// collide across any number of nodes.
+  reference String
+  title     String
+  detail    String?
+
+  /// The durable address. Required — see this file's header, decision 1.
+  positionId String
+  /// The current holder, when there is one. NULL means unclaimed at that
+  /// post. Never a hard relation to User (no `@relation` here) — the same
+  /// "erasure the ledger cannot obey" reasoning as `createdByUserId` and
+  /// `TaskTransition.byUserId` below: this column must survive the User row
+  /// being gone, so it is a bare scalar, not an FK a cascade could follow.
+  assigneeUserId String?
+  /// Where the work belongs, copied at write time (from the Position's own
+  /// orgUnitId, at creation) so a re-parent of the position later does not
+  /// move this task's history. Bare scalar, not a relation — see
+  /// TaskService.create()'s own comment for exactly how it is derived; there
+  /// is no default() path that invents one.
+  orgUnitId String
+
+  state    TaskState @default(OPEN)
+  stageId  String?
+  priority Int       @default(0)
+  dueAt    DateTime?
+
+  /// Ecosystem audit 2026-10-29 (merged from @newaxhq/tasks's CpmSolver):
+  /// days, used by TaskDependencyService.computeCriticalPath(). Null means
+  /// "not estimated" — such a task defaults to 1 day in a CPM run rather
+  /// than silently excluding it from the schedule.
+  estimatedDurationDays Int?
+
+  /// What this task is about, when it came from somewhere else — an order,
+  /// a stock count, a requisition. Polymorphic by (type, id) rather than a
+  /// foreign key per module, because `tasks` must stay droppable and must
+  /// never import the module it serves (module independence, CLAUDE.md) —
+  /// see core/extension-points/task-source.registry.ts (WO-23.3).
+  sourceType String?
+  sourceId   String?
+  /// Idempotency for machine-created tasks: a redelivered domain event must
+  /// not raise a second task. NULL for hand-created tasks, which are not
+  /// idempotent and should not be (same NULL exemption as every composite
+  /// unique elsewhere in this schema).
+  sourceRef String?
+
+  createdByUserId String?
+  createdAt       DateTime  @default(now())
+  closedAt        DateTime?
+
+  position     Position         @relation(fields: [positionId], references: [id])
+  transitions  TaskTransition[]
+  dependsOn    TaskDependency[] @relation("TaskDependencySuccessor")
+  blocks       TaskDependency[] @relation("TaskDependencyPredecessor")
+
+  @@unique([sourceType, sourceRef])
+  @@index([positionId, state])
+  @@index([assigneeUserId, state])
+  @@index([orgUnitId, state])
+  @@index([dueAt])
+}
+
+/// Ecosystem audit 2026-10-29 (merged from @newaxhq/tasks's CpmSolver and
+/// DependencyCascadeEngine): one directed edge, predecessor -> successor.
+/// Cycle detection is the CPM solve's own job (it already throws on one),
+/// not an insert-time check here — the same division of labour the
+/// original package already drew between building the graph and solving
+/// it.
+model TaskDependency {
+  id                 String @id @default(cuid())
+  predecessorTaskId  String
+  successorTaskId    String
+  createdAt          DateTime @default(now())
+
+  predecessor Task @relation("TaskDependencyPredecessor", fields: [predecessorTaskId], references: [id], onDelete: Cascade)
+  successor   Task @relation("TaskDependencySuccessor", fields: [successorTaskId], references: [id], onDelete: Cascade)
+
+  @@unique([predecessorTaskId, successorTaskId])
+  @@index([successorTaskId])
+}
+
+/// The history TaskService.transition() writes on every state change — see
+/// this file's header, decision 3. Not written for an assignment change
+/// (TaskService.assign()): this table's columns are about Task.state and
+/// Task.stageId only, never about who holds the task — see task.service.ts's
+/// own comment on assign() for where an assignment IS recorded (AuditLog,
+/// action 'task.assigned'), and why that is exactly what TaskService.close()
+/// reads for its own toxic-pair check.
+model TaskTransition {
+  id          String     @id @default(cuid())
+  taskId      String
+  fromState   TaskState?
+  toState     TaskState
+  fromStageId String?
+  toStageId   String?
+  /// Who moved it. NULL when the mover was the system (e.g. a machine-
+  /// created task's own initial OPEN transition, sourceType/sourceRef set).
+  byUserId  String?
+  reason    String?
+  occurredAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, occurredAt])
+}
+
+/// A client's own workflow stages inside IN_PROGRESS — rows, not an enum,
+/// exactly as OrgUnitType and Rank are rows (this file's header, decision 2).
+/// No organizationId (ADR-049's own dropped-column correction, above):
+/// `key` is unique alone.
+model TaskStageDefinition {
+  id    String @id @default(cuid())
+  key   String @unique
+  label String
+  order Int
+}

@@ -1,8 +1,8 @@
-use sqlx::{sqlite::SqlitePoolOptions, Pool, Row, Sqlite};
+﻿use sqlx::{postgres::PgPoolOptions, Pool, Row, Postgres};
 use std::sync::Arc;
 use tracing::{info, warn};
 
-pub type DbPool = Pool<Sqlite>;
+pub type DbPool = Pool<Postgres>;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -17,7 +17,7 @@ pub struct AppState {
 /// into, or a body we deliver -- so the caller has to handle the failure
 /// instead. Returns the column name in the error so the message says which
 /// field the schema is missing.
-pub fn required_text(row: &sqlx::sqlite::SqliteRow, column: &str) -> Result<String, String> {
+pub fn required_text(row: &sqlx::postgres::PgRow, column: &str) -> Result<String, String> {
     if let Ok(value) = row.try_get::<String, _>(column) {
         return Ok(value);
     }
@@ -52,7 +52,7 @@ pub fn report_write(result: Result<u64, sqlx::Error>, context: &str) -> bool {
 /// Check whether a table exists in the database. Used by purge_demo_rows.
 async fn table_exists(pool: &DbPool, table: &str) -> bool {
     match sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?",
+        "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1",
     )
     .bind(table)
     .fetch_one(pool)
@@ -69,7 +69,7 @@ async fn table_exists(pool: &DbPool, table: &str) -> bool {
 pub async fn init_db(database_url: &str) -> Result<DbPool, sqlx::Error> {
     info!("Connecting to database: {}", database_url);
 
-    let pool = SqlitePoolOptions::new()
+    let pool = PgPoolOptions::new()
         .max_connections(10)
         .connect(database_url)
         .await?;

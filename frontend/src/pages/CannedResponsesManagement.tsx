@@ -259,7 +259,7 @@ export function CannedResponsesManagement() {
               return (
                 <div
                   key={c.id || displayCode}
-                  className="p-3.5 hover:bg-black/5 transition-colors flex items-start justify-between gap-4"
+                  className="p-3.5 hover:bg-[var(--color-accent-muted)] transition-colors flex items-start justify-between gap-4"
                 >
                   <div className="space-y-1.5 flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -286,7 +286,7 @@ export function CannedResponsesManagement() {
                     <button
                       type="button"
                       onClick={() => startEdit(c)}
-                      className="flex items-center gap-1 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] px-2.5 py-1 rounded hover:bg-black/5 transition-colors"
+                      className="flex items-center gap-1 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] px-2.5 py-1 rounded hover:bg-[var(--color-accent-muted)] transition-colors"
                       title="Edit response"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
@@ -374,7 +374,7 @@ export function CannedResponsesManagement() {
               <button
                 type="button"
                 onClick={() => setEditingItem(null)}
-                className="px-3 py-1.5 text-xs rounded border border-[var(--color-border)] hover:bg-black/5"
+                className="px-3 py-1.5 text-xs rounded border border-[var(--color-border)] hover:bg-[var(--color-accent-muted)]"
               >
                 Cancel
               </button>
@@ -508,7 +508,7 @@ export function CannedResponsesManagement() {
               <button
                 type="button"
                 onClick={() => setTestingItem(null)}
-                className="px-3 py-1 text-xs rounded border border-[var(--color-border)] hover:bg-black/5"
+                className="px-3 py-1 text-xs rounded border border-[var(--color-border)] hover:bg-[var(--color-accent-muted)]"
               >
                 Close
               </button>

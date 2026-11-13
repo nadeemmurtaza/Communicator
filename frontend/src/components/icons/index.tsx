@@ -36,6 +36,9 @@
 import { createElement, type ReactElement, type SVGProps } from 'react'
 import { BRAND_GLYPHS } from './brand-marks'
 import { CHANNEL_GLYPHS, DUOTONE_ICONS, type DuotoneGlyph, type DuotoneNode } from './duotone-icons'
+// Icons not in the duotone set — re-exported directly from lucide-react
+import { ArrowRightLeft, Ban, BarChart, Bell, CheckCircle, Cpu, Database, Eye, EyeOff, Gauge, ListTodo, Minus, TrendingDown, Video, Warehouse } from 'lucide-react'
+export { ArrowRightLeft, Ban, BarChart, Bell, CheckCircle, Cpu, Database, Eye, EyeOff, Gauge, ListTodo, Minus, TrendingDown, Video, Warehouse }
 
 /**
  * Not exported on purpose: a module whose only extra export is a type still
@@ -204,6 +207,7 @@ export const Webhook = (props: IconProps) => <Glyph glyph={DUOTONE_ICONS.Webhook
 export const X = (props: IconProps) => <Glyph glyph={DUOTONE_ICONS.X} {...props} />
 export const XCircle = (props: IconProps) => <Glyph glyph={DUOTONE_ICONS.XCircle} {...props} />
 export const Zap = (props: IconProps) => <Glyph glyph={DUOTONE_ICONS.Zap} {...props} />
+export const ShoppingCart = (props: IconProps) => <Glyph glyph={DUOTONE_ICONS.Package} {...props} />
 
 export const WhatsAppIcon = (props: IconProps) => <Glyph glyph={BRAND_GLYPHS.whatsapp} {...props} />
 export const InstagramIcon = (props: IconProps) => <Glyph glyph={BRAND_GLYPHS.instagram} {...props} />
@@ -211,6 +215,8 @@ export const FacebookIcon = (props: IconProps) => <Glyph glyph={BRAND_GLYPHS.fac
 export const TelegramIcon = (props: IconProps) => <Glyph glyph={BRAND_GLYPHS.telegram} {...props} />
 export const TikTokIcon = (props: IconProps) => <Glyph glyph={BRAND_GLYPHS.tiktok} {...props} />
 export const LineIcon = (props: IconProps) => <Glyph glyph={BRAND_GLYPHS.line} {...props} />
+export const DiscordIcon = (props: IconProps) => <Glyph glyph={BRAND_GLYPHS.discord} {...props} />
+export const SlackIcon = (props: IconProps) => <Glyph glyph={BRAND_GLYPHS.slack} {...props} />
 
 /** Channels with no logo of their own: SMS, email and voice are protocols. */
 export const SmsIcon = (props: IconProps) => <Glyph glyph={CHANNEL_GLYPHS.sms} {...props} />

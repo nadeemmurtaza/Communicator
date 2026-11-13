@@ -1,0 +1,71 @@
+// On-site messaging. WO-8.6,
+// docs/implementation/content-marketing-search/08-content-marketing-search.md.
+//
+// "Keep it restrained. Three popups on one page loses more revenue than any
+// of them earns" — the doc's own words — is why every message here targets a
+// page and, optionally, a segment, and is scheduled rather than always-on.
+
+enum OnsiteMessageKind {
+  ANNOUNCEMENT_BAR
+  POPUP
+  NEWSLETTER_CAPTURE
+  COOKIE_CONSENT
+}
+
+enum OnsitePopupTrigger {
+  IMMEDIATE
+  TIMED
+  EXIT_INTENT
+}
+
+model OnsiteMessage {
+  id           String             @id @default(cuid())
+  kind         OnsiteMessageKind
+  /// A path prefix ("/", "/shop", "/product") — null targets every page.
+  pagePattern  String?
+  segmentId    String?
+  trigger      OnsitePopupTrigger @default(IMMEDIATE)
+  /// Seconds before showing. TIMED trigger only.
+  delaySeconds Int?
+  linkUrl      String?
+  isActive     Boolean            @default(true)
+  startsAt     DateTime?
+  endsAt       DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  segment      Segment?                   @relation(fields: [segmentId], references: [id], onDelete: SetNull)
+  translations OnsiteMessageTranslation[]
+
+  @@index([kind, isActive])
+}
+
+model OnsiteMessageTranslation {
+  id              String  @id @default(cuid())
+  onsiteMessageId String
+  locale          String
+  headline        String?
+  body            String?
+  ctaLabel        String?
+
+  onsiteMessage OnsiteMessage @relation(fields: [onsiteMessageId], references: [id], onDelete: Cascade)
+
+  @@unique([onsiteMessageId, locale])
+}
+
+/// A distinct, lightweight capture list — not folded into Contact. Most
+/// submitters have never transacted, and forcing an immediate Contact row
+/// for a bare anonymous email would pollute CRM dedup with addresses that
+/// never become a sale. A subscriber who later orders is linked by Contact's
+/// own email-dedup path when a real Contact is created from that order, not
+/// from here.
+model NewsletterSubscriber {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  locale       String
+  source       String    @default("onsite_popup")
+  subscribedAt DateTime  @default(now())
+  optedOutAt   DateTime?
+
+  @@index([optedOutAt])
+}

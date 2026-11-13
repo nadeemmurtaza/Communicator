@@ -1,0 +1,112 @@
+// Phase 5 WO-5.1/5.2/5.3 (docs/implementation/promotions-giftcards/05-promotions-giftcards.md).
+//
+// Two things people conflate, kept distinct: an automatic Discount applies
+// itself when its conditions match; a PromoCode is the same Discount rule
+// plus a code the customer has to type. Evaluation itself is a pure function
+// (`evaluateDiscounts`, @newax/shared) — this schema only holds the rules it
+// reads and the OrderDiscount snapshot of what it decided.
+
+enum DiscountType {
+  PERCENTAGE // basis points, House Rule 5
+  FIXED_AMOUNT // paisa off
+  FREE_SHIPPING
+  BUY_X_GET_Y
+  TIERED // spend more, save more — see DiscountRule's own doc comment in @newax/shared/discounts.ts
+}
+
+enum DiscountScope {
+  ORDER
+  PRODUCT
+  CATEGORY
+  COLLECTION
+  SHIPPING
+}
+
+model Discount {
+  id          String        @id @default(cuid())
+  name        String // staff-facing, not translated
+  type        DiscountType
+  scope       DiscountScope @default(ORDER)
+  /// PERCENTAGE/TIERED: basis points (1000 = 10%). FIXED_AMOUNT: paisa. Unused by FREE_SHIPPING/BUY_X_GET_Y.
+  value       Int
+  /// Cap on a PERCENTAGE/TIERED discount, in paisa. Null = uncapped.
+  maxDiscount Int?
+
+  /// Conditions. All that are set must hold — see evaluateDiscounts().
+  minSubtotal       Int?
+  minQuantity       Int?
+  productIds        String[] @default([])
+  categoryIds       String[] @default([])
+  customerSegmentId String?
+  firstOrderOnly    Boolean  @default(false)
+
+  /// BUY_X_GET_Y only.
+  buyQuantity    Int?
+  getQuantity    Int?
+  getDiscountBps Int? // 10000 = free
+
+  startsAt    DateTime?
+  endsAt      DateTime?
+  isActive    Boolean   @default(true)
+  /// Can this combine with other discounts?
+  isStackable Boolean   @default(false)
+  /// Lower runs first when several stackable discounts apply.
+  priority    Int       @default(0)
+
+  usageLimit        Int? // total redemptions across all customers
+  usageLimitPerUser Int?
+  usageCount        Int  @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  codes      PromoCode[]
+  orderLines OrderDiscount[]
+
+  @@index([isActive, startsAt, endsAt])
+}
+
+model PromoCode {
+  id                 String    @id @default(cuid())
+  discountId         String
+  /// Stored UPPERCASE and compared uppercase. Customers type in any case.
+  code               String    @unique
+  isActive           Boolean   @default(true)
+  usageLimit         Int?
+  usageCount         Int       @default(0)
+  /// Single-customer code, e.g. a service-recovery gesture.
+  restrictedToUserId String?
+  expiresAt          DateTime?
+  /// Set when this code came from a bulk generation run.
+  batchId            String?
+  createdAt          DateTime  @default(now())
+
+  discount Discount @relation(fields: [discountId], references: [id], onDelete: Cascade)
+  /// cart.prisma (WO-8.5) — the abandoned-cart this code was minted for.
+  carts    Cart[]
+
+  @@index([discountId])
+  @@index([batchId])
+}
+
+/// Which discounts an order actually received, so it can explain itself.
+/// Snapshot rule (House Rule 7): name/type/amount are copied, never joined —
+/// the Discount may be edited or deleted after the order that used it.
+model OrderDiscount {
+  id          String   @id @default(cuid())
+  orderId     String
+  discountId  String?
+  promoCodeId String?
+  name        String
+  type        String
+  /// Paisa this discount removed from the order — orderDiscount plus every
+  /// line's discountUnit*quantity it produced, so an order can be audited
+  /// against the sum of its own OrderDiscount rows.
+  amount      Int
+  createdAt   DateTime @default(now())
+
+  order    Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  discount Discount? @relation(fields: [discountId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+}

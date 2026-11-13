@@ -1,0 +1,57 @@
+// The `pricing` module — 146-wholesale-tiered-pricing.md
+// (b2b-wholesale-multientity/146-wholesale-tiered-pricing.md). Resolves
+// "what does THIS buyer pay for THIS variant in THIS context," replacing
+// the inline `variant.priceOverride ?? product.basePrice` fallback with a
+// chain: an assigned PriceList's own quantity-break entry, falling through
+// to that same existing expression unchanged. No `organizationId` column,
+// deviating from this doc's own sketch — `Category`/`Product` carry none
+// either, and `receivables.prisma`'s own header note already states why:
+// this codebase is one Organization per deployment, so a catalog/CRM-
+// adjacent config table (not a money-posting ledger line) needs no
+// per-row tenant column. `PriceListAssignment.tagId` is a real FK to
+// `Tag`, not the doc's own loose `customerTag` string, so a rename of a
+// tag can never silently strand an assignment string-matching nothing.
+
+model PriceList {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entries     PriceListEntry[]
+  assignments PriceListAssignment[]
+}
+
+/// A quantity break OR a flat override — never both meaninglessly: a row
+/// with minQuantity=1 IS the flat override case, so this is one shape, not
+/// two competing mechanisms.
+model PriceListEntry {
+  id             String @id @default(cuid())
+  priceListId    String
+  variantId      String
+  minQuantity    Int    @default(1)
+  unitPriceMinor Int
+
+  priceList PriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
+
+  @@unique([priceListId, variantId, minQuantity])
+  @@index([variantId])
+}
+
+/// Which price list applies to which buyer — a customer, or a customer's
+/// tag (a segment/channel). Exactly one active assignment wins per buyer,
+/// resolved customer-specific-first, then by tag; a buyer with neither
+/// falls through to today's existing default (PricingService.resolvePrices()).
+model PriceListAssignment {
+  id          String  @id @default(cuid())
+  priceListId String
+  customerId  String? // Contact.id — same join CustomerCreditTerm.customerId already uses
+  tagId       String? // Tag.id
+
+  priceList PriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([tagId])
+}

@@ -1,4 +1,4 @@
-use crate::db::AppState;
+﻿use crate::db::AppState;
 use crate::services::messaging;
 use axum::{
     extract::{Path, Query, State},
@@ -22,7 +22,7 @@ pub struct TicketQueryParams {
     pub search: Option<String>,
 }
 
-fn format_ticket_row(row: &sqlx::sqlite::SqliteRow) -> Value {
+fn format_ticket_row(row: &sqlx::postgres::PgRow) -> Value {
     // Option-typed reads: an absent or undecodable column reports null instead
     // of an empty string the UI would render as a real value.
     let id: Option<String> = row.try_get("id").ok().flatten();
@@ -100,7 +100,7 @@ fn format_ticket_row(row: &sqlx::sqlite::SqliteRow) -> Value {
 
 /// Ok(None) means "no such ticket"; Err means the read itself failed, so the
 /// caller can tell a missing ticket apart from a broken database.
-async fn fetch_full_ticket_by_id(db: &sqlx::SqlitePool, id: &str) -> Result<Option<Value>, sqlx::Error> {
+async fn fetch_full_ticket_by_id(db: &sqlx::PgPool, id: &str) -> Result<Option<Value>, sqlx::Error> {
     let sql = r#"
         SELECT
             t.id, t.ticket_number, t.title, t.description, t.ticket_type,
@@ -1396,7 +1396,7 @@ pub struct LinkedIssuesQuery {
     pub ticket_id: Option<String>,
 }
 
-fn format_linked_issue_row(row: &sqlx::sqlite::SqliteRow) -> Value {
+fn format_linked_issue_row(row: &sqlx::postgres::PgRow) -> Value {
     // Option-typed reads: an unreadable column reports null instead of an empty
     // string or a defaulted "synced" that the UI would show as a real state.
     let id: Option<String> = row.try_get("id").ok().flatten();
@@ -1578,7 +1578,7 @@ pub struct SlackSyncPayload {
 
 /// Reads the stored slack row. Ok(None) means no slack config row exists at all;
 /// Err means the read itself failed.
-async fn slack_config_row(db: &sqlx::SqlitePool) -> Result<Option<(Value, Value)>, sqlx::Error> {
+async fn slack_config_row(db: &sqlx::PgPool) -> Result<Option<(Value, Value)>, sqlx::Error> {
     let row = sqlx::query("SELECT credentials, config FROM issue_tracker_configs WHERE provider = 'slack'")
         .fetch_optional(db)
         .await?;

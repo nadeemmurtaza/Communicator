@@ -1,0 +1,175 @@
+// Bank facility management
+// (finance-accounting/167-bank-facility-management.md).
+// The mirror concern to receivables.prisma: not what the business is owed,
+// but what the business itself owes a bank against a facility limit — a
+// term loan, running finance, an overdraft, or a letter-of-credit/bank-
+// guarantee facility limit. Additive only.
+
+enum BankFacilityType {
+  TERM_LOAN
+  RUNNING_FINANCE
+  OVERDRAFT
+  LETTER_OF_CREDIT
+  BANK_GUARANTEE
+}
+
+enum BankFacilityStatus {
+  ACTIVE
+  CLOSED
+}
+
+/// The lending institution itself — deliberately its own actor, never
+/// `Contact`/`Party`: a bank is not a customer or a supplier
+/// (167-bank-facility-management.md's own "actor with three tables" lens).
+model Bank {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  facilities     BankFacility[]
+  statementLines BankStatementLine[]
+}
+
+/// Ecosystem audit 2026-10-29 (merged from @newaxhq/bankfacilities): one
+/// line from a bank statement, matched (or not yet matched) against a
+/// recorded drawdown/repayment — reconciliation's own ledger, scoped to
+/// the bank it came from (a statement is the bank's, not any one
+/// facility's — a bank with several facilities gets one statement).
+enum BankStatementLineType {
+  CREDIT
+  DEBIT
+}
+
+model BankStatementLine {
+  id                   String                @id @default(cuid())
+  bankId               String
+  date                 DateTime
+  description          String
+  reference            String?
+  amountMinor          Int
+  type                 BankStatementLineType
+  matchedTransactionId String?
+  reconciled           Boolean               @default(false)
+  createdAt            DateTime              @default(now())
+
+  bank Bank @relation(fields: [bankId], references: [id])
+
+  @@index([bankId, date])
+}
+
+/// One facility limit a bank has extended — its own markup rate, tenor and
+/// maturity, independent of any drawdown against it. Utilization is never
+/// stored here: it is computed at read time from `drawdowns`/`repayments`
+/// (BankFacilitiesService.utilizationOf()), the same "never a maintained
+/// counter that could drift" discipline doc 150's bundleAvailableStock()
+/// already applies.
+model BankFacility {
+  id                String             @id @default(cuid())
+  bankId            String
+  /// "hbl-running-finance-01" — stable, human-chosen, never reused.
+  key               String             @unique
+  label             String
+  facilityType      BankFacilityType
+  limitMinor        Int
+  /// Annual markup rate in basis points (2200 = 22.00%), current as of
+  /// today for a floating-rate facility — `isFloatingRate` names it as a
+  /// value an admin re-enters when the bank revises it, never something
+  /// this schema tracks a history of on its own.
+  markupRateBps     Int
+  isFloatingRate    Boolean            @default(false)
+  securityReference String?
+  startDate         DateTime
+  maturityDate      DateTime
+  status            BankFacilityStatus @default(ACTIVE)
+  createdAt         DateTime           @default(now())
+
+  bank       Bank                        @relation(fields: [bankId], references: [id])
+  drawdowns  BankFacilityDrawdown[]
+  repayments BankFacilityRepayment[]
+  accruals   BankFacilityMarkupAccrual[]
+  covenants  BankFacilityCovenant[]
+
+  @@index([status])
+  @@index([maturityDate])
+}
+
+/// Ecosystem audit 2026-10-29 (merged from @newaxhq/bankfacilities): a
+/// loan covenant the bank imposed on this facility — never a stored
+/// pass/fail, always evaluated at read time against the facility's own
+/// live utilization or caller-supplied metrics, same "never a maintained
+/// counter that could drift" discipline the facility's own utilizedMinor
+/// already applies.
+enum BankFacilityCovenantType {
+  MAX_UTILIZATION_BPS
+  MAX_LEVERAGE
+  MIN_DSCR
+}
+
+model BankFacilityCovenant {
+  id              String                   @id @default(cuid())
+  facilityId      String
+  covenantType    BankFacilityCovenantType
+  targetThreshold Float
+  description     String?
+  createdAt       DateTime                 @default(now())
+
+  facility BankFacility @relation(fields: [facilityId], references: [id])
+
+  @@index([facilityId])
+}
+
+/// A REQUEST/RECORD pair like every other money-moving mechanism in this
+/// codebase: below the configured threshold, posts straight through;
+/// above it, needs a second approver (finance.facilities.approve_drawdown)
+/// before `post()` — the identical shape CreditNotesService's own
+/// create()/approve()/issue() already establishes. Refused outright if it
+/// would push utilization past the facility's own limit — surfaced before
+/// an over-limit drawdown is allowed to post, never discovered after.
+model BankFacilityDrawdown {
+  id            String    @id @default(cuid())
+  facilityId    String
+  amountMinor   Int
+  drawdownDate  DateTime
+  note          String?
+  createdById   String
+  approvedById  String?
+  postedAt      DateTime?
+  createdAt     DateTime  @default(now())
+
+  facility BankFacility @relation(fields: [facilityId], references: [id])
+}
+
+/// A repayment against principal, accrued markup, or both — either
+/// component may be zero but not both. Posts through the same
+/// findPostedEntry idempotency key every other posting rule in this
+/// repository already uses.
+model BankFacilityRepayment {
+  id             String   @id @default(cuid())
+  facilityId     String
+  principalMinor Int      @default(0)
+  markupMinor    Int      @default(0)
+  repaymentDate  DateTime
+  note           String?
+  createdById    String
+  createdAt      DateTime @default(now())
+
+  facility BankFacility @relation(fields: [facilityId], references: [id])
+}
+
+/// One row per calendar month the markup-accrual cron posts for a facility
+/// — mirrors AssetDepreciationPosting exactly: a schedule-free periodic
+/// posting log giving findPostedEntry-style idempotency without re-deriving
+/// totals from the general ledger on every read.
+model BankFacilityMarkupAccrual {
+  id          String   @id @default(cuid())
+  facilityId  String
+  periodStart DateTime
+  periodEnd   DateTime
+  amountMinor Int
+  createdAt   DateTime @default(now())
+
+  facility BankFacility @relation(fields: [facilityId], references: [id])
+
+  @@unique([facilityId, periodStart])
+}

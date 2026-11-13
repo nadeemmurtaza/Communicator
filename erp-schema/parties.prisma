@@ -1,0 +1,51 @@
+// Parties: the permanent counterparty profile. One canonical record per
+// business a shop trades with — a supplier today, a retailer/distributor/
+// manufacturer counterparty whenever a real feature needs one — searched and
+// selected rather than re-typed into each transaction. Role-specific tables
+// (Supplier today) hang a 1:1 off Party for fields only that role needs,
+// instead of duplicating name/contact/address per role.
+
+enum PartyRoleName {
+  SUPPLIER
+  MANUFACTURER
+  DISTRIBUTOR
+  RETAILER
+}
+
+model Party {
+  id          String  @id @default(cuid())
+  name        String
+  contactName String?
+  phone       String?
+  email       String?
+  address     String?
+  city        String?
+  taxId       String?
+  notes       String?
+  isActive    Boolean @default(true)
+
+  /// Set only once a real external counterparty system is integrated — out
+  /// of scope today (see packages/shared/src/entities/organization.ts). Lets
+  /// a future integration key off this Party without a schema change.
+  externalRef    String?
+  externalSystem String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  roles    PartyRoleAssignment[]
+  supplier Supplier?
+
+  @@index([phone])
+  @@index([taxId])
+}
+
+model PartyRoleAssignment {
+  id      String        @id @default(cuid())
+  partyId String
+  role    PartyRoleName
+
+  party Party @relation(fields: [partyId], references: [id], onDelete: Cascade)
+
+  @@unique([partyId, role])
+}

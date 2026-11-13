@@ -44,7 +44,7 @@ function renderTopicIcon(topicName: string) {
     case 'Account & VIP Access':
       return <ShieldCheck className="h-5 w-5 text-emerald-600 shrink-0" />
     default:
-      return <Folder className="h-5 w-5 text-slate-600 shrink-0" />
+      return <Folder className="h-5 w-5 text-[var(--color-ink-muted)] shrink-0" />
   }
 }
 
@@ -248,7 +248,7 @@ export function KnowledgeBase() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[var(--color-border)] pb-5">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+            <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-purple-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
               <BookOpen className="h-5 w-5" />
             </div>
             <div>
@@ -272,7 +272,7 @@ export function KnowledgeBase() {
               setShowNoteForm(true)
               setShowUrlModal(false)
             }}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-surface)] border border-slate-300 px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-2xs transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-surface)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink)] hover:bg-[var(--color-page)] shadow-2xs transition-colors cursor-pointer"
           >
             <Plus className="h-4 w-4" /> <span>Add Source Note</span>
           </button>
@@ -282,7 +282,7 @@ export function KnowledgeBase() {
               setShowUrlModal(true)
               setShowNoteForm(false)
             }}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 shadow-2xs transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-blue-50 border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 shadow-2xs transition-colors cursor-pointer"
           >
             <LinkIcon className="h-4 w-4" /> <span>Ingest URL</span>
           </button>
@@ -297,7 +297,7 @@ export function KnowledgeBase() {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadingDoc}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent-soft)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-semibold text-[var(--color-accent)] hover:bg-indigo-100 shadow-2xs transition-colors disabled:opacity-50 cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-accent-soft)] border border-[var(--color-border)] px-3 py-1.5 text-xs font-semibold text-[var(--color-accent)] hover:bg-indigo-100 shadow-2xs transition-colors disabled:opacity-50 cursor-pointer"
           >
             <span className="flex items-center gap-1.5"><FileText className="h-4 w-4" /> <span>{uploadingDoc ? 'Parsing...' : 'Upload PDF/Doc'}</span></span>
           </button>
@@ -305,7 +305,7 @@ export function KnowledgeBase() {
           <button
             onClick={handleScanGaps}
             disabled={scanningGaps}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-accent)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-accent)] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--color-accent-hover)] shadow-none transition-colors disabled:opacity-50 cursor-pointer"
           >
             <span className="flex items-center gap-1.5"><Sparkles className="h-4 w-4" /> <span>{scanningGaps ? 'Scanning...' : 'Scan Gaps'}</span></span>
           </button>
@@ -314,13 +314,13 @@ export function KnowledgeBase() {
 
       {/* Notifications */}
       {error && (
-        <div className="flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 shadow-xs">
+        <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 shadow-none">
           <span>{error}</span>
           <button onClick={() => setError(null)} className="cursor-pointer text-rose-600 hover:text-rose-800"><X className="h-4 w-4" /></button>
         </div>
       )}
       {success && (
-        <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-800 shadow-xs">
+        <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-800 shadow-none">
           <span>{success}</span>
           <button onClick={() => setSuccess(null)} className="cursor-pointer text-emerald-600 hover:text-emerald-800"><X className="h-4 w-4" /></button>
         </div>
@@ -385,11 +385,11 @@ export function KnowledgeBase() {
             className={`pb-3 font-bold transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
               activeTab === 'library'
                 ? 'border-purple-600 text-purple-700'
-                : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
+                : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
             }`}
           >
             <span className="flex items-center gap-1.5"><Folder className="h-4 w-4" /> <span>Content Library by Topic</span></span>
-            <span className="rounded-full bg-slate-100 text-[var(--color-ink)] px-2 py-0.5 text-[10px] font-semibold">
+            <span className="rounded-full bg-[var(--color-accent-muted)] text-[var(--color-ink)] px-2 py-0.5 text-[10px] font-semibold">
               {totalSourcesCount}
             </span>
           </button>
@@ -399,7 +399,7 @@ export function KnowledgeBase() {
             className={`pb-3 font-bold transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
               activeTab === 'performance'
                 ? 'border-purple-600 text-purple-700'
-                : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
+                : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
             }`}
           >
             <span className="flex items-center gap-1.5"><BarChart3 className="h-4 w-4" /> <span>Cross-Touchpoint Reporting</span></span>
@@ -410,7 +410,7 @@ export function KnowledgeBase() {
             className={`pb-3 font-bold transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
               activeTab === 'recommendations'
                 ? 'border-purple-600 text-purple-700'
-                : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
+                : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
             }`}
           >
             <span className="flex items-center gap-1.5"><Target className="h-4 w-4" /> <span>Content &amp; Action Gaps</span></span>
@@ -426,7 +426,7 @@ export function KnowledgeBase() {
             className={`pb-3 font-bold transition-all border-b-2 cursor-pointer flex items-center gap-2 ${
               activeTab === 'gaps'
                 ? 'border-purple-600 text-purple-700'
-                : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
+                : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
             }`}
           >
             <span className="flex items-center gap-1.5"><Sparkles className="h-4 w-4" /> <span>FAQ Gaps ({gaps.length})</span></span>
@@ -448,11 +448,11 @@ export function KnowledgeBase() {
                 placeholder="Search articles, policies, or topics..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full text-xs border border-slate-300 rounded-lg px-3 py-1.5 focus:outline-hidden focus:border-purple-500"
+                className="w-full text-xs border border-[var(--color-border)] rounded-[var(--radius-md)] px-3 py-1.5 focus:outline-hidden focus:border-purple-500"
               />
               <button
                 type="submit"
-                className="bg-[var(--color-accent)] text-white text-xs px-3 py-1.5 rounded-lg font-semibold hover:bg-[var(--color-accent-hover)] transition-colors cursor-pointer"
+                className="bg-[var(--color-accent)] text-white text-xs px-3 py-1.5 rounded-[var(--radius-md)] font-semibold hover:bg-[var(--color-accent-hover)] transition-colors cursor-pointer"
               >
                 Search
               </button>
@@ -465,7 +465,7 @@ export function KnowledgeBase() {
                 <select
                   value={selectedTouchpoint}
                   onChange={(e) => setSelectedTouchpoint(e.target.value)}
-                  className="text-xs border border-slate-300 rounded-lg px-2 py-1 bg-[var(--color-surface)] focus:outline-hidden cursor-pointer"
+                  className="text-xs border border-[var(--color-border)] rounded-[var(--radius-md)] px-2 py-1 bg-[var(--color-surface)] focus:outline-hidden cursor-pointer"
                 >
                   <option value="all">All Touchpoints</option>
                   <option value="agent">Fin Agent</option>
@@ -484,7 +484,7 @@ export function KnowledgeBase() {
                     className={`px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize transition-all cursor-pointer whitespace-nowrap ${
                       selectedTopic === top
                         ? 'bg-purple-600 text-white shadow-2xs'
-                        : 'bg-slate-100 text-[var(--color-ink-muted)] hover:bg-slate-200'
+                        : 'bg-[var(--color-accent-muted)] text-[var(--color-ink-muted)] hover:bg-[var(--color-border)]'
                     }`}
                   >
                     {top === 'all' ? 'All Topics' : top}
@@ -543,7 +543,7 @@ export function KnowledgeBase() {
                     {group.sources.map((source) => (
                       <div
                         key={source.id}
-                        className="p-3 hover:bg-[var(--color-page)]/70 rounded-xl transition-colors flex flex-col md:flex-row md:items-start justify-between gap-3"
+                        className="p-3 hover:bg-[var(--color-page)]/70 rounded-[var(--radius-lg)] transition-colors flex flex-col md:flex-row md:items-start justify-between gap-3"
                       >
                         <div className="space-y-1.5 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
@@ -553,7 +553,7 @@ export function KnowledgeBase() {
                             >
                               {source.title}
                             </h4>
-                            <span className="text-[10px] uppercase font-semibold text-[var(--color-ink-muted)] bg-slate-100 px-1.5 py-0.2 rounded border border-[var(--color-border)]">
+                            <span className="text-[10px] uppercase font-semibold text-[var(--color-ink-muted)] bg-[var(--color-accent-muted)] px-1.5 py-0.2 rounded border border-[var(--color-border)]">
                               {source.sourceType}
                             </span>
                           </div>
@@ -628,7 +628,7 @@ export function KnowledgeBase() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
               {/* Fin Agent */}
-              <div className="border border-purple-200 bg-purple-50/40 rounded-xl p-4 space-y-3">
+              <div className="border border-purple-200 bg-purple-50/40 rounded-[var(--radius-lg)] p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 font-bold text-xs text-purple-900">
                     <Bot className="h-4 w-4 text-indigo-600 inline mr-1" />
@@ -645,7 +645,7 @@ export function KnowledgeBase() {
                   </div>
                   <div className="flex justify-between text-xs text-[var(--color-ink-muted)]">
                     <span>Total Deflections:</span>
-                    <strong className="text-slate-800">{hubOverview?.touchpointBreakdown.agent.deflectionsCount} inquiries</strong>
+                    <strong className="text-[var(--color-ink)]">{hubOverview?.touchpointBreakdown.agent.deflectionsCount} inquiries</strong>
                   </div>
                 </div>
                 <p className="text-[11px] text-purple-700 italic">
@@ -654,7 +654,7 @@ export function KnowledgeBase() {
               </div>
 
               {/* Copilot */}
-              <div className="border border-blue-200 bg-blue-50/40 rounded-xl p-4 space-y-3">
+              <div className="border border-blue-200 bg-blue-50/40 rounded-[var(--radius-lg)] p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 font-bold text-xs text-blue-900">
                     <MessageSquare className="h-4 w-4 text-blue-600" />
@@ -671,7 +671,7 @@ export function KnowledgeBase() {
                   </div>
                   <div className="flex justify-between text-xs text-[var(--color-ink-muted)]">
                     <span>Replies Inserted:</span>
-                    <strong className="text-slate-800">{hubOverview?.touchpointBreakdown.copilot.insertionsCount} insertions</strong>
+                    <strong className="text-[var(--color-ink)]">{hubOverview?.touchpointBreakdown.copilot.insertionsCount} insertions</strong>
                   </div>
                 </div>
                 <p className="text-[11px] text-blue-700 italic">
@@ -680,7 +680,7 @@ export function KnowledgeBase() {
               </div>
 
               {/* Help Center */}
-              <div className="border border-emerald-200 bg-emerald-50/40 rounded-xl p-4 space-y-3">
+              <div className="border border-emerald-200 bg-emerald-50/40 rounded-[var(--radius-lg)] p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 font-bold text-xs text-emerald-900">
                     <Globe className="h-4 w-4 text-emerald-600" />
@@ -697,7 +697,7 @@ export function KnowledgeBase() {
                   </div>
                   <div className="flex justify-between text-xs text-[var(--color-ink-muted)]">
                     <span>Self-Serve Deflection:</span>
-                    <strong className="text-slate-800">3,420 views</strong>
+                    <strong className="text-[var(--color-ink)]">3,420 views</strong>
                   </div>
                 </div>
                 <p className="text-[11px] text-emerald-700 italic">
@@ -786,7 +786,7 @@ export function KnowledgeBase() {
                 key={f.id}
                 type="button"
                 onClick={() => setRecommendationFilter(f.id as any)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                className={`px-3 py-1.5 rounded-[var(--radius-md)] text-xs font-semibold transition-colors cursor-pointer ${
                   recommendationFilter === f.id
                     ? 'bg-amber-600 text-white shadow-2xs'
                     : 'bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-ink-muted)] hover:bg-[var(--color-page)]'
@@ -823,7 +823,7 @@ export function KnowledgeBase() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <span className="bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 rounded-lg text-xs border border-emerald-300 shadow-2xs">
+                      <span className="bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 rounded-[var(--radius-md)] text-xs border border-emerald-300 shadow-2xs">
                         +{rec.impactOnResolution}% Resolution Impact
                       </span>
                     </div>
@@ -834,12 +834,12 @@ export function KnowledgeBase() {
                   </p>
 
                   {/* Suggested Solution & Content Box */}
-                  <div className="bg-amber-50/60 border border-amber-200 rounded-xl p-3 space-y-1.5 text-xs">
+                  <div className="bg-amber-50/60 border border-amber-200 rounded-[var(--radius-lg)] p-3 space-y-1.5 text-xs">
                     <span className="font-bold text-amber-900 text-[11px] flex items-center gap-1.5">
                       <Lightbulb className="h-3.5 w-3.5 text-amber-600 shrink-0" />
                       <span>Recommended Action: {rec.suggestedAction}</span>
                     </span>
-                    <p className="text-slate-800 italic bg-[var(--color-surface)]/80 p-2 rounded-lg border border-amber-200/50">
+                    <p className="text-[var(--color-ink)] italic bg-[var(--color-surface)]/80 p-2 rounded-[var(--radius-md)] border border-amber-200/50">
                       "{rec.suggestedContent}"
                     </p>
                   </div>
@@ -849,7 +849,7 @@ export function KnowledgeBase() {
                     <button
                       type="button"
                       onClick={() => handleDismissRecommendation(rec.id)}
-                      className="text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] px-3 py-1.5 rounded-lg hover:bg-slate-100 cursor-pointer font-semibold transition-colors"
+                      className="text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] px-3 py-1.5 rounded-[var(--radius-md)] hover:bg-[var(--color-accent-muted)] cursor-pointer font-semibold transition-colors"
                     >
                       Dismiss
                     </button>
@@ -857,7 +857,7 @@ export function KnowledgeBase() {
                       type="button"
                       disabled={processingRecId === rec.id}
                       onClick={() => handleApplyRecommendation(rec)}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-[var(--radius-lg)] shadow-none transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                     >
                       <Rocket className="h-3.5 w-3.5" />
                       <span>{processingRecId === rec.id ? 'Publishing…' : 'Apply with 1-Click'}</span>
@@ -884,7 +884,7 @@ export function KnowledgeBase() {
             <button
               onClick={handleScanGaps}
               disabled={scanningGaps}
-              className="bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+              className="bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white text-xs font-semibold px-3.5 py-1.5 rounded-[var(--radius-md)] transition-colors cursor-pointer disabled:opacity-50"
             >
               {scanningGaps ? 'Scanning...' : 'Scan Now'}
             </button>
@@ -899,14 +899,14 @@ export function KnowledgeBase() {
                     Asked {g.frequency}x
                   </span>
                 </div>
-                <p className="text-xs text-[var(--color-ink-muted)] bg-[var(--color-page)] p-2.5 rounded-xl border border-[var(--color-border)]">
+                <p className="text-xs text-[var(--color-ink-muted)] bg-[var(--color-page)] p-2.5 rounded-[var(--radius-lg)] border border-[var(--color-border)]">
                   {g.suggestedAnswer}
                 </p>
                 <div className="flex justify-end pt-1">
                   <button
                     type="button"
                     onClick={() => handleApproveGap(g)}
-                    className="bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs px-3 py-1.5 rounded-lg shadow-2xs cursor-pointer transition-colors"
+                    className="bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs px-3 py-1.5 rounded-[var(--radius-md)] shadow-2xs cursor-pointer transition-colors"
                   >
                     + Add to Knowledge Hub
                   </button>
@@ -938,7 +938,7 @@ export function KnowledgeBase() {
               </button>
             </div>
 
-            <div className="text-xs text-[var(--color-ink)] leading-relaxed max-h-72 overflow-y-auto whitespace-pre-wrap bg-[var(--color-page)] p-4 rounded-xl border border-[var(--color-border)]/70 font-normal">
+            <div className="text-xs text-[var(--color-ink)] leading-relaxed max-h-72 overflow-y-auto whitespace-pre-wrap bg-[var(--color-page)] p-4 rounded-[var(--radius-lg)] border border-[var(--color-border)]/70 font-normal">
               {selectedEntryPreview.content}
             </div>
 
@@ -946,7 +946,7 @@ export function KnowledgeBase() {
               <span className="text-emerald-700 font-bold"><Zap className="h-3.5 w-3.5 inline mr-1 text-amber-500" />{selectedEntryPreview.resolutionRate}% Resolution Efficiency</span>
               <button
                 onClick={() => setSelectedEntryPreview(null)}
-                className="px-4 py-1.5 bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white rounded-lg font-semibold cursor-pointer"
+                className="px-4 py-1.5 bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white rounded-[var(--radius-md)] font-semibold cursor-pointer"
               >
                 Close
               </button>
@@ -974,7 +974,7 @@ export function KnowledgeBase() {
                   placeholder="e.g. Expedited Shipping Rules"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-hidden focus:border-purple-500"
+                  className="w-full border border-[var(--color-border)] rounded-[var(--radius-md)] px-2.5 py-1.5 focus:outline-hidden focus:border-purple-500"
                   required
                 />
               </div>
@@ -984,7 +984,7 @@ export function KnowledgeBase() {
                 <select
                   value={noteTopic}
                   onChange={(e) => setNoteTopic(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 bg-[var(--color-surface)] focus:outline-hidden focus:border-purple-500"
+                  className="w-full border border-[var(--color-border)] rounded-[var(--radius-md)] px-2.5 py-1.5 bg-[var(--color-surface)] focus:outline-hidden focus:border-purple-500"
                 >
                   <option value="Billing & Refunds">Billing &amp; Refunds</option>
                   <option value="Shipping & Delivery">Shipping &amp; Delivery</option>
@@ -1002,7 +1002,7 @@ export function KnowledgeBase() {
                   placeholder="Write policy details, FAQ instructions, or process steps..."
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg p-2.5 focus:outline-hidden focus:border-purple-500"
+                  className="w-full border border-[var(--color-border)] rounded-[var(--radius-md)] p-2.5 focus:outline-hidden focus:border-purple-500"
                   required
                 />
               </div>
@@ -1011,14 +1011,14 @@ export function KnowledgeBase() {
                 <button
                   type="button"
                   onClick={() => setShowNoteForm(false)}
-                  className="px-3 py-1.5 text-xs text-[var(--color-ink-muted)] hover:text-slate-800"
+                  className="px-3 py-1.5 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={savingNote}
-                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-4 py-1.5 rounded-lg shadow-xs cursor-pointer transition-colors"
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs px-4 py-1.5 rounded-[var(--radius-md)] shadow-none cursor-pointer transition-colors"
                 >
                   {savingNote ? 'Publishing…' : 'Publish to Hub'}
                 </button>
@@ -1047,7 +1047,7 @@ export function KnowledgeBase() {
                   placeholder="https://help.example.com/shipping-policy"
                   value={urlInput}
                   onChange={(e) => setUrlInput(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-hidden focus:border-blue-500"
+                  className="w-full border border-[var(--color-border)] rounded-[var(--radius-md)] px-2.5 py-1.5 focus:outline-hidden focus:border-blue-500"
                   required
                 />
               </div>
@@ -1056,14 +1056,14 @@ export function KnowledgeBase() {
                 <button
                   type="button"
                   onClick={() => setShowUrlModal(false)}
-                  className="px-3 py-1.5 text-xs text-[var(--color-ink-muted)] hover:text-slate-800"
+                  className="px-3 py-1.5 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={ingestingUrl}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-1.5 rounded-lg shadow-xs cursor-pointer transition-colors"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-1.5 rounded-[var(--radius-md)] shadow-none cursor-pointer transition-colors"
                 >
                   {ingestingUrl ? 'Crawling…' : 'Crawl & Ingest'}
                 </button>

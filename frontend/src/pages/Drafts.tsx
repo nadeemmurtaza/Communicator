@@ -40,7 +40,7 @@ export function Drafts() {
       </div>
 
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-[var(--radius-sm)] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
       )}
@@ -48,13 +48,13 @@ export function Drafts() {
       {drafts === null ? (
         <p className="text-sm text-[var(--color-ink-muted)]">Loading…</p>
       ) : drafts.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-[var(--color-surface)] px-4 py-10 text-center text-sm text-[var(--color-ink-muted)]">
+        <div className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-10 text-center text-sm text-[var(--color-ink-muted)]">
           Nothing pending. New drafts land here as leads reply.
         </div>
       ) : (
         <ul className="space-y-3">
           {drafts.map((d) => (
-            <li key={d.id} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+            <li key={d.id} className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <Link
@@ -63,7 +63,7 @@ export function Drafts() {
                   >
                     Conversation {d.conversationId.slice(0, 8)}
                   </Link>
-                  <p className="mt-1 whitespace-pre-wrap text-sm text-slate-800">{d.body}</p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--color-ink)]">{d.body}</p>
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--color-ink-faint)]">
                     <span>{Math.round(d.confidence * 100)}% confidence</span>
                     <span>·</span>
@@ -80,14 +80,14 @@ export function Drafts() {
                   <button
                     disabled={busyId === d.id}
                     onClick={() => act(d.id, 'reject')}
-                    className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-50"
+                    className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-1.5 text-sm font-medium text-[var(--color-ink)] hover:bg-[var(--color-page)] disabled:opacity-50"
                   >
                     Reject
                   </button>
                   <button
                     disabled={busyId === d.id}
                     onClick={() => act(d.id, 'approve')}
-                    className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
+                    className="rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
                   >
                     Approve &amp; send
                   </button>

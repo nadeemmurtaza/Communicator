@@ -1,0 +1,132 @@
+// Finance: operational expenses and per-order economics (RETAIL-ERP.md
+// Tranche 6, WO-23.1 — "build 10-admin-dashboard.md §B as written, now
+// posting to the GL"). ExpenseCategory + Expense are WO-B.1; OrderEconomics
+// below is WO-B.3.
+//
+// Deliberately NOT double-entry. If you find yourself wanting a JournalEntry
+// model, stop - see docs/implementation/finance-accounting/04-finance.md. The GL posting this
+// tranche adds (posting-rules.subscriber.ts's onExpenseRecorded) is a
+// DERIVED journal entry keyed off (source, sourceRef) — Expense itself never
+// gains a status column for it, matching how OrderPlaced/PaymentSucceeded
+// already work. OrderEconomics is a derived REPORTING snapshot, not a GL
+// posting at all — order revenue/COGS already post to the ledger at
+// OrderPlaced time (posting-rules.subscriber.ts's onOrderPlaced); this table
+// exists purely so unit-economics reports don't recompute across the whole
+// order tree on every read.
+// Money is integer paisa (Rule 5). Every report groups by incurredAt, never
+// paidAt: October's rent paid in November is an October expense.
+
+model ExpenseCategory {
+  id       String  @id @default(cuid())
+  key      String  @unique // "rent", "salaries", "marketing", "packaging"
+  /// Staff-only label. NOT a translation row - Rule 6's second paragraph, and D10.
+  name     String
+  /// Direct costs sit above the gross-profit line; operating below it.
+  isDirect Boolean @default(false)
+  isActive Boolean @default(true)
+  order    Int     @default(0)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  expenses  Expense[]
+
+  @@index([isActive, order])
+}
+
+enum ExpenseRecurrence {
+  NONE
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+model Expense {
+  id          String @id @default(cuid())
+  categoryId  String
+  /// Paisa. Always positive - an expense is not a negative income.
+  amount      Int
+  currency    String @default("PKR")
+  description String
+
+  /// The date the cost BELONGS TO, which is not always when it was entered.
+  incurredAt DateTime
+  /// When money actually left. Null = unpaid. Cash flow is the only consumer.
+  paidAt     DateTime?
+
+  payee      String?
+  supplierId String?
+  reference  String?
+  receiptUrl String? // via the existing StorageDriver (WO-B.2)
+
+  recurrence      ExpenseRecurrence @default(NONE)
+  recurringFromId String?
+  /// Period key of a generated instance, e.g. "2026-08". With recurringFromId
+  /// this is what makes the cron idempotent at the DATABASE level (WO-B.2).
+  recurringPeriod String?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  /// WO-23.3 (RETAIL-ERP.md R13/R8, ADR-021). "Expenses are recorded at
+  /// whichever tier pays them" — defaults to BRAND, same reasoning as
+  /// PurchaseOrder.scopeLevel. No locationId: an expense names a tier, not
+  /// a place stock sits.
+  scopeLevel   ScopeLevel @default(BRAND)
+  /// This node's own identifier (AppConfigService.nodeId) when recorded —
+  /// a bare string, never a Node row FK. Null for an expense recorded
+  /// before this column existed.
+  originNodeId String?
+
+  category      ExpenseCategory @relation(fields: [categoryId], references: [id])
+  supplier      Supplier?       @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  createdBy     User?           @relation("ExpenseCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  recurringFrom Expense?        @relation("ExpenseRecurrence", fields: [recurringFromId], references: [id], onDelete: SetNull)
+  generated     Expense[]       @relation("ExpenseRecurrence")
+
+  @@unique([recurringFromId, recurringPeriod])
+  @@index([incurredAt])
+  @@index([categoryId, incurredAt])
+  @@index([paidAt])
+  @@index([supplierId])
+  @@index([scopeLevel])
+}
+
+/// One row per order, written when it reaches DELIVERED and recomputed if it
+/// is later RETURNED (WO-B.3). `orderId` is the primary key on purpose — this
+/// is a snapshot keyed 1:1 on the order it describes, never a log of
+/// recomputations; each write overwrites the same row, matching the
+/// idempotent-upsert idiom every other domain-event listener here already
+/// uses.
+model OrderEconomics {
+  orderId String @id
+
+  /// itemsSubtotal + stitchingSubtotal - itemDiscountTotal - orderDiscount.
+  /// Zeroed on RETURNED — see shippingCostEstimated's own note on why revenue
+  /// and cogs, and only those two, zero on a return.
+  revenue               Int
+  shippingIncome        Int
+  codFeeIncome          Int
+  /// Σ OrderItem.unitCost × quantity. Zeroed on RETURNED, same as revenue —
+  /// reversing one without the other drives margin negative on every return.
+  cogs                  Int
+  /// Σ Shipment.cost across the order's shipments (nullable per shipment).
+  shippingCost          Int
+  /// True when shippingCost fell back to 0 for lack of real Shipment.cost
+  /// data (no shipment row yet, or one exists with cost still null) — a
+  /// figure this table lied about would be worse than one it flags.
+  shippingCostEstimated Boolean  @default(false)
+  /// round(grandTotal × FinanceGatewayFeeBps[provider] / 10000). 0 for a COD
+  /// order under the default settings — not a special case in code, just
+  /// what the default bps table says for "cod".
+  gatewayFee            Int
+  /// Flat per-order cost from the FinancePackagingCostPerOrder setting.
+  packagingCost         Int
+  /// revenue + shippingIncome + codFeeIncome - cogs - shippingCost -
+  /// gatewayFee - packagingCost.
+  contribution          Int
+  computedAt            DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}

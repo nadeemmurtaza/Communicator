@@ -37,7 +37,7 @@ export function CannedResponsesModal(props: CannedResponsesModalProps) {
           <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] shadow-2xl max-w-3xl w-full p-6 space-y-5 animate-in fade-in zoom-in-95 max-h-[85vh] overflow-y-auto">
             <div className="flex items-start justify-between border-b border-[var(--color-border)] pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm">
+                <div className="w-8 h-8 rounded-[var(--radius-md)] bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm">
                   <Zap className="h-4 w-4 text-blue-700" />
                 </div>
                 <div>
@@ -61,7 +61,7 @@ export function CannedResponsesModal(props: CannedResponsesModalProps) {
             </div>
 
             {/* Create New Canned Snippet Form */}
-            <div className="bg-blue-50/50 border border-blue-200/70 rounded-xl p-4 space-y-3">
+            <div className="bg-blue-50/50 border border-blue-200/70 rounded-[var(--radius-lg)] p-4 space-y-3">
               <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
                 <Plus className="h-4 w-4" />
                 <span>Create New Canned Snippet</span>
@@ -93,7 +93,7 @@ export function CannedResponsesModal(props: CannedResponsesModalProps) {
                   <select
                     value={newCannedCategory}
                     onChange={(e) => setNewCannedCategory(e.target.value)}
-                    className="w-full text-xs border border-[var(--color-border)] rounded-lg px-2.5 py-1.5 bg-[var(--color-surface)] focus:outline-hidden focus:border-blue-500"
+                    className="w-full text-xs border border-[var(--color-border)] rounded-[var(--radius-md)] px-2.5 py-1.5 bg-[var(--color-surface)] focus:outline-hidden focus:border-blue-500"
                   >
                     <option value="greetings">Greetings</option>
                     <option value="sales">Sales</option>
@@ -128,7 +128,7 @@ export function CannedResponsesModal(props: CannedResponsesModalProps) {
                   placeholder="Hi {{customer.first_name}}! Thanks for reaching out..."
                   value={newCannedContent}
                   onChange={(e) => setNewCannedContent(e.target.value)}
-                  className="w-full text-xs border border-[var(--color-border)] rounded-lg px-3 py-2 bg-[var(--color-surface)] focus:outline-hidden focus:border-blue-500 font-normal"
+                  className="w-full text-xs border border-[var(--color-border)] rounded-[var(--radius-md)] px-3 py-2 bg-[var(--color-surface)] focus:outline-hidden focus:border-blue-500 font-normal"
                 />
               </div>
 
@@ -137,7 +137,7 @@ export function CannedResponsesModal(props: CannedResponsesModalProps) {
                   type="button"
                   onClick={handleCreateCanned}
                   disabled={isSavingCanned || !newCannedCode.trim() || !newCannedContent.trim()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-1.5 rounded-lg shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-1.5 rounded-[var(--radius-md)] shadow-none transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {isSavingCanned ? 'Saving…' : 'Save Canned Snippet'}
                 </button>
@@ -151,12 +151,12 @@ export function CannedResponsesModal(props: CannedResponsesModalProps) {
                 <span className="text-[11px] font-normal text-[var(--color-ink-muted)]">{cannedResponses.length} snippets</span>
               </h4>
 
-              <div className="border border-[var(--color-border)] rounded-xl overflow-hidden divide-y divide-[var(--color-border)] max-h-72 overflow-y-auto">
+              <div className="border border-[var(--color-border)] rounded-[var(--radius-lg)] overflow-hidden divide-y divide-[var(--color-border)] max-h-72 overflow-y-auto">
                 {cannedResponses.map((c: any) => (
                   <div key={c.id || c.shortCode || c.short_code} className="p-3 hover:bg-[var(--color-page)]/70 transition-colors flex items-start justify-between gap-3">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-black text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded-md">
+                        <span className="font-mono text-xs font-black text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded-[var(--radius-sm)]">
                           /{c.shortCode || c.short_code}
                         </span>
                         <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-[var(--color-accent-soft)] text-[var(--color-ink-muted)] border border-[var(--color-border)]">
@@ -189,7 +189,7 @@ export function CannedResponsesModal(props: CannedResponsesModalProps) {
               <button
                 type="button"
                 onClick={() => setShowCannedModal(false)}
-                className="px-4 py-1.5 text-xs bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white rounded-lg font-semibold shadow-xs transition-colors cursor-pointer"
+                className="px-4 py-1.5 text-xs bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white rounded-[var(--radius-md)] font-semibold shadow-none transition-colors cursor-pointer"
               >
                 Close
               </button>

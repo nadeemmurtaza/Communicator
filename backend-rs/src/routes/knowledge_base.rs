@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+﻿#![allow(dead_code)]
 
 use crate::db::AppState;
 use crate::routes::auth::Tenant;
@@ -32,15 +32,15 @@ fn db_err(e: sqlx::Error) -> Response {
 
 /// DB `Err` is propagated, not folded into "table missing": a transient
 /// database failure must never be reported as a schema problem.
-async fn table_exists(db: &sqlx::SqlitePool, table: &str) -> Result<bool, sqlx::Error> {
-    sqlx::query_scalar::<_, i64>("SELECT count(*) FROM sqlite_master WHERE type='table' AND name=?")
+async fn table_exists(db: &sqlx::PgPool, table: &str) -> Result<bool, sqlx::Error> {
+    sqlx::query_scalar::<_, i64>("SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name=$1")
         .bind(table)
         .fetch_one(db)
         .await
         .map(|c| c > 0)
 }
 
-async fn require_table(db: &sqlx::SqlitePool, table: &str) -> Result<(), Response> {
+async fn require_table(db: &sqlx::PgPool, table: &str) -> Result<(), Response> {
     match table_exists(db, table).await {
         Ok(true) => Ok(()),
         Ok(false) => Err(err(
@@ -61,7 +61,7 @@ async fn require_table(db: &sqlx::SqlitePool, table: &str) -> Result<(), Respons
 /// tenancy migration carry NULL and belong to no verified tenant, so they are
 /// counted for nobody rather than guessed into somebody's dashboard.
 async fn count_by_status(
-    db: &sqlx::SqlitePool,
+    db: &sqlx::PgPool,
     table: &str,
     status: &str,
     tenant_key: &str,
@@ -133,7 +133,7 @@ fn serialize_entry(e: &KbRow) -> Value {
 }
 
 async fn fetch_entry(
-    db: &sqlx::SqlitePool,
+    db: &sqlx::PgPool,
     id: &str,
     tenant_key: &str,
 ) -> Result<Option<KbRow>, sqlx::Error> {
@@ -147,7 +147,7 @@ async fn fetch_entry(
 }
 
 async fn insert_entry(
-    db: &sqlx::SqlitePool,
+    db: &sqlx::PgPool,
     tenant_key: &str,
     title: &str,
     content: &str,

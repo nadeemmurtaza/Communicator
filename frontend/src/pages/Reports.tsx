@@ -74,12 +74,12 @@ export function Reports() {
 
         <div className="flex items-center gap-3">
           {activeTab !== 'live' && (
-            <div className="inline-flex rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-1 text-xs font-medium text-[var(--color-ink-muted)] shadow-sm">
+            <div className="inline-flex rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-1 text-xs font-medium text-[var(--color-ink-muted)] shadow-sm">
               {(['7d', '30d', '90d'] as PeriodType[]).map((p) => (
                 <button
                   key={p}
                   onClick={() => setPeriod(p)}
-                  className={`px-3 py-1.5 rounded-md transition-colors ${
+                  className={`px-3 py-1.5 rounded-[var(--radius-sm)] transition-colors ${
                     period === p
                       ? 'bg-[var(--color-accent)] text-white font-semibold'
                       : 'hover:text-[var(--color-ink)] hover:bg-[var(--color-page)]'
@@ -94,7 +94,7 @@ export function Reports() {
           <button
             onClick={loadData}
             disabled={loading}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-xs font-medium text-[var(--color-ink)] shadow-sm hover:bg-[var(--color-page)] disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] text-xs font-medium text-[var(--color-ink)] shadow-sm hover:bg-[var(--color-page)] disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 text-[var(--color-ink-muted)] ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -109,7 +109,7 @@ export function Reports() {
           className={`pb-3 -mb-px flex items-center gap-2 border-b-2 transition-colors ${
             activeTab === 'live'
               ? 'border-indigo-600 text-[var(--color-accent)] font-semibold'
-              : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -121,7 +121,7 @@ export function Reports() {
           className={`pb-3 -mb-px border-b-2 transition-colors ${
             activeTab === 'conversations'
               ? 'border-indigo-600 text-[var(--color-accent)] font-semibold'
-              : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
           Conversation Volume &amp; Trends
@@ -132,7 +132,7 @@ export function Reports() {
           className={`pb-3 -mb-px border-b-2 transition-colors ${
             activeTab === 'agents'
               ? 'border-indigo-600 text-[var(--color-accent)] font-semibold'
-              : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
           Agent Leaderboard
@@ -143,7 +143,7 @@ export function Reports() {
           className={`pb-3 -mb-px border-b-2 transition-colors ${
             activeTab === 'teams'
               ? 'border-indigo-600 text-[var(--color-accent)] font-semibold'
-              : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
           Team Performance
@@ -154,7 +154,7 @@ export function Reports() {
           className={`pb-3 -mb-px border-b-2 transition-colors ${
             activeTab === 'csat'
               ? 'border-indigo-600 text-[var(--color-accent)] font-semibold'
-              : 'border-transparent text-[var(--color-ink-muted)] hover:text-slate-800'
+              : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
           }`}
         >
           CSAT Satisfaction
@@ -163,7 +163,7 @@ export function Reports() {
 
       {/* Error state */}
       {error && (
-        <div className="p-4 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm">
+        <div className="p-4 rounded-[var(--radius-md)] bg-rose-50 border border-rose-200 text-rose-700 text-sm">
           {error}
         </div>
       )}
@@ -173,31 +173,31 @@ export function Reports() {
         <div className="space-y-6">
           {/* Key Stat Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-4 shadow-sm">
+            <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4 shadow-sm">
               <span className="text-xs font-medium text-[var(--color-ink-muted)] uppercase tracking-wider">Open Conversations</span>
               <div className="mt-2 text-2xl font-bold text-[var(--color-ink)]">{liveData.liveMetrics.openConversations}</div>
               <span className="text-xs text-[var(--color-ink-faint)] mt-1 inline-block">Across all active channels</span>
             </div>
 
-            <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-4 shadow-sm">
+            <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4 shadow-sm">
               <span className="text-xs font-medium text-amber-600 uppercase tracking-wider">Unassigned Queue</span>
               <div className="mt-2 text-2xl font-bold text-amber-700">{liveData.liveMetrics.unassignedConversations}</div>
               <span className="text-xs text-amber-600/80 mt-1 inline-block">Awaiting agent claim</span>
             </div>
 
-            <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-4 shadow-sm">
+            <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4 shadow-sm">
               <span className="text-xs font-medium text-[var(--color-accent)] uppercase tracking-wider">Pending Reply</span>
               <div className="mt-2 text-2xl font-bold text-[var(--color-accent)]">{liveData.liveMetrics.pendingReplies}</div>
               <span className="text-xs text-[var(--color-accent)]/80 mt-1 inline-block">Customer sent last message</span>
             </div>
 
-            <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-4 shadow-sm">
+            <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4 shadow-sm">
               <span className="text-xs font-medium text-emerald-600 uppercase tracking-wider">Resolved Today</span>
               <div className="mt-2 text-2xl font-bold text-emerald-700">{liveData.liveMetrics.resolvedToday}</div>
               <span className="text-xs text-emerald-600/80 mt-1 inline-block">Closed or converted</span>
             </div>
 
-            <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-4 shadow-sm">
+            <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4 shadow-sm">
               <span className="text-xs font-medium text-[var(--color-ink-muted)] uppercase tracking-wider">Avg Wait in Queue</span>
               <div className="mt-2 text-2xl font-bold text-[var(--color-ink)]">{liveData.liveMetrics.avgWaitTimeFormatted}</div>
               <span className="text-xs text-[var(--color-ink-faint)] mt-1 inline-block">Target SLA &lt; 5m</span>
@@ -207,7 +207,7 @@ export function Reports() {
           {/* Operational Split: Channels & Agent Workloads */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Live Channel Breakdown */}
-            <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-5 shadow-sm space-y-4">
+            <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-5 shadow-sm space-y-4">
               <h2 className="text-base font-semibold text-[var(--color-ink)]">Live Traffic by Channel</h2>
               <div className="space-y-3">
                 {Object.entries(liveData.channelBreakdown).map(([ch, count]) => {
@@ -219,7 +219,7 @@ export function Reports() {
                         <span className="capitalize text-[var(--color-ink)]">{ch}</span>
                         <span className="text-[var(--color-ink-muted)]">{count} chats ({pct}%)</span>
                       </div>
-                      <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                      <div className="w-full h-2 rounded-full bg-[var(--color-accent-muted)] overflow-hidden">
                         <div
                           className="h-full bg-[var(--color-accent-soft)]0 rounded-full transition-all"
                           style={{ width: `${pct}%` }}
@@ -232,13 +232,13 @@ export function Reports() {
             </div>
 
             {/* Agent Workload & Capacity */}
-            <div className="lg:col-span-2 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-5 shadow-sm space-y-4">
+            <div className="lg:col-span-2 bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-5 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-base font-semibold text-[var(--color-ink)]">Agent Concurrency &amp; Capacity</h2>
                   <p className="text-xs text-[var(--color-ink-muted)] mt-0.5">Real-time load balancing and agent active seat utilization</p>
                 </div>
-                <span className="text-xs px-2.5 py-1 bg-slate-100 rounded-md font-medium text-[var(--color-ink)]">
+                <span className="text-xs px-2.5 py-1 bg-[var(--color-accent-muted)] rounded-[var(--radius-sm)] font-medium text-[var(--color-ink)]">
                   {liveData.agentsOnline.length} Teammates Active
                 </span>
               </div>
@@ -248,7 +248,7 @@ export function Reports() {
                   const capPct = Math.min(100, Math.round((agent.activeChats / agent.maxCapacity) * 100))
                   const isBusy = agent.activeChats >= agent.maxCapacity
                   return (
-                    <div key={agent.id} className="p-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-page)]/50 space-y-3">
+                    <div key={agent.id} className="p-4 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-page)]/50 space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
                           <div className="relative">
@@ -284,7 +284,7 @@ export function Reports() {
                             {agent.activeChats} / {agent.maxCapacity} chats
                           </span>
                         </div>
-                        <div className="w-full h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                        <div className="w-full h-1.5 rounded-full bg-[var(--color-border)] overflow-hidden">
                           <div
                             className={`h-full rounded-full ${
                               capPct >= 80 ? 'bg-amber-500' : 'bg-[var(--color-accent)]'
@@ -307,13 +307,13 @@ export function Reports() {
         <div className="space-y-6">
           {/* Summary KPI Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-4 shadow-sm">
+            <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4 shadow-sm">
               <span className="text-xs font-medium text-[var(--color-ink-muted)] uppercase tracking-wider">Total Volume</span>
               <div className="mt-2 text-2xl font-bold text-[var(--color-ink)]">{convData.summary.totalConversations}</div>
               <span className="text-xs text-[var(--color-ink-faint)] mt-1 inline-block">{period} span</span>
             </div>
 
-            <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-4 shadow-sm">
+            <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4 shadow-sm">
               <span className="text-xs font-medium text-[var(--color-ink-muted)] uppercase tracking-wider">Total Messages</span>
               <div className="mt-2 text-2xl font-bold text-[var(--color-ink)]">{convData.summary.totalMessages}</div>
               <span className="text-xs text-[var(--color-ink-faint)] mt-1 inline-block">
@@ -321,25 +321,25 @@ export function Reports() {
               </span>
             </div>
 
-            <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-4 shadow-sm">
+            <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4 shadow-sm">
               <span className="text-xs font-medium text-emerald-600 uppercase tracking-wider">Resolution Rate</span>
               <div className="mt-2 text-2xl font-bold text-emerald-700">{convData.summary.resolutionRatePercent}%</div>
               <span className="text-xs text-emerald-600/80 mt-1 inline-block">Target &gt; 85%</span>
             </div>
 
-            <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-4 shadow-sm">
+            <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4 shadow-sm">
               <span className="text-xs font-medium text-[var(--color-accent)] uppercase tracking-wider">Avg First Response</span>
               <div className="mt-2 text-2xl font-bold text-[var(--color-accent)]">{convData.summary.avgFirstResponseMinutes}m</div>
               <span className="text-xs text-[var(--color-accent)]/80 mt-1 inline-block">First reply speed</span>
             </div>
 
-            <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-4 shadow-sm">
+            <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4 shadow-sm">
               <span className="text-xs font-medium text-[var(--color-ink-muted)] uppercase tracking-wider">Avg Resolution Time</span>
               <div className="mt-2 text-2xl font-bold text-[var(--color-ink)]">{convData.summary.avgResolutionHours}h</div>
               <span className="text-xs text-[var(--color-ink-faint)] mt-1 inline-block">Full resolution</span>
             </div>
 
-            <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-4 shadow-sm">
+            <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-4 shadow-sm">
               <span className="text-xs font-medium text-purple-600 uppercase tracking-wider">Inbound Ratio</span>
               <div className="mt-2 text-2xl font-bold text-purple-700">
                 {Math.round((convData.summary.inboundMessages / (convData.summary.totalMessages || 1)) * 100)}%
@@ -349,7 +349,7 @@ export function Reports() {
           </div>
 
           {/* Time Series Volume Chart */}
-          <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-6 shadow-sm space-y-4">
+          <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-6 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
                 <h2 className="text-base font-semibold text-[var(--color-ink)]">Conversation &amp; Resolution Trajectory</h2>
@@ -386,7 +386,7 @@ export function Reports() {
                           title={`${point.date}: ${point.resolutions} resolved`}
                         />
                       </div>
-                      <span className="text-[10px] text-[var(--color-ink-faint)] truncate w-full text-center group-hover:text-slate-800">
+                      <span className="text-[10px] text-[var(--color-ink-faint)] truncate w-full text-center group-hover:text-[var(--color-ink)]">
                         {point.date}
                       </span>
                     </div>
@@ -397,7 +397,7 @@ export function Reports() {
           </div>
 
           {/* Channel Distribution Table */}
-          <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] overflow-hidden shadow-sm">
+          <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] overflow-hidden shadow-sm">
             <div className="p-4 border-b border-[var(--color-border)] bg-[var(--color-page)]/50">
               <h2 className="text-sm font-semibold text-[var(--color-ink)]">Traffic Distribution by Channel</h2>
             </div>
@@ -424,7 +424,7 @@ export function Reports() {
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-medium w-8">{share}%</span>
-                            <div className="w-24 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                            <div className="w-24 h-1.5 rounded-full bg-[var(--color-accent-muted)] overflow-hidden">
                               <div className="h-full bg-[var(--color-accent)] rounded-full" style={{ width: `${share}%` }} />
                             </div>
                           </div>
@@ -447,7 +447,7 @@ export function Reports() {
       {/* TAB 3: AGENT LEADERBOARD */}
       {activeTab === 'agents' && (
         <div className="space-y-6">
-          <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] overflow-hidden shadow-sm">
+          <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] overflow-hidden shadow-sm">
             <div className="p-5 border-b border-[var(--color-border)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <h2 className="text-base font-semibold text-[var(--color-ink)]">Teammate Performance Leaderboard</h2>
@@ -477,7 +477,7 @@ export function Reports() {
                           <img
                             src={agent.avatar}
                             alt={agent.name}
-                            className="w-9 h-9 rounded-full object-cover border border-[var(--color-border)] shadow-xs"
+                            className="w-9 h-9 rounded-full object-cover border border-[var(--color-border)] shadow-none"
                           />
                           <div>
                             <div className="font-semibold text-[var(--color-ink)] flex items-center gap-2">
@@ -522,31 +522,31 @@ export function Reports() {
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {teamsData.map((team) => (
-              <div key={team.id} className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-5 shadow-sm space-y-4">
+              <div key={team.id} className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-5 shadow-sm space-y-4">
                 <div className="flex items-start justify-between">
                   <div>
                     <h3 className="font-bold text-[var(--color-ink)] text-base">{team.name}</h3>
                     <p className="text-xs text-[var(--color-ink-muted)] mt-0.5 line-clamp-2">{team.description}</p>
                   </div>
-                  <span className="text-xs px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-md font-semibold text-emerald-800">
+                  <span className="text-xs px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-[var(--radius-sm)] font-semibold text-emerald-800">
                     SLA: {team.slaAdherencePercent}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 pt-2 border-t border-[var(--color-border)]">
-                  <div className="bg-[var(--color-page)] rounded-lg p-2.5">
+                  <div className="bg-[var(--color-page)] rounded-[var(--radius-md)] p-2.5">
                     <span className="text-[11px] text-[var(--color-ink-muted)] font-medium uppercase">Total Handled</span>
                     <div className="text-lg font-bold text-[var(--color-ink)] mt-1">{team.conversationsCount} chats</div>
                   </div>
-                  <div className="bg-[var(--color-page)] rounded-lg p-2.5">
+                  <div className="bg-[var(--color-page)] rounded-[var(--radius-md)] p-2.5">
                     <span className="text-[11px] text-[var(--color-ink-muted)] font-medium uppercase">Unassigned Queue</span>
                     <div className="text-lg font-bold text-amber-600 mt-1">{team.unassignedCount} waiting</div>
                   </div>
-                  <div className="bg-[var(--color-page)] rounded-lg p-2.5">
+                  <div className="bg-[var(--color-page)] rounded-[var(--radius-md)] p-2.5">
                     <span className="text-[11px] text-[var(--color-ink-muted)] font-medium uppercase">Resolution Rate</span>
                     <div className="text-lg font-bold text-emerald-700 mt-1">{team.resolutionRate}</div>
                   </div>
-                  <div className="bg-[var(--color-page)] rounded-lg p-2.5">
+                  <div className="bg-[var(--color-page)] rounded-[var(--radius-md)] p-2.5">
                     <span className="text-[11px] text-[var(--color-ink-muted)] font-medium uppercase">Avg First Reply</span>
                     <div className="text-lg font-bold text-[var(--color-accent)] mt-1">{team.avgResponseMinutes}</div>
                   </div>
@@ -562,7 +562,7 @@ export function Reports() {
         <div className="space-y-6">
           {/* Top CSAT Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-5 shadow-sm flex items-center gap-4">
+            <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-5 shadow-sm flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-500 text-3xl font-extrabold">
                 <Star className="h-7 w-7 fill-amber-400 text-amber-500" />
               </div>
@@ -575,7 +575,7 @@ export function Reports() {
               </div>
             </div>
 
-            <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-5 shadow-sm flex items-center gap-4">
+            <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-5 shadow-sm flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 text-2xl font-bold">
                 %
               </div>
@@ -588,7 +588,7 @@ export function Reports() {
               </div>
             </div>
 
-            <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-5 shadow-sm flex items-center gap-4">
+            <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-5 shadow-sm flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-[var(--color-accent-soft)] border border-indigo-100 flex items-center justify-center text-[var(--color-accent)] text-2xl font-bold">
                 <CheckCircle2 className="h-7 w-7 text-indigo-600" />
               </div>
@@ -605,7 +605,7 @@ export function Reports() {
           {/* Rating Breakdown & Customer Feedback Quotes */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Star Distribution */}
-            <div className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-5 shadow-sm space-y-4">
+            <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-5 shadow-sm space-y-4">
               <h2 className="text-base font-semibold text-[var(--color-ink)]">Score Distribution</h2>
               <div className="space-y-2.5">
                 {[5, 4, 3, 2, 1].map((stars) => {
@@ -617,7 +617,7 @@ export function Reports() {
                       <span className="w-12 font-semibold text-[var(--color-ink)] flex items-center gap-1">
                         {stars} <Star className="h-3 w-3 fill-amber-400 text-amber-500 inline ml-0.5" />
                       </span>
-                      <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                      <div className="flex-1 h-2 rounded-full bg-[var(--color-accent-muted)] overflow-hidden">
                         <div
                           className={`h-full rounded-full ${
                             stars >= 4 ? 'bg-emerald-500' : stars === 3 ? 'bg-amber-400' : 'bg-rose-400'
@@ -634,15 +634,15 @@ export function Reports() {
             </div>
 
             {/* Testimonials */}
-            <div className="lg:col-span-2 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] p-5 shadow-sm space-y-4">
+            <div className="lg:col-span-2 bg-[var(--color-surface)] rounded-[var(--radius-lg)] border border-[var(--color-border)] p-5 shadow-sm space-y-4">
               <h2 className="text-base font-semibold text-[var(--color-ink)]">Recent Customer Feedback</h2>
               <div className="space-y-3">
                 {csatData.recentFeedback.map((fb, idx) => (
-                  <div key={idx} className="p-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-page)]/50 space-y-2">
+                  <div key={idx} className="p-4 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-page)]/50 space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-[var(--color-ink)] text-sm">{fb.contactName}</span>
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-200 text-[var(--color-ink)] uppercase">
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-[var(--color-border)] text-[var(--color-ink)] uppercase">
                           {fb.channel}
                         </span>
                         <span className="text-xs text-[var(--color-ink-faint)]">• Agent: {fb.assignedAgent}</span>

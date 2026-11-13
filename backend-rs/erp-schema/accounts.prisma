@@ -1,0 +1,119 @@
+// The `accounts` capability module — 149-b2b-accounts-approvals-sector-packs.md
+// (b2b-wholesale-multientity/149-b2b-accounts-approvals-sector-packs.md). A
+// thin layer over mechanisms this repository already has in full: placing an
+// order against a B2BAccount is not a new payment mechanism, it is the
+// ABSENCE of one at order time — doc 145's own CreditTermsService.
+// checkCreditAvailable() gates it (AccountProvider, payments/providers/
+// account.provider.ts), and the order posts as an outstanding receivable
+// through the identical OrderPlaced posting rule every order already uses
+// (accounting/posting-rules.subscriber.ts's own "always posts to AR rather
+// than branching on payment method"). Settlement later runs through the
+// identical PaymentsService.approve() every COD/bank-transfer payment
+// already uses — no new settlement code exists here on purpose.
+//
+// No `organizationId` column, deviating from this doc's own sketch — same
+// reasoning pricing.prisma's own header note already gives: this codebase is
+// one Organization per deployment, so a CRM-adjacent config table (not a
+// money-posting ledger line) needs no per-row tenant column.
+//
+// `customerId`/`requestedByContactId`/approver ids are all `Contact.id`
+// (crm.prisma), matching the already-built `CustomerCreditTerm.customerId`
+// convention (receivables.prisma) — never `Party` (parties.prisma), despite
+// this doc's own loose "Party/Contact" phrasing, because this is the exact
+// model `checkCreditAvailable()` already keys its credit check against.
+
+model B2BAccount {
+  id                    String   @id @default(cuid())
+  /// Contact.id — the buyer this standing account belongs to. @unique: "the
+  /// second copy of the write" lens — never two accounts for one buyer.
+  customerId            String   @unique
+  isActive              Boolean  @default(true)
+  /// The buyer's own PO number becomes a required reference on every order
+  /// placed against this account (PaymentContext.purchaseOrderReference).
+  requiresPurchaseOrder Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  approvalPolicy B2BPurchaseApprovalPolicy?
+  orderRequests  B2BOrderRequest[]
+
+  @@index([isActive])
+}
+
+/// The buyer's own internal purchasing control, not this organization's —
+/// the seller merely holds and enforces the buyer's stated policy, the way a
+/// corporate card program enforces a cardholder's own spend limit without
+/// deciding it. Registers B2BAccount's own order-submission path against the
+/// existing generic ApprovalChain/ApprovalStep mechanism
+/// (ApprovalSubjectType.B2B_ORDER) — never a second approval-chain
+/// implementation.
+model B2BPurchaseApprovalPolicy {
+  id             String   @id @default(cuid())
+  b2bAccountId   String   @unique
+  /// Orders at or above this amount require approval before they place.
+  thresholdMinor Int
+  /// Which of the buyer's OWN Contacts may approve — never one of this
+  /// org's own staff. Any ONE of these may decide (a set, not a sequence);
+  /// doc 149's own Out of Scope: multi-tier chains are doc 63's existing
+  /// generic tier-count mechanism, not built here until a real buyer needs
+  /// it.
+  approverContactIds String[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  b2bAccount B2BAccount @relation(fields: [b2bAccountId], references: [id], onDelete: Cascade)
+}
+
+enum B2BOrderRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  /// Converted into a real Order via the identical order-placement path
+  /// every other order already uses (OrdersService.place()).
+  CONVERTED
+}
+
+/// "Request or record" — an order placed against a B2BAccount under an
+/// active B2BPurchaseApprovalPolicy, at or above its thresholdMinor, is a
+/// REQUEST until approved (refusable by the buyer's own approver): no Order,
+/// no stock deduction, no ledger posting exists until this request is
+/// APPROVED and converted, mirroring PurchaseRequisition ->
+/// convertToPurchaseOrder() exactly — never a bespoke second flow. A
+/// rejected request is a terminal chain state (doc 63's own existing
+/// answer); re-submission starts a new request and a new chain, never
+/// resets the rejected one.
+model B2BOrderRequest {
+  id           String @id @default(cuid())
+  b2bAccountId String
+  /// Contact.id of the buyer who submitted this — never automatically
+  /// accepted as this request's own approver, even if listed in
+  /// approverContactIds ("the toxic pair" lens), enforced by the caller
+  /// (AccountsService), not ApprovalService itself.
+  requestedByContactId String
+  /// The signed-in User behind that Contact, if any — OrdersService.place()
+  /// takes a userId, not a contactId, so this is what CONVERTED replays
+  /// against.
+  requestedByUserId    String?
+  cartToken            String
+  locale               String
+  /// The full PlaceOrderDto as submitted, replayed verbatim at conversion —
+  /// never re-derived from a second, parallel input.
+  paymentDto Json
+  /// The cart's own resolved total at submission time — an approximation
+  /// used only for the threshold decision and for display; the REAL,
+  /// binding amount is whatever OrdersService.place() computes fresh at
+  /// conversion time, the same re-price-from-the-database discipline every
+  /// other order already follows.
+  amountMinor   Int
+  status        B2BOrderRequestStatus @default(PENDING)
+  /// Set once APPROVED and converted — @unique so a request can never
+  /// convert twice ("the second copy of the write" lens).
+  orderId       String?               @unique
+  rejectionNote String?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  b2bAccount B2BAccount @relation(fields: [b2bAccountId], references: [id], onDelete: Cascade)
+
+  @@index([b2bAccountId, status])
+}

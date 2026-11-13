@@ -1,4 +1,4 @@
-//! Enterprise SSO / SAML 2.0 Service Provider surface (port of
+﻿//! Enterprise SSO / SAML 2.0 Service Provider surface (port of
 //! api/routes/sso.py). Consumed by frontend/src/pages/Team.tsx, which links
 //! straight to `/api/v1/sso/metadata.xml` and posts the IdP's form to
 //! `/api/v1/sso/saml/acs`.

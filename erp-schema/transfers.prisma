@@ -1,0 +1,181 @@
+// Inter-branch stock transfers (RETAIL-ERP.md R4, Tranche 5). Off by default
+// — see modules.registry.ts. Inter-brand transfers via the org tier (R4's
+// own "for an inter-brand transfer the in-transit location belongs to the
+// organization tier", WO-22.2) and settlement modes + InterBranchInvoice
+// (R12/R17, WO-22.3) are both built below now.
+//
+// R4 is the whole design: in-transit is a Location, not a flag or a status
+// string. `sourceLocationId`/`destinationLocationId`/`inTransitLocationId`
+// are bare scalars (inventory.prisma is a different module's schema file,
+// same "no cross-module Prisma coupling" choice PosTerminal.locationId and
+// Order.locationId already made) — TransfersService checks they exist at
+// write time and owns the in-transit Location's whole lifecycle, creating
+// it on dispatch and never touching it again after receipt/cancel empties it.
+
+enum StockTransferStatus {
+  /// Dispatched: stock has left the source and sits in the transfer's own
+  /// IN_TRANSIT location. The only status a transfer can be received or
+  /// cancelled from.
+  IN_TRANSIT
+  RECEIVED
+  /// Ecosystem audit 2026-10-29: receive() reached here with a short
+  /// receipt (quantityReceived < quantityDispatched on at least one line).
+  /// The write-off and any INVOICED invoicing already happened — same as
+  /// before this status existed — but the transfer itself now waits for a
+  /// human-acknowledged reconcile() before it is considered closed, instead
+  /// of silently finishing as a plain RECEIVED with no record that anything
+  /// was short.
+  DISCREPANCY
+  /// Reached only from DISCREPANCY via reconcile() — the short receipt has
+  /// been reviewed and explained.
+  RECONCILED
+  CANCELLED
+}
+
+/// R12 — "money between branches and brands is a setting, not a fork."
+/// Resolved automatically by TransfersService.resolveTransferSettlement(),
+/// never client-supplied: NONE for owned-to-owned inside one brand
+/// (including today's default, every Location's retailBrandId null); INVOICED
+/// by construction the moment a transfer genuinely crosses a RetailBrand
+/// (R17 — two brands are two businesses). INTERNAL_PL is a real value in
+/// R12's own list but WO-22.3 does not derive it anywhere: R12 states a
+/// concrete trigger for the other two only, and no other ruling names one for
+/// this — inventing a trigger nothing specified would be exactly the
+/// speculative functionality this codebase's operating protocol forbids.
+/// Left buildable, not built.
+enum SettlementMode {
+  NONE
+  INTERNAL_PL
+  INVOICED
+}
+
+model StockTransfer {
+  id             String              @id @default(cuid())
+  /// Node-prefixed per R6 — see nextTransferNumber() in transfers.service.ts,
+  /// the same TransferNumberCounter pattern orders.service.ts's
+  /// nextOrderNumber() already uses.
+  number         String              @unique
+  status         StockTransferStatus @default(IN_TRANSIT)
+  /// Resolved once at dispatch() and never changed — see SettlementMode.
+  settlementMode SettlementMode      @default(NONE)
+
+  sourceLocationId      String
+  destinationLocationId String
+  /// The Location this transfer's own dispatch created — one in-transit
+  /// bucket per transfer, never shared. Cleared to net zero by receive() or
+  /// cancel(); the row itself is never deleted (it is the transfer's own
+  /// ledger anchor — every TRANSFER_OUT/TRANSFER_IN movement for this
+  /// transfer references it).
+  inTransitLocationId   String
+
+  createdByUserId    String
+  receivedByUserId   String?
+  reconciledByUserId String?
+
+  note String?
+  /// Set only by reconcile(), moving a DISCREPANCY transfer to RECONCILED.
+  discrepancyReason String?
+
+  dispatchedAt  DateTime  @default(now())
+  receivedAt    DateTime?
+  reconciledAt  DateTime?
+  cancelledAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  lines              StockTransferLine[]
+  /// Set only when settlementMode is INVOICED, and only once receive()
+  /// values what actually arrived (R12/R17, WO-22.3) — see
+  /// InterBranchInvoice's own comment for why receive(), not dispatch().
+  interBranchInvoice InterBranchInvoice?
+
+  @@index([status])
+  @@index([sourceLocationId])
+  @@index([destinationLocationId])
+}
+
+model StockTransferLine {
+  id         String @id @default(cuid())
+  transferId String
+  /// Bare scalar — catalog is a different module's schema file, same
+  /// convention OrderItem.productId/variantId already use for cross-module
+  /// snapshot fields.
+  variantId  String
+
+  quantityDispatched Int
+  /// Null until received. Less than quantityDispatched means a short
+  /// receipt — receive() write-offs the difference from the in-transit
+  /// location rather than silently letting it vanish from the ledger.
+  quantityReceived   Int?
+  /// ProductVariant.costPrice (the running weighted-average) snapshotted at
+  /// dispatch() — House Rule 7, a line is a snapshot, so a cost change
+  /// between dispatch and receive never retroactively reprices an invoice
+  /// already promised. Null unless settlementMode is INVOICED: NONE and
+  /// INTERNAL_PL transfers need no valuation, so none is computed.
+  unitCost           Int?
+
+  transfer StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+
+  @@index([transferId])
+  @@index([variantId])
+}
+
+/// R12/R17's settlement document for an INVOICED transfer (WO-22.3) — the
+/// `transfers` module's own, distinct from the general-purpose `Invoice` R18
+/// gives the future `invoicing` module (WO-23.4): different lifecycle,
+/// different numbering, and RETAIL-ERP.md's own module-ownership table lists
+/// them apart. One per transfer (transferId is unique), created by receive()
+/// rather than dispatch() — billing what actually ARRIVED, valued at each
+/// line's dispatch-time unitCost, so a short receipt never invoices the
+/// buying brand for stock that never reached it (the shortfall is already
+/// written off separately, on the physical stock ledger). No payment/
+/// settlement workflow yet — the AR/AP balance the posting rule books is the
+/// open claim; collecting it is real future work, not fabricated here.
+model InterBranchInvoice {
+  id     String @id @default(cuid())
+  /// Node-prefixed per R6, same counter-row pattern as TransferNumberCounter.
+  number String @unique
+
+  transferId String @unique
+
+  /// Bare scalars — RetailBrand lives in organization.prisma, a different
+  /// module's schema file (same cross-module convention Location.retailBrandId
+  /// already uses). The seller and the buyer in this trade.
+  sourceRetailBrandId      String
+  destinationRetailBrandId String
+
+  /// Sum of each line's (unitCost * quantityReceived) — the transfer price,
+  /// which R12 fixes at weighted-average cost, so this invoice never carries
+  /// a markup and the posting rule's Revenue/COGS pair always nets to zero
+  /// group-wide (no unrealized intercompany profit to defer — R17's own
+  /// harder case simply cannot arise while transfer pricing has no markup
+  /// lever, which nothing in this codebase gives it yet).
+  amountMinor Int
+
+  issuedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  transfer StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+
+  @@index([sourceRetailBrandId])
+  @@index([destinationRetailBrandId])
+}
+
+/// Same shape as OrderNumberCounter (orders.prisma) — an
+/// `INSERT ... ON CONFLICT DO UPDATE ... RETURNING` counter row sidesteps
+/// the read-then-write race a MAX(number)+1 read would have under
+/// concurrent dispatches, for the same reason nextOrderNumber()'s own
+/// doc comment gives in full.
+model TransferNumberCounter {
+  year    Int @id
+  counter Int @default(0)
+}
+
+/// Same shape as TransferNumberCounter, one counter per InterBranchInvoice
+/// rather than sharing the transfer's own sequence — a different document,
+/// a different legal/audit trail, R6's own reasoning for keeping numbering
+/// series apart per document kind.
+model InterBranchInvoiceNumberCounter {
+  year    Int @id
+  counter Int @default(0)
+}

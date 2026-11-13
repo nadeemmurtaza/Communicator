@@ -1,0 +1,20 @@
+// A BPMN visual workflow engine, built by explicit owner override (ADR-026)
+// — architecture-patterns/142-bpmn-visual-workflow-engine.md (WO-142.3). A
+// view over ApprovalChain/ApprovalStep (approvals.prisma), never a second
+// execution runtime: compiledSteps is compiled at save time by
+// compileBpmnToApprovalSteps() and is the ONLY thing ApprovalService ever
+// reads; diagramXml is a display/authoring artifact, replayed back into the
+// editor on reopen, never interpreted at runtime. No organizationId
+// (ADR-044/ADR-040): this deployment IS the tenant.
+
+model BpmnWorkflowDefinition {
+  id            String              @id @default(cuid())
+  /// One authored diagram per subject type — reuses doc 63's own enum,
+  /// never a parallel one.
+  subjectType   ApprovalSubjectType @unique
+  diagramXml    String
+  /// CompiledApprovalStep[]: { stepOrder, approverRoleId?, approverUserId? }
+  compiledSteps Json
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+}
