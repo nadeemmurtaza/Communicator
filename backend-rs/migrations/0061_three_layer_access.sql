@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS access_grants (
     org_id UUID REFERENCES nid_organizations(id) ON DELETE CASCADE,
     brand_id UUID REFERENCES nid_brands(id) ON DELETE CASCADE,
     access_type VARCHAR(20) NOT NULL CHECK (access_type IN ('owner', 'partner', 'admin', 'member')),
-    partnership_percentage NUMERIC(5,2),
+    partnership_percentage DOUBLE PRECISION,
     granted_by TEXT NOT NULL REFERENCES team_members(id),
     status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'revoked', 'pending')),
     granted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -58,11 +58,29 @@ CREATE INDEX IF NOT EXISTS idx_dept_assignments_member ON department_assignments
 CREATE INDEX IF NOT EXISTS idx_dept_assignments_dept ON department_assignments(department_id);
 CREATE INDEX IF NOT EXISTS idx_dept_assignments_tenant ON department_assignments(tenant_id);
 
+-- 3b. Tenant Role Definitions: per-tenant custom roles (distinct from the
+-- global, name-unique `role_definitions` table used by admin_system.rs for
+-- system-wide agent roles — this one is scoped per tenant/slug).
+CREATE TABLE IF NOT EXISTS tenant_role_definitions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id TEXT NOT NULL REFERENCES nid_tenants(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) NOT NULL,
+    description TEXT,
+    permissions JSONB NOT NULL DEFAULT '[]',
+    is_built_in BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (tenant_id, slug)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tenant_role_definitions_tenant ON tenant_role_definitions(tenant_id);
+
 -- 4. Role Assignments: Links members to roles at specific entity levels
 CREATE TABLE IF NOT EXISTS role_assignments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     team_member_id TEXT NOT NULL REFERENCES team_members(id) ON DELETE CASCADE,
-    role_definition_id TEXT NOT NULL REFERENCES role_definitions(id) ON DELETE CASCADE,
+    role_definition_id UUID NOT NULL REFERENCES tenant_role_definitions(id) ON DELETE CASCADE,
     tenant_id TEXT NOT NULL REFERENCES nid_tenants(id) ON DELETE CASCADE,
     org_id UUID REFERENCES nid_organizations(id) ON DELETE CASCADE,
     brand_id UUID REFERENCES nid_brands(id) ON DELETE CASCADE,
@@ -101,7 +119,7 @@ CREATE TABLE IF NOT EXISTS invitations (
     org_id UUID REFERENCES nid_organizations(id) ON DELETE CASCADE,
     brand_id UUID REFERENCES nid_brands(id) ON DELETE CASCADE,
     scope VARCHAR(20) NOT NULL CHECK (scope IN ('tenant', 'organization', 'brand')),
-    role_definition_id TEXT REFERENCES role_definitions(id) ON DELETE SET NULL,
+    role_definition_id UUID REFERENCES tenant_role_definitions(id) ON DELETE SET NULL,
     department_id UUID REFERENCES departments(id) ON DELETE SET NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined', 'expired', 'revoked')),
     expires_at TIMESTAMPTZ NOT NULL,

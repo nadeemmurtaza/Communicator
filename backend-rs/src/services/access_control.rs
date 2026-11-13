@@ -1,7 +1,4 @@
-use crate::db::DbPool;
-use axum::extract::State;
 use axum::http::StatusCode;
-use axum::Json;
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, FromRow};
 use uuid::Uuid;
@@ -14,13 +11,16 @@ use std::collections::HashMap;
 #[derive(FromRow, Serialize, Clone)]
 pub struct AccessGrant {
     pub id: Uuid,
-    pub team_member_id: Uuid,
-    pub tenant_id: Uuid,
+    pub team_member_id: String,
+
+    pub tenant_id: String,
+
     pub org_id: Option<Uuid>,
     pub brand_id: Option<Uuid>,
     pub access_type: String,
     pub partnership_percentage: Option<f64>,
-    pub granted_by: Uuid,
+    pub granted_by: String,
+
     pub status: String,
     pub granted_at: chrono::DateTime<chrono::Utc>,
 }
@@ -28,7 +28,8 @@ pub struct AccessGrant {
 #[derive(FromRow, Serialize, Clone)]
 pub struct Department {
     pub id: Uuid,
-    pub tenant_id: Uuid,
+    pub tenant_id: String,
+
     pub name: String,
     pub slug: String,
     pub default_permissions: Option<serde_json::Value>,
@@ -42,9 +43,11 @@ pub struct Department {
 #[derive(FromRow, Serialize, Clone)]
 pub struct DepartmentAssignment {
     pub id: Uuid,
-    pub team_member_id: Uuid,
+    pub team_member_id: String,
+
     pub department_id: Uuid,
-    pub tenant_id: Uuid,
+    pub tenant_id: String,
+
     pub org_id: Option<Uuid>,
     pub brand_id: Option<Uuid>,
     pub scope: String,
@@ -54,9 +57,11 @@ pub struct DepartmentAssignment {
 #[derive(FromRow, Serialize, Clone)]
 pub struct RoleAssignment {
     pub id: Uuid,
-    pub team_member_id: Uuid,
+    pub team_member_id: String,
+
     pub role_definition_id: Uuid,
-    pub tenant_id: Uuid,
+    pub tenant_id: String,
+
     pub org_id: Option<Uuid>,
     pub brand_id: Option<Uuid>,
     pub scope: String,
@@ -77,10 +82,12 @@ pub struct PermissionCatalogEntry {
 #[derive(FromRow, Serialize, Clone)]
 pub struct Invitation {
     pub id: Uuid,
-    pub tenant_id: Uuid,
+    pub tenant_id: String,
+
     pub email: Option<String>,
     pub username: Option<String>,
-    pub invited_by: Uuid,
+    pub invited_by: String,
+
     pub org_id: Option<Uuid>,
     pub brand_id: Option<Uuid>,
     pub scope: String,
@@ -89,7 +96,8 @@ pub struct Invitation {
     pub status: String,
     pub expires_at: chrono::DateTime<chrono::Utc>,
     pub accepted_at: Option<chrono::DateTime<chrono::Utc>>,
-    pub accepted_by: Option<Uuid>,
+    pub accepted_by: Option<String>,
+
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
@@ -107,8 +115,10 @@ pub struct PermissionCatalogService {
 
 #[derive(Serialize)]
 pub struct EffectivePermissions {
-    pub team_member_id: Uuid,
-    pub tenant_id: Uuid,
+    pub team_member_id: String,
+
+    pub tenant_id: String,
+
     pub org_id: Option<Uuid>,
     pub brand_id: Option<Uuid>,
     pub permissions: Vec<String>,
@@ -123,7 +133,8 @@ pub struct EffectivePermissions {
 
 #[derive(Deserialize)]
 pub struct CreateAccessGrantRequest {
-    pub team_member_id: Uuid,
+    pub team_member_id: String,
+
     pub access_type: String,
     pub partnership_percentage: Option<f64>,
     pub org_id: Option<Uuid>,
@@ -139,14 +150,16 @@ pub struct UpdateAccessGrantRequest {
 
 #[derive(Deserialize)]
 pub struct TransferOwnershipRequest {
-    pub new_owner_id: Uuid,
+    pub new_owner_id: String,
+
     pub org_id: Option<Uuid>,
     pub brand_id: Option<Uuid>,
 }
 
 #[derive(Deserialize)]
 pub struct AddPartnerRequest {
-    pub team_member_id: Uuid,
+    pub team_member_id: String,
+
     pub partnership_percentage: f64,
     pub org_id: Option<Uuid>,
     pub brand_id: Option<Uuid>,
@@ -171,7 +184,8 @@ pub struct UpdateDepartmentRequest {
 
 #[derive(Deserialize)]
 pub struct AssignDepartmentRequest {
-    pub team_member_id: Uuid,
+    pub team_member_id: String,
+
     pub scope: Option<String>,
     pub org_id: Option<Uuid>,
     pub brand_id: Option<Uuid>,
@@ -194,7 +208,8 @@ pub struct UpdateRoleRequest {
 
 #[derive(Deserialize)]
 pub struct AssignRoleRequest {
-    pub team_member_id: Uuid,
+    pub team_member_id: String,
+
     pub scope: Option<String>,
     pub org_id: Option<Uuid>,
     pub brand_id: Option<Uuid>,
@@ -249,7 +264,8 @@ impl AccessControlService {
 
     pub async fn list_access_grants(
         pool: &PgPool,
-        tenant_id: Uuid,
+        tenant_id: String,
+
         org_id: Option<Uuid>,
         brand_id: Option<Uuid>,
     ) -> Result<Vec<AccessGrant>, StatusCode> {
@@ -274,9 +290,11 @@ impl AccessControlService {
 
     pub async fn create_access_grant(
         pool: &PgPool,
-        tenant_id: Uuid,
+        tenant_id: String,
+
         req: &CreateAccessGrantRequest,
-        granted_by: Uuid,
+        granted_by: String,
+
     ) -> Result<AccessGrant, StatusCode> {
         if req.access_type != "owner" && req.access_type != "partner" && req.access_type != "admin" && req.access_type != "member" {
             return Err(StatusCode::BAD_REQUEST);
@@ -357,7 +375,8 @@ impl AccessControlService {
 
     pub async fn transfer_ownership(
         pool: &PgPool,
-        tenant_id: Uuid,
+        tenant_id: String,
+
         req: &TransferOwnershipRequest,
     ) -> Result<AccessGrant, StatusCode> {
         let grant = sqlx::query_as!(
@@ -382,9 +401,11 @@ impl AccessControlService {
 
     pub async fn add_partner(
         pool: &PgPool,
-        tenant_id: Uuid,
+        tenant_id: String,
+
         req: &AddPartnerRequest,
-        granted_by: Uuid,
+        granted_by: String,
+
     ) -> Result<AccessGrant, StatusCode> {
         let grant = sqlx::query_as!(
             AccessGrant,
@@ -408,7 +429,8 @@ impl AccessControlService {
 
     pub async fn list_departments(
         pool: &PgPool,
-        tenant_id: Uuid,
+        tenant_id: String,
+
     ) -> Result<Vec<Department>, StatusCode> {
         let depts = sqlx::query_as!(
             Department,
@@ -426,7 +448,8 @@ impl AccessControlService {
 
     pub async fn create_department(
         pool: &PgPool,
-        tenant_id: Uuid,
+        tenant_id: String,
+
         req: &CreateDepartmentRequest,
     ) -> Result<Department, StatusCode> {
         let slug = req.slug.clone().unwrap_or_else(|| {
@@ -444,7 +467,7 @@ impl AccessControlService {
             tenant_id,
             req.name,
             slug,
-            &req.default_permissions,
+            req.default_permissions.clone(),
             req.icon.as_deref(),
             req.color.as_deref()
         )
@@ -497,7 +520,7 @@ impl AccessControlService {
         req: &AssignDepartmentRequest,
     ) -> Result<DepartmentAssignment, StatusCode> {
         // Get department tenant_id
-        let tenant_id: Uuid = sqlx::query_scalar!("SELECT tenant_id FROM departments WHERE id = $1", dept_id)
+        let tenant_id: String = sqlx::query_scalar!("SELECT tenant_id FROM departments WHERE id = $1", dept_id)
             .fetch_one(pool)
             .await
             .map_err(|_| StatusCode::NOT_FOUND)?;
@@ -541,8 +564,10 @@ impl AccessControlService {
 
     pub async fn check_entity_access(
         pool: &PgPool,
-        team_member_id: Uuid,
-        tenant_id: Uuid,
+        team_member_id: String,
+
+        tenant_id: String,
+
         org_id: Option<Uuid>,
         brand_id: Option<Uuid>,
     ) -> Result<Option<AccessGrant>, StatusCode> {
@@ -570,12 +595,14 @@ impl AccessControlService {
 
     pub async fn check_department_access(
         pool: &PgPool,
-        team_member_id: Uuid,
-        tenant_id: Uuid,
+        team_member_id: String,
+
+        tenant_id: String,
+
         department_slug: &str,
     ) -> Result<bool, StatusCode> {
         let count: i64 = sqlx::query_scalar!(
-            r#"SELECT COUNT(*)::INTEGER FROM department_assignments da
+            r#"SELECT COALESCE(COUNT(*), 0) AS "count!" FROM department_assignments da
                JOIN departments d ON da.department_id = d.id
                WHERE da.team_member_id = $1 AND d.tenant_id = $2 AND d.slug = $3"#,
             team_member_id,
@@ -590,15 +617,17 @@ impl AccessControlService {
 
     pub async fn check_permission(
         pool: &PgPool,
-        team_member_id: Uuid,
-        tenant_id: Uuid,
+        team_member_id: String,
+
+        tenant_id: String,
+
         permission_key: &str,
         org_id: Option<Uuid>,
         brand_id: Option<Uuid>,
     ) -> Result<bool, StatusCode> {
         // Check if member has owner/partner access (bypasses permission checks)
         let is_owner: i64 = sqlx::query_scalar!(
-            r#"SELECT COUNT(*)::INTEGER FROM access_grants
+            r#"SELECT COALESCE(COUNT(*), 0) AS "count!" FROM access_grants
                WHERE team_member_id = $1 AND tenant_id = $2 AND status = 'active'
                  AND access_type IN ('owner', 'partner')
                  AND (org_id IS NULL OR org_id = $3)
@@ -618,9 +647,9 @@ impl AccessControlService {
 
         // Check role-based permissions
         let has_perm: i64 = sqlx::query_scalar!(
-            r#"SELECT COUNT(*)::INTEGER
+            r#"SELECT COALESCE(COUNT(*), 0) AS "count!"
                FROM role_assignments ra
-               JOIN role_definitions rd ON ra.role_definition_id = rd.id
+               JOIN tenant_role_definitions rd ON ra.role_definition_id = rd.id
                WHERE ra.team_member_id = $1 AND ra.tenant_id = $2
                  AND (ra.org_id IS NULL OR ra.org_id = $3)
                  AND (ra.brand_id IS NULL OR ra.brand_id = $4)
@@ -640,13 +669,15 @@ impl AccessControlService {
 
     pub async fn resolve_effective_permissions(
         pool: &PgPool,
-        team_member_id: Uuid,
-        tenant_id: Uuid,
+        team_member_id: String,
+
+        tenant_id: String,
+
         org_id: Option<Uuid>,
         brand_id: Option<Uuid>,
     ) -> Result<EffectivePermissions, StatusCode> {
         // Get access type
-        let grant = Self::check_entity_access(pool, team_member_id, tenant_id, org_id, brand_id).await?;
+        let grant = Self::check_entity_access(pool, team_member_id.clone(), tenant_id.clone(), org_id, brand_id).await?;
         let access_type = grant.as_ref().map(|g| g.access_type.clone()).unwrap_or_else(|| "none".to_string());
 
         // If owner/partner, return all permissions
@@ -658,8 +689,8 @@ impl AccessControlService {
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             return Ok(EffectivePermissions {
-                team_member_id,
-                tenant_id,
+                team_member_id: team_member_id.clone(),
+                tenant_id: tenant_id.clone(),
                 org_id,
                 brand_id,
                 permissions: all_perms,
@@ -670,33 +701,34 @@ impl AccessControlService {
         }
 
         // Collect permissions from all roles
-        let perms: Vec<String> = sqlx::query_scalar(
-            r#"SELECT DISTINCT json_array_elements_text(rd.permissions)::TEXT
+        let perms: Vec<Option<String>> = sqlx::query_scalar!(
+            r#"SELECT DISTINCT jsonb_array_elements_text(rd.permissions)::TEXT
                FROM role_assignments ra
-               JOIN role_definitions rd ON ra.role_definition_id = rd.id
+               JOIN tenant_role_definitions rd ON ra.role_definition_id = rd.id
                WHERE ra.team_member_id = $1 AND ra.tenant_id = $2
                  AND (ra.org_id IS NULL OR ra.org_id = $3)
                  AND (ra.brand_id IS NULL OR ra.brand_id = $4)
                ORDER BY 1"#,
-            team_member_id,
-            tenant_id,
+            team_member_id.clone(),
+            tenant_id.clone(),
             org_id,
             brand_id
         )
         .fetch_all(pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let perms: Vec<String> = perms.into_iter().flatten().collect();
 
         // Collect role names
-        let roles: Vec<String> = sqlx::query_scalar(
+        let roles: Vec<String> = sqlx::query_scalar!(
             r#"SELECT DISTINCT rd.name
                FROM role_assignments ra
-               JOIN role_definitions rd ON ra.role_definition_id = rd.id
+               JOIN tenant_role_definitions rd ON ra.role_definition_id = rd.id
                WHERE ra.team_member_id = $1 AND ra.tenant_id = $2
                  AND (ra.org_id IS NULL OR ra.org_id = $3)
                  AND (ra.brand_id IS NULL OR ra.brand_id = $4)"#,
-            team_member_id,
-            tenant_id,
+            team_member_id.clone(),
+            tenant_id.clone(),
             org_id,
             brand_id
         )
@@ -705,13 +737,13 @@ impl AccessControlService {
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
         // Collect department names
-        let departments: Vec<String> = sqlx::query_scalar(
+        let departments: Vec<String> = sqlx::query_scalar!(
             r#"SELECT DISTINCT d.name
                FROM department_assignments da
                JOIN departments d ON da.department_id = d.id
                WHERE da.team_member_id = $1 AND d.tenant_id = $2"#,
-            team_member_id,
-            tenant_id
+            team_member_id.clone(),
+            tenant_id.clone()
         )
         .fetch_all(pool)
         .await
@@ -807,7 +839,8 @@ impl AccessControlService {
 
     pub async fn list_invitations(
         pool: &PgPool,
-        tenant_id: Uuid,
+        tenant_id: String,
+
         status: Option<&str>,
     ) -> Result<Vec<Invitation>, StatusCode> {
         let invitations = if let Some(status) = status {
@@ -843,9 +876,11 @@ impl AccessControlService {
 
     pub async fn send_email_invitation(
         pool: &PgPool,
-        tenant_id: Uuid,
+        tenant_id: String,
+
         req: &SendEmailInvitationRequest,
-        invited_by: Uuid,
+        invited_by: String,
+
     ) -> Result<Invitation, StatusCode> {
         let scope = req.scope.clone().unwrap_or_else(|| "tenant".to_string());
         let expires_at = chrono::Utc::now() + chrono::Duration::days(7);
@@ -873,9 +908,11 @@ impl AccessControlService {
 
     pub async fn send_username_invitation(
         pool: &PgPool,
-        tenant_id: Uuid,
+        tenant_id: String,
+
         req: &SendUsernameInvitationRequest,
-        invited_by: Uuid,
+        invited_by: String,
+
     ) -> Result<Invitation, StatusCode> {
         let scope = req.scope.clone().unwrap_or_else(|| "tenant".to_string());
         let expires_at = chrono::Utc::now() + chrono::Duration::days(7);
@@ -904,7 +941,8 @@ impl AccessControlService {
     pub async fn accept_invitation(
         pool: &PgPool,
         invitation_id: Uuid,
-        accepted_by: Uuid,
+        accepted_by: String,
+
     ) -> Result<Invitation, StatusCode> {
         let invitation = sqlx::query_as!(
             Invitation,
@@ -939,12 +977,10 @@ impl AccessControlService {
 
         if event == "access.grant.created" || event == "access.grant.updated" {
             // Mirror the access grant from nID to Communicator
-            if let Some(tenant_id_str) = data.get("tenantId").and_then(|v| v.as_str()) {
-                let tenant_id = Uuid::parse_str(tenant_id_str).map_err(|_| StatusCode::BAD_REQUEST)?;
-                if let Some(team_member_id_str) = data.get("accountId").and_then(|v| v.as_str()) {
-                    let team_member_id = Uuid::parse_str(team_member_id_str).map_err(|_| StatusCode::BAD_REQUEST)?;
+            if let Some(tenant_id) = data.get("tenantId").and_then(|v| v.as_str()) {
+                if let Some(team_member_id) = data.get("accountId").and_then(|v| v.as_str()) {
                     let access_type = data.get("accessType").and_then(|v| v.as_str()).unwrap_or("member");
-                    let partnership_percentage = data.get("partnershipPercentage").and_then(|v| v.f64());
+                    let partnership_percentage = data.get("partnershipPercentage").and_then(|v| v.as_f64());
 
                     // Upsert the access grant
                     let _ = sqlx::query(
@@ -975,10 +1011,10 @@ impl AccessControlService {
         let data = &webhook.data;
 
         if event == "department.created" || event == "department.updated" {
-            if let Some(tenant_id_str) = data.get("tenantId").and_then(|v| v.as_str()) {
-                let tenant_id = Uuid::parse_str(tenant_id_str).map_err(|_| StatusCode::BAD_REQUEST)?;
+            if let Some(tenant_id) = data.get("tenantId").and_then(|v| v.as_str()) {
                 let name = data.get("name").and_then(|v| v.as_str()).unwrap_or("");
-                let slug = data.get("slug").and_then(|v| v.as_str()).unwrap_or(name.to_lowercase().as_str());
+                let name_lower = name.to_lowercase();
+                let slug = data.get("slug").and_then(|v| v.as_str()).unwrap_or(name_lower.as_str());
                 let icon = data.get("icon").and_then(|v| v.as_str());
                 let color = data.get("color").and_then(|v| v.as_str());
 
@@ -1010,15 +1046,15 @@ impl AccessControlService {
         let data = &webhook.data;
 
         if event == "role.created" || event == "role.updated" {
-            if let Some(tenant_id_str) = data.get("tenantId").and_then(|v| v.as_str()) {
-                let tenant_id = Uuid::parse_str(tenant_id_str).map_err(|_| StatusCode::BAD_REQUEST)?;
+            if let Some(tenant_id) = data.get("tenantId").and_then(|v| v.as_str()) {
                 let name = data.get("name").and_then(|v| v.as_str()).unwrap_or("");
-                let slug = data.get("slug").and_then(|v| v.as_str()).unwrap_or(name.to_lowercase().as_str());
+                let name_lower = name.to_lowercase();
+                let slug = data.get("slug").and_then(|v| v.as_str()).unwrap_or(name_lower.as_str());
                 let description = data.get("description").and_then(|v| v.as_str());
                 let permissions = data.get("permissions").cloned().unwrap_or_else(|| serde_json::json!([]));
 
                 let _ = sqlx::query(
-                    r#"INSERT INTO role_definitions (tenant_id, name, slug, description, permissions, is_built_in)
+                    r#"INSERT INTO tenant_role_definitions (tenant_id, name, slug, description, permissions, is_built_in)
                        VALUES ($1, $2, $3, $4, $5, false)
                        ON CONFLICT (tenant_id, slug)
                        DO UPDATE SET name = $2, description = $4, permissions = $5, updated_at = NOW()"#,
