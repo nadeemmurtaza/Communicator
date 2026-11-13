@@ -2573,6 +2573,7 @@ pub struct CustomerMembership {
     pub started_at: String,
     pub ends_at: Option<String>,
     pub status: String,
+    pub created_at: String,
 }
 
 // ---------------------------------------------------------------------------
@@ -2590,6 +2591,7 @@ pub struct AnalyticsDailyStat {
     pub avg_order_value: f64,
     pub unique_customers: i32,
     pub products_sold: i32,
+    pub created_at: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
@@ -2678,6 +2680,7 @@ pub struct StorefrontSection {
     pub section_type: String,
     pub sort_order: i32,
     pub content: Option<String>,
+    pub created_at: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]

@@ -292,9 +292,9 @@ impl CommerceStorefrontService {
         Ok(StorefrontVisit {
             id,
             storefront_id: storefront_id.to_string(),
-            visitor_ip: visitor_ip.map(|s| s.to_string()),
+            visitor_ip: visitor_ip.unwrap_or_default().to_string(),
             user_agent: user_agent.map(|s| s.to_string()),
-            path: path.map(|s| s.to_string()),
+            path: path.unwrap_or_default().to_string(),
             visited_at: chrono::Utc::now().to_rfc3339(),
         })
     }

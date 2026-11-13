@@ -329,8 +329,8 @@ impl CommerceAnalyticsService {
             id,
             brand_id: req.brand_id.clone(),
             event_type: req.event_type.clone(),
-            entity_type: req.entity_type.clone(),
-            entity_id: req.entity_id.clone(),
+            entity_type: req.entity_type.clone().unwrap_or_default(),
+            entity_id: req.entity_id.clone().unwrap_or_default(),
             properties,
             created_at: chrono::Utc::now().to_rfc3339(),
         })
