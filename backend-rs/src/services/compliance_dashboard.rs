@@ -230,7 +230,7 @@ impl ComplianceDashboardService {
             total_suppressed, active_suppressed, pending_gdpr_requests: pending_gdpr,
             total_gdpr_requests: total_gdpr, active_policies, total_audit_entries: total_audit,
             critical_violations, suppression_by_reason, gdpr_by_type, recent_audit_logs,
-            upcoming_gdpr_expiries,
+            upcoming_gdpr_expiries: upcoming_expiries,
         })
     }
 
@@ -496,7 +496,7 @@ impl ComplianceDashboardService {
             binds.push(status.clone());
             bind_count += 1;
             if ["completed", "denied"].contains(&status.as_str()) {
-                sets.push("completed_at = NOW()");
+                sets.push("completed_at = NOW()".to_string());
             }
         }
         if let Some(ref handled_by) = req.handled_by {

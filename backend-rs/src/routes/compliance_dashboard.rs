@@ -3,7 +3,7 @@
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
-use crate::state::AppState;
+use crate::db::AppState;
 use crate::services::compliance_dashboard::*;
 
 // ---------------------------------------------------------------------------
