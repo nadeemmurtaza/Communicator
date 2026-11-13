@@ -19,7 +19,7 @@ use tracing::{info, warn, error};
 // Types
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct ExternalIntegration {
     pub id: String,
     pub brand_id: String,
@@ -64,7 +64,7 @@ pub struct CreateIntegrationResponse {
     pub message: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExternalGenerateRequest {
     pub recipient: String,
     pub recipient_type: Option<String>,
@@ -142,7 +142,7 @@ impl ExternalOtpIntegrationService {
         let integration_id = format!("ext_{}", uuid::Uuid::new_v4().as_hyphenated());
 
         // Generate public key
-        let public_key = format!("pk_{}_{}", req.brand_id[..8.min(req.brand_id.len())], nanoid::nanoid!(8));
+        let public_key = format!("pk_{}_{}", &req.brand_id[..8.min(req.brand_id.len())], nanoid::nanoid!(8));
 
         // Generate secret key (32-byte random hex)
         let mut secret_bytes = [0u8; 32];
@@ -294,12 +294,7 @@ impl ExternalOtpIntegrationService {
         pool: &DbPool,
         public_key: &str,
     ) -> Result<ExternalIntegration, String> {
-        let integ: Option<(
-            String, String, String, String, String,
-            String, String, String, String, String,
-            Vec<String>, Vec<String>, bool, i64, i64,
-            Option<String>, String, String,
-        )> = sqlx::query_as(
+        let integ: Option<ExternalIntegration> = sqlx::query_as(
             r#"SELECT id, brand_id, platform_name, platform_url, display_name,
                       public_key, secret_key_hash, secret_key_salt,
                       webhook_url, webhook_secret,
@@ -315,29 +310,7 @@ impl ExternalOtpIntegrationService {
         .await
         .map_err(|e| format!("Failed to fetch integration: {}", e))?;
 
-        match integ {
-            Some(i) => Ok(ExternalIntegration {
-                id: i.0,
-                brand_id: i.1,
-                platform_name: i.2,
-                platform_url: i.3,
-                display_name: i.4,
-                public_key: i.5,
-                secret_key_hash: i.6,
-                secret_key_salt: i.7,
-                webhook_url: i.8,
-                webhook_secret: i.9,
-                allowed_purposes: i.10,
-                allowed_channels: i.11,
-                is_active: i.12,
-                rate_limit_per_minute: i.13,
-                rate_limit_per_hour: i.14,
-                last_used_at: i.15,
-                created_at: i.16,
-                updated_at: i.17,
-            }),
-            None => Err("Integration not found or inactive".to_string()),
-        }
+        integ.ok_or_else(|| "Integration not found or inactive".to_string())
     }
 
     /// List all integrations for a brand.
@@ -345,12 +318,7 @@ impl ExternalOtpIntegrationService {
         pool: &DbPool,
         brand_id: &str,
     ) -> Result<Vec<ExternalIntegration>, String> {
-        let integrations: Vec<(
-            String, String, String, String, String,
-            String, String, String, String, String,
-            Vec<String>, Vec<String>, bool, i64, i64,
-            Option<String>, String, String,
-        )> = sqlx::query_as(
+        let integrations: Vec<ExternalIntegration> = sqlx::query_as(
             r#"SELECT id, brand_id, platform_name, platform_url, display_name,
                       public_key, secret_key_hash, secret_key_salt,
                       webhook_url, webhook_secret,
@@ -366,26 +334,7 @@ impl ExternalOtpIntegrationService {
         .await
         .map_err(|e| format!("Failed to fetch integrations: {}", e))?;
 
-        Ok(integrations.into_iter().map(|i| ExternalIntegration {
-            id: i.0,
-            brand_id: i.1,
-            platform_name: i.2,
-            platform_url: i.3,
-            display_name: i.4,
-            public_key: i.5,
-            secret_key_hash: i.6,
-            secret_key_salt: i.7,
-            webhook_url: i.8,
-            webhook_secret: i.9,
-            allowed_purposes: i.10,
-            allowed_channels: i.11,
-            is_active: i.12,
-            rate_limit_per_minute: i.13,
-            rate_limit_per_hour: i.14,
-            last_used_at: i.15,
-            created_at: i.16,
-            updated_at: i.17,
-        }).collect())
+        Ok(integrations)
     }
 
     /// Deactivate an integration.
@@ -707,12 +656,13 @@ impl ExternalOtpIntegrationService {
         let payload_str = payload_str.clone();
         let delivery_id = delivery_id.clone();
         let pool = pool.clone();
+        let event_type = event_type.to_string();
 
         tokio::spawn(async move {
             let client = reqwest::Client::new();
             let mut request = client.post(&webhook_url)
                 .header("Content-Type", "application/json")
-                .header("X-Communicator-Event", event_type)
+                .header("X-Communicator-Event", &event_type)
                 .header("X-Communicator-Timestamp", &timestamp)
                 .body(payload_str);
 
