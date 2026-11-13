@@ -68,6 +68,38 @@ impl WixSyncAdapter {
         resp.json().await.map_err(|e| format!("Failed to parse Wix response: {e}"))
     }
 
+    /// Page through a Wix query endpoint using `query.paging.limit/offset`,
+    /// collecting the named top-level array across every page. Stops once a
+    /// page comes back with fewer than `limit` items (and also refetches one
+    /// more page past an exact-multiple-of-`limit` result set, which simply
+    /// comes back empty and stops the loop) -- the same "short/empty page
+    /// means last page" rule Wix's V1/V2 list endpoints all honor regardless
+    /// of whether a given endpoint additionally echoes a cursor/offset count.
+    async fn fetch_all_wix_paged(
+        &self,
+        api_key: &str,
+        site_id: &str,
+        path: &str,
+        array_key: &str,
+        build_payload: impl Fn(i64, i64) -> Value,
+    ) -> Result<Vec<Value>, String> {
+        const LIMIT: i64 = 100;
+        let mut all = Vec::new();
+        let mut offset: i64 = 0;
+        loop {
+            let payload = build_payload(LIMIT, offset);
+            let body = self.wix_post(api_key, site_id, path, &payload).await?;
+            let page = body.get(array_key).and_then(|v| v.as_array()).cloned().unwrap_or_default();
+            let page_len = page.len() as i64;
+            all.extend(page);
+            if page_len < LIMIT {
+                break;
+            }
+            offset += LIMIT;
+        }
+        Ok(all)
+    }
+
     async fn upsert_product(&self, pool: &PgPool, brand_id: &str, p: &Value) -> Result<(), String> {
         let external_id = p.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
         if external_id.is_empty() {
@@ -330,10 +362,18 @@ impl SyncAdapter for WixSyncAdapter {
             }
         };
 
-        // Wix Stores Catalog V1: query products.
-        let payload = serde_json::json!({ "query": { "paging": { "limit": 100 } } });
-        let body = match self.wix_post(&api_key, &site_id, "/stores/v1/products/query", &payload).await {
-            Ok(b) => b,
+        // Wix Stores Catalog V1: query products, paging through every page.
+        let products = match self
+            .fetch_all_wix_paged(
+                &api_key,
+                &site_id,
+                "/stores/v1/products/query",
+                "products",
+                |limit, offset| serde_json::json!({ "query": { "paging": { "limit": limit, "offset": offset } } }),
+            )
+            .await
+        {
+            Ok(p) => p,
             Err(e) => {
                 return SyncResult {
                     success: false,
@@ -346,7 +386,6 @@ impl SyncAdapter for WixSyncAdapter {
             }
         };
 
-        let products = body.get("products").and_then(|v| v.as_array()).cloned().unwrap_or_default();
         let mut errors = Vec::new();
         for p in &products {
             if let Err(e) = self.upsert_product(pool, brand_id, p).await {
@@ -379,10 +418,18 @@ impl SyncAdapter for WixSyncAdapter {
             }
         };
 
-        // Wix eCommerce Orders V1: query orders.
-        let payload = serde_json::json!({ "query": { "paging": { "limit": 100 } } });
-        let body = match self.wix_post(&api_key, &site_id, "/ecom/v1/orders/query", &payload).await {
-            Ok(b) => b,
+        // Wix eCommerce Orders V1: query orders, paging through every page.
+        let orders = match self
+            .fetch_all_wix_paged(
+                &api_key,
+                &site_id,
+                "/ecom/v1/orders/query",
+                "orders",
+                |limit, offset| serde_json::json!({ "query": { "paging": { "limit": limit, "offset": offset } } }),
+            )
+            .await
+        {
+            Ok(o) => o,
             Err(e) => {
                 return SyncResult {
                     success: false,
@@ -395,7 +442,6 @@ impl SyncAdapter for WixSyncAdapter {
             }
         };
 
-        let orders = body.get("orders").and_then(|v| v.as_array()).cloned().unwrap_or_default();
         let mut errors = Vec::new();
         for o in &orders {
             if let Err(e) = self.upsert_order(pool, brand_id, o).await {
@@ -460,17 +506,27 @@ impl SyncAdapter for WixSyncAdapter {
             };
         }
 
-        // Wix Stores Inventory V2: query inventory items by product id.
+        // Wix Stores Inventory V2: query inventory items by product id,
+        // paging through every page.
         let product_ids: Vec<String> = mappings.iter().map(|(_, ext)| ext.clone()).collect();
-        let payload = serde_json::json!({
-            "query": {
-                "filter": { "productIds": product_ids },
-                "paging": { "limit": 100 }
-            }
-        });
-
-        let body = match self.wix_post(&api_key, &site_id, "/stores/v2/inventoryItems/query", &payload).await {
-            Ok(b) => b,
+        let items = match self
+            .fetch_all_wix_paged(
+                &api_key,
+                &site_id,
+                "/stores/v2/inventoryItems/query",
+                "inventoryItems",
+                move |limit, offset| {
+                    serde_json::json!({
+                        "query": {
+                            "filter": { "productIds": product_ids },
+                            "paging": { "limit": limit, "offset": offset }
+                        }
+                    })
+                },
+            )
+            .await
+        {
+            Ok(i) => i,
             Err(e) => {
                 return SyncResult {
                     success: false,
@@ -483,7 +539,6 @@ impl SyncAdapter for WixSyncAdapter {
             }
         };
 
-        let items = body.get("inventoryItems").and_then(|v| v.as_array()).cloned().unwrap_or_default();
         let mut by_product: std::collections::HashMap<String, i32> = std::collections::HashMap::new();
         for item in &items {
             let product_id = item.get("productId").and_then(|v| v.as_str()).unwrap_or("");

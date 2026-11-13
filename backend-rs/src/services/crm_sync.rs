@@ -492,6 +492,265 @@ fn provider_auth<'a>(
     }
 }
 
+/// Pull a best-effort name/email/phone/website out of a CRM record, in
+/// whichever shape this provider's API hands records back in. Mirrors the
+/// fields the outbound side above reads off `organizations`/`leads`/
+/// `contacts` (name, email, phone, website) so a round trip is consistent.
+fn extract_crm_fields(provider: &str, rec: &Value) -> (String, String, String, String) {
+    match provider {
+        "hubspot" => {
+            let props = rec.get("properties").cloned().unwrap_or(Value::Null);
+            let name = props
+                .get("name")
+                .or_else(|| props.get("company"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| {
+                    let first = props.get("firstname").and_then(|v| v.as_str()).unwrap_or("");
+                    let last = props.get("lastname").and_then(|v| v.as_str()).unwrap_or("");
+                    format!("{first} {last}").trim().to_string()
+                });
+            let email = props.get("email").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let phone = props.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let website = props
+                .get("website")
+                .or_else(|| props.get("domain"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            (name, email, phone, website)
+        }
+        "salesforce" => {
+            let name = rec.get("Name").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let email = rec.get("Email").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let phone = rec.get("Phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let website = rec.get("Website").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            (name, email, phone, website)
+        }
+        _ => {
+            // Pipedrive: persons/organizations carry email/phone as arrays of
+            // `{value, primary, ...}` objects (or occasionally a bare
+            // string); leads carry their name under "title" instead of
+            // "name".
+            let extract_first = |field: &str| -> String {
+                match rec.get(field) {
+                    Some(Value::String(s)) => s.clone(),
+                    Some(Value::Array(arr)) => arr
+                        .first()
+                        .and_then(|v| v.get("value"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    _ => String::new(),
+                }
+            };
+            let name = rec
+                .get("name")
+                .or_else(|| rec.get("title"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let email = extract_first("email");
+            let phone = extract_first("phone");
+            let website = rec.get("website").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            (name, email, phone, website)
+        }
+    }
+}
+
+/// Upsert a CRM account/company record into the local `organizations` table
+/// (same columns the outbound side reads: name, email, phone, website).
+async fn upsert_organization_from_crm(
+    state: &AppState,
+    id: &str,
+    name: &str,
+    email: &str,
+    phone: &str,
+    website: &str,
+) -> Result<(), String> {
+    let tenant_key = {
+        let configured = state.config.default_tenant_key.trim();
+        if configured.is_empty() { "newax".to_string() } else { configured.to_string() }
+    };
+    sqlx::query(
+        "INSERT INTO organizations (id, tenant_key, name, email, phone, website, created_at, updated_at) \
+         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW()) \
+         ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, email = EXCLUDED.email, \
+         phone = EXCLUDED.phone, website = EXCLUDED.website, updated_at = NOW()",
+    )
+    .bind(id)
+    .bind(&tenant_key)
+    .bind(name)
+    .bind(email)
+    .bind(phone)
+    .bind(website)
+    .execute(&state.db)
+    .await
+    .map(|_| ())
+    .map_err(|e| format!("Failed to upsert organization: {e}"))
+}
+
+/// Upsert a CRM lead record into the local `leads` table. `leads` was built
+/// around the harvester-sourced lead model, so a CRM lead's id is recorded
+/// into `harvester_institution_id` (unique, not null) to keep every CRM
+/// lead's local row addressable and the upsert idempotent across syncs.
+async fn upsert_lead_from_crm(
+    state: &AppState,
+    id: &str,
+    provider: &str,
+    crm_id: &str,
+    name: &str,
+) -> Result<(), String> {
+    let harvester_institution_id = format!("crm_{provider}_{crm_id}");
+    let name = if name.is_empty() { harvester_institution_id.clone() } else { name.to_string() };
+    sqlx::query(
+        "INSERT INTO leads (id, harvester_institution_id, name, created_at) \
+         VALUES ($1, $2, $3, NOW()) \
+         ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name",
+    )
+    .bind(id)
+    .bind(&harvester_institution_id)
+    .bind(&name)
+    .execute(&state.db)
+    .await
+    .map(|_| ())
+    .map_err(|e| format!("Failed to upsert lead: {e}"))
+}
+
+/// `contacts.lead_id` is a NOT NULL FK into `leads`, but a CRM contact/person
+/// isn't tied to one of our harvester-sourced leads. Ensure one shared,
+/// idempotent placeholder lead per connection so inbound CRM contacts have a
+/// valid row to attach to, and return its id.
+async fn ensure_crm_placeholder_lead(
+    state: &AppState,
+    connection_id: &str,
+    provider: &str,
+) -> Result<String, String> {
+    let placeholder_id = format!("lead_crm_contacts_{connection_id}");
+    let harvester_institution_id = format!("crm_contacts_placeholder_{connection_id}");
+    sqlx::query(
+        "INSERT INTO leads (id, harvester_institution_id, name, created_at) \
+         VALUES ($1, $2, $3, NOW()) ON CONFLICT (id) DO NOTHING",
+    )
+    .bind(&placeholder_id)
+    .bind(&harvester_institution_id)
+    .bind(format!("CRM contacts ({provider})"))
+    .execute(&state.db)
+    .await
+    .map_err(|e| format!("Failed to ensure placeholder lead for CRM contacts: {e}"))?;
+    Ok(placeholder_id)
+}
+
+/// Upsert a CRM contact/person record into the local `contacts` table (same
+/// columns the outbound side reads: person_name as name, value as email).
+async fn upsert_contact_from_crm(
+    state: &AppState,
+    id: &str,
+    lead_id: &str,
+    name: &str,
+    email: &str,
+) -> Result<(), String> {
+    let value = if email.is_empty() { id.to_string() } else { email.to_string() };
+    sqlx::query(
+        "INSERT INTO contacts (id, lead_id, channel, value, person_name, created_at) \
+         VALUES ($1, $2, 'email', $3, $4, NOW()) \
+         ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value, person_name = EXCLUDED.person_name",
+    )
+    .bind(id)
+    .bind(lead_id)
+    .bind(&value)
+    .bind(name)
+    .execute(&state.db)
+    .await
+    .map(|_| ())
+    .map_err(|e| format!("Failed to upsert contact: {e}"))
+}
+
+/// Fetch every page of records from a CRM list endpoint, following each
+/// provider's own pagination shape:
+/// - HubSpot: `paging.next.after` cursor, passed back as `?after=`.
+/// - Pipedrive: `additional_data.pagination.{more_items_in_collection,next_start}`,
+///   passed back as `&start=`.
+/// - Salesforce: `done`/`nextRecordsUrl` (a path relative to `instance_url`)
+///   on SOQL-style query responses.
+async fn fetch_all_crm_records(
+    state: &AppState,
+    provider: &str,
+    creds: &CrmCreds,
+    endpoint: &str,
+) -> Result<Vec<Value>, String> {
+    let mut all_records = Vec::new();
+    let mut url = match provider {
+        "hubspot" => format!("{endpoint}?limit=100"),
+        "pipedrive" => format!("{endpoint}&limit=100&start=0"),
+        _ => endpoint.to_string(),
+    };
+
+    loop {
+        let req = state.http_client.get(&url);
+        let req = provider_auth(provider, creds, req);
+        let resp = req.send().await.map_err(|e| format!("CRM request failed: {e}"))?;
+        if !resp.status().is_success() {
+            let status = resp.status();
+            return Err(format!("CRM returned HTTP {status}"));
+        }
+        let body: Value = resp.json().await.map_err(|e| format!("Failed to parse CRM response: {e}"))?;
+
+        let records: Vec<Value> = body
+            .get("results") // HubSpot
+            .or_else(|| body.get("data")) // Pipedrive / Salesforce composite
+            .or_else(|| body.get("records")) // Salesforce SOQL-style
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        let page_len = records.len();
+        all_records.extend(records);
+
+        let next = match provider {
+            "hubspot" => body
+                .get("paging")
+                .and_then(|p| p.get("next"))
+                .and_then(|n| n.get("after"))
+                .and_then(|a| a.as_str())
+                .map(|after| format!("{endpoint}?limit=100&after={after}")),
+            "pipedrive" => {
+                let more = body
+                    .get("additional_data")
+                    .and_then(|a| a.get("pagination"))
+                    .and_then(|p| p.get("more_items_in_collection"))
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                let next_start = body
+                    .get("additional_data")
+                    .and_then(|a| a.get("pagination"))
+                    .and_then(|p| p.get("next_start"))
+                    .and_then(|v| v.as_i64());
+                match (more, next_start) {
+                    (true, Some(start)) => Some(format!("{endpoint}&limit=100&start={start}")),
+                    _ => None,
+                }
+            }
+            "salesforce" => {
+                let done = body.get("done").and_then(|v| v.as_bool()).unwrap_or(true);
+                let next_records_url = body.get("nextRecordsUrl").and_then(|v| v.as_str());
+                match (done, next_records_url, &creds.instance_url) {
+                    (false, Some(path), Some(base)) => Some(format!("{base}{path}")),
+                    _ => None,
+                }
+            }
+            _ => None,
+        };
+
+        match next {
+            Some(n) if page_len > 0 => url = n,
+            _ => break,
+        }
+    }
+
+    Ok(all_records)
+}
+
 /// Upsert a crm_external_refs row recording that a local record is linked to
 /// a CRM record (or that a CRM record was pulled in without a local target).
 async fn upsert_external_ref(
@@ -559,61 +818,82 @@ async fn perform_sync(
     };
 
     if direction == "outbound" {
-        // Pull local rows for this object type and push each one to the CRM.
+        // Pull local rows for this object type, a page at a time, and push
+        // each one to the CRM. $1/$2 are bound as LIMIT/OFFSET below.
         let (query, local_type) = match object_type {
             "account" | "company" => (
-                "SELECT id, name, email, phone, website FROM organizations LIMIT 100",
+                "SELECT id, name, email, phone, website FROM organizations ORDER BY id LIMIT $1 OFFSET $2",
                 "account",
             ),
             "lead" => (
-                "SELECT id, name, '' as email, '' as phone, '' as website FROM leads LIMIT 100",
+                "SELECT id, name, '' as email, '' as phone, '' as website FROM leads ORDER BY id LIMIT $1 OFFSET $2",
                 "lead",
             ),
             _ => (
-                "SELECT id, person_name as name, value as email, '' as phone, '' as website FROM contacts LIMIT 100",
+                "SELECT id, person_name as name, value as email, '' as phone, '' as website FROM contacts ORDER BY id LIMIT $1 OFFSET $2",
                 "contact",
             ),
         };
 
-        let rows = match sqlx::query(query).fetch_all(&state.db).await {
-            Ok(r) => r,
-            Err(e) => return (0, 0, 0, "failed".to_string(), Some(e.to_string())),
-        };
+        const PAGE_SIZE: i64 = 200;
+        let mut offset: i64 = 0;
+        let mut total = 0i32;
+        let mut success = 0i32;
+        let mut failed = 0i32;
 
-        let mut success = 0;
-        let mut failed = 0;
-        for row in &rows {
-            let local_id: String = row.try_get("id").unwrap_or_default();
-            let name: String = row.try_get("name").unwrap_or_default();
-            let email: String = row.try_get("email").unwrap_or_default();
-
-            let body = match provider.as_str() {
-                "hubspot" => json!({ "properties": { "name": name, "email": email } }),
-                _ => json!({ "Name": name, "Email": email }),
+        loop {
+            let rows = match sqlx::query(query)
+                .bind(PAGE_SIZE)
+                .bind(offset)
+                .fetch_all(&state.db)
+                .await
+            {
+                Ok(r) => r,
+                Err(e) => return (total, success, failed, "failed".to_string(), Some(e.to_string())),
             };
-
-            let req = state.http_client.post(&endpoint).json(&body);
-            let req = provider_auth(&provider, &creds, req);
-            match req.send().await {
-                Ok(resp) if resp.status().is_success() => {
-                    let crm_id = resp
-                        .json::<Value>()
-                        .await
-                        .ok()
-                        .and_then(|v| {
-                            v.get("id")
-                                .or_else(|| v.get("data").and_then(|d| d.get("id")))
-                                .map(|i| i.to_string())
-                        })
-                        .unwrap_or_else(|| local_id.clone());
-                    upsert_external_ref(state, connection_id, local_type, &local_id, object_type, &crm_id).await;
-                    success += 1;
-                }
-                _ => failed += 1,
+            if rows.is_empty() {
+                break;
             }
+            let page_len = rows.len() as i64;
+
+            for row in &rows {
+                let local_id: String = row.try_get("id").unwrap_or_default();
+                let name: String = row.try_get("name").unwrap_or_default();
+                let email: String = row.try_get("email").unwrap_or_default();
+
+                let body = match provider.as_str() {
+                    "hubspot" => json!({ "properties": { "name": name, "email": email } }),
+                    _ => json!({ "Name": name, "Email": email }),
+                };
+
+                let req = state.http_client.post(&endpoint).json(&body);
+                let req = provider_auth(&provider, &creds, req);
+                match req.send().await {
+                    Ok(resp) if resp.status().is_success() => {
+                        let crm_id = resp
+                            .json::<Value>()
+                            .await
+                            .ok()
+                            .and_then(|v| {
+                                v.get("id")
+                                    .or_else(|| v.get("data").and_then(|d| d.get("id")))
+                                    .map(|i| i.to_string())
+                            })
+                            .unwrap_or_else(|| local_id.clone());
+                        upsert_external_ref(state, connection_id, local_type, &local_id, object_type, &crm_id).await;
+                        success += 1;
+                    }
+                    _ => failed += 1,
+                }
+            }
+
+            total += page_len as i32;
+            if page_len < PAGE_SIZE {
+                break;
+            }
+            offset += PAGE_SIZE;
         }
 
-        let total = rows.len() as i32;
         (
             total,
             success,
@@ -622,37 +902,13 @@ async fn perform_sync(
             None,
         )
     } else {
-        // Inbound: pull the CRM's records and record them as external refs.
-        let req = state.http_client.get(&endpoint);
-        let req = provider_auth(&provider, &creds, req);
-        let resp = match req.send().await {
+        // Inbound: pull every page of the CRM's records, actually write
+        // each record's fields into the matching local table, and then
+        // point crm_external_refs at that real local row.
+        let records = match fetch_all_crm_records(state, &provider, &creds, &endpoint).await {
             Ok(r) => r,
-            Err(e) => return (0, 0, 0, "failed".to_string(), Some(e.to_string())),
+            Err(e) => return (0, 0, 0, "failed".to_string(), Some(e)),
         };
-
-        if !resp.status().is_success() {
-            let status = resp.status();
-            return (
-                0,
-                0,
-                0,
-                "failed".to_string(),
-                Some(format!("CRM returned HTTP {status}")),
-            );
-        }
-
-        let body: Value = match resp.json().await {
-            Ok(v) => v,
-            Err(e) => return (0, 0, 0, "failed".to_string(), Some(e.to_string())),
-        };
-
-        let records: Vec<Value> = body
-            .get("results") // HubSpot
-            .or_else(|| body.get("data")) // Pipedrive / Salesforce composite
-            .or_else(|| body.get("records")) // Salesforce SOQL-style
-            .and_then(|v| v.as_array())
-            .cloned()
-            .unwrap_or_default();
 
         let local_type = match object_type {
             "account" | "company" => "account",
@@ -660,26 +916,65 @@ async fn perform_sync(
             _ => "contact",
         };
 
+        // contacts.lead_id is a NOT NULL FK; CRM contacts aren't tied to one
+        // of our harvester-sourced leads, so route them through one shared
+        // placeholder lead for this connection.
+        let placeholder_lead_id = if local_type == "contact" {
+            match ensure_crm_placeholder_lead(state, connection_id, &provider).await {
+                Ok(id) => Some(id),
+                Err(e) => return (0, 0, 0, "failed".to_string(), Some(e)),
+            }
+        } else {
+            None
+        };
+
         let mut success = 0;
+        let mut failed = 0;
         for rec in &records {
             let crm_id = rec
                 .get("id")
+                .or_else(|| rec.get("Id")) // Salesforce capitalizes its id field
                 .map(|v| v.to_string().trim_matches('"').to_string())
                 .unwrap_or_default();
             if crm_id.is_empty() {
+                failed += 1;
                 continue;
             }
-            // Without a safe, unambiguous local row to attach each pulled
-            // record to across three different CRM schemas, inbound sync
-            // records the external reference using the CRM id as the local
-            // key so repeated pulls are idempotent and the sync is auditable.
-            let local_id = format!("ext_{provider}_{crm_id}");
-            upsert_external_ref(state, connection_id, local_type, &local_id, object_type, &crm_id).await;
-            success += 1;
+            let (name, email, phone, website) = extract_crm_fields(&provider, rec);
+            let local_id = format!("{local_type}_crm_{provider}_{crm_id}");
+
+            let upsert_result = match local_type {
+                "account" => upsert_organization_from_crm(state, &local_id, &name, &email, &phone, &website).await,
+                "lead" => upsert_lead_from_crm(state, &local_id, &provider, &crm_id, &name).await,
+                _ => {
+                    upsert_contact_from_crm(
+                        state,
+                        &local_id,
+                        placeholder_lead_id.as_deref().unwrap_or_default(),
+                        &name,
+                        &email,
+                    )
+                    .await
+                }
+            };
+
+            match upsert_result {
+                Ok(()) => {
+                    upsert_external_ref(state, connection_id, local_type, &local_id, object_type, &crm_id).await;
+                    success += 1;
+                }
+                Err(_) => failed += 1,
+            }
         }
 
         let total = records.len() as i32;
-        (total, success, total - success, "completed".to_string(), None)
+        (
+            total,
+            success,
+            failed,
+            if failed > 0 { "partial".to_string() } else { "completed".to_string() },
+            None,
+        )
     }
 }
 

@@ -14,6 +14,25 @@ pub struct ShopifySyncAdapter {
     pub http_client: reqwest::Client,
 }
 
+/// Parse a RFC 5988 `Link` header and return the URL for `rel="next"`, if
+/// present. Shopify hands back a ready-to-call URL (with the `page_info`
+/// cursor baked in), so following pagination is just re-issuing GETs against
+/// this value until it's no longer present.
+fn parse_shopify_next_link(value: &str) -> Option<String> {
+    for part in value.split(',') {
+        let mut segments = part.trim().split(';');
+        let url_part = segments.next()?.trim();
+        let is_next = segments.any(|seg| {
+            let seg = seg.trim();
+            seg == "rel=\"next\"" || seg == "rel=next"
+        });
+        if is_next {
+            return Some(url_part.trim_start_matches('<').trim_end_matches('>').to_string());
+        }
+    }
+    None
+}
+
 impl ShopifySyncAdapter {
     /// Pull the shop domain and access token out of the connection's
     /// `credentials` JSON blob. Accepts a couple of plausible key spellings
@@ -53,6 +72,47 @@ impl ShopifySyncAdapter {
             .as_ref()
             .map(|c| c.id.clone())
             .unwrap_or_default()
+    }
+
+    /// GET `url` and every subsequent page the `Link: rel="next"` header
+    /// points at, collecting the named top-level array across all pages.
+    async fn fetch_all_paginated(
+        &self,
+        token: &str,
+        mut url: String,
+        array_key: &str,
+    ) -> Result<Vec<Value>, String> {
+        let mut all = Vec::new();
+        loop {
+            let resp = self
+                .http_client
+                .get(&url)
+                .header("X-Shopify-Access-Token", token)
+                .send()
+                .await
+                .map_err(|e| format!("Failed to reach Shopify: {e}"))?;
+
+            let next_url = resp
+                .headers()
+                .get(reqwest::header::LINK)
+                .and_then(|v| v.to_str().ok())
+                .and_then(parse_shopify_next_link);
+
+            let body: Value = resp
+                .json()
+                .await
+                .map_err(|e| format!("Failed to parse Shopify response: {e}"))?;
+
+            let page = body.get(array_key).and_then(|v| v.as_array()).cloned().unwrap_or_default();
+            let page_was_empty = page.is_empty();
+            all.extend(page);
+
+            match next_url {
+                Some(n) if !page_was_empty => url = n,
+                _ => break,
+            }
+        }
+        Ok(all)
     }
 
     async fn upsert_product(&self, pool: &PgPool, brand_id: &str, p: &Value) -> Result<(), String> {
@@ -315,40 +375,20 @@ impl SyncAdapter for ShopifySyncAdapter {
         };
 
         let url = format!("https://{domain}/admin/api/{API_VERSION}/products.json?limit=250");
-        let resp = self
-            .http_client
-            .get(&url)
-            .header("X-Shopify-Access-Token", &token)
-            .send()
-            .await;
-
-        let body: Value = match resp {
-            Ok(r) => match r.json().await {
-                Ok(v) => v,
-                Err(e) => {
-                    return SyncResult {
-                        success: false,
-                        platform: "shopify".to_string(),
-                        entity_type: "products".to_string(),
-                        entity_id: String::new(),
-                        message: "Failed to parse Shopify products response".to_string(),
-                        errors: vec![e.to_string()],
-                    }
-                }
-            },
+        let products = match self.fetch_all_paginated(&token, url, "products").await {
+            Ok(p) => p,
             Err(e) => {
                 return SyncResult {
                     success: false,
                     platform: "shopify".to_string(),
                     entity_type: "products".to_string(),
                     entity_id: String::new(),
-                    message: "Failed to reach Shopify".to_string(),
-                    errors: vec![e.to_string()],
+                    message: "Failed to fetch Shopify products".to_string(),
+                    errors: vec![e],
                 }
             }
         };
 
-        let products = body.get("products").and_then(|v| v.as_array()).cloned().unwrap_or_default();
         let mut errors = Vec::new();
         for p in &products {
             if let Err(e) = self.upsert_product(pool, brand_id, p).await {
@@ -384,40 +424,20 @@ impl SyncAdapter for ShopifySyncAdapter {
         let url = format!(
             "https://{domain}/admin/api/{API_VERSION}/orders.json?status=any&limit=250"
         );
-        let resp = self
-            .http_client
-            .get(&url)
-            .header("X-Shopify-Access-Token", &token)
-            .send()
-            .await;
-
-        let body: Value = match resp {
-            Ok(r) => match r.json().await {
-                Ok(v) => v,
-                Err(e) => {
-                    return SyncResult {
-                        success: false,
-                        platform: "shopify".to_string(),
-                        entity_type: "orders".to_string(),
-                        entity_id: String::new(),
-                        message: "Failed to parse Shopify orders response".to_string(),
-                        errors: vec![e.to_string()],
-                    }
-                }
-            },
+        let orders = match self.fetch_all_paginated(&token, url, "orders").await {
+            Ok(o) => o,
             Err(e) => {
                 return SyncResult {
                     success: false,
                     platform: "shopify".to_string(),
                     entity_type: "orders".to_string(),
                     entity_id: String::new(),
-                    message: "Failed to reach Shopify".to_string(),
-                    errors: vec![e.to_string()],
+                    message: "Failed to fetch Shopify orders".to_string(),
+                    errors: vec![e],
                 }
             }
         };
 
-        let orders = body.get("orders").and_then(|v| v.as_array()).cloned().unwrap_or_default();
         let mut errors = Vec::new();
         for o in &orders {
             if let Err(e) = self.upsert_order(pool, brand_id, o).await {

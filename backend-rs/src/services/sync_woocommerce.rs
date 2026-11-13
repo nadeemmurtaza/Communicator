@@ -56,6 +56,45 @@ impl WooCommerceSyncAdapter {
             .unwrap_or_default()
     }
 
+    /// Page through a WooCommerce list endpoint with `page=N`, stopping once
+    /// a page comes back with fewer than `per_page` items (WooCommerce has
+    /// no items left once a short page is seen; the `X-WP-TotalPages`
+    /// response header is an alternative signal but isn't guaranteed to be
+    /// present on every store/proxy setup, so this is the more robust check).
+    async fn fetch_all_paginated(
+        &self,
+        store_url: &str,
+        key: &str,
+        secret: &str,
+        path_with_query: &str,
+        per_page: usize,
+    ) -> Result<Vec<Value>, String> {
+        let mut all = Vec::new();
+        let mut page = 1u32;
+        loop {
+            let url = format!("{store_url}{path_with_query}&page={page}");
+            let resp = self
+                .http_client
+                .get(&url)
+                .basic_auth(key, Some(secret))
+                .send()
+                .await
+                .map_err(|e| format!("Failed to reach WooCommerce: {e}"))?;
+            let items: Vec<Value> = resp
+                .json()
+                .await
+                .map_err(|e| format!("Failed to parse WooCommerce response: {e}"))?;
+
+            let got = items.len();
+            all.extend(items);
+            if got < per_page {
+                break;
+            }
+            page += 1;
+        }
+        Ok(all)
+    }
+
     async fn upsert_product(&self, pool: &PgPool, brand_id: &str, p: &Value) -> Result<(), String> {
         let external_id = p.get("id").map(|v| v.to_string()).unwrap_or_default();
         let name = p.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -287,36 +326,19 @@ impl SyncAdapter for WooCommerceSyncAdapter {
             }
         };
 
-        let url = format!("{store_url}/wp-json/wc/v3/products?per_page=100");
-        let resp = self
-            .http_client
-            .get(&url)
-            .basic_auth(&key, Some(&secret))
-            .send()
-            .await;
-
-        let products: Vec<Value> = match resp {
-            Ok(r) => match r.json().await {
-                Ok(v) => v,
-                Err(e) => {
-                    return SyncResult {
-                        success: false,
-                        platform: "woocommerce".to_string(),
-                        entity_type: "products".to_string(),
-                        entity_id: String::new(),
-                        message: "Failed to parse WooCommerce products response".to_string(),
-                        errors: vec![e.to_string()],
-                    }
-                }
-            },
+        let products = match self
+            .fetch_all_paginated(&store_url, &key, &secret, "/wp-json/wc/v3/products?per_page=100", 100)
+            .await
+        {
+            Ok(p) => p,
             Err(e) => {
                 return SyncResult {
                     success: false,
                     platform: "woocommerce".to_string(),
                     entity_type: "products".to_string(),
                     entity_id: String::new(),
-                    message: "Failed to reach WooCommerce".to_string(),
-                    errors: vec![e.to_string()],
+                    message: "Failed to fetch WooCommerce products".to_string(),
+                    errors: vec![e],
                 }
             }
         };
@@ -353,36 +375,19 @@ impl SyncAdapter for WooCommerceSyncAdapter {
             }
         };
 
-        let url = format!("{store_url}/wp-json/wc/v3/orders?per_page=100");
-        let resp = self
-            .http_client
-            .get(&url)
-            .basic_auth(&key, Some(&secret))
-            .send()
-            .await;
-
-        let orders: Vec<Value> = match resp {
-            Ok(r) => match r.json().await {
-                Ok(v) => v,
-                Err(e) => {
-                    return SyncResult {
-                        success: false,
-                        platform: "woocommerce".to_string(),
-                        entity_type: "orders".to_string(),
-                        entity_id: String::new(),
-                        message: "Failed to parse WooCommerce orders response".to_string(),
-                        errors: vec![e.to_string()],
-                    }
-                }
-            },
+        let orders = match self
+            .fetch_all_paginated(&store_url, &key, &secret, "/wp-json/wc/v3/orders?per_page=100", 100)
+            .await
+        {
+            Ok(o) => o,
             Err(e) => {
                 return SyncResult {
                     success: false,
                     platform: "woocommerce".to_string(),
                     entity_type: "orders".to_string(),
                     entity_id: String::new(),
-                    message: "Failed to reach WooCommerce".to_string(),
-                    errors: vec![e.to_string()],
+                    message: "Failed to fetch WooCommerce orders".to_string(),
+                    errors: vec![e],
                 }
             }
         };
