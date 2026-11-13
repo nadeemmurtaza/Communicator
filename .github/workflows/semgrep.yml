@@ -20,7 +20,7 @@ jobs:
     container:
       image: semgrep/semgrep
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Uses Semgrep's free community/registry rulesets (p/default,
       # language-specific packs auto-selected) -- no SEMGREP_APP_TOKEN or
