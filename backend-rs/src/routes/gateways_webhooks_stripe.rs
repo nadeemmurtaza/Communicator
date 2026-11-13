@@ -1490,7 +1490,7 @@ pub(crate) async fn gateway_row_for_channel(
 
     let by_channel = sqlx::query_as::<_, GatewayDbRow>(
         "SELECT id, gateway_type, provider, name, is_default, is_active, credentials, config, test_status, latency_ms, last_tested_at, created_at, updated_at \
-         FROM channel_gateway_connections WHERE is_active = 1 AND (LOWER(gateway_type) = ? OR LOWER(provider) = ?) \
+         FROM channel_gateway_connections WHERE is_active = 1 AND (LOWER(gateway_type) = $1 OR LOWER(provider) = $2) \
          ORDER BY is_default DESC, updated_at DESC LIMIT 1",
     )
     .bind(&channel)
@@ -1883,7 +1883,7 @@ pub async fn list_gateways(
 
     let rows = if let Some(ref g_type) = query.gateway_type {
         match sqlx::query_as::<_, GatewayDbRow>(
-            "SELECT id, gateway_type, provider, name, is_default, is_active, credentials, config, test_status, latency_ms, last_tested_at, created_at, updated_at FROM channel_gateway_connections WHERE gateway_type = ? ORDER BY is_default DESC, name ASC",
+            "SELECT id, gateway_type, provider, name, is_default, is_active, credentials, config, test_status, latency_ms, last_tested_at, created_at, updated_at FROM channel_gateway_connections WHERE gateway_type = $1 ORDER BY is_default DESC, name ASC",
         )
         .bind(g_type)
         .fetch_all(&state.db)
@@ -1913,7 +1913,7 @@ pub async fn get_single_gateway(
 ) -> impl IntoResponse {
 
     let row = match sqlx::query_as::<_, GatewayDbRow>(
-        "SELECT id, gateway_type, provider, name, is_default, is_active, credentials, config, test_status, latency_ms, last_tested_at, created_at, updated_at FROM channel_gateway_connections WHERE id = ?",
+        "SELECT id, gateway_type, provider, name, is_default, is_active, credentials, config, test_status, latency_ms, last_tested_at, created_at, updated_at FROM channel_gateway_connections WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -2061,7 +2061,7 @@ pub async fn create_gateway(
     let mut warnings: Vec<String> = Vec::new();
 
     if is_default {
-        match sqlx::query("UPDATE channel_gateway_connections SET is_default = 0, updated_at = ? WHERE gateway_type = ?")
+        match sqlx::query("UPDATE channel_gateway_connections SET is_default = 0, updated_at = $1 WHERE gateway_type = $2")
             .bind(&now)
             .bind(&gateway_type)
             .execute(&state.db)
@@ -2080,7 +2080,7 @@ pub async fn create_gateway(
     match sqlx::query(
         r#"
         INSERT INTO channel_gateway_connections (id, gateway_type, provider, name, is_default, is_active, credentials, config, test_status, latency_ms, last_tested_at, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'untested', 0, NULL, ?, ?)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'untested', 0, NULL, $9, $10)
         "#,
     )
     .bind(&id)
@@ -2104,7 +2104,7 @@ pub async fn create_gateway(
     }
 
     let created = sqlx::query_as::<_, GatewayDbRow>(
-        "SELECT id, gateway_type, provider, name, is_default, is_active, credentials, config, test_status, latency_ms, last_tested_at, created_at, updated_at FROM channel_gateway_connections WHERE id = ?",
+        "SELECT id, gateway_type, provider, name, is_default, is_active, credentials, config, test_status, latency_ms, last_tested_at, created_at, updated_at FROM channel_gateway_connections WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -2137,7 +2137,7 @@ pub async fn update_gateway(
     Json(payload): Json<serde_json::Value>,
 ) -> impl IntoResponse {
     let existing = match sqlx::query_as::<_, GatewayDbRow>(
-        "SELECT id, gateway_type, provider, name, is_default, is_active, credentials, config, test_status, latency_ms, last_tested_at, created_at, updated_at FROM channel_gateway_connections WHERE id = ?",
+        "SELECT id, gateway_type, provider, name, is_default, is_active, credentials, config, test_status, latency_ms, last_tested_at, created_at, updated_at FROM channel_gateway_connections WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -2211,7 +2211,7 @@ pub async fn update_gateway(
     gw.updated_at = Utc::now().to_rfc3339();
 
     match sqlx::query(
-        "UPDATE channel_gateway_connections SET name = ?, is_active = ?, credentials = ?, config = ?, updated_at = ? WHERE id = ?",
+        "UPDATE channel_gateway_connections SET name = $1, is_active = $2, credentials = $3, config = $4, updated_at = $5 WHERE id = $6",
     )
     .bind(&gw.name)
     .bind(gw.is_active)
@@ -2242,7 +2242,7 @@ pub async fn delete_gateway(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    match sqlx::query("DELETE FROM channel_gateway_connections WHERE id = ?")
+    match sqlx::query("DELETE FROM channel_gateway_connections WHERE id = $1")
         .bind(&id)
         .execute(&state.db)
         .await
@@ -2273,7 +2273,7 @@ pub async fn test_gateway_connection(
     Path(id): Path<String>,
 ) -> impl IntoResponse {
     let existing = match sqlx::query_as::<_, GatewayDbRow>(
-        "SELECT id, gateway_type, provider, name, is_default, is_active, credentials, config, test_status, latency_ms, last_tested_at, created_at, updated_at FROM channel_gateway_connections WHERE id = ?",
+        "SELECT id, gateway_type, provider, name, is_default, is_active, credentials, config, test_status, latency_ms, last_tested_at, created_at, updated_at FROM channel_gateway_connections WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -2355,7 +2355,7 @@ pub async fn set_default_gateway(
     Path(id): Path<String>,
 ) -> impl IntoResponse {
     let existing = match sqlx::query_as::<_, GatewayDbRow>(
-        "SELECT id, gateway_type, provider, name, is_default, is_active, credentials, config, test_status, latency_ms, last_tested_at, created_at, updated_at FROM channel_gateway_connections WHERE id = ?",
+        "SELECT id, gateway_type, provider, name, is_default, is_active, credentials, config, test_status, latency_ms, last_tested_at, created_at, updated_at FROM channel_gateway_connections WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -2422,7 +2422,7 @@ pub async fn send_gateway_ping(
     Json(payload): Json<serde_json::Value>,
 ) -> impl IntoResponse {
     let existing = match sqlx::query_as::<_, GatewayDbRow>(
-        "SELECT id, gateway_type, provider, name, is_default, is_active, credentials, config, test_status, latency_ms, last_tested_at, created_at, updated_at FROM channel_gateway_connections WHERE id = ?",
+        "SELECT id, gateway_type, provider, name, is_default, is_active, credentials, config, test_status, latency_ms, last_tested_at, created_at, updated_at FROM channel_gateway_connections WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
