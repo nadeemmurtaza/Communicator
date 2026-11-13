@@ -5,7 +5,7 @@
 //! for the AI reply engine.
 
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ReplyContextPackage {
@@ -57,7 +57,7 @@ pub struct ReplyIntegrationSummary {
     pub settings: ReplyIntegrationSettings,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct SourceTypeCount {
     pub source_type: String,
     pub count: i64,

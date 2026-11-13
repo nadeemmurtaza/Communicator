@@ -26,19 +26,19 @@ pub struct UnifiedAnalyticsSummary {
     pub workflow_stats: WorkflowStats,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct ChannelCount {
     pub channel: String,
     pub count: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct StatusCount {
     pub status: String,
     pub count: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct TopicCount {
     pub topic: String,
     pub count: i64,
@@ -76,7 +76,7 @@ pub struct WorkflowStats {
     pub success_rate: f64,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct SavedReport {
     pub id: String,
     pub org_id: String,
@@ -95,7 +95,7 @@ pub struct SavedReport {
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct ScheduledReport {
     pub id: String,
     pub report_id: String,
@@ -110,7 +110,7 @@ pub struct ScheduledReport {
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct ReportTemplate {
     pub id: String,
     pub org_id: String,
@@ -124,7 +124,7 @@ pub struct ReportTemplate {
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct DashboardWidget {
     pub id: String,
     pub org_id: String,
@@ -141,7 +141,7 @@ pub struct DashboardWidget {
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct AnalyticsSnapshot {
     pub id: String,
     pub org_id: String,
@@ -152,7 +152,7 @@ pub struct AnalyticsSnapshot {
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct UnifiedAnalyticsSettings {
     pub id: String,
     pub org_id: String,

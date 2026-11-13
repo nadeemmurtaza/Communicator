@@ -146,11 +146,12 @@ impl ExternalOtpIntegrationService {
 
         // Generate secret key (32-byte random hex)
         let mut secret_bytes = [0u8; 32];
-        rand::RngCore::next_bytes(&mut rand::thread_rng(), &mut secret_bytes);
+        rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut secret_bytes);
         let secret_key = format!("sk_{}", hex::encode(&secret_bytes));
 
         // Hash the secret key for storage
-        let salt = rand::RngCore::next_bytes(&mut rand::thread_rng(), &mut [0u8; 32]);
+        let mut salt = [0u8; 32];
+        rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut salt);
         let salt_hex = hex::encode(&salt);
 
         let mut mac = HmacSha256::new_from_slice(&salt)
@@ -160,7 +161,7 @@ impl ExternalOtpIntegrationService {
 
         // Generate webhook secret
         let mut webhook_secret_bytes = [0u8; 32];
-        rand::RngCore::next_bytes(&mut rand::thread_rng(), &mut webhook_secret_bytes);
+        rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut webhook_secret_bytes);
         let webhook_secret = hex::encode(&webhook_secret_bytes);
 
         let allowed_purposes = req.allowed_purposes.clone().unwrap_or_else(|| {

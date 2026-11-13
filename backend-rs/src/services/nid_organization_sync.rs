@@ -516,7 +516,7 @@ pub async fn webhook_handler(
         .cloned()
         .unwrap_or_default();
 
-    match upsert_organization_from_webhook(&state.db_pool, &org_data, &tenant_data, event_type).await {
+    match upsert_organization_from_webhook(&state.db, &org_data, &tenant_data, event_type).await {
         Ok(_) => StatusCode::OK,
         Err(e) => {
             eprintln!("Organization webhook error: {}", e);
@@ -528,7 +528,7 @@ pub async fn webhook_handler(
 pub async fn list_organizations_handler(
     State(state): State<AppState>,
 ) -> (StatusCode, Json<Vec<NidOrganization>>) {
-    match list_organizations(&state.db_pool).await {
+    match list_organizations(&state.db).await {
         Ok(orgs) => (StatusCode::OK, Json(orgs)),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(vec![])),
     }
@@ -538,7 +538,7 @@ pub async fn get_organization_handler(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> (StatusCode, Json<NidOrganization>) {
-    match fetch_organization_by_nid_id(&state.db_pool, &id).await {
+    match fetch_organization_by_nid_id(&state.db, &id).await {
         Ok(org) => (StatusCode::OK, Json(org)),
         Err(_) => (StatusCode::NOT_FOUND, Json(NidOrganization {
             id: String::new(),
@@ -565,7 +565,7 @@ pub async fn get_organization_handler(
 pub async fn get_connection_handler(
     State(state): State<AppState>,
 ) -> (StatusCode, Json<Option<NidOrganizationConnection>>) {
-    let conn = get_connection(&state.db_pool).await;
+    let conn = get_connection(&state.db).await;
     (StatusCode::OK, Json(conn))
 }
 
@@ -612,7 +612,7 @@ pub async fn update_connection_handler(
         query_parts.join(", ")
     );
 
-    match sqlx::query(&query).execute(&state.db_pool).await {
+    match sqlx::query(&query).execute(&state.db).await {
         Ok(_) => StatusCode::OK,
         Err(e) => {
             eprintln!("Failed to update connection: {}", e);
@@ -624,7 +624,7 @@ pub async fn update_connection_handler(
 pub async fn get_health_handler(
     State(state): State<AppState>,
 ) -> (StatusCode, Json<ConnectionHealth>) {
-    match get_health(&state.db_pool).await {
+    match get_health(&state.db).await {
         Ok(health) => (StatusCode::OK, Json(health)),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(ConnectionHealth {
             connection_status: "error".to_string(),
@@ -646,7 +646,7 @@ pub async fn get_sync_log_handler(
         .and_then(|v| v.parse::<i64>().ok())
         .unwrap_or(50);
 
-    match get_sync_log(&state.db_pool, limit).await {
+    match get_sync_log(&state.db, limit).await {
         Ok(logs) => (StatusCode::OK, Json(logs)),
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(vec![])),
     }
@@ -656,7 +656,7 @@ pub async fn create_redirect_handler(
     State(state): State<AppState>,
     Json(req): Json<CreateRedirectRequest>,
 ) -> (StatusCode, Json<RedirectSession>) {
-    match create_redirect_session(&state.db_pool, req).await {
+    match create_redirect_session(&state.db, req).await {
         Ok(session) => (StatusCode::OK, Json(session)),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(RedirectSession {
             state_token: String::new(),
@@ -677,7 +677,7 @@ pub async fn redirect_callback_handler(
     let org_id = params.get("organization_id").map(|s| s.as_str());
     let error = params.get("error").map(|s| s.as_str());
 
-    match handle_redirect_callback(&state.db_pool, state_token, org_id, error).await {
+    match handle_redirect_callback(&state.db, state_token, org_id, error).await {
         Ok(result) => (StatusCode::OK, Json(result)),
         Err(e) => (StatusCode::BAD_REQUEST, Json(serde_json::json!({
             "success": false,

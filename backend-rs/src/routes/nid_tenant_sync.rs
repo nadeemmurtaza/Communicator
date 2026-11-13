@@ -13,7 +13,7 @@ use axum::Json;
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
-use crate::db::DbPool;
+use crate::db::AppState;
 use crate::services::nid_tenant_sync::{
     CreateRedirectSessionRequest, NidTenantSyncService, UpdateConnectionSettingsRequest,
 };
@@ -43,11 +43,11 @@ pub struct WebhookResponse {
 /// POST /api/v1/nid/webhook
 /// Receives webhook events from nID for tenant creation/updates
 pub async fn nid_webhook(
-    State(pool): State<DbPool>,
-    headers: axum::headers::HeaderMap,
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<WebhookResponse>, (StatusCode, String)> {
-    let service = NidTenantSyncService::new(&pool);
+    let service = NidTenantSyncService::new(&state.db);
 
     // Extract signature from header
     let signature = headers
@@ -74,9 +74,9 @@ pub async fn nid_webhook(
 /// GET /api/v1/nid/tenants
 /// List all synced nID tenants
 pub async fn list_nid_tenants(
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let service = NidTenantSyncService::new(&pool);
+    let service = NidTenantSyncService::new(&state.db);
 
     match service.list_tenants().await {
         Ok(tenants) => Ok(Json(serde_json::json!({
@@ -90,10 +90,10 @@ pub async fn list_nid_tenants(
 /// GET /api/v1/nid/tenants/{tenant_id}
 /// Get a specific nID tenant by ID
 pub async fn get_nid_tenant(
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
     Path(tenant_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let service = NidTenantSyncService::new(&pool);
+    let service = NidTenantSyncService::new(&state.db);
 
     match service.get_tenant(&tenant_id).await {
         Ok(Some(tenant)) => Ok(Json(serde_json::json!(tenant))),
@@ -105,9 +105,9 @@ pub async fn get_nid_tenant(
 /// GET /api/v1/nid/connection
 /// Get nID connection settings and health
 pub async fn get_nid_connection(
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let service = NidTenantSyncService::new(&pool);
+    let service = NidTenantSyncService::new(&state.db);
     let health = service.check_connection_health().await;
     Ok(Json(health))
 }
@@ -115,10 +115,10 @@ pub async fn get_nid_connection(
 /// PUT /api/v1/nid/connection
 /// Update nID connection settings
 pub async fn update_nid_connection(
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
     Json(req): Json<UpdateConnectionSettingsRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let service = NidTenantSyncService::new(&pool);
+    let service = NidTenantSyncService::new(&state.db);
 
     match service.update_connection_settings(&req).await {
         Ok(settings) => {
@@ -132,10 +132,10 @@ pub async fn update_nid_connection(
 /// POST /api/v1/nid/redirect/create
 /// Create a redirect session for tenant creation in nID
 pub async fn create_redirect_session(
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
     Json(req): Json<CreateRedirectSessionRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let service = NidTenantSyncService::new(&pool);
+    let service = NidTenantSyncService::new(&state.db);
 
     match service.create_redirect_session(&req).await {
         Ok(session) => {
@@ -157,10 +157,10 @@ pub async fn create_redirect_session(
 /// GET /api/v1/nid/redirect/callback
 /// Handle callback from nID after tenant creation
 pub async fn redirect_callback(
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
     axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let service = NidTenantSyncService::new(&pool);
+    let service = NidTenantSyncService::new(&state.db);
 
     let state = params
         .get("state")
@@ -177,10 +177,10 @@ pub async fn redirect_callback(
 /// GET /api/v1/nid/redirect/{state}
 /// Get redirect session status
 pub async fn get_redirect_session(
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
     Path(state): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let service = NidTenantSyncService::new(&pool);
+    let service = NidTenantSyncService::new(&state.db);
 
     match service.get_redirect_session(&state) {
         Some(session) => Ok(Json(serde_json::json!(session))),
@@ -191,7 +191,7 @@ pub async fn get_redirect_session(
 /// GET /api/v1/nid/sync-log
 /// Get tenant sync log entries
 pub async fn get_sync_log(
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
     axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
     let limit: i64 = params
@@ -200,7 +200,7 @@ pub async fn get_sync_log(
         .unwrap_or(50);
     let event_type = params.get("event_type").cloned();
 
-    let pool_ref = pool.get_pg_pool();
+    let pool_ref = &state.db;
 
     let query = if let Some(ref et) = event_type {
         format!(

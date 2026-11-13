@@ -7,7 +7,7 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
 use serde::Deserialize;
-use crate::db::DbPool;
+use crate::db::AppState;
 use crate::services::store_connection::{
     StoreConnectionService, CreateStoreConnectionRequest, UpdateStoreConnectionRequest,
     StoreAccountCreationRequest, StoreOtpVerificationRequest, UiCompatibilityReport,
@@ -24,10 +24,10 @@ pub struct BrandQuery {
 
 /// Create a new store connection for any platform.
 pub async fn create_connection(
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
     Json(req): Json<CreateStoreConnectionRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    match StoreConnectionService::create_connection(&pool, &req).await {
+    match StoreConnectionService::create_connection(&state.db, &req).await {
         Ok(resp) => (
             StatusCode::CREATED,
             Json(serde_json::json!({
@@ -47,10 +47,10 @@ pub async fn create_connection(
 
 /// Get a store connection by ID.
 pub async fn get_connection(
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
     Path(connection_id): Path<String>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    match StoreConnectionService::get_by_id(&pool, &connection_id).await {
+    match StoreConnectionService::get_by_id(&state.db, &connection_id).await {
         Ok(conn) => (
             StatusCode::OK,
             Json(serde_json::json!({
@@ -70,10 +70,10 @@ pub async fn get_connection(
 
 /// List all store connections for a brand.
 pub async fn list_connections(
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
     Query(params): Query<BrandQuery>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    match StoreConnectionService::list_by_brand(&pool, &params.brand_id).await {
+    match StoreConnectionService::list_by_brand(&state.db, &params.brand_id).await {
         Ok(conns) => (
             StatusCode::OK,
             Json(serde_json::json!({
@@ -93,11 +93,11 @@ pub async fn list_connections(
 
 /// Update a store connection.
 pub async fn update_connection(
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
     Path(connection_id): Path<String>,
     Json(req): Json<UpdateStoreConnectionRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    match StoreConnectionService::update_connection(&pool, &connection_id, &req).await {
+    match StoreConnectionService::update_connection(&state.db, &connection_id, &req).await {
         Ok(conn) => (
             StatusCode::OK,
             Json(serde_json::json!({
@@ -117,10 +117,10 @@ pub async fn update_connection(
 
 /// Deactivate a store connection.
 pub async fn deactivate_connection(
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
     Path(connection_id): Path<String>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    match StoreConnectionService::deactivate_connection(&pool, &connection_id).await {
+    match StoreConnectionService::deactivate_connection(&state.db, &connection_id).await {
         Ok(()) => (
             StatusCode::OK,
             Json(serde_json::json!({
@@ -144,10 +144,10 @@ pub async fn deactivate_connection(
 
 /// Get connection status for a store.
 pub async fn get_connection_status(
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
     Path(connection_id): Path<String>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    match StoreConnectionService::get_connection_status(&pool, &connection_id).await {
+    match StoreConnectionService::get_connection_status(&state.db, &connection_id).await {
         Ok(status) => (
             StatusCode::OK,
             Json(serde_json::json!({
@@ -167,10 +167,10 @@ pub async fn get_connection_status(
 
 /// Run a health check on a store connection.
 pub async fn run_health_check(
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
     Path(connection_id): Path<String>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    match StoreConnectionService::run_health_check(&pool, &connection_id).await {
+    match StoreConnectionService::run_health_check(&state.db, &connection_id).await {
         Ok(status) => (
             StatusCode::OK,
             Json(serde_json::json!({
@@ -194,11 +194,11 @@ pub async fn run_health_check(
 
 /// Submit a UI compatibility report from the widget.
 pub async fn submit_ui_compatibility_report(
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
     Path(brand_id): Path<String>,
     Json(report): Json<UiCompatibilityReport>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    match StoreConnectionService::submit_ui_compatibility_report(&pool, &brand_id, &report).await {
+    match StoreConnectionService::submit_ui_compatibility_report(&state.db, &brand_id, &report).await {
         Ok(result) => (
             StatusCode::OK,
             Json(serde_json::json!({
@@ -218,10 +218,10 @@ pub async fn submit_ui_compatibility_report(
 
 /// Get the latest UI compatibility result for a store.
 pub async fn get_ui_compatibility(
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
     Path(connection_id): Path<String>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    match StoreConnectionService::get_latest_ui_compatibility(&pool, &connection_id).await {
+    match StoreConnectionService::get_latest_ui_compatibility(&state.db, &connection_id).await {
         Ok(Some(result)) => (
             StatusCode::OK,
             Json(serde_json::json!({
@@ -252,10 +252,10 @@ pub async fn get_ui_compatibility(
 
 /// Get brand OTP isolation config.
 pub async fn get_brand_isolation(
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
     Path(brand_id): Path<String>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    match StoreConnectionService::get_brand_isolation(&pool, &brand_id).await {
+    match StoreConnectionService::get_brand_isolation(&state.db, &brand_id).await {
         Ok(iso) => (
             StatusCode::OK,
             Json(serde_json::json!({
@@ -275,12 +275,12 @@ pub async fn get_brand_isolation(
 
 /// Update brand OTP isolation settings.
 pub async fn update_brand_isolation(
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
     Path(brand_id): Path<String>,
     Json(req): Json<UpdateIsolationRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
     match StoreConnectionService::update_brand_isolation(
-        &pool, &brand_id,
+        &state.db, &brand_id,
         req.isolation_enabled,
         req.isolation_mode,
         req.rate_limit_per_minute,
@@ -321,11 +321,11 @@ pub struct UpdateIsolationRequest {
 
 /// Initiate account creation for a store customer.
 pub async fn initiate_account_creation(
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
     Path(connection_id): Path<String>,
     Json(req): Json<StoreAccountCreationRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    match StoreConnectionService::initiate_account_creation(&pool, &connection_id, &req).await {
+    match StoreConnectionService::initiate_account_creation(&state.db, &connection_id, &req).await {
         Ok(resp) => {
             let status = if resp.success {
                 StatusCode::OK
@@ -352,10 +352,10 @@ pub async fn initiate_account_creation(
 
 /// Verify OTP for store account creation.
 pub async fn verify_account_creation(
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
     Json(req): Json<StoreOtpVerificationRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    match StoreConnectionService::verify_account_creation(&pool, &req).await {
+    match StoreConnectionService::verify_account_creation(&state.db, &req).await {
         Ok(resp) => {
             let status = if resp.success {
                 StatusCode::OK
@@ -382,12 +382,12 @@ pub async fn verify_account_creation(
 
 /// Resend OTP for a pending account creation.
 pub async fn resend_otp(
-    State(pool): State<DbPool>,
+    State(state): State<AppState>,
     Path(pending_id): Path<String>,
     Json(req): Json<ResendOtpRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
     match StoreConnectionService::resend_otp(
-        &pool, &pending_id,
+        &state.db, &pending_id,
         req.ip_address.as_deref(),
         req.user_agent.as_deref(),
     ).await {

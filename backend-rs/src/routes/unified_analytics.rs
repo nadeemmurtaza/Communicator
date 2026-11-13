@@ -74,7 +74,7 @@ pub struct ExportQuery {
 pub async fn get_summary(
     State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let service = UnifiedAnalyticsService::new(&state.pool);
+    let service = UnifiedAnalyticsService::new(&state.db);
     match service.get_summary().await {
         Ok(summary) => Json(serde_json::to_value(summary).map_err(|e| {
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() })))
@@ -91,7 +91,7 @@ pub async fn list_saved_reports(
     State(state): State<AppState>,
     Query(params): Query<ReportQuery>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let service = UnifiedAnalyticsService::new(&state.pool);
+    let service = UnifiedAnalyticsService::new(&state.db);
     let org_id = params.org_id.unwrap_or_else(|| "default".to_string());
     match service.list_saved_reports(&org_id, params.report_type.as_deref()).await {
         Ok(reports) => Json(serde_json::to_value(reports).map_err(|e| {
@@ -108,7 +108,7 @@ pub async fn create_saved_report(
     State(state): State<AppState>,
     Json(payload): Json<CreateReportQuery>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let service = UnifiedAnalyticsService::new(&state.pool);
+    let service = UnifiedAnalyticsService::new(&state.db);
     match service.create_saved_report(
         &payload.org_id,
         &payload.name,
@@ -133,7 +133,7 @@ pub async fn update_saved_report(
     Path(id): Path<String>,
     Json(updates): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let service = UnifiedAnalyticsService::new(&state.pool);
+    let service = UnifiedAnalyticsService::new(&state.db);
     match service.update_saved_report(&id, &updates).await {
         Ok(report) => Json(serde_json::to_value(report).map_err(|e| {
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() })))
@@ -149,7 +149,7 @@ pub async fn delete_saved_report(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
-    let service = UnifiedAnalyticsService::new(&state.pool);
+    let service = UnifiedAnalyticsService::new(&state.db);
     match service.delete_saved_report(&id).await {
         Ok(()) => Ok(StatusCode::NO_CONTENT),
         Err(e) => Err((
@@ -163,7 +163,7 @@ pub async fn run_report(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let service = UnifiedAnalyticsService::new(&state.pool);
+    let service = UnifiedAnalyticsService::new(&state.db);
     match service.run_report(&id).await {
         Ok(result) => Json(serde_json::to_value(result).map_err(|e| {
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() })))
@@ -180,7 +180,7 @@ pub async fn list_scheduled_reports(
     State(state): State<AppState>,
     Query(params): Query<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let service = UnifiedAnalyticsService::new(&state.pool);
+    let service = UnifiedAnalyticsService::new(&state.db);
     match service.list_scheduled_reports(None).await {
         Ok(reports) => Json(serde_json::to_value(reports).map_err(|e| {
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() })))
@@ -196,7 +196,7 @@ pub async fn create_scheduled_report(
     State(state): State<AppState>,
     Json(payload): Json<CreateScheduledQuery>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let service = UnifiedAnalyticsService::new(&state.pool);
+    let service = UnifiedAnalyticsService::new(&state.db);
     match service.create_scheduled_report(
         &payload.report_id,
         &payload.schedule,
@@ -218,7 +218,7 @@ pub async fn update_scheduled_report(
     Path(id): Path<String>,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let service = UnifiedAnalyticsService::new(&state.pool);
+    let service = UnifiedAnalyticsService::new(&state.db);
     let status = payload.get("status").and_then(|v| v.as_str()).unwrap_or("active");
     match service.update_scheduled_report(&id, status).await {
         Ok(report) => Json(serde_json::to_value(report).map_err(|e| {
@@ -235,7 +235,7 @@ pub async fn delete_scheduled_report(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
-    let service = UnifiedAnalyticsService::new(&state.pool);
+    let service = UnifiedAnalyticsService::new(&state.db);
     match service.delete_scheduled_report(&id).await {
         Ok(()) => Ok(StatusCode::NO_CONTENT),
         Err(e) => Err((
@@ -250,7 +250,7 @@ pub async fn list_templates(
     State(state): State<AppState>,
     Query(params): Query<ReportQuery>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let service = UnifiedAnalyticsService::new(&state.pool);
+    let service = UnifiedAnalyticsService::new(&state.db);
     let org_id = params.org_id.unwrap_or_else(|| "default".to_string());
     match service.list_templates(&org_id).await {
         Ok(templates) => Json(serde_json::to_value(templates).map_err(|e| {
@@ -267,7 +267,7 @@ pub async fn create_template(
     State(state): State<AppState>,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let service = UnifiedAnalyticsService::new(&state.pool);
+    let service = UnifiedAnalyticsService::new(&state.db);
     let org_id = payload.get("org_id").and_then(|v| v.as_str()).unwrap_or("default");
     let name = payload.get("name").and_then(|v| v.as_str()).unwrap_or("");
     let report_type = payload.get("report_type").and_then(|v| v.as_str()).unwrap_or("unified");
@@ -289,7 +289,7 @@ pub async fn list_widgets(
     State(state): State<AppState>,
     Query(params): Query<WidgetQuery>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let service = UnifiedAnalyticsService::new(&state.pool);
+    let service = UnifiedAnalyticsService::new(&state.db);
     match service.list_widgets(&params.org_id, &params.dashboard_id).await {
         Ok(widgets) => Json(serde_json::to_value(widgets).map_err(|e| {
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() })))
@@ -305,7 +305,7 @@ pub async fn create_widget(
     State(state): State<AppState>,
     Json(payload): Json<CreateWidgetQuery>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let service = UnifiedAnalyticsService::new(&state.pool);
+    let service = UnifiedAnalyticsService::new(&state.db);
     match service.create_widget(
         &payload.org_id,
         &payload.dashboard_id,
@@ -332,7 +332,7 @@ pub async fn update_widget(
     Path(id): Path<String>,
     Json(updates): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let service = UnifiedAnalyticsService::new(&state.pool);
+    let service = UnifiedAnalyticsService::new(&state.db);
     match service.update_widget(&id, &updates).await {
         Ok(widget) => Json(serde_json::to_value(widget).map_err(|e| {
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() })))
@@ -348,7 +348,7 @@ pub async fn delete_widget(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
-    let service = UnifiedAnalyticsService::new(&state.pool);
+    let service = UnifiedAnalyticsService::new(&state.db);
     match service.delete_widget(&id).await {
         Ok(()) => Ok(StatusCode::NO_CONTENT),
         Err(e) => Err((
@@ -363,7 +363,7 @@ pub async fn create_snapshot(
     State(state): State<AppState>,
     Json(payload): Json<SnapshotQuery>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let service = UnifiedAnalyticsService::new(&state.pool);
+    let service = UnifiedAnalyticsService::new(&state.db);
     match service.create_snapshot(
         &payload.org_id,
         &payload.snapshot_type,
@@ -384,7 +384,7 @@ pub async fn list_snapshots(
     State(state): State<AppState>,
     Query(params): Query<ListSnapshotQuery>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let service = UnifiedAnalyticsService::new(&state.pool);
+    let service = UnifiedAnalyticsService::new(&state.db);
     let limit = params.limit.unwrap_or(50);
     match service.list_snapshots(&params.org_id, params.snapshot_type.as_deref(), limit).await {
         Ok(snapshots) => Json(serde_json::to_value(snapshots).map_err(|e| {
@@ -402,7 +402,7 @@ pub async fn get_settings(
     State(state): State<AppState>,
     Query(params): Query<ReportQuery>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let service = UnifiedAnalyticsService::new(&state.pool);
+    let service = UnifiedAnalyticsService::new(&state.db);
     let org_id = params.org_id.unwrap_or_else(|| "default".to_string());
     match service.get_settings(&org_id).await {
         Ok(settings) => Json(serde_json::to_value(settings).map_err(|e| {
@@ -420,7 +420,7 @@ pub async fn update_settings(
     Query(params): Query<ReportQuery>,
     Json(updates): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let service = UnifiedAnalyticsService::new(&state.pool);
+    let service = UnifiedAnalyticsService::new(&state.db);
     let org_id = params.org_id.unwrap_or_else(|| "default".to_string());
     match service.update_settings(&org_id, &updates).await {
         Ok(settings) => Json(serde_json::to_value(settings).map_err(|e| {
@@ -438,7 +438,7 @@ pub async fn export_report(
     State(state): State<AppState>,
     Query(params): Query<ExportQuery>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let service = UnifiedAnalyticsService::new(&state.pool);
+    let service = UnifiedAnalyticsService::new(&state.db);
     match service.export_report(&params.report_id, &params.format).await {
         Ok(result) => Json(serde_json::to_value(result).map_err(|e| {
             (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() })))

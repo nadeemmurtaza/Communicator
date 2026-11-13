@@ -615,7 +615,7 @@ pub async fn webhook_handler(
 
     let data = payload.get("data").cloned().unwrap_or_default();
 
-    let service = NidBrandSyncService::new(&state.db_pool);
+    let service = NidBrandSyncService::new(&state.db);
     let signature = ""; // In production, extract from X-nID-Signature header
 
     let payload_inner = BrandWebhookPayload {
@@ -639,7 +639,7 @@ pub async fn list_brands_handler(
     Query(params): Query<HashMap<String, String>>,
 ) -> (StatusCode, Json<Vec<NidBrand>>) {
     let tenant_id = params.get("tenant_id").map(|s| s.as_str());
-    let service = NidBrandSyncService::new(&state.db_pool);
+    let service = NidBrandSyncService::new(&state.db);
     match service.list_brands(tenant_id).await {
         Ok(brands) => (StatusCode::OK, Json(brands)),
         Err(e) => {
@@ -653,7 +653,7 @@ pub async fn get_brand_handler(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> (StatusCode, Json<NidBrand>) {
-    let service = NidBrandSyncService::new(&state.db_pool);
+    let service = NidBrandSyncService::new(&state.db);
     match service.get_brand_by_nid_id(&id).await {
         Ok(brand) => (StatusCode::OK, Json(brand)),
         Err(e) => {
@@ -683,7 +683,7 @@ pub async fn get_brand_handler(
 pub async fn get_connection_handler(
     State(state): State<AppState>,
 ) -> (StatusCode, Json<BrandConnectionSettings>) {
-    let service = NidBrandSyncService::new(&state.db_pool);
+    let service = NidBrandSyncService::new(&state.db);
     let settings = service.get_connection_settings_public().await;
     (StatusCode::OK, Json(settings))
 }
@@ -692,7 +692,7 @@ pub async fn update_connection_handler(
     State(state): State<AppState>,
     Json(req): Json<UpdateBrandConnectionRequest>,
 ) -> (StatusCode, Json<BrandConnectionSettings>) {
-    let service = NidBrandSyncService::new(&state.db_pool);
+    let service = NidBrandSyncService::new(&state.db);
     match service.update_connection_settings(&req).await {
         Ok(settings) => (StatusCode::OK, Json(settings)),
         Err(e) => {
@@ -711,7 +711,7 @@ pub async fn update_connection_handler(
 pub async fn health_handler(
     State(state): State<AppState>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let service = NidBrandSyncService::new(&state.db_pool);
+    let service = NidBrandSyncService::new(&state.db);
     match service.run_health_check().await {
         Ok(result) => (StatusCode::OK, Json(result)),
         Err(e) => {
@@ -729,7 +729,7 @@ pub async fn get_sync_log_handler(
         .and_then(|v| v.parse::<i64>().ok())
         .unwrap_or(50);
 
-    let service = NidBrandSyncService::new(&state.db_pool);
+    let service = NidBrandSyncService::new(&state.db);
     match service.get_sync_log(limit).await {
         Ok(logs) => (StatusCode::OK, Json(logs)),
         Err(e) => {
@@ -743,7 +743,7 @@ pub async fn create_redirect_handler(
     State(state): State<AppState>,
     Json(req): Json<CreateBrandRedirectRequest>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let service = NidBrandSyncService::new(&state.db_pool);
+    let service = NidBrandSyncService::new(&state.db);
     match service.create_redirect_session(&req).await {
         Ok(result) => (StatusCode::OK, Json(result)),
         Err(e) => {
@@ -765,7 +765,7 @@ pub async fn redirect_callback_handler(
         .map(|s| s.as_str())
         .unwrap_or("");
 
-    let service = NidBrandSyncService::new(&state.db_pool);
+    let service = NidBrandSyncService::new(&state.db);
     match service.redirect_callback(state_token, nid_brand_id).await {
         Ok(result) => (StatusCode::OK, Json(result)),
         Err(e) => {

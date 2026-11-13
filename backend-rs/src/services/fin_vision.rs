@@ -15,6 +15,7 @@ use crate::services::claude_client::{self, ClaudeError};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use sqlx::Row;
 use std::time::Instant;
 
 // ---------------------------------------------------------------------------

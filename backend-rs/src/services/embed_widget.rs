@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 
 use crate::models::EmbedWidgetConfig;
 
@@ -15,19 +15,19 @@ pub struct EmbedWidgetSummary {
     pub recent_events: Vec<EmbedWidgetEvent>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct EventTypeCount {
     pub event_type: String,
     pub count: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct DomainCount {
     pub domain: String,
     pub instances: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct EmbedWidgetEvent {
     pub id: String,
     pub instance_id: String,
@@ -36,7 +36,7 @@ pub struct EmbedWidgetEvent {
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct EmbedWidgetSettings {
     pub id: String,
     pub org_id: String,
@@ -271,7 +271,23 @@ impl EmbedWidgetService {
                 LIMIT 20
             "#).fetch_all(&self.pool).await.ok();
 
-            articles.map(|a| serde_json::json!({ "articles": a }))
+            articles.map(|rows| {
+                let articles: Vec<serde_json::Value> = rows
+                    .iter()
+                    .map(|r| {
+                        serde_json::json!({
+                            "id": r.try_get::<String, _>("id").unwrap_or_default(),
+                            "title": r.try_get::<String, _>("title").unwrap_or_default(),
+                            "slug": r.try_get::<String, _>("slug").unwrap_or_default(),
+                            "content": r.try_get::<String, _>("content").unwrap_or_default(),
+                            "categoryId": r.try_get::<Option<String>, _>("category_id").unwrap_or_default(),
+                            "helpfulCount": r.try_get::<i64, _>("helpful_count").unwrap_or_default(),
+                            "notHelpfulCount": r.try_get::<i64, _>("not_helpful_count").unwrap_or_default(),
+                        })
+                    })
+                    .collect();
+                serde_json::json!({ "articles": articles })
+            })
         } else {
             None
         };

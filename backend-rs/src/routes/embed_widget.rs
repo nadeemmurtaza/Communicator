@@ -1,15 +1,9 @@
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::models::{CreateEmbedWidgetRequest, RecordWidgetEventRequest};
-use crate::services::embed_widget::EmbedWidgetService;
-
-#[derive(Debug, Serialize)]
-pub struct EmbedWidgetState {
-    pub embed_widget: EmbedWidgetService,
-}
 
 #[derive(Debug, Deserialize)]
 pub struct ListConfigsQuery {
@@ -43,29 +37,32 @@ pub struct UpdateSettingsRequest {
 }
 
 // GET /embed-widget/summary
-pub async fn get_summary(State(state): State<EmbedWidgetState>) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let summary = state.embed_widget.get_summary().await
+pub async fn get_summary(State(state): State<crate::db::AppState>) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let embed_widget = crate::services::embed_widget::EmbedWidgetService::new(&state.db);
+    let summary = embed_widget.get_summary().await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     Ok(Json(serde_json::to_value(summary).unwrap()))
 }
 
 // GET /embed-widget/configs
 pub async fn list_configs(
-    State(state): State<EmbedWidgetState>,
+    State(state): State<crate::db::AppState>,
     Query(query): Query<ListConfigsQuery>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
     let org_id = query.org_id.unwrap_or_else(|| "default".to_string());
-    let configs = state.embed_widget.list_configs(&org_id, query.status.as_deref())
+    let embed_widget = crate::services::embed_widget::EmbedWidgetService::new(&state.db);
+    let configs = embed_widget.list_configs(&org_id, query.status.as_deref()).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     Ok(Json(serde_json::to_value(configs).unwrap()))
 }
 
 // GET /embed-widget/configs/:id
 pub async fn get_config(
-    State(state): State<EmbedWidgetState>,
+    State(state): State<crate::db::AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let config = state.embed_widget.get_config(&id).await
+    let embed_widget = crate::services::embed_widget::EmbedWidgetService::new(&state.db);
+    let config = embed_widget.get_config(&id).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     match config {
         Some(c) => Ok(Json(serde_json::to_value(c).unwrap())),
@@ -75,7 +72,7 @@ pub async fn get_config(
 
 // POST /embed-widget/configs
 pub async fn create_config(
-    State(state): State<EmbedWidgetState>,
+    State(state): State<crate::db::AppState>,
     Json(req): Json<CreateEmbedWidgetRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
     let org_id = "default".to_string();
@@ -83,7 +80,8 @@ pub async fn create_config(
     let styles = req.styles.unwrap_or_else(|| serde_json::json!({}));
     let trigger_config = req.trigger_config.unwrap_or_else(|| serde_json::json!({}));
 
-    let result = state.embed_widget.create_config(
+    let embed_widget = crate::services::embed_widget::EmbedWidgetService::new(&state.db);
+    let result = embed_widget.create_config(
         &org_id, &req.name, &req.widget_type, &settings, &styles, &trigger_config
     ).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -92,7 +90,7 @@ pub async fn create_config(
 
 // PUT /embed-widget/configs/:id
 pub async fn update_config(
-    State(state): State<EmbedWidgetState>,
+    State(state): State<crate::db::AppState>,
     Path(id): Path<String>,
     Json(req): Json<UpdateConfigRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
@@ -113,34 +111,37 @@ pub async fn update_config(
         updates["trigger_config"] = trigger_config;
     }
 
-    let config = state.embed_widget.update_config(&id, &updates)
+    let embed_widget = crate::services::embed_widget::EmbedWidgetService::new(&state.db);
+    let config = embed_widget.update_config(&id, &updates).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     Ok(Json(serde_json::to_value(config).unwrap()))
 }
 
 // DELETE /embed-widget/configs/:id
 pub async fn delete_config(
-    State(state): State<EmbedWidgetState>,
+    State(state): State<crate::db::AppState>,
     Path(id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    state.embed_widget.delete_config(&id).await
+    let embed_widget = crate::services::embed_widget::EmbedWidgetService::new(&state.db);
+    embed_widget.delete_config(&id).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     Ok(StatusCode::NO_CONTENT)
 }
 
 // GET /embed-widget/settings
 pub async fn get_settings(
-    State(state): State<EmbedWidgetState>,
+    State(state): State<crate::db::AppState>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
     let org_id = "default".to_string();
-    let settings = state.embed_widget.get_settings(&org_id).await
+    let embed_widget = crate::services::embed_widget::EmbedWidgetService::new(&state.db);
+    let settings = embed_widget.get_settings(&org_id).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     Ok(Json(serde_json::to_value(settings).unwrap()))
 }
 
 // PUT /embed-widget/settings
 pub async fn update_settings(
-    State(state): State<EmbedWidgetState>,
+    State(state): State<crate::db::AppState>,
     Json(req): Json<UpdateSettingsRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
     let org_id = "default".to_string();
@@ -161,29 +162,32 @@ pub async fn update_settings(
         updates["default_language"] = serde_json::json!(default_language);
     }
 
-    let settings = state.embed_widget.update_settings(&org_id, &updates)
+    let embed_widget = crate::services::embed_widget::EmbedWidgetService::new(&state.db);
+    let settings = embed_widget.update_settings(&org_id, &updates).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     Ok(Json(serde_json::to_value(settings).unwrap()))
 }
 
 // POST /embed-widget/events
 pub async fn record_event(
-    State(state): State<EmbedWidgetState>,
+    State(state): State<crate::db::AppState>,
     Json(req): Json<RecordWidgetEventRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
     let payload = req.payload.unwrap_or_else(|| serde_json::json!({}));
-    let event_id = state.embed_widget.record_event(&req.instance_id, &req.event_type, &payload)
+    let embed_widget = crate::services::embed_widget::EmbedWidgetService::new(&state.db);
+    let event_id = embed_widget.record_event(&req.instance_id, &req.event_type, &payload).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     Ok(Json(serde_json::json!({ "event_id": event_id })))
 }
 
 // GET /embed-widget/events
 pub async fn get_events(
-    State(state): State<EmbedWidgetState>,
+    State(state): State<crate::db::AppState>,
     Query(query): Query<GetEventsQuery>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
     let limit = query.limit.unwrap_or(50);
-    let events = state.embed_widget.get_events(
+    let embed_widget = crate::services::embed_widget::EmbedWidgetService::new(&state.db);
+    let events = embed_widget.get_events(
         query.instance_id.as_deref(),
         query.event_type.as_deref(),
         limit,
@@ -194,19 +198,21 @@ pub async fn get_events(
 
 // GET /embed-widget/public/:config_id
 pub async fn get_public_widget_data(
-    State(state): State<EmbedWidgetState>,
+    State(state): State<crate::db::AppState>,
     Path(config_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let data = state.embed_widget.get_public_widget_data(&config_id).await
+    let embed_widget = crate::services::embed_widget::EmbedWidgetService::new(&state.db);
+    let data = embed_widget.get_public_widget_data(&config_id).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     Ok(Json(serde_json::to_value(data).unwrap()))
 }
 
 // GET /embed-widget/script/:config_id
 pub async fn get_embed_script(
-    State(state): State<EmbedWidgetState>,
+    State(state): State<crate::db::AppState>,
     Path(config_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let script = state.embed_widget.generate_embed_script(&config_id);
+    let embed_widget = crate::services::embed_widget::EmbedWidgetService::new(&state.db);
+    let script = embed_widget.generate_embed_script(&config_id);
     Ok(Json(serde_json::json!({ "script": script, "config_id": config_id })))
 }

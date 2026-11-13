@@ -142,7 +142,7 @@ pub async fn list_templates(
     }
 
     let rows = sqlx::query(&query)
-        .fetch_all(&db)
+        .fetch_all(db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
 
@@ -187,7 +187,7 @@ pub async fn get_template(
          FROM csat_survey_templates WHERE id = ?"
     )
     .bind(&id)
-    .fetch_optional(&db)
+    .fetch_optional(db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
 
@@ -250,7 +250,7 @@ pub async fn create_template(
     .bind(trigger_delay_minutes)
     .bind(&channel_filter)
     .bind(enabled)
-    .execute(&db)
+    .execute(db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
 
@@ -274,7 +274,7 @@ pub async fn update_template(
     // Check exists
     let exists = sqlx::query("SELECT COUNT(*) FROM csat_survey_templates WHERE id = ?")
         .bind(&id)
-        .fetch_one(&db)
+        .fetch_one(db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
 
@@ -359,7 +359,7 @@ pub async fn update_template(
     }
 
     query_builder
-        .execute(&db)
+        .execute(db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
 
@@ -377,7 +377,7 @@ pub async fn delete_template(
 
     sqlx::query("DELETE FROM csat_survey_templates WHERE id = ?")
         .bind(&id)
-        .execute(&db)
+        .execute(db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
 
@@ -435,7 +435,7 @@ pub async fn list_surveys(
     }
 
     let rows = qb
-        .fetch_all(&db)
+        .fetch_all(db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
 
@@ -488,7 +488,7 @@ pub async fn create_survey(
         "SELECT trigger_delay_minutes FROM csat_survey_templates WHERE id = ?"
     )
     .bind(&template_id)
-    .fetch_optional(&db)
+    .fetch_optional(db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
 
@@ -514,7 +514,7 @@ pub async fn create_survey(
     .bind(&channel)
     .bind(&contact_identifier)
     .bind(&expires_at)
-    .execute(&db)
+    .execute(db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
 
@@ -541,7 +541,7 @@ pub async fn respond_to_survey(
         "SELECT id, status, template_id FROM csat_surveys WHERE id = ?"
     )
     .bind(&id)
-    .fetch_optional(&db)
+    .fetch_optional(db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
 
@@ -564,7 +564,7 @@ pub async fn respond_to_survey(
         "SELECT min_score, max_score FROM csat_survey_templates WHERE id = ?"
     )
     .bind(&template_id)
-    .fetch_optional(&db)
+    .fetch_optional(db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
 
@@ -588,7 +588,7 @@ pub async fn respond_to_survey(
     .bind(&body.comment)
     .bind(&now)
     .bind(&id)
-    .execute(&db)
+    .execute(db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
 
@@ -615,7 +615,7 @@ pub async fn send_survey(
     )
     .bind(&now)
     .bind(&id)
-    .execute(&db)
+    .execute(db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
 
@@ -648,7 +648,7 @@ pub async fn get_csat_summary(
         "SELECT COUNT(*) FROM csat_surveys WHERE created_at >= ? AND status != 'cancelled'"
     )
     .bind(&window_start)
-    .fetch_one(&db)
+    .fetch_one(db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?
     .try_get(0).unwrap_or(0);
@@ -658,7 +658,7 @@ pub async fn get_csat_summary(
         "SELECT COUNT(*) FROM csat_surveys WHERE created_at >= ? AND status = 'responded'"
     )
     .bind(&window_start)
-    .fetch_one(&db)
+    .fetch_one(db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?
     .try_get(0).unwrap_or(0);
@@ -668,7 +668,7 @@ pub async fn get_csat_summary(
         "SELECT AVG(score) as avg_score FROM csat_surveys WHERE created_at >= ? AND status = 'responded' AND score IS NOT NULL"
     )
     .bind(&window_start)
-    .fetch_optional(&db)
+    .fetch_optional(db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
 
@@ -679,7 +679,7 @@ pub async fn get_csat_summary(
         "SELECT COUNT(*) FROM csat_surveys WHERE created_at >= ? AND status = 'responded' AND score >= 4"
     )
     .bind(&window_start)
-    .fetch_one(&db)
+    .fetch_one(db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
 
@@ -697,7 +697,7 @@ pub async fn get_csat_summary(
          GROUP BY score ORDER BY score"
     )
     .bind(&window_start)
-    .fetch_all(&db)
+    .fetch_all(db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
 
@@ -715,7 +715,7 @@ pub async fn get_csat_summary(
          GROUP BY channel"
     )
     .bind(&window_start)
-    .fetch_all(&db)
+    .fetch_all(db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
 
@@ -735,7 +735,7 @@ pub async fn get_csat_summary(
          ORDER BY s.responded_at DESC LIMIT 10"
     )
     .bind(&window_start)
-    .fetch_all(&db)
+    .fetch_all(db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
 
@@ -760,7 +760,7 @@ pub async fn get_csat_summary(
         .collect();
 
     // Trend: compare last 7 days to previous 7 days
-    let trend_7d = compute_trend(&db).await.ok();
+    let trend_7d = compute_trend(db).await.ok();
 
     let response_rate = if total_sent > 0 {
         (total_responses as f64 / total_sent as f64) * 100.0
@@ -993,7 +993,7 @@ pub async fn list_snapshots(
          top_comments, created_at
          FROM csat_snapshots ORDER BY window_end DESC LIMIT 52"
     )
-    .fetch_all(&db)
+    .fetch_all(db)
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
 

@@ -305,7 +305,8 @@ impl StoreConnectionService {
 
         // Hash the API secret if provided
         let (api_secret_hash, api_secret_salt) = if let Some(ref secret) = req.api_secret {
-            let salt = rand::RngCore::next_bytes(&mut rand::thread_rng(), &mut [0u8; 32]);
+            let mut salt = [0u8; 32];
+            rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut salt);
             let salt_hex = hex::encode(&salt);
             let mut mac = HmacSha256::new_from_slice(&salt)
                 .map_err(|e| format!("Failed to create HMAC: {}", e))?;
@@ -317,7 +318,8 @@ impl StoreConnectionService {
 
         // Hash the access token if provided
         let (access_token_hash, access_token_salt) = if let Some(ref token) = req.access_token {
-            let salt = rand::RngCore::next_bytes(&mut rand::thread_rng(), &mut [0u8; 32]);
+            let mut salt = [0u8; 32];
+            rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut salt);
             let salt_hex = hex::encode(&salt);
             let mut mac = HmacSha256::new_from_slice(&salt)
                 .map_err(|e| format!("Failed to create HMAC: {}", e))?;
@@ -527,7 +529,8 @@ impl StoreConnectionService {
             param_count += 1;
         }
         if let Some(ref secret) = req.api_secret {
-            let salt = rand::RngCore::next_bytes(&mut rand::thread_rng(), &mut [0u8; 32]);
+            let mut salt = [0u8; 32];
+            rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut salt);
             let salt_hex = hex::encode(&salt);
             let mut mac = HmacSha256::new_from_slice(&salt)
                 .map_err(|e| format!("Failed to create HMAC: {}", e))?;
@@ -539,7 +542,8 @@ impl StoreConnectionService {
             param_count += 2;
         }
         if let Some(ref token) = req.access_token {
-            let salt = rand::RngCore::next_bytes(&mut rand::thread_rng(), &mut [0u8; 32]);
+            let mut salt = [0u8; 32];
+            rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut salt);
             let salt_hex = hex::encode(&salt);
             let mut mac = HmacSha256::new_from_slice(&salt)
                 .map_err(|e| format!("Failed to create HMAC: {}", e))?;

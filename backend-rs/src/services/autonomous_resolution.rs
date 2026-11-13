@@ -241,7 +241,7 @@ pub async fn get_resolution_summary(state: &AppState) -> Result<ResolutionSummar
 
     // Active policies
     let active_policies: i32 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM agent_policies WHERE is_active = true"
+        "SELECT COUNT(*) FROM resolution_agent_policies WHERE is_active = true"
     )
     .fetch_one(&state.db)
     .await?;
@@ -874,7 +874,7 @@ pub async fn list_agent_policies(
     let query = format!(
         "SELECT id, organization_id, name, description, policy_type, condition, action, \
          is_active, priority, metadata, created_at, updated_at \
-         FROM agent_policies{} ORDER BY priority DESC",
+         FROM resolution_agent_policies{} ORDER BY priority DESC",
         where_clause
     );
 

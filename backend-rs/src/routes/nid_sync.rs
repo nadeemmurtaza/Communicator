@@ -4,7 +4,6 @@
     Json,
 };
 use serde::Deserialize;
-use std::sync::Arc;
 
 use crate::db::AppState;
 use crate::services::nid_sync::NidSyncService;
@@ -36,7 +35,7 @@ pub struct SetPlatformRequest {
 // ---- Launchpad ----
 
 pub async fn get_launchpad_overview(
-    State(state): State<Arc<AppState>>,
+    State(state): State<AppState>,
     Query(query): Query<AccountQuery>,
 ) -> Result<Json<crate::services::nid_sync::LaunchpadOverview>, (StatusCode, String)> {
     let service = NidSyncService::new(state.db.clone());
@@ -49,7 +48,7 @@ pub async fn get_launchpad_overview(
 // ---- Personal Profile ----
 
 pub async fn get_personal_profile(
-    State(state): State<Arc<AppState>>,
+    State(state): State<AppState>,
     Path(account_id): Path<String>,
 ) -> Result<Json<crate::services::nid_sync::PersonalProfileOverview>, (StatusCode, String)> {
     let service = NidSyncService::new(state.db.clone());
@@ -62,7 +61,7 @@ pub async fn get_personal_profile(
 // ---- Work Profile ----
 
 pub async fn get_work_profile(
-    State(state): State<Arc<AppState>>,
+    State(state): State<AppState>,
     Path(org_id): Path<String>,
 ) -> Result<Json<crate::services::nid_sync::WorkProfileOverview>, (StatusCode, String)> {
     let service = NidSyncService::new(state.db.clone());
@@ -75,7 +74,7 @@ pub async fn get_work_profile(
 // ---- Organizations ----
 
 pub async fn get_user_organizations(
-    State(state): State<Arc<AppState>>,
+    State(state): State<AppState>,
     Query(query): Query<AccountQuery>,
 ) -> Result<Json<Vec<crate::services::nid_sync::NidOrganization>>, (StatusCode, String)> {
     let service = NidSyncService::new(state.db.clone());
@@ -88,7 +87,7 @@ pub async fn get_user_organizations(
 // ---- Memberships ----
 
 pub async fn get_user_memberships(
-    State(state): State<Arc<AppState>>,
+    State(state): State<AppState>,
     Query(query): Query<AccountQuery>,
 ) -> Result<Json<Vec<crate::services::nid_sync::NidMembership>>, (StatusCode, String)> {
     let service = NidSyncService::new(state.db.clone());
@@ -101,7 +100,7 @@ pub async fn get_user_memberships(
 // ---- Invoices ----
 
 pub async fn get_invoices(
-    State(state): State<Arc<AppState>>,
+    State(state): State<AppState>,
     Query(query): Query<TenantQuery>,
 ) -> Result<Json<Vec<crate::services::nid_sync::NidInvoice>>, (StatusCode, String)> {
     let service = NidSyncService::new(state.db.clone());
@@ -114,7 +113,7 @@ pub async fn get_invoices(
 // ---- Payments ----
 
 pub async fn get_payments(
-    State(state): State<Arc<AppState>>,
+    State(state): State<AppState>,
     Query(query): Query<TenantQuery>,
 ) -> Result<Json<Vec<crate::services::nid_sync::NidPayment>>, (StatusCode, String)> {
     let service = NidSyncService::new(state.db.clone());
@@ -127,7 +126,7 @@ pub async fn get_payments(
 // ---- Subscriptions ----
 
 pub async fn get_subscriptions(
-    State(state): State<Arc<AppState>>,
+    State(state): State<AppState>,
     Query(query): Query<TenantQuery>,
 ) -> Result<Json<Vec<crate::services::nid_sync::NidSubscription>>, (StatusCode, String)> {
     let service = NidSyncService::new(state.db.clone());
@@ -140,7 +139,7 @@ pub async fn get_subscriptions(
 // ---- Order Platform Info ----
 
 pub async fn set_order_platform_info(
-    State(state): State<Arc<AppState>>,
+    State(state): State<AppState>,
     Json(req): Json<SetPlatformRequest>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     let service = NidSyncService::new(state.db.clone());
@@ -161,7 +160,7 @@ pub async fn set_order_platform_info(
 // ---- Tenants ----
 
 pub async fn get_tenants(
-    State(state): State<Arc<AppState>>,
+    State(state): State<AppState>,
 ) -> Result<Json<Vec<crate::services::nid_sync::NidTenant>>, (StatusCode, String)> {
     let service = NidSyncService::new(state.db.clone());
     match service.get_tenants().await {
