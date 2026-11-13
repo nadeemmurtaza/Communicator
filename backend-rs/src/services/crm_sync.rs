@@ -319,7 +319,7 @@ pub async fn update_crm_connection_status(
     .fetch_one(&state.db)
     .await?;
 
-    Ok(connection_from_row(row))
+    Ok(connection_from_row(&row))
 }
 
 /// Delete a CRM connection
@@ -367,7 +367,7 @@ pub async fn trigger_sync(
     .execute(&state.db)
     .await?;
 
-    // Perform the sync (simulated for now — real implementation calls CRM APIs)
+    // Perform the sync against the real CRM API for this connection's provider.
     let (record_count, success_count, error_count, status, error_message) =
         perform_sync(state, connection_id, direction, object_type).await;
 
@@ -421,42 +421,266 @@ pub async fn trigger_sync(
     })
 }
 
-/// Perform the actual sync operation (simulated — real implementation calls CRM APIs)
+/// CRM credentials pulled from `crm_connections.credentials` (plain JSON).
+struct CrmCreds {
+    access_token: String,
+    /// Salesforce only: the org's REST base URL (e.g. https://foo.my.salesforce.com)
+    instance_url: Option<String>,
+}
+
+fn parse_creds(raw: Option<&str>) -> Option<CrmCreds> {
+    let json: Value = serde_json::from_str(raw.unwrap_or("{}")).ok()?;
+    let access_token = json
+        .get("access_token")
+        .or_else(|| json.get("api_token"))
+        .or_else(|| json.get("api_key"))
+        .and_then(|v| v.as_str())?
+        .to_string();
+    let instance_url = json
+        .get("instance_url")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+    Some(CrmCreds { access_token, instance_url })
+}
+
+/// Builds the (method-agnostic) list/create URL for a provider + object type.
+fn crm_endpoint(provider: &str, object_type: &str, creds: &CrmCreds) -> Result<String, String> {
+    match provider {
+        "hubspot" => {
+            let obj = match object_type {
+                "account" | "company" => "companies",
+                _ => "contacts",
+            };
+            Ok(format!("https://api.hubapi.com/crm/v3/objects/{obj}"))
+        }
+        "salesforce" => {
+            let base = creds
+                .instance_url
+                .clone()
+                .ok_or_else(|| "Salesforce connection is missing instance_url".to_string())?;
+            let obj = match object_type {
+                "account" | "company" => "Account",
+                "lead" => "Lead",
+                _ => "Contact",
+            };
+            Ok(format!("{base}/services/data/v58.0/sobjects/{obj}"))
+        }
+        "pipedrive" => {
+            let obj = match object_type {
+                "account" | "company" => "organizations",
+                "lead" => "leads",
+                _ => "persons",
+            };
+            Ok(format!(
+                "https://api.pipedrive.com/v1/{obj}?api_token={}",
+                creds.access_token
+            ))
+        }
+        other => Err(format!("Unsupported CRM provider: {other}")),
+    }
+}
+
+fn provider_auth<'a>(
+    provider: &str,
+    creds: &'a CrmCreds,
+    req: reqwest::RequestBuilder,
+) -> reqwest::RequestBuilder {
+    match provider {
+        // Pipedrive carries auth in the query string (see crm_endpoint); others use Bearer.
+        "pipedrive" => req,
+        _ => req.bearer_auth(&creds.access_token),
+    }
+}
+
+/// Upsert a crm_external_refs row recording that a local record is linked to
+/// a CRM record (or that a CRM record was pulled in without a local target).
+async fn upsert_external_ref(
+    state: &AppState,
+    connection_id: &str,
+    local_type: &str,
+    local_id: &str,
+    crm_object_type: &str,
+    crm_record_id: &str,
+) {
+    let id = Uuid::new_v4().to_string();
+    let _ = sqlx::query(
+        "INSERT INTO crm_external_refs (id, connection_id, local_type, local_id, crm_object_type, crm_record_id, last_synced_at, sync_status) \
+         VALUES ($1, $2, $3, $4, $5, $6, NOW(), 'synced') \
+         ON CONFLICT (connection_id, local_type, local_id) DO UPDATE \
+         SET crm_record_id = EXCLUDED.crm_record_id, last_synced_at = NOW(), sync_status = 'synced', updated_at = NOW()",
+    )
+    .bind(&id)
+    .bind(connection_id)
+    .bind(local_type)
+    .bind(local_id)
+    .bind(crm_object_type)
+    .bind(crm_record_id)
+    .execute(&state.db)
+    .await;
+}
+
+/// Push local records to the CRM (outbound) or pull CRM records in (inbound),
+/// making real HTTP calls against the connection's configured provider.
 async fn perform_sync(
     state: &AppState,
-    _connection_id: &str,
+    connection_id: &str,
     direction: &str,
     object_type: &str,
 ) -> (i32, i32, i32, String, Option<String>) {
-    // Count local records to sync
-    let local_count_query = match object_type {
-        "lead" => "SELECT COUNT(*) FROM leads",
-        "contact" => "SELECT COUNT(*) FROM contacts",
-        "account" | "company" => "SELECT COUNT(*) FROM organizations",
-        _ => "SELECT 0",
+    let safe_conn = connection_id.replace('\'', "''");
+    let conn_row = match sqlx::query(&format!(
+        "SELECT provider, credentials FROM crm_connections WHERE id = '{safe_conn}'"
+    ))
+    .fetch_one(&state.db)
+    .await
+    {
+        Ok(r) => r,
+        Err(e) => return (0, 0, 0, "failed".to_string(), Some(e.to_string())),
+    };
+    let provider: String = conn_row.try_get("provider").unwrap_or_default();
+    let credentials: Option<String> = conn_row.try_get("credentials").ok();
+
+    let creds = match parse_creds(credentials.as_deref()) {
+        Some(c) => c,
+        None => {
+            return (
+                0,
+                0,
+                0,
+                "failed".to_string(),
+                Some("CRM connection has no usable credentials".to_string()),
+            )
+        }
     };
 
-    let count: i32 = match sqlx::query_scalar(local_count_query).fetch_one(&state.db).await {
-        Ok(c) => c,
-        Err(_) => 0,
+    let endpoint = match crm_endpoint(&provider, object_type, &creds) {
+        Ok(u) => u,
+        Err(e) => return (0, 0, 0, "failed".to_string(), Some(e)),
     };
 
-    // Simulate sync: in production, this would call Salesforce/HubSpot APIs
-    // For now, we simulate based on local record count
-    let success_count = if direction == "outbound" { count } else { 0 };
-    let error_count = 0;
+    if direction == "outbound" {
+        // Pull local rows for this object type and push each one to the CRM.
+        let (query, local_type) = match object_type {
+            "account" | "company" => (
+                "SELECT id, name, email, phone, website FROM organizations LIMIT 100",
+                "account",
+            ),
+            "lead" => (
+                "SELECT id, name, '' as email, '' as phone, '' as website FROM leads LIMIT 100",
+                "lead",
+            ),
+            _ => (
+                "SELECT id, person_name as name, value as email, '' as phone, '' as website FROM contacts LIMIT 100",
+                "contact",
+            ),
+        };
 
-    (
-        count,
-        success_count,
-        error_count,
-        if error_count > 0 {
-            "partial".to_string()
-        } else {
-            "completed".to_string()
-        },
-        None,
-    )
+        let rows = match sqlx::query(query).fetch_all(&state.db).await {
+            Ok(r) => r,
+            Err(e) => return (0, 0, 0, "failed".to_string(), Some(e.to_string())),
+        };
+
+        let mut success = 0;
+        let mut failed = 0;
+        for row in &rows {
+            let local_id: String = row.try_get("id").unwrap_or_default();
+            let name: String = row.try_get("name").unwrap_or_default();
+            let email: String = row.try_get("email").unwrap_or_default();
+
+            let body = match provider.as_str() {
+                "hubspot" => json!({ "properties": { "name": name, "email": email } }),
+                _ => json!({ "Name": name, "Email": email }),
+            };
+
+            let req = state.http_client.post(&endpoint).json(&body);
+            let req = provider_auth(&provider, &creds, req);
+            match req.send().await {
+                Ok(resp) if resp.status().is_success() => {
+                    let crm_id = resp
+                        .json::<Value>()
+                        .await
+                        .ok()
+                        .and_then(|v| {
+                            v.get("id")
+                                .or_else(|| v.get("data").and_then(|d| d.get("id")))
+                                .map(|i| i.to_string())
+                        })
+                        .unwrap_or_else(|| local_id.clone());
+                    upsert_external_ref(state, connection_id, local_type, &local_id, object_type, &crm_id).await;
+                    success += 1;
+                }
+                _ => failed += 1,
+            }
+        }
+
+        let total = rows.len() as i32;
+        (
+            total,
+            success,
+            failed,
+            if failed > 0 { "partial".to_string() } else { "completed".to_string() },
+            None,
+        )
+    } else {
+        // Inbound: pull the CRM's records and record them as external refs.
+        let req = state.http_client.get(&endpoint);
+        let req = provider_auth(&provider, &creds, req);
+        let resp = match req.send().await {
+            Ok(r) => r,
+            Err(e) => return (0, 0, 0, "failed".to_string(), Some(e.to_string())),
+        };
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            return (
+                0,
+                0,
+                0,
+                "failed".to_string(),
+                Some(format!("CRM returned HTTP {status}")),
+            );
+        }
+
+        let body: Value = match resp.json().await {
+            Ok(v) => v,
+            Err(e) => return (0, 0, 0, "failed".to_string(), Some(e.to_string())),
+        };
+
+        let records: Vec<Value> = body
+            .get("results") // HubSpot
+            .or_else(|| body.get("data")) // Pipedrive / Salesforce composite
+            .or_else(|| body.get("records")) // Salesforce SOQL-style
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+
+        let local_type = match object_type {
+            "account" | "company" => "account",
+            "lead" => "lead",
+            _ => "contact",
+        };
+
+        let mut success = 0;
+        for rec in &records {
+            let crm_id = rec
+                .get("id")
+                .map(|v| v.to_string().trim_matches('"').to_string())
+                .unwrap_or_default();
+            if crm_id.is_empty() {
+                continue;
+            }
+            // Without a safe, unambiguous local row to attach each pulled
+            // record to across three different CRM schemas, inbound sync
+            // records the external reference using the CRM id as the local
+            // key so repeated pulls are idempotent and the sync is auditable.
+            let local_id = format!("ext_{provider}_{crm_id}");
+            upsert_external_ref(state, connection_id, local_type, &local_id, object_type, &crm_id).await;
+            success += 1;
+        }
+
+        let total = records.len() as i32;
+        (total, success, total - success, "completed".to_string(), None)
+    }
 }
 
 /// List sync logs
@@ -624,7 +848,7 @@ pub fn get_crm_providers() -> Vec<CRMProviderInfo> {
 
 // ——— Row helpers ———
 
-fn connection_from_row(row: &impl sqlx::Row) -> CRMConnection {
+fn connection_from_row(row: &sqlx::postgres::PgRow) -> CRMConnection {
     CRMConnection {
         id: row.try_get("id").unwrap_or_default(),
         organization_id: row.try_get("organization_id").unwrap_or_default(),
@@ -641,7 +865,7 @@ fn connection_from_row(row: &impl sqlx::Row) -> CRMConnection {
     }
 }
 
-fn sync_log_from_row(row: &impl sqlx::Row) -> CRMSyncLog {
+fn sync_log_from_row(row: &sqlx::postgres::PgRow) -> CRMSyncLog {
     CRMSyncLog {
         id: row.try_get("id").unwrap_or_default(),
         connection_id: row.try_get("connection_id").unwrap_or_default(),
@@ -657,7 +881,7 @@ fn sync_log_from_row(row: &impl sqlx::Row) -> CRMSyncLog {
     }
 }
 
-fn field_mapping_from_row(row: &impl sqlx::Row) -> CRMFieldMapping {
+fn field_mapping_from_row(row: &sqlx::postgres::PgRow) -> CRMFieldMapping {
     CRMFieldMapping {
         id: row.try_get("id").unwrap_or_default(),
         connection_id: row.try_get("connection_id").unwrap_or_default(),
@@ -671,7 +895,7 @@ fn field_mapping_from_row(row: &impl sqlx::Row) -> CRMFieldMapping {
     }
 }
 
-fn external_ref_from_row(row: &impl sqlx::Row) -> CRMExternalRef {
+fn external_ref_from_row(row: &sqlx::postgres::PgRow) -> CRMExternalRef {
     CRMExternalRef {
         id: row.try_get("id").unwrap_or_default(),
         connection_id: row.try_get("connection_id").unwrap_or_default(),
