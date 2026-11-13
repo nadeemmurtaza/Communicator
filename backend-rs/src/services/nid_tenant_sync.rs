@@ -15,7 +15,6 @@ use crate::db::DbPool;
 use crate::services::signatures::secrets_match;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
-use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::{error, info, warn};
 use uuid::Uuid;
@@ -106,7 +105,7 @@ pub struct NidTenantSyncService {
 impl NidTenantSyncService {
     pub fn new(pool: &DbPool) -> Self {
         Self {
-            pool: pool.get_pg_pool().clone(),
+            pool: pool.clone(),
         }
     }
 
@@ -121,8 +120,14 @@ impl NidTenantSyncService {
         payload: &str,
         signature: &str,
     ) -> Result<serde_json::Value, String> {
-        // Get webhook secret for verification
+        // Auto-sync must be enabled to accept incoming tenant updates at all
         let settings = self.get_connection_settings().await;
+        if !settings.auto_sync_enabled {
+            warn!("Auto-sync disabled — rejecting nID webhook");
+            return Err("Auto-sync is disabled for this connection".to_string());
+        }
+
+        // Get webhook secret for verification
         let webhook_secret = self
             .get_webhook_receive_secret()
             .await
@@ -130,7 +135,7 @@ impl NidTenantSyncService {
 
         // Verify signature
         let signature_valid = if !webhook_secret.is_empty() {
-            secrets_match(signature, &webhook_secret)
+            secrets_match(signature, Some(&webhook_secret))
         } else {
             // If no secret configured, accept but warn
             warn!("No webhook receive secret configured — accepting webhook without verification");
@@ -184,6 +189,7 @@ impl NidTenantSyncService {
                 .await;
             }
             Err(e) => {
+                error!("nID webhook processing failed for log {}: {}", log_id, e);
                 let _ = sqlx::query(
                     r#"UPDATE tenant_sync_log SET processing_status = 'failed', error_message = $2, processed_at = NOW() WHERE id = $1"#,
                 )
@@ -200,8 +206,8 @@ impl NidTenantSyncService {
     async fn handle_tenant_created(&self, webhook: &NidWebhookPayload) -> Result<serde_json::Value, String> {
         let data = &webhook.data;
         let tenant_id = data.get("id").and_then(|v| v.as_str()).unwrap_or(&webhook.tenant_id);
-        let name = data.get("name").and_then(|v| v.as_str()).unwrap_or("");;
-        let slug = data.get("slug").and_then(|v| v.as_str()).unwrap_or("");;
+        let name = data.get("name").and_then(|v| v.as_str()).unwrap_or("");
+        let slug = data.get("slug").and_then(|v| v.as_str()).unwrap_or("");
 
         // Duplication prevention: check if tenant already exists
         let existing: Option<String> = sqlx::query_scalar(
@@ -209,7 +215,8 @@ impl NidTenantSyncService {
         )
         .bind(tenant_id)
         .fetch_optional(&self.pool)
-        .await?;
+        .await
+        .map_err(|e| format!("Failed to check existing tenant: {}", e))?;
 
         if existing.is_some() {
             info!("Tenant {} already exists — skipping creation", tenant_id);
@@ -224,11 +231,12 @@ impl NidTenantSyncService {
         )
         .bind(slug)
         .fetch_optional(&self.pool)
-        .await?;
+        .await
+        .map_err(|e| format!("Failed to check tenant slug: {}", e))?;
 
         if let Some(existing_id) = slug_exists {
             info!("Tenant with slug '{}' already exists (ID: {}) — updating instead", slug, existing_id);
-            self.handle_tenant_updated(webhook).await?;
+            Box::pin(self.handle_tenant_updated(webhook)).await?;
             return Ok(serde_json::json!({"status": "duplicate_slug", "tenant_id": existing_id}));
         }
 
@@ -273,10 +281,11 @@ impl NidTenantSyncService {
         .bind(
             data.get("createdAt")
                 .and_then(|v| v.as_str())
-                .map(|s| s.parse().ok()),
+                .map(String::from),
         )
         .execute(&self.pool)
-        .await?;
+        .await
+        .map_err(|e| format!("Failed to insert tenant: {}", e))?;
 
         info!("Tenant {} created in mirror", tenant_id);
 
@@ -299,43 +308,42 @@ impl NidTenantSyncService {
         )
         .bind(tenant_id)
         .fetch_one(&self.pool)
-        .await?;
+        .await
+        .map_err(|e| format!("Failed to check tenant existence: {}", e))?;
 
         if !exists {
             // Tenant doesn't exist — this might be a delayed update, create it
-            return self.handle_tenant_created(webhook).await;
+            return Box::pin(self.handle_tenant_created(webhook)).await;
         }
 
-        // Update tenant data
+        // Update tenant data. Built dynamically since only the fields nID
+        // actually sent should change; each value is bound positionally so
+        // nothing here is vulnerable to SQL injection despite the query
+        // text itself being assembled at runtime.
         let mut query_parts = Vec::new();
-        let mut params: Vec<&dyn sqlx::types::Type<sqlx::Postgres>> = Vec::new();
         let mut param_idx = 1;
 
-        if let Some(name) = data.get("name").and_then(|v| v.as_str()) {
+        let name = data.get("name").and_then(|v| v.as_str());
+        if name.is_some() {
             query_parts.push(format!("name = ${}", param_idx));
-            params.push(&name as &dyn sqlx::types::Type<sqlx::Postgres>);
             param_idx += 1;
         }
 
-        if let Some(region) = data.get("dataResidencyRegion").and_then(|v| v.as_str()) {
+        let region = data.get("dataResidencyRegion").and_then(|v| v.as_str());
+        if region.is_some() {
             query_parts.push(format!("data_residency_region = ${}", param_idx));
-            params.push(&region as &dyn sqlx::types::Type<sqlx::Postgres>);
             param_idx += 1;
         }
 
-        if let Some(webhook_url) = data.get("webhookUrl").and_then(|v| v.as_str()) {
+        let webhook_url = data.get("webhookUrl").and_then(|v| v.as_str());
+        if webhook_url.is_some() {
             query_parts.push(format!("webhook_url = ${}", param_idx));
-            params.push(&webhook_url as &dyn sqlx::types::Type<sqlx::Postgres>);
             param_idx += 1;
         }
 
         // Always update sync status
-        query_parts.push(format!("sync_status = 'synced'"));
+        query_parts.push("sync_status = 'synced'".to_string());
         query_parts.push("last_synced_at = NOW()".to_string());
-
-        if query_parts.is_empty() {
-            return Ok(serde_json::json!({"status": "no_changes"}));
-        }
 
         let query = format!(
             "UPDATE nid_tenants SET {}, updated_at = NOW() WHERE nid_tenant_id = ${}",
@@ -343,11 +351,21 @@ impl NidTenantSyncService {
             param_idx
         );
 
-        // Use a simpler approach with named parameters
-        let _ = sqlx::query(&query)
-            .bind(tenant_id)
-            .execute(&self.pool)
-            .await;
+        let mut q = sqlx::query(&query);
+        if let Some(name) = name {
+            q = q.bind(name);
+        }
+        if let Some(region) = region {
+            q = q.bind(region);
+        }
+        if let Some(webhook_url) = webhook_url {
+            q = q.bind(webhook_url);
+        }
+        q = q.bind(tenant_id);
+
+        q.execute(&self.pool)
+            .await
+            .map_err(|e| format!("Failed to update tenant: {}", e))?;
 
         info!("Tenant {} updated in mirror", tenant_id);
         Ok(serde_json::json!({"status": "updated", "tenant_id": tenant_id}))

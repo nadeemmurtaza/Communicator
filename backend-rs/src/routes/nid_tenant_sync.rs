@@ -164,7 +164,7 @@ pub async fn redirect_callback(
 
     let state = params
         .get("state")
-        .ok_or(("Invalid state parameter".to_string()))?;
+        .ok_or_else(|| (StatusCode::BAD_REQUEST, "Invalid state parameter".to_string()))?;
     let tenant_id = params.get("tenant_id").map(|s| s.as_str());
     let error = params.get("error").map(|s| s.as_str());
 
@@ -178,11 +178,11 @@ pub async fn redirect_callback(
 /// Get redirect session status
 pub async fn get_redirect_session(
     State(state): State<AppState>,
-    Path(state): Path<String>,
+    Path(state_token): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
     let service = NidTenantSyncService::new(&state.db);
 
-    match service.get_redirect_session(&state) {
+    match service.get_redirect_session(&state_token).await {
         Some(session) => Ok(Json(serde_json::json!(session))),
         None => Err((StatusCode::NOT_FOUND, "Redirect session not found".to_string())),
     }
