@@ -3,7 +3,7 @@
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
-use serde_json::Value;
+use serde_json::{json, Value};
 use sqlx::Row;
 
 use crate::db::AppState;
@@ -206,7 +206,7 @@ pub async fn create_action(
     let brand_id = body.get("brand_id").and_then(|v| v.as_str());
     let created_by = body.get("created_by").and_then(|v| v.as_str());
 
-    let action = procedures::create_action(&state, name, description, action_type, endpoint, method, &headers, body_template, auth_config, timeout_seconds, retry_count, brand_id, created_by)
+    let action = procedures::create_action(&state, name, description, action_type, endpoint, method, &headers, body_template, auth_config.as_ref(), timeout_seconds, retry_count, brand_id, created_by)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
     Ok(Json(serde_json::to_value(action).unwrap_or_default()))

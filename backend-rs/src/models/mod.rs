@@ -312,6 +312,12 @@ pub struct Message {
     pub provider_metadata: Option<String>,
     pub sender_name: Option<String>,
     pub is_private: Option<bool>,
+    pub media_type: Option<String>,
+    pub media_url: Option<String>,
+    pub media_filename: Option<String>,
+    pub media_mimetype: Option<String>,
+    pub voice_duration: Option<i32>,
+    pub transcription_text: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
