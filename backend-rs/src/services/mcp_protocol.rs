@@ -512,7 +512,7 @@ pub async fn discover_tools(state: &AppState, server_id: &str) -> Result<Discove
         .map_err(|e| format!("Failed to insert tool: {}", e))?;
 
         tools_discovered += 1;
-        tool_names.push(tool_name.clone());
+        tool_names.push(tool_name.to_string());
     }
 
     // Update server status

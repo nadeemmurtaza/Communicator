@@ -400,24 +400,26 @@ pub async fn list_notifications(
     status: Option<&str>,
     limit: i32,
 ) -> Result<Vec<NotificationItem>, sqlx::Error> {
-    let mut conditions = vec![];
-    let mut params = vec![];
-    let mut param_idx = 1;
+    let mut conditions: Vec<String> = Vec::new();
+    let mut idx = 1;
 
-    if let Some(uid) = user_id {
-        params.push(format!("user_id = '${}'", uid.replace('\'', "''")));
+    if user_id.is_some() {
+        conditions.push(format!("user_id = ${}", idx));
+        idx += 1;
     }
-    if let Some(ntype) = notification_type {
-        params.push(format!("notification_type = '${}'", ntype.replace('\'', "''")));
+    if notification_type.is_some() {
+        conditions.push(format!("notification_type = ${}", idx));
+        idx += 1;
     }
-    if let Some(st) = status {
-        params.push(format!("status = '${}'", st.replace('\'', "''")));
+    if status.is_some() {
+        conditions.push(format!("status = ${}", idx));
+        idx += 1;
     }
 
-    let where_clause = if params.is_empty() {
+    let where_clause = if conditions.is_empty() {
         "".to_string()
     } else {
-        format!("WHERE {}", params.join(" AND "))
+        format!("WHERE {}", conditions.join(" AND "))
     };
 
     let limit_val = if limit <= 0 { 50 } else { limit };
@@ -429,7 +431,18 @@ pub async fn list_notifications(
         where_clause, limit_val
     );
 
-    let rows = sqlx::query(&query).fetch_all(&state.db).await?;
+    let mut q = sqlx::query(&query);
+    if let Some(uid) = user_id {
+        q = q.bind(uid);
+    }
+    if let Some(ntype) = notification_type {
+        q = q.bind(ntype);
+    }
+    if let Some(st) = status {
+        q = q.bind(st);
+    }
+
+    let rows = q.fetch_all(&state.db).await?;
 
     let notifications: Vec<NotificationItem> = rows
         .iter()
