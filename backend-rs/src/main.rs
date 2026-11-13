@@ -49,10 +49,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let http_client = reqwest::Client::builder().build()?;
 
     let state = AppState {
-        db,
+        db: db.clone(),
         config: Arc::clone(&config),
         http_client,
-        nid: Arc::new(services::nid_client::NidClient::from_config(&config)),
+        nid: Arc::new(services::nid_client::NidClient::from_config(&db, &config)),
     };
 
     // CORS configuration: restrict origins based on environment.

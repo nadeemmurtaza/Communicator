@@ -56,6 +56,8 @@ pub struct Config {
     pub nid_vault_role_id: String,
     pub nid_vault_secret_id: String,
     pub nid_allow_mock_auth: bool,
+    /// Brand ID used by the OTP engine when nID sign-up generates OTPs.
+    pub nid_otp_brand_id: String,
 
     // Fallback tenant when a request carries no X-Tenant-Key. Intentionally
     // has no compiled-in value: unset means tenant-less requests are refused.
@@ -160,6 +162,10 @@ impl Config {
         let nid_allow_mock_auth = env::var("NID_ALLOW_MOCK_AUTH")
             .map(|v| matches!(v.as_str(), "1" | "true" | "TRUE" | "yes" | "on"))
             .unwrap_or(false);
+        let nid_otp_brand_id = env::var("NID_OTP_BRAND_ID").unwrap_or_else(|_| {
+            // Default to the client_id so the OTP engine has a brand context
+            env::var("NID_CLIENT_ID").unwrap_or_default()
+        });
         let default_tenant_key = env::var("DEFAULT_TENANT_KEY").unwrap_or_default();
         let public_url = env::var("PUBLIC_URL").unwrap_or_default();
         let live_proof_storage_dir =
@@ -218,6 +224,7 @@ impl Config {
             nid_vault_role_id,
             nid_vault_secret_id,
             nid_allow_mock_auth,
+            nid_otp_brand_id,
             default_tenant_key,
             public_url,
             live_proof_storage_dir,
@@ -334,6 +341,7 @@ impl Config {
             "nid_vault_role_id" => Self::set_string(&mut self.nid_vault_role_id, value),
             "nid_vault_secret_id" => Self::set_string(&mut self.nid_vault_secret_id, value),
             "nid_allow_mock_auth" => Self::set_bool(&mut self.nid_allow_mock_auth, value),
+            "nid_otp_brand_id" => Self::set_string(&mut self.nid_otp_brand_id, value),
             "default_tenant_key" => Self::set_string(&mut self.default_tenant_key, value),
             "public_url" => Self::set_string(&mut self.public_url, value),
             "live_proof_storage_dir" => Self::set_string(&mut self.live_proof_storage_dir, value),

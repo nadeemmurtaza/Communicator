@@ -205,53 +205,59 @@ pub async fn get_current_user_profile(
 }
 
 // ===========================================================================
-// Sign Up — Account creation via nID phone + OTP
+// Sign Up — Account creation via nID email + OTP
 // ===========================================================================
 
 #[derive(serde::Deserialize)]
 pub struct SignUpStartBody {
-    phone: String,
+    email: String,
 }
 
-/// Starts the sign-up flow by sending an OTP code to the given phone number.
-/// The account is created in nID when the OTP is verified (verify_sign_up).
+/// Starts the sign-up flow by sending an OTP code to the given email address.
+/// Uses the local Communicator OTP engine (email channel). Returns an otp_id
+/// that must be included when calling /auth/sign-up/verify.
 pub async fn sign_up_start(
     State(state): State<AppState>,
     Json(body): Json<SignUpStartBody>,
 ) -> Result<impl IntoResponse, AuthError> {
-    let phone = body.phone.trim();
-    if phone.is_empty() {
+    let email = body.email.trim();
+    if email.is_empty() {
         return Err(AuthError(
             StatusCode::BAD_REQUEST,
-            "Phone number is required.".to_string(),
+            "Email address is required.".to_string(),
         ));
     }
-    state.nid.start_sign_up(phone).await?;
+    let otp_id = state.nid.start_sign_up(email).await?;
     Ok(Json(json!({
         "status": "otp_sent",
-        "phone": phone,
-        "message": "Verification code sent. Call /auth/sign-up/verify with the code.",
+        "email": email,
+        "otpId": otp_id,
+        "message": "Verification code sent to your email. Include otpId when calling /auth/sign-up/verify.",
     })))
 }
 
 #[derive(serde::Deserialize)]
 pub struct SignUpVerifyBody {
-    phone: String,
+    email: String,
     code: String,
+    /// Optional: the otpId returned from /auth/sign-up/start.
+    /// If omitted, the server looks up the pending OTP by email.
+    #[allow(dead_code)]
+    otp_id: Option<String>,
 }
 
-/// Verifies the OTP code, creating the nID account if it doesn't exist.
+/// Verifies the OTP code using the local OTP engine and creates the session.
 /// Returns a session token that can be used as a Bearer token for auth.
 pub async fn sign_up_verify(
     State(state): State<AppState>,
     Json(body): Json<SignUpVerifyBody>,
 ) -> Result<impl IntoResponse, AuthError> {
-    let phone = body.phone.trim();
+    let email = body.email.trim();
     let code = body.code.trim();
-    if phone.is_empty() {
+    if email.is_empty() {
         return Err(AuthError(
             StatusCode::BAD_REQUEST,
-            "Phone number is required.".to_string(),
+            "Email address is required.".to_string(),
         ));
     }
     if code.is_empty() {
@@ -261,13 +267,14 @@ pub async fn sign_up_verify(
         ));
     }
 
-    let result: SignUpResult = state.nid.verify_sign_up(phone, code).await?;
+    let result: SignUpResult = state.nid.verify_sign_up(email, code).await?;
     Ok(Json(json!({
         "status": "signed_up",
         "token": result.session_token,
         "account_id": result.account_id,
         "accountId": result.account_id,
-        "phone": result.phone,
+        "email": result.email,
+        "otpId": result.otp_id,
         "provider": "nID",
     })))
 }

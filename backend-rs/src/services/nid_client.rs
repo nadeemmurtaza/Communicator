@@ -1,6 +1,8 @@
 ﻿#![allow(dead_code)]
 
 use crate::config::Config;
+use crate::db::DbPool;
+use crate::services::otp_engine::{GenerateOtpRequest, OtpEngine, VerifyOtpRequest};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -32,12 +34,13 @@ pub struct PendingState {
     redirect_uri: String,
 }
 
-/// Result of a successful nID account sign-up (phone + OTP verification).
+/// Result of a successful nID account sign-up (email + OTP verification).
 #[derive(Clone, Debug, Serialize)]
 pub struct SignUpResult {
     pub session_token: String,
     pub account_id: String,
-    pub phone: String,
+    pub email: String,
+    pub otp_id: String,
 }
 
 #[derive(Debug)]
@@ -51,15 +54,27 @@ pub enum NidError {
     OtpFailed(String),
 }
 
+/// Pending OTP sign-up request — maps email -> otp_id so verify_sign_up can find it.
+#[derive(Clone, Debug)]
+struct PendingOtp {
+    otp_id: String,
+    created_at: u64,
+}
+
 pub struct NidClient {
     http: reqwest::Client,
+    pool: DbPool,
     base_url: String,
     client_id: String,
     client_secret: String,
     redirect_uri: String,
     allow_mock_auth: bool,
+    /// Brand ID used when calling the OTP engine for nID sign-up OTPs.
+    otp_brand_id: String,
     pending: RwLock<HashMap<String, PendingState>>,
     sessions: RwLock<HashMap<String, SessionClaims>>,
+    /// Maps email -> pending OTP info for sign-up flow.
+    pending_otp: RwLock<HashMap<String, PendingOtp>>,
 }
 
 fn now_secs() -> u64 {
@@ -135,19 +150,22 @@ fn parse_origin(raw: &str) -> Option<Origin> {
 }
 
 impl NidClient {
-    pub fn from_config(config: &Config) -> Self {
+    pub fn from_config(pool: &DbPool, config: &Config) -> Self {
         Self {
             http: reqwest::Client::builder()
                 .timeout(std::time::Duration::from_secs(10))
                 .build()
                 .unwrap_or_default(),
+            pool: pool.clone(),
             base_url: config.nid_base_url.trim_end_matches('/').to_string(),
             client_id: config.nid_client_id.clone(),
             client_secret: config.nid_client_secret.clone(),
             redirect_uri: config.nid_redirect_uri.clone(),
             allow_mock_auth: config.nid_allow_mock_auth,
+            otp_brand_id: config.nid_otp_brand_id.clone(),
             pending: RwLock::new(HashMap::new()),
             sessions: RwLock::new(HashMap::new()),
+            pending_otp: RwLock::new(HashMap::new()),
         }
     }
 
@@ -397,81 +415,114 @@ impl NidClient {
     }
 
     // ------------------------------------------------------------------
-    // Sign Up — Account creation via nID phone + OTP
+    // Sign Up — Account creation via Communicator OTP engine + email
     // ------------------------------------------------------------------
 
-    /// Sends an OTP code to the given phone number via nID.
-    /// nID endpoint: POST /v1/accounts/otp/start
-    pub async fn start_sign_up(&self, phone: &str) -> Result<(), NidError> {
-        let response = self
-            .http
-            .post(format!("{}/v1/accounts/otp/start", self.base_url))
-            .json(&serde_json::json!({ "phone": phone }))
-            .send()
-            .await
-            .map_err(|err| NidError::Unreachable(err.to_string()))?;
+    /// Sends an OTP code to the given email address using the local OTP engine.
+    /// The OTP is dispatched via email (SMTP) and tracked so verify_sign_up can validate it.
+    pub async fn start_sign_up(&self, email: &str) -> Result<String, NidError> {
+        // Prune expired pending OTPs (older than STATE_TTL_SECS)
+        self.prune_pending_otp().await;
 
-        let status = response.status();
-        if !status.is_success() {
-            let body: serde_json::Value = response.json().await.unwrap_or_else(|_| json!({}));
-            let detail = body
-                .pointer("/message")
-                .and_then(|v| v.as_str())
-                .unwrap_or("nID rejected the OTP request");
-            return Err(NidError::OtpFailed(detail.to_string()));
+        // Check for rate limiting: reject if a recent OTP already exists for this email
+        {
+            let pending = self.pending_otp.read().await;
+            if let Some(existing) = pending.get(email) {
+                if now_secs() - existing.created_at < 60 {
+                    return Err(NidError::OtpFailed(
+                        "An OTP was recently sent to this email. Please wait before requesting another.".to_string(),
+                    ));
+                }
+            }
         }
-        Ok(())
+
+        // Use the local OTP engine to generate and send the OTP via email
+        let brand_id = self.otp_brand_id.as_str();
+        if brand_id.is_empty() {
+            return Err(NidError::OtpFailed(
+                "OTP engine is not configured. Set NID_OTP_BRAND_ID.".to_string(),
+            ));
+        }
+
+        let req = GenerateOtpRequest {
+            recipient: email.to_string(),
+            recipient_type: Some("email".to_string()),
+            purpose: Some("sign_up".to_string()),
+            channel: Some("email".to_string()),
+            metadata: None,
+            ip_address: None,
+            user_agent: None,
+        };
+
+        let result = OtpEngine::generate_and_send(&self.pool, brand_id, &req)
+            .await
+            .map_err(|err| NidError::OtpFailed(err))?;
+
+        if !result.success {
+            return Err(NidError::OtpFailed(
+                result.error.unwrap_or_else(|| "OTP generation failed".to_string()),
+            ));
+        }
+
+        // Store the otp_id so verify_sign_up can find it
+        let pending = PendingOtp {
+            otp_id: result.otp_id.clone(),
+            created_at: now_secs(),
+        };
+        self.pending_otp.write().await.insert(email.to_string(), pending);
+
+        Ok(result.otp_id)
     }
 
-    /// Verifies the OTP code and creates (or logs in to) the nID account.
-    /// nID endpoint: POST /v1/accounts/otp/verify
+    /// Verifies the OTP code using the local OTP engine and creates the session.
     /// Returns a session token and account identity on success.
-    pub async fn verify_sign_up(&self, phone: &str, code: &str) -> Result<SignUpResult, NidError> {
-        let response = self
-            .http
-            .post(format!("{}/v1/accounts/otp/verify", self.base_url))
-            .json(&serde_json::json!({ "phone": phone, "code": code }))
-            .send()
-            .await
-            .map_err(|err| NidError::Unreachable(err.to_string()))?;
+    pub async fn verify_sign_up(&self, email: &str, code: &str) -> Result<SignUpResult, NidError> {
+        // Look up the pending OTP for this email
+        let otp_id = {
+            let pending = self.pending_otp.read().await;
+            let pending_otp = pending.get(email).ok_or_else(|| {
+                NidError::OtpFailed("No pending OTP for this email. Please request a new code.".to_string())
+            })?;
+            // Check expiry (same TTL as STATE_TTL_SECS = 10 minutes)
+            if now_secs() - pending_otp.created_at > STATE_TTL_SECS {
+                return Err(NidError::OtpFailed(
+                    "OTP request has expired. Please request a new code.".to_string(),
+                ));
+            }
+            pending_otp.otp_id.clone()
+        };
 
-        let status = response.status();
-        if !status.is_success() {
-            let body: serde_json::Value = response.json().await.unwrap_or_else(|_| json!({}));
-            let detail = body
-                .pointer("/message")
-                .and_then(|v| v.as_str())
-                .unwrap_or("OTP verification failed");
-            return Err(NidError::OtpFailed(detail.to_string()));
+        // Verify via the local OTP engine
+        let verify_req = VerifyOtpRequest {
+            otp_id: otp_id.clone(),
+            code: code.to_string(),
+            ip_address: None,
+            user_agent: None,
+        };
+
+        let result = OtpEngine::verify(&self.pool, &verify_req)
+            .await
+            .map_err(|err| NidError::OtpFailed(err))?;
+
+        if !result.verified {
+            return Err(NidError::OtpFailed(
+                result.error.unwrap_or_else(|| "OTP verification failed".to_string()),
+            ));
         }
 
-        let data: serde_json::Value =
-            response.json().await.map_err(|_| NidError::MalformedResponse)?;
+        // Remove the pending OTP entry
+        self.pending_otp.write().await.remove(email);
 
-        let session_token = data
-            .get("sessionToken")
-            .and_then(|v| v.as_str())
-            .filter(|v| !v.is_empty())
-            .ok_or(NidError::MalformedResponse)?
-            .to_string();
-
-        let account = data.get("account").ok_or(NidError::MalformedResponse)?;
-        let account_id = account
-            .get("id")
-            .and_then(|v| v.as_str())
-            .filter(|v| !v.is_empty())
-            .ok_or(NidError::MalformedResponse)?
-            .to_string();
+        // Generate a session token and account ID for the new user
+        let session_token = random_hex(32);
+        let account_id = format!("acc_{}", fnv1a_hex(email));
 
         // Store the session so validate_session can find it later.
         let claims = SessionClaims {
             account_id: account_id.clone(),
-            phone: Some(phone.to_string()),
-            email: account.get("email").and_then(|v| v.as_str()).map(String::from),
-            phone_verified: account
-                .get("phoneVerifiedAt")
-                .map(|_| true)
-                .unwrap_or(false),
+            phone: None,
+            email: Some(email.to_string()),
+            phone_verified: false,
             access_token: session_token.clone(),
         };
         self.sessions
@@ -482,7 +533,14 @@ impl NidClient {
         Ok(SignUpResult {
             session_token,
             account_id,
-            phone: phone.to_string(),
+            email: email.to_string(),
+            otp_id,
         })
+    }
+
+    /// Prune expired pending OTP entries.
+    async fn prune_pending_otp(&self) {
+        let cutoff = now_secs().saturating_sub(STATE_TTL_SECS);
+        self.pending_otp.write().await.retain(|_, v| v.created_at > cutoff);
     }
 }
