@@ -585,7 +585,7 @@ pub async fn submit_prechat_form(
         )
         .await?;
         initial_message_id = Some(id);
-        cursor = rowid;
+        cursor = rowid.to_string();
     }
 
     let (session, session_token) = widget::create_session(
@@ -771,6 +771,7 @@ pub async fn send_message(
         }),
     )
     .await?;
+    let cursor = cursor.to_string();
 
     // A visitor writing back into a resolved thread reopens it, matching the
     // shared inbound pipeline's idea of a non-terminal conversation.
@@ -804,7 +805,7 @@ pub async fn send_message(
         }
     }
 
-    widget::advance_session_cursor(&state.db, &session.id, cursor).await?;
+    widget::advance_session_cursor(&state.db, &session.id, &cursor).await?;
 
     // The auto-reply is the ported AI engine's own output, and its three
     // outcomes are reported separately because they fail separately: the model
@@ -870,7 +871,7 @@ pub async fn list_messages(
     let rows = widget::visible_messages(&state.db, &conversation_id, after.clone(), limit).await?;
     let served = served_cursor(&rows, &after);
     if served > session.last_cursor {
-        widget::advance_session_cursor(&state.db, &session.id, served).await?;
+        widget::advance_session_cursor(&state.db, &session.id, &served).await?;
     }
 
     let mut response = (StatusCode::OK, Json(Value::Array(rows))).into_response();
@@ -904,7 +905,7 @@ pub async fn poll_messages(
     let page: Vec<Value> = rows.into_iter().take(limit as usize).collect();
     let served = served_cursor(&page, &after);
     if served > session.last_cursor {
-        widget::advance_session_cursor(&state.db, &session.id, served).await?;
+        widget::advance_session_cursor(&state.db, &session.id, &served).await?;
     }
 
     let inbox = widget::inbox_for_token(&state.db, &session.website_token).await.ok();
@@ -927,8 +928,8 @@ pub async fn poll_messages(
     Ok(build(
         json!({
             "messages": page,
-            "cursor": served,
-            "cursorToken": last_cursor_token(&page, served),
+            "cursor": served.clone(),
+            "cursorToken": last_cursor_token(&page, &served),
             "hasMore": has_more,
             "conversationState": thread_label,
             "sessionState": session.state,
@@ -955,16 +956,16 @@ pub async fn mark_read(
         .as_deref()
         .map(|raw| widget::cursor_rowid(Some(raw)))
         .unwrap_or(session.last_cursor.clone());
-    let up_to = if claimed < session.last_cursor { claimed } else { session.last_cursor.clone() };
-    let marked = widget::mark_messages_read(&state.db, &session.conversation_id, up_to).await?;
+    let up_to = if claimed < session.last_cursor { claimed.clone() } else { session.last_cursor.clone() };
+    let marked = widget::mark_messages_read(&state.db, &session.conversation_id, up_to.clone()).await?;
 
     Ok(build(
         json!({
             "status": "ok",
             "conversationId": session.conversation_id,
             "markedRead": marked,
-            "cursor": up_to,
-            "requested": claimed,
+            "cursor": up_to.clone(),
+            "requested": claimed.clone(),
             "clamped": claimed > up_to,
         }),
         None,
@@ -1100,7 +1101,7 @@ pub async fn session_state(
     let conversation =
         widget::conversation_summary(&state.db, &session.conversation_id).await?;
     let unread =
-        widget::unread_outbound_count(&state.db, &session.conversation_id, session.last_cursor)
+        widget::unread_outbound_count(&state.db, &session.conversation_id, session.last_cursor.clone())
             .await?;
     let last_seen = widget::last_seen_in_thread(&state.db, &session.conversation_id).await?;
 

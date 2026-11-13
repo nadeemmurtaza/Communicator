@@ -188,8 +188,8 @@ pub async fn update_settings_handler(
     let organization_id = body.get("organization_id")
         .and_then(|v| v.as_str())
         .unwrap_or("org-default");
-    let settings = body.get("settings")
-        .unwrap_or(&serde_json::json!({}));
+    let empty_settings = serde_json::json!({});
+    let settings = body.get("settings").unwrap_or(&empty_settings);
 
     match kb_documents::update_settings(&state, organization_id, settings).await {
         Ok(settings) => (StatusCode::OK, Json(settings)).into_response(),
