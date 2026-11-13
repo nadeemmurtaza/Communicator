@@ -21,7 +21,7 @@ use std::collections::HashMap;
 // Data types
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct StoreConnection {
     pub id: String,
     pub brand_id: String,
@@ -94,7 +94,7 @@ pub struct CreateStoreConnectionResponse {
     pub message: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct StoreConnectionStatus {
     pub id: String,
     pub store_connection_id: String,
@@ -117,7 +117,7 @@ pub struct StoreConnectionStatus {
     pub next_check_at: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct UiCompatibilityResult {
     pub id: String,
     pub store_connection_id: String,
@@ -193,7 +193,7 @@ pub struct UiCompatibilityReport {
     pub issues_found: Option<Vec<String>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct BrandOtpIsolation {
     pub id: String,
     pub brand_id: String,
@@ -332,7 +332,7 @@ impl StoreConnectionService {
         // Generate public key for the store widget
         let public_key = format!(
             "pk_store_{}_{}",
-            req.brand_id[..8.min(req.brand_id.len())],
+            &req.brand_id[..8.min(req.brand_id.len())],
             nanoid::nanoid!(8)
         );
 
@@ -462,18 +462,7 @@ impl StoreConnectionService {
         pool: &DbPool,
         brand_id: &str,
     ) -> Result<Vec<StoreConnection>, String> {
-        let rows: Vec<(
-            String, String, Option<String>, String, String,
-            String, String, String, String,
-            String, String, String,
-            String, String, String,
-            Option<String>, String, Option<String>, String,
-            bool, String,
-            bool, bool, bool, bool,
-            String, String,
-            bool, String, Option<String>, String,
-            serde_json::Value, String, String,
-        )> = sqlx::query_as(
+        let rows: Vec<StoreConnection> = sqlx::query_as(
             r#"SELECT id, brand_id, organization_id, platform_name, platform_version,
                       store_url, store_domain, store_name, display_name,
                       api_key, api_secret_hash, api_secret_salt,
@@ -493,7 +482,7 @@ impl StoreConnectionService {
         .await
         .map_err(|e| format!("Failed to fetch connections: {}", e))?;
 
-        rows.into_iter().map(Self::row_to_connection).collect()
+        Ok(rows)
     }
 
     /// Update store connection.
@@ -506,121 +495,42 @@ impl StoreConnectionService {
         use sha2::Sha256;
         type HmacSha256 = Hmac<Sha256>;
 
-        let mut sets = Vec::new();
-        let mut binds: Vec<Box<dyn sqlx::types::Type<sqlx::Postgres> + sqlx::Encode<'_, sqlx::Postgres>>> = Vec::new();
-        let mut param_count = 1;
+        let current = Self::get_by_id(pool, connection_id).await?;
 
-        // Build dynamic SET clause
-        let mut parts = Vec::new();
-        
-        if let Some(ref name) = req.store_name {
-            parts.push(format!("store_name = ${}", param_count));
-            binds.push(Box::new(name.clone()));
-            param_count += 1;
-        }
-        if let Some(ref name) = req.display_name {
-            parts.push(format!("display_name = ${}", param_count));
-            binds.push(Box::new(name.clone()));
-            param_count += 1;
-        }
-        if let Some(ref key) = req.api_key {
-            parts.push(format!("api_key = ${}", param_count));
-            binds.push(Box::new(key.clone()));
-            param_count += 1;
-        }
-        if let Some(ref secret) = req.api_secret {
+        // Re-hash the API secret / access token if new ones were provided;
+        // otherwise keep the existing hash/salt pair unchanged.
+        let (api_secret_hash, api_secret_salt) = if let Some(ref secret) = req.api_secret {
             let mut salt = [0u8; 32];
             rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut salt);
             let salt_hex = hex::encode(&salt);
             let mut mac = HmacSha256::new_from_slice(&salt)
                 .map_err(|e| format!("Failed to create HMAC: {}", e))?;
             mac.update(secret.as_bytes());
-            let hash = hex::encode(mac.finalize().into_bytes());
-            parts.push(format!("api_secret_hash = ${}, api_secret_salt = ${}", param_count, param_count + 1));
-            binds.push(Box::new(hash));
-            binds.push(Box::new(salt_hex));
-            param_count += 2;
-        }
-        if let Some(ref token) = req.access_token {
+            (hex::encode(mac.finalize().into_bytes()), salt_hex)
+        } else {
+            (current.api_secret_hash.clone(), current.api_secret_salt.clone())
+        };
+        let (access_token_hash, access_token_salt) = if let Some(ref token) = req.access_token {
             let mut salt = [0u8; 32];
             rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut salt);
             let salt_hex = hex::encode(&salt);
             let mut mac = HmacSha256::new_from_slice(&salt)
                 .map_err(|e| format!("Failed to create HMAC: {}", e))?;
             mac.update(token.as_bytes());
-            let hash = hex::encode(mac.finalize().into_bytes());
-            parts.push(format!("access_token_hash = ${}, access_token_salt = ${}", param_count, param_count + 1));
-            binds.push(Box::new(hash));
-            binds.push(Box::new(salt_hex));
-            param_count += 2;
-        }
-        if let Some(ref secret) = req.webhook_secret {
-            parts.push(format!("webhook_secret = ${}", param_count));
-            binds.push(Box::new(secret.clone()));
-            param_count += 1;
-        }
-        if let Some(ref purpose) = req.default_purpose {
-            parts.push(format!("default_purpose = ${}", param_count));
-            binds.push(Box::new(purpose.clone()));
-            param_count += 1;
-        }
-        if let Some(auto) = req.auto_create_customer {
-            parts.push(format!("auto_create_customer = ${}", param_count));
-            binds.push(Box::new(auto));
-            param_count += 1;
-        }
-        if let Some(enabled) = req.whatsapp_enabled {
-            parts.push(format!("whatsapp_enabled = ${}", param_count));
-            binds.push(Box::new(enabled));
-            param_count += 1;
-        }
-        if let Some(enabled) = req.email_enabled {
-            parts.push(format!("email_enabled = ${}", param_count));
-            binds.push(Box::new(enabled));
-            param_count += 1;
-        }
-        if let Some(enabled) = req.sms_enabled {
-            parts.push(format!("sms_enabled = ${}", param_count));
-            binds.push(Box::new(enabled));
-            param_count += 1;
-        }
-        if let Some(enabled) = req.in_app_enabled {
-            parts.push(format!("in_app_enabled = ${}", param_count));
-            binds.push(Box::new(enabled));
-            param_count += 1;
-        }
-        if let Some(ref channel) = req.default_channel {
-            parts.push(format!("default_channel = ${}", param_count));
-            binds.push(Box::new(channel.clone()));
-            param_count += 1;
-        }
-        if let Some(ref order) = req.priority_order {
-            let order_str = format!("ARRAY[{}]", order.iter()
-                .map(|s| format!("'{}'", s.replace("'", "''")))
-                .collect::<Vec<_>>().join(", "));
-            parts.push(format!("priority_order = ${}", param_count));
-            binds.push(Box::new(order_str));
-            param_count += 1;
-        }
-        if let Some(active) = req.is_active {
-            parts.push(format!("is_active = ${}", param_count));
-            binds.push(Box::new(active));
-            param_count += 1;
-        }
-        
-        // Always update updated_at
-        parts.push(format!("updated_at = NOW()"));
+            (hex::encode(mac.finalize().into_bytes()), salt_hex)
+        } else {
+            (current.access_token_hash.clone(), current.access_token_salt.clone())
+        };
 
-        if parts.is_empty() {
-            return Self::get_by_id(pool, connection_id).await;
-        }
-
-        // Use a simpler approach: fetch current, then update with all fields
-        let current = Self::get_by_id(pool, connection_id).await?;
-        
         let updated = StoreConnection {
             store_name: req.store_name.clone().unwrap_or(current.store_name),
             display_name: req.display_name.clone().unwrap_or(current.display_name),
+            api_key: req.api_key.clone().unwrap_or(current.api_key),
+            api_secret_hash,
+            api_secret_salt,
+            access_token_hash,
+            access_token_salt,
+            webhook_secret: req.webhook_secret.clone().unwrap_or(current.webhook_secret),
             default_purpose: req.default_purpose.clone().unwrap_or(current.default_purpose),
             auto_create_customer: req.auto_create_customer.unwrap_or(current.auto_create_customer),
             whatsapp_enabled: req.whatsapp_enabled.unwrap_or(current.whatsapp_enabled),
@@ -640,16 +550,25 @@ impl StoreConnectionService {
 
         sqlx::query(
             r#"UPDATE store_connections SET
-                store_name = $2, display_name = $3, default_purpose = $4,
-                auto_create_customer = $5,
-                whatsapp_enabled = $6, email_enabled = $7, sms_enabled = $8, in_app_enabled = $9,
-                default_channel = $10, priority_order = $11,
-                is_active = $12, updated_at = NOW()
+                store_name = $2, display_name = $3, api_key = $4,
+                api_secret_hash = $5, api_secret_salt = $6,
+                access_token_hash = $7, access_token_salt = $8, webhook_secret = $9,
+                default_purpose = $10,
+                auto_create_customer = $11,
+                whatsapp_enabled = $12, email_enabled = $13, sms_enabled = $14, in_app_enabled = $15,
+                default_channel = $16, priority_order = $17,
+                is_active = $18, updated_at = NOW()
                WHERE id = $1"#
         )
         .bind(&updated.id)
         .bind(&updated.store_name)
         .bind(&updated.display_name)
+        .bind(&updated.api_key)
+        .bind(&updated.api_secret_hash)
+        .bind(&updated.api_secret_salt)
+        .bind(&updated.access_token_hash)
+        .bind(&updated.access_token_salt)
+        .bind(&updated.webhook_secret)
         .bind(&updated.default_purpose)
         .bind(&updated.auto_create_customer)
         .bind(&updated.whatsapp_enabled)
@@ -694,20 +613,18 @@ impl StoreConnectionService {
         pool: &DbPool,
         connection_id: &str,
     ) -> Result<StoreConnectionStatus, String> {
-        let row: Option<(
-            String, String, String,
-            String, Option<String>, i64, f64,
-            bool, Option<String>, String, i64,
-            bool, Option<String>, i64,
-            i64, Option<String>, String, i64,
-            Option<String>, Option<String>,
-        )> = sqlx::query_as(
+        let row: Option<StoreConnectionStatus> = sqlx::query_as(
             r#"SELECT id, store_connection_id, brand_id,
-                      heartbeat_status, last_heartbeat_at, response_time_ms, uptime_percentage,
-                      api_reachable, last_api_check_at, api_version, api_rate_limit_remaining,
-                      webhook_reachable, last_webhook_check_at, webhook_events_received,
-                      error_count_24h, last_error_at, last_error_message, consecutive_errors,
-                      last_full_check_at, next_check_at
+                      heartbeat_status, last_heartbeat_at::TEXT AS last_heartbeat_at,
+                      response_time_ms::BIGINT AS response_time_ms, uptime_percentage,
+                      api_reachable, last_api_check_at::TEXT AS last_api_check_at, api_version,
+                      api_rate_limit_remaining::BIGINT AS api_rate_limit_remaining,
+                      webhook_reachable, last_webhook_check_at::TEXT AS last_webhook_check_at,
+                      webhook_events_received::BIGINT AS webhook_events_received,
+                      error_count_24h::BIGINT AS error_count_24h, last_error_message,
+                      consecutive_errors::BIGINT AS consecutive_errors,
+                      last_full_check_at::TEXT AS last_full_check_at,
+                      next_check_at::TEXT AS next_check_at
                FROM store_connection_status
                WHERE store_connection_id = $1
                LIMIT 1"#
@@ -717,30 +634,7 @@ impl StoreConnectionService {
         .await
         .map_err(|e| format!("Failed to fetch connection status: {}", e))?;
 
-        match row {
-            Some(r) => Ok(StoreConnectionStatus {
-                id: r.0,
-                store_connection_id: r.1,
-                brand_id: r.2,
-                heartbeat_status: r.3,
-                last_heartbeat_at: r.4,
-                response_time_ms: r.5,
-                uptime_percentage: r.6,
-                api_reachable: r.7,
-                last_api_check_at: r.8,
-                api_version: r.9,
-                api_rate_limit_remaining: r.10,
-                webhook_reachable: r.11,
-                last_webhook_check_at: r.12,
-                webhook_events_received: r.13,
-                error_count_24h: r.14,
-                last_error_message: r.16,
-                consecutive_errors: r.17,
-                last_full_check_at: r.18,
-                next_check_at: r.19,
-            }),
-            None => Err("Connection status not found".to_string()),
-        }
+        row.ok_or_else(|| "Connection status not found".to_string())
     }
 
     /// Run a health check on a store connection.
@@ -776,7 +670,7 @@ impl StoreConnectionService {
         }
 
         // Update status record
-        let (status_id,) = sqlx::query_as(
+        let (status_id,): (Option<String>,) = sqlx::query_as(
             r#"SELECT id FROM store_connection_status WHERE store_connection_id = $1 LIMIT 1"#
         )
         .bind(connection_id)
@@ -1095,7 +989,6 @@ impl StoreConnectionService {
             resend_cooldown_enforced: countdown_timer_present && resend_button_present,
             https_enforced,
             csrf_protection_present,
-            rate_limit_ui_feedback: countdown_timer_present,
             mobile_responsive,
             mobile_touch_targets_ok,
             overall_compatible,
@@ -1111,30 +1004,20 @@ impl StoreConnectionService {
         pool: &DbPool,
         connection_id: &str,
     ) -> Result<Option<UiCompatibilityResult>, String> {
-        let row: Option<(
-            String, String, String, String, i64,
-            i64, i64, bool, String,
-            bool, bool, String,
-            bool, String,
-            bool, String, bool,
-            bool, bool, bool,
-            bool, bool,
-            bool, bool, bool,
-            bool, bool, bool,
-            bool, bool,
-            bool, Vec<String>, Vec<String>,
-            String, String,
-        )> = sqlx::query_as(
-            r#"SELECT id, store_connection_id, brand_id, check_status, check_score,
-                      input_boxes_count, expected_boxes_count, input_boxes_match, input_boxes_error,
+        let row: Option<UiCompatibilityResult> = sqlx::query_as(
+            r#"SELECT id, store_connection_id, brand_id, check_status,
+                      check_score::BIGINT AS check_score,
+                      checked_at::TEXT AS checked_at,
+                      input_boxes_count::BIGINT AS input_boxes_count,
+                      expected_boxes_count::BIGINT AS expected_boxes_count,
+                      input_boxes_match, input_boxes_error,
                       paste_supported, paste_event_handler_found, paste_error,
                       individual_input_paste, individual_input_paste_error,
-                      aria_labels_present, aria_labels_error, keyboard_navigation,
-                      keyboard_navigation_error, screen_reader_compatible,
-                      form_validation_present, form_validation_error,
+                      aria_labels_present, keyboard_navigation, screen_reader_compatible,
+                      form_validation_present,
                       error_messages_visible,
                       countdown_timer_present, resend_button_present, resend_cooldown_enforced,
-                      https_enforced, csrf_protection_present, rate_limit_ui_feedback,
+                      https_enforced, csrf_protection_present,
                       mobile_responsive, mobile_touch_targets_ok,
                       overall_compatible, issues_found, recommendations,
                       check_method, page_url
@@ -1148,44 +1031,7 @@ impl StoreConnectionService {
         .await
         .map_err(|e| format!("Failed to fetch UI compatibility: {}", e))?;
 
-        match row {
-            Some(r) => Ok(Some(UiCompatibilityResult {
-                id: r.0,
-                store_connection_id: r.1,
-                brand_id: r.2,
-                check_status: r.3,
-                check_score: r.4,
-                checked_at: chrono::Utc::now().to_rfc3339(),
-                input_boxes_count: r.5,
-                expected_boxes_count: r.6,
-                input_boxes_match: r.7,
-                input_boxes_error: r.8,
-                paste_supported: r.9,
-                paste_event_handler_found: r.10,
-                paste_error: r.11,
-                individual_input_paste: r.12,
-                individual_input_paste_error: r.13,
-                aria_labels_present: r.14,
-                keyboard_navigation: r.16,
-                screen_reader_compatible: r.18,
-                form_validation_present: r.19,
-                error_messages_visible: r.22,
-                countdown_timer_present: r.23,
-                resend_button_present: r.24,
-                resend_cooldown_enforced: r.25,
-                https_enforced: r.26,
-                csrf_protection_present: r.27,
-                rate_limit_ui_feedback: r.28,
-                mobile_responsive: r.29,
-                mobile_touch_targets_ok: r.30,
-                overall_compatible: r.31,
-                issues_found: r.32,
-                recommendations: r.33,
-                check_method: r.34,
-                page_url: r.35,
-            })),
-            None => Ok(None),
-        }
+        Ok(row)
     }
 
     // -----------------------------------------------------------------------
@@ -1227,22 +1073,20 @@ impl StoreConnectionService {
         // Ensure it exists
         Self::ensure_brand_isolation(pool, brand_id, &None).await.ok();
 
-        let row: Option<(
-            String, String, Option<String>,
-            bool, String, String, String,
-            bool, bool, bool,
-            i64, i64, i64, i64,
-            bool, bool,
-            i64, i64, i64, Option<String>,
-            serde_json::Value, String, String,
-        )> = sqlx::query_as(
+        let row: Option<BrandOtpIsolation> = sqlx::query_as(
             r#"SELECT id, brand_id, organization_id,
                       isolation_enabled, isolation_mode, otp_prefix, otp_namespace,
                       isolated_whatsapp, isolated_email, isolated_sms,
-                      rate_limit_per_minute, rate_limit_per_hour, cooldown_seconds, lockout_seconds,
+                      rate_limit_per_minute::BIGINT AS rate_limit_per_minute,
+                      rate_limit_per_hour::BIGINT AS rate_limit_per_hour,
+                      cooldown_seconds::BIGINT AS cooldown_seconds,
+                      lockout_seconds::BIGINT AS lockout_seconds,
                       block_cross_brand_otp, block_shared_recipient,
-                      total_otp_generated, total_otp_verified, total_otp_failed, last_otp_generated_at,
-                      metadata, created_at, updated_at
+                      total_otp_generated::BIGINT AS total_otp_generated,
+                      total_otp_verified::BIGINT AS total_otp_verified,
+                      total_otp_failed::BIGINT AS total_otp_failed,
+                      last_otp_generated_at::TEXT AS last_otp_generated_at,
+                      metadata, created_at::TEXT AS created_at, updated_at::TEXT AS updated_at
                FROM brand_otp_isolation
                WHERE brand_id = $1
                LIMIT 1"#
@@ -1252,34 +1096,7 @@ impl StoreConnectionService {
         .await
         .map_err(|e| format!("Failed to fetch brand isolation: {}", e))?;
 
-        match row {
-            Some(r) => Ok(BrandOtpIsolation {
-                id: r.0,
-                brand_id: r.1,
-                organization_id: r.2,
-                isolation_enabled: r.3,
-                isolation_mode: r.4,
-                otp_prefix: r.5,
-                otp_namespace: r.6,
-                isolated_whatsapp: r.7,
-                isolated_email: r.8,
-                isolated_sms: r.9,
-                rate_limit_per_minute: r.10,
-                rate_limit_per_hour: r.11,
-                cooldown_seconds: r.12,
-                lockout_seconds: r.13,
-                block_cross_brand_otp: r.14,
-                block_shared_recipient: r.15,
-                total_otp_generated: r.16,
-                total_otp_verified: r.17,
-                total_otp_failed: r.18,
-                last_otp_generated_at: r.19,
-                metadata: r.20,
-                created_at: r.21,
-                updated_at: r.22,
-            }),
-            None => Err("Brand isolation config not found".to_string()),
-        }
+        row.ok_or_else(|| "Brand isolation config not found".to_string())
     }
 
     /// Update brand OTP isolation settings.
@@ -1496,8 +1313,8 @@ impl StoreConnectionService {
                     success: true,
                     pending_id,
                     otp_id: otp_resp.otp_id,
-                    channel,
                     message: format!("OTP sent via {}. Please enter the code to verify your account.", channel),
+                    channel,
                     expires_in_seconds: ttl_seconds,
                     error: None,
                 })
@@ -1609,13 +1426,13 @@ impl StoreConnectionService {
         }
 
         // Verify OTP via the OTP engine
-        let verify_result = OtpEngine::verify(
-            pool,
-            &pending.3,
-            &req.code,
-            req.ip_address.as_deref(),
-            req.user_agent.as_deref(),
-        ).await;
+        let verify_req = crate::services::otp_engine::VerifyOtpRequest {
+            otp_id: pending.3.clone(),
+            code: req.code.clone(),
+            ip_address: req.ip_address.clone(),
+            user_agent: req.user_agent.clone(),
+        };
+        let verify_result = OtpEngine::verify(pool, &verify_req).await;
 
         match verify_result {
             Ok(verify_resp) => {
@@ -1809,8 +1626,8 @@ impl StoreConnectionService {
             success: true,
             pending_id: pending_id.to_string(),
             otp_id: otp_resp.otp_id,
-            channel,
             message: format!("New OTP sent via {}", channel),
+            channel,
             expires_in_seconds: otp_resp.expires_in_seconds,
             error: None,
         })
@@ -1826,18 +1643,7 @@ impl StoreConnectionService {
         column: &str,
         value: &str,
     ) -> Result<StoreConnection, String> {
-        let row: Option<(
-            String, String, Option<String>, String, String,
-            String, String, String, String,
-            String, String, String,
-            String, String, String,
-            Option<String>, String, Option<String>, String,
-            bool, String,
-            bool, bool, bool, bool,
-            String, String,
-            bool, String, Option<String>, String,
-            serde_json::Value, String, String,
-        )> = sqlx::query_as(
+        let row: Option<StoreConnection> = sqlx::query_as(
             &format!(
                 r#"SELECT id, brand_id, organization_id, platform_name, platform_version,
                           store_url, store_domain, store_name, display_name,
@@ -1860,67 +1666,7 @@ impl StoreConnectionService {
         .await
         .map_err(|e| format!("Failed to fetch connection: {}", e))?;
 
-        match row {
-            Some(r) => Ok(Self::row_to_connection(r)),
-            None => Err("Store connection not found or inactive".to_string()),
-        }
-    }
-
-    /// Convert a database row to a StoreConnection.
-    fn row_to_connection(r: (
-        String, String, Option<String>, String, String,
-        String, String, String, String,
-        String, String, String,
-        String, String, String,
-        Option<String>, String, Option<String>, String,
-        bool, String,
-        bool, bool, bool, bool,
-        String, String,
-        bool, String, Option<String>, String,
-        serde_json::Value, String, String,
-    )) -> StoreConnection {
-        let priority_order: Vec<String> = r.25
-            .split(',')
-            .map(|s| s.trim().trim_matches('[').trim_matches(']').trim_matches('\'').to_string())
-            .filter(|s| !s.is_empty())
-            .collect();
-
-        StoreConnection {
-            id: r.0,
-            brand_id: r.1,
-            organization_id: r.2,
-            platform_name: r.3,
-            platform_version: r.4,
-            store_url: r.5,
-            store_domain: r.6,
-            store_name: r.7,
-            display_name: r.8,
-            api_key: r.9,
-            api_secret_hash: r.10,
-            api_secret_salt: r.11,
-            access_token_hash: r.12,
-            access_token_salt: r.13,
-            webhook_secret: r.14,
-            external_integration_id: r.15,
-            public_key: r.16,
-            webhook_url: r.17,
-            default_purpose: r.18,
-            auto_create_customer: r.19,
-            customer_tag: r.20,
-            whatsapp_enabled: r.21,
-            email_enabled: r.22,
-            sms_enabled: r.23,
-            in_app_enabled: r.24,
-            default_channel: r.25,
-            priority_order,
-            is_active: r.26,
-            connection_status: r.27,
-            last_status_check: r.28,
-            last_error: r.29,
-            metadata: r.30,
-            created_at: r.31,
-            updated_at: r.32,
-        }
+        row.ok_or_else(|| "Store connection not found or inactive".to_string())
     }
 
     /// Select the best channel based on store preferences and recipient type.

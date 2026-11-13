@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS store_connection_status (
     heartbeat_status TEXT NOT NULL DEFAULT 'unknown',  -- 'healthy', 'degraded', 'unhealthy', 'unknown'
     last_heartbeat_at TIMESTAMPTZ,
     response_time_ms INTEGER DEFAULT 0,
-    uptime_percentage NUMERIC(5,2) DEFAULT 0,         -- e.g., 99.95
+    uptime_percentage DOUBLE PRECISION DEFAULT 0,         -- e.g., 99.95
     
     -- API connectivity
     api_reachable BOOLEAN NOT NULL DEFAULT false,
