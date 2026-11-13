@@ -61,7 +61,7 @@ fn rule_matches(r: &AutomationRule, p: &InboundProbe) -> bool {
 
 async fn active_rules(state: &AppState, tenant: &str) -> Result<Vec<AutomationRule>, sqlx::Error> {
     sqlx::query_as::<_, AutomationRule>(
-        "SELECT id, name, description, trigger_keyword, match_type, action_type, action_value, priority, is_active, execution_count, last_triggered_at, created_at FROM automation_rules WHERE is_active = 1 AND COALESCE(tenant_key, '') = ? ORDER BY priority DESC, created_at ASC",
+        "SELECT id, name, description, trigger_keyword, match_type, action_type, action_value, priority, is_active, execution_count, last_triggered_at, created_at FROM automation_rules WHERE is_active = 1 AND COALESCE(tenant_key, '') = $1 ORDER BY priority DESC, created_at ASC",
     )
     .bind(tenant)
     .fetch_all(&state.db)
@@ -72,7 +72,7 @@ async fn active_rules(state: &AppState, tenant: &str) -> Result<Vec<AutomationRu
 async fn conversation_target(state: &AppState, conversation_id: &str) -> Option<(Option<String>, String)> {
     sqlx::query_as::<_, (Option<String>, String)>(
         "SELECT COALESCE(NULLIF(c.contact_phone, ''), NULLIF(c.phone, ''), NULLIF(ct.value, '')) AS phone, c.channel AS channel \
-         FROM conversations c LEFT JOIN contacts ct ON ct.id = c.contact_id WHERE c.id = ? LIMIT 1",
+         FROM conversations c LEFT JOIN contacts ct ON ct.id = c.contact_id WHERE c.id = $1 LIMIT 1",
     )
     .bind(conversation_id)
     .fetch_optional(&state.db)
@@ -103,7 +103,7 @@ pub async fn list_automation_rules(
     Tenant(tenant): Tenant,
 ) -> Response {
     let rules = sqlx::query_as::<_, AutomationRule>(
-        "SELECT id, name, description, trigger_keyword, match_type, action_type, action_value, priority, is_active, execution_count, last_triggered_at, created_at FROM automation_rules WHERE COALESCE(tenant_key, '') = ? ORDER BY priority DESC, created_at ASC",
+        "SELECT id, name, description, trigger_keyword, match_type, action_type, action_value, priority, is_active, execution_count, last_triggered_at, created_at FROM automation_rules WHERE COALESCE(tenant_key, '') = $1 ORDER BY priority DESC, created_at ASC",
     )
     .bind(&tenant)
     .fetch_all(&state.db)
@@ -224,7 +224,7 @@ pub async fn update_automation_rule(
     Json(payload): Json<UpdateRulePayload>,
 ) -> impl IntoResponse {
     let existing = sqlx::query_as::<_, AutomationRule>(
-        "SELECT id, name, description, trigger_keyword, match_type, action_type, action_value, priority, is_active, execution_count, last_triggered_at, created_at FROM automation_rules WHERE id = ? AND COALESCE(tenant_key, '') = ?",
+        "SELECT id, name, description, trigger_keyword, match_type, action_type, action_value, priority, is_active, execution_count, last_triggered_at, created_at FROM automation_rules WHERE id = $1 AND COALESCE(tenant_key, '') = $2",
     )
     .bind(&id)
     .bind(&tenant)
@@ -544,7 +544,7 @@ pub async fn apply_automation_rules(
                 }
 
                 let provider_message_id = outcome["providerMessageId"].as_str().unwrap_or("");
-                let provider_res = sqlx::query("UPDATE messages SET provider_message_id = ? WHERE id = ?")
+                let provider_res = sqlx::query("UPDATE messages SET provider_message_id = $1 WHERE id = $2")
                     .bind(provider_message_id)
                     .bind(&msg_id)
                     .execute(&state.db)
@@ -587,7 +587,7 @@ pub async fn apply_automation_rules(
             }
         }
         "handoff" => {
-            let res = sqlx::query("UPDATE conversations SET human_takeover = 1, updated_at = ? WHERE id = ?")
+            let res = sqlx::query("UPDATE conversations SET human_takeover = 1, updated_at = $1 WHERE id = $2")
                 .bind(&now)
                 .bind(&conv_id)
                 .execute(&state.db)
@@ -631,7 +631,7 @@ pub async fn apply_automation_rules(
                 }
             }
             let serialized = serde_json::to_string(obj).unwrap_or_else(|_| "{}".to_string());
-            let res = sqlx::query("UPDATE conversations SET custom_attributes = ?, updated_at = ? WHERE id = ?")
+            let res = sqlx::query("UPDATE conversations SET custom_attributes = $1, updated_at = $2 WHERE id = $3")
                 .bind(&serialized)
                 .bind(&now)
                 .bind(&conv_id)
@@ -677,14 +677,14 @@ pub async fn apply_automation_rules(
     let mut execution_count_after: Option<i64> = None;
     if counter_bumped {
         let bump = sqlx::query(
-            "UPDATE automation_rules SET execution_count = COALESCE(execution_count, 0) + 1, last_triggered_at = ? WHERE id = ?",
+            "UPDATE automation_rules SET execution_count = COALESCE(execution_count, 0) + 1, last_triggered_at = $1 WHERE id = $2",
         )
         .bind(&now)
         .bind(&rule.id)
         .execute(&state.db)
         .await;
         if bump.is_ok() {
-            execution_count_after = sqlx::query_scalar::<_, i64>("SELECT execution_count FROM automation_rules WHERE id = ?")
+            execution_count_after = sqlx::query_scalar::<_, i64>("SELECT execution_count FROM automation_rules WHERE id = $1")
                 .bind(&rule.id)
                 .fetch_optional(&state.db)
                 .await
@@ -714,7 +714,7 @@ pub async fn apply_automation_rules(
     });
     let audit_id = Uuid::new_v4().to_string();
     let audit_res = sqlx::query(
-        "INSERT INTO audit_logs (id, entity_type, entity_id, action, actor, severity, compliance_category, description, details, created_at) VALUES (?, 'automation_rule', ?, 'automation_rule_applied', 'automation_engine', 'info', 'audit_trail', ?, ?, ?)",
+        "INSERT INTO audit_logs (id, entity_type, entity_id, action, actor, severity, compliance_category, description, details, created_at) VALUES ($1, 'automation_rule', $2, 'automation_rule_applied', 'automation_engine', 'info', 'audit_trail', $3, $4, $5)",
     )
     .bind(&audit_id)
     .bind(&rule.id)
@@ -798,19 +798,19 @@ pub async fn get_automation_stats(
 
     let total_rules = scalar_i64_scoped(
         &state,
-        "SELECT COUNT(*) FROM automation_rules WHERE COALESCE(tenant_key, '') = ?",
+        "SELECT COUNT(*) FROM automation_rules WHERE COALESCE(tenant_key, '') = $1",
         &tenant,
     )
     .await;
     let active_rules = scalar_i64_scoped(
         &state,
-        "SELECT COUNT(*) FROM automation_rules WHERE is_active = 1 AND COALESCE(tenant_key, '') = ?",
+        "SELECT COUNT(*) FROM automation_rules WHERE is_active = 1 AND COALESCE(tenant_key, '') = $1",
         &tenant,
     )
     .await;
     let total_executions = scalar_i64_scoped(
         &state,
-        "SELECT COALESCE(SUM(execution_count), 0) FROM automation_rules WHERE COALESCE(tenant_key, '') = ?",
+        "SELECT COALESCE(SUM(execution_count), 0) FROM automation_rules WHERE COALESCE(tenant_key, '') = $1",
         &tenant,
     )
     .await;
@@ -956,7 +956,7 @@ pub async fn run_inactivity_nudges(State(state): State<AppState>) -> Response {
         // created_at is stored in two historical formats, so both bounds are compared.
         let window_start_naive = window_start.naive_utc().format("%Y-%m-%d %H:%M:%S").to_string();
         let recent_nudge: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM messages WHERE conversation_id = ? AND provider = 'inactivity_nudge' AND delivery_status = 'sent' AND (created_at >= ? OR created_at >= ?)",
+            "SELECT COUNT(*) FROM messages WHERE conversation_id = $1 AND provider = 'inactivity_nudge' AND delivery_status = 'sent' AND (created_at >= $2 OR created_at >= $3)",
         )
         .bind(&cand.id)
         .bind(window_start.to_rfc3339())
@@ -985,7 +985,7 @@ pub async fn run_inactivity_nudges(State(state): State<AppState>) -> Response {
         let delivery_state = if dispatched { "sent" } else { "failed" };
 
         let insert = sqlx::query(
-            "INSERT INTO messages (id, conversation_id, sender, sender_name, direction, channel, body, status, delivery_status, sent_at, created_at, provider, intent) VALUES (?, ?, 'bot', 'inactivity_nudge', 'outbound', ?, ?, ?, ?, ?, ?, 'inactivity_nudge', 'inactivity_nudge')",
+            "INSERT INTO messages (id, conversation_id, sender, sender_name, direction, channel, body, status, delivery_status, sent_at, created_at, provider, intent) VALUES ($1, $2, 'bot', 'inactivity_nudge', 'outbound', $3, $4, $5, $6, $7, $8, 'inactivity_nudge', 'inactivity_nudge')",
         )
         .bind(&msg_id)
         .bind(&cand.id)
@@ -1013,7 +1013,7 @@ pub async fn run_inactivity_nudges(State(state): State<AppState>) -> Response {
             // The dispatch result and the follow-up writes are reported apart: a
             // nudge the provider accepted but whose stored state is missing is not
             // a clean success.
-            let provider_res = sqlx::query("UPDATE messages SET provider_message_id = ? WHERE id = ?")
+            let provider_res = sqlx::query("UPDATE messages SET provider_message_id = $1 WHERE id = $2")
                 .bind(outcome["providerMessageId"].as_str().unwrap_or(""))
                 .bind(&msg_id)
                 .execute(&state.db)
@@ -1029,7 +1029,7 @@ pub async fn run_inactivity_nudges(State(state): State<AppState>) -> Response {
                 )),
             }
 
-            let stamp_res = sqlx::query("UPDATE conversations SET last_outbound_at = ?, updated_at = ? WHERE id = ?")
+            let stamp_res = sqlx::query("UPDATE conversations SET last_outbound_at = $1, updated_at = $2 WHERE id = $3")
                 .bind(&now_str)
                 .bind(&now_str)
                 .bind(&cand.id)
@@ -1078,7 +1078,7 @@ pub async fn run_inactivity_nudges(State(state): State<AppState>) -> Response {
         "run_at": now_str.clone(),
     });
     let audit_res = sqlx::query(
-        "INSERT INTO audit_logs (id, entity_type, entity_id, action, actor, severity, compliance_category, description, details, created_at) VALUES (?, 'automation', 'inactivity_nudge', 'nudge_run', 'automation_engine', 'info', 'audit_trail', ?, ?, ?)",
+        "INSERT INTO audit_logs (id, entity_type, entity_id, action, actor, severity, compliance_category, description, details, created_at) VALUES ($1, 'automation', 'inactivity_nudge', 'nudge_run', 'automation_engine', 'info', 'audit_trail', $2, $3, $4)",
     )
     .bind(&audit_id)
     .bind(format!(
