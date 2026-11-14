@@ -81,7 +81,7 @@ pub async fn list_services(
     Tenant(tenant): Tenant,
 ) -> Response {
     let services = match sqlx::query_as::<_, ServiceItem>(
-        "SELECT id, name, COALESCE(summary, '') AS summary, target_institution_types FROM services WHERE COALESCE(tenant_key, '') = ? ORDER BY name ASC",
+        "SELECT id, name, COALESCE(summary, '') AS summary, target_institution_types FROM services WHERE COALESCE(tenant_key, '') = $1 ORDER BY name ASC",
     )
     .bind(&tenant)
     .fetch_all(&state.db)
@@ -118,7 +118,7 @@ pub async fn get_service(
     Path(id): Path<String>,
 ) -> Response {
     let row = sqlx::query_as::<_, ServiceFullRow>(&format!(
-        "SELECT {SERVICE_COLUMNS} FROM services WHERE id = ? LIMIT 1"
+        "SELECT {SERVICE_COLUMNS} FROM services WHERE id = $1 LIMIT 1"
     ))
     .bind(&id)
     .fetch_optional(&state.db)
@@ -181,7 +181,7 @@ pub async fn create_service(
     let pricing = payload.pricing_notes.unwrap_or_default();
 
     let res = sqlx::query(
-        "INSERT INTO services (id, name, summary, details, target_institution_types, faq, pricing_notes, created_at, updated_at, tenant_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO services (id, name, summary, details, target_institution_types, faq, pricing_notes, created_at, updated_at, tenant_key) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
     )
     .bind(&id)
     .bind(name)
@@ -275,7 +275,7 @@ pub async fn create_sequence(
     }
 
     let res = sqlx::query(
-        "INSERT INTO follow_up_sequences (id, name, description, is_active, created_at) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO follow_up_sequences (id, name, description, is_active, created_at) VALUES ($1, $2, $3, $4, $5)",
     )
     .bind(&id)
     .bind(&name)
@@ -315,7 +315,7 @@ pub async fn sequence_variant_stats(
     Path(id): Path<String>,
 ) -> Response {
     let seq: Option<(String, String)> =
-        sqlx::query_as("SELECT id, name FROM follow_up_sequences WHERE id = ? LIMIT 1")
+        sqlx::query_as("SELECT id, name FROM follow_up_sequences WHERE id = $1 LIMIT 1")
             .bind(&id)
             .fetch_optional(&state.db)
             .await
@@ -330,7 +330,7 @@ pub async fn sequence_variant_stats(
     };
 
     let declared: Vec<Option<String>> = sqlx::query_scalar(
-        "SELECT variant FROM sequence_steps WHERE sequence_id = ? GROUP BY variant",
+        "SELECT variant FROM sequence_steps WHERE sequence_id = $1 GROUP BY variant",
     )
     .bind(&seq_id)
     .fetch_all(&state.db)
@@ -364,7 +364,7 @@ pub async fn sequence_variant_stats(
                 COUNT(*) AS enrolled, \
                 COALESCE(SUM(CASE WHEN UPPER(state) IN ('ENGAGED','HOT_LEAD','HANDED_OFF','CLOSED_WON','CLOSED_LOST') OR last_inbound_at IS NOT NULL THEN 1 ELSE 0 END), 0) AS replied, \
                 COALESCE(SUM(CASE WHEN UPPER(state) = 'CLOSED_WON' OR resolution_type = 'won' THEN 1 ELSE 0 END), 0) AS closed_won \
-         FROM conversations WHERE sequence_id = ? GROUP BY COALESCE(sequence_variant, '(no variant)')",
+         FROM conversations WHERE sequence_id = $1 GROUP BY COALESCE(sequence_variant, '(no variant)')",
     )
     .bind(&seq_id)
     .fetch_all(&state.db)

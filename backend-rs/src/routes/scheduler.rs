@@ -248,7 +248,7 @@ struct JobRow {
     updated_at: String,
 }
 
-const SELECT_JOB: &str = "SELECT id, job_key, description, interval_seconds, is_enabled, last_run_at, next_run_at, last_status, last_candidates, last_executed, last_error, created_at, updated_at FROM scheduler_jobs WHERE job_key = ?";
+const SELECT_JOB: &str = "SELECT id, job_key, description, interval_seconds, is_enabled, last_run_at, next_run_at, last_status, last_candidates, last_executed, last_error, created_at, updated_at FROM scheduler_jobs WHERE job_key = $1";
 
 impl JobRow {
     fn json(&self, now: DateTime<Utc>) -> Value {
@@ -322,7 +322,7 @@ async fn ensure_job(state: &AppState, job_key: &str) -> Result<JobRow, String> {
     let now = Utc::now();
     let next = now + ChronoDuration::seconds(interval);
     let insert = sqlx::query(
-        "INSERT INTO scheduler_jobs (id, job_key, description, interval_seconds, is_enabled, last_run_at, next_run_at, last_status, last_candidates, last_executed, last_error, created_at, updated_at) VALUES (?, ?, ?, ?, 1, NULL, ?, 'never', 0, 0, '', ?, ?)",
+        "INSERT INTO scheduler_jobs (id, job_key, description, interval_seconds, is_enabled, last_run_at, next_run_at, last_status, last_candidates, last_executed, last_error, created_at, updated_at) VALUES ($1, $2, $3, $4, 1, NULL, $5, 'never', 0, 0, '', $6, $7)",
     )
     .bind(Uuid::new_v4().simple().to_string())
     .bind(job_key)
@@ -371,7 +371,7 @@ async fn finish_run(
     let now = Utc::now();
     let duration_ms = (now - started).num_milliseconds();
     let history = sqlx::query(
-        "INSERT INTO scheduler_runs (id, job_key, started_at, finished_at, duration_ms, candidates, executed, failed, status, detail, dry_run) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO scheduler_runs (id, job_key, started_at, finished_at, duration_ms, candidates, executed, failed, status, detail, dry_run) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
     )
     .bind(Uuid::new_v4().simple().to_string())
     .bind(job_key)
@@ -407,7 +407,7 @@ async fn finish_run(
     let roll_failure = match job.as_ref() {
         Ok(_) => {
             let roll = sqlx::query(
-                "UPDATE scheduler_jobs SET last_run_at = ?, last_status = ?, last_candidates = ?, last_executed = ?, last_error = ?, next_run_at = ?, updated_at = ? WHERE job_key = ?",
+                "UPDATE scheduler_jobs SET last_run_at = $1, last_status = $2, last_candidates = $3, last_executed = $4, last_error = $5, next_run_at = $6, updated_at = $7 WHERE job_key = $8",
             )
             .bind(now.to_rfc3339())
             .bind(status)
@@ -670,7 +670,7 @@ async fn record_outbound(
     })
     .to_string();
     let insert = sqlx::query(
-        "INSERT INTO messages (id, conversation_id, sender, sender_name, direction, channel, body, status, delivery_status, provider, provider_message_id, intent, provider_metadata, sent_at, created_at) VALUES (?, ?, 'bot', ?, 'outbound', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO messages (id, conversation_id, sender, sender_name, direction, channel, body, status, delivery_status, provider, provider_message_id, intent, provider_metadata, sent_at, created_at) VALUES ($1, $2, 'bot', $3, 'outbound', $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
     )
     .bind(Uuid::new_v4().simple().to_string())
     .bind(conversation_id)
@@ -790,7 +790,7 @@ async fn sequence_step_body(
     let (sequence_id, sequence_name) = sequences.into_iter().next().unwrap();
 
     let steps: Vec<(i64, i64, Option<String>)> = match sqlx::query_as(
-        "SELECT step_number, delay_days, template FROM sequence_steps WHERE sequence_id = ? ORDER BY step_number ASC",
+        "SELECT step_number, delay_days, template FROM sequence_steps WHERE sequence_id = $1 ORDER BY step_number ASC",
     )
     .bind(&sequence_id)
     .fetch_all(&state.db)
@@ -857,9 +857,9 @@ async fn run_followups_inner(state: &AppState, opts: &RunQuery, tenant_key: &str
         WHERE c.next_followup_at IS NOT NULL AND c.next_followup_at <> ''
           AND COALESCE(c.human_takeover, 0) = 0
           AND COALESCE(c.state, '') IN ('new', 'awaiting_reply', 'engaged')
-          AND COALESCE(c.tenant_key, '') = ?
+          AND COALESCE(c.tenant_key, '') = $1
         ORDER BY c.next_followup_at ASC
-        LIMIT ?
+        LIMIT $2
         "#,
     )
     .bind(tenant_key)
@@ -1006,7 +1006,7 @@ async fn run_followups_inner(state: &AppState, opts: &RunQuery, tenant_key: &str
             };
             let advance = write_failure(
                 sqlx::query(
-                    "UPDATE conversations SET sequence_step = COALESCE(sequence_step, 0) + 1, next_followup_at = ?, last_outbound_at = ?, updated_at = ? WHERE id = ?",
+                    "UPDATE conversations SET sequence_step = COALESCE(sequence_step, 0) + 1, next_followup_at = $1, last_outbound_at = $2, updated_at = $3 WHERE id = $4",
                 )
                 .bind(&next)
                 .bind(started.to_rfc3339())
@@ -1136,9 +1136,9 @@ async fn dispatch_drafts_inner(state: &AppState, opts: &RunQuery, tenant_key: &s
         LEFT JOIN contacts ct ON ct.id = c.contact_id
         WHERE a.status = 'approved'
           AND COALESCE(a.dispatched_message_id, '') = ''
-          AND COALESCE(c.tenant_key, '') = ?
+          AND COALESCE(c.tenant_key, '') = $1
         ORDER BY a.updated_at ASC
-        LIMIT ?
+        LIMIT $2
         "#,
     )
     .bind(tenant_key)
@@ -1196,9 +1196,9 @@ async fn dispatch_drafts_inner(state: &AppState, opts: &RunQuery, tenant_key: &s
             LEFT JOIN conversations c ON c.id = d.conversation_id
             LEFT JOIN contacts ct ON ct.id = c.contact_id
             WHERE d.status IN ('auto_approved', 'approved')
-              AND COALESCE(c.tenant_key, '') = ?
+              AND COALESCE(c.tenant_key, '') = $1
             ORDER BY d.created_at ASC
-            LIMIT ?
+            LIMIT $2
             "#,
         )
         .bind(tenant_key)
@@ -1302,7 +1302,7 @@ async fn dispatch_drafts_inner(state: &AppState, opts: &RunQuery, tenant_key: &s
                     }
                     let mark = match candidate.source.as_deref() {
                         Some("draft") => write_failure(
-                            sqlx::query("UPDATE drafts SET status = 'sent' WHERE id = ?")
+                            sqlx::query("UPDATE drafts SET status = 'sent' WHERE id = $1")
                                 .bind(item_id)
                                 .execute(&state.db)
                                 .await,
@@ -1310,7 +1310,7 @@ async fn dispatch_drafts_inner(state: &AppState, opts: &RunQuery, tenant_key: &s
                         ),
                         Some("copilot_approval") => write_failure(
                             sqlx::query(
-                                "UPDATE copilot_approvals SET status = 'sent', dispatched_message_id = ?, resolved_at = ?, updated_at = ? WHERE id = ?",
+                                "UPDATE copilot_approvals SET status = 'sent', dispatched_message_id = $1, resolved_at = $2, updated_at = $3 WHERE id = $4",
                             )
                             .bind(provider_id)
                             .bind(&now)
@@ -1446,9 +1446,9 @@ async fn run_nudges_inner(state: &AppState, opts: &RunQuery, tenant_key: &str) -
         WHERE COALESCE(c.human_takeover, 0) = 0
           AND c.last_inbound_at IS NOT NULL AND c.last_inbound_at <> ''
           AND COALESCE(c.state, '') IN ('engaged', 'awaiting_reply')
-          AND COALESCE(c.tenant_key, '') = ?
+          AND COALESCE(c.tenant_key, '') = $1
         ORDER BY c.last_inbound_at ASC
-        LIMIT ?
+        LIMIT $2
         "#,
     )
     .bind(tenant_key)
@@ -1509,7 +1509,7 @@ async fn run_nudges_inner(state: &AppState, opts: &RunQuery, tenant_key: &str) -
         // name; a `not_sent` row carries no `sent_at` and so never suppresses
         // a later genuine attempt.
         let already = sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM messages WHERE conversation_id = ? AND intent = 'inactivity_nudge' AND sent_at > ?",
+            "SELECT COUNT(*) FROM messages WHERE conversation_id = $1 AND intent = 'inactivity_nudge' AND sent_at > $2",
         )
         .bind(&row.conversation_id)
         .bind(window_start.to_rfc3339())
@@ -1665,7 +1665,7 @@ async fn run_nudges_inner(state: &AppState, opts: &RunQuery, tenant_key: &str) -
             // earlier-nudge check reads that table, so a missed timestamp bump
             // cannot cause a second nudge.
             report_write(
-                sqlx::query("UPDATE conversations SET last_outbound_at = ?, updated_at = ? WHERE id = ?")
+                sqlx::query("UPDATE conversations SET last_outbound_at = $1, updated_at = $2 WHERE id = $3")
                     .bind(started.to_rfc3339())
                     .bind(started.to_rfc3339())
                     .bind(&candidate.conversation_id)
@@ -1770,9 +1770,9 @@ async fn process_campaigns_inner(state: &AppState, opts: &RunQuery, tenant_key: 
 
     let rows = match sqlx::query_as::<_, (String, String, Option<String>)>(
         "SELECT id, name, scheduled_at FROM broadcasts \
-         WHERE status = 'scheduled' AND COALESCE(tenant_key, '') = ? \
+         WHERE status = 'scheduled' AND COALESCE(tenant_key, '') = $1 \
          AND scheduled_at IS NOT NULL AND scheduled_at <> '' \
-         ORDER BY scheduled_at ASC LIMIT ?",
+         ORDER BY scheduled_at ASC LIMIT $2",
     )
     .bind(tenant_key)
     .bind(opts.max() as i64)
@@ -2097,7 +2097,7 @@ pub async fn get_job(State(state): State<AppState>, Path(key): Path<String>) -> 
     };
 
     let runs: Vec<Value> = match sqlx::query_as::<_, RunRow>(
-        "SELECT id, job_key, started_at, finished_at, duration_ms, candidates, executed, failed, status, detail, dry_run FROM scheduler_runs WHERE job_key = ? ORDER BY started_at DESC LIMIT 20",
+        "SELECT id, job_key, started_at, finished_at, duration_ms, candidates, executed, failed, status, detail, dry_run FROM scheduler_runs WHERE job_key = $1 ORDER BY started_at DESC LIMIT 20",
     )
     .bind(&key)
     .fetch_all(&state.db)
@@ -2230,7 +2230,7 @@ pub async fn update_job(
     };
 
     let result = sqlx::query(
-        "UPDATE scheduler_jobs SET interval_seconds = ?, is_enabled = ?, next_run_at = ?, updated_at = ? WHERE job_key = ?",
+        "UPDATE scheduler_jobs SET interval_seconds = $1, is_enabled = $2, next_run_at = $3, updated_at = $4 WHERE job_key = $5",
     )
     .bind(interval)
     .bind(enabled)
@@ -2320,7 +2320,7 @@ pub async fn scheduler_status(
     );
     let due_followups = measured(
         sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM conversations WHERE next_followup_at IS NOT NULL AND next_followup_at <> '' AND COALESCE(human_takeover, 0) = 0 AND COALESCE(tenant_key, '') = ?",
+            "SELECT COUNT(*) FROM conversations WHERE next_followup_at IS NOT NULL AND next_followup_at <> '' AND COALESCE(human_takeover, 0) = 0 AND COALESCE(tenant_key, '') = $1",
         )
         .bind(&tenant_key)
         .fetch_one(&state.db)
@@ -2330,7 +2330,7 @@ pub async fn scheduler_status(
     );
     let due_campaigns = measured(
         sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM broadcasts WHERE status = 'scheduled' AND scheduled_at IS NOT NULL AND scheduled_at <> '' AND COALESCE(tenant_key, '') = ?",
+            "SELECT COUNT(*) FROM broadcasts WHERE status = 'scheduled' AND scheduled_at IS NOT NULL AND scheduled_at <> '' AND COALESCE(tenant_key, '') = $1",
         )
         .bind(&tenant_key)
         .fetch_one(&state.db)
@@ -2343,7 +2343,7 @@ pub async fn scheduler_status(
             "SELECT COUNT(*) FROM copilot_approvals a \
              LEFT JOIN conversations c ON c.id = a.conversation_id \
              WHERE a.status = 'approved' AND COALESCE(a.dispatched_message_id, '') = '' \
-             AND COALESCE(c.tenant_key, '') = ?",
+             AND COALESCE(c.tenant_key, '') = $1",
         )
         .bind(&tenant_key)
         .fetch_one(&state.db)

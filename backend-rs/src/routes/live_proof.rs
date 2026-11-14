@@ -69,7 +69,7 @@ async fn fetch_session(pool: &sqlx::PgPool, id: &str) -> Result<Option<ProofSess
         "SELECT id, tenant_id, organization_id, order_id, customer_identifier, claim_type,
                 session_token, status, anti_spoof_nonce, max_video_seconds, require_video,
                 require_photos, expires_at, completed_at, rejection_reason
-         FROM live_proof_sessions WHERE id = ?",
+         FROM live_proof_sessions WHERE id = $1",
     )
     .bind(id)
     .fetch_optional(pool)
@@ -158,7 +158,7 @@ async fn validate(
             // not from this write, so a failure is logged and reported but does
             // not change the answer the customer gets.
             crate::db::report_write(
-                sqlx::query("UPDATE live_proof_sessions SET status = 'expired', updated_at = ? WHERE id = ?")
+                sqlx::query("UPDATE live_proof_sessions SET status = 'expired', updated_at = $1 WHERE id = $2")
                     .bind(now_iso())
                     .bind(&session.id)
                     .execute(&state.db)
@@ -286,7 +286,7 @@ pub async fn create_pending_session(
             contact_id, order_id, customer_identifier, claim_type, session_token, status,
             anti_spoof_nonce, max_video_seconds, require_video, require_photos, expires_at,
             completed_at, rejection_reason, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, NULL, NULL, ?, ?)",
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10, $11, $12, $13, $14, NULL, NULL, $15, $16)",
     )
     .bind(&id)
     .bind(&spec.tenant_id)
@@ -428,7 +428,7 @@ pub async fn create_session(
 fn evidence_list_sql() -> &'static str {
     "SELECT id, session_id, media_type, sha256_hash, file_size_bytes, duration_seconds,
             verification_score, watermark_verified, mime_type, resolution, captured_at
-     FROM live_proof_evidences WHERE session_id = ? ORDER BY captured_at"
+     FROM live_proof_evidences WHERE session_id = $1 ORDER BY captured_at"
 }
 
 async fn evidences(state: &AppState, session_id: &str) -> Vec<Value> {
@@ -527,8 +527,8 @@ pub async fn record_decision(
     };
 
     let result = sqlx::query(
-        "UPDATE live_proof_sessions SET status = ?, rejection_reason = COALESCE(?, rejection_reason),
-                updated_at = ? WHERE id = ?",
+        "UPDATE live_proof_sessions SET status = $1, rejection_reason = COALESCE($2, rejection_reason),
+                updated_at = $3 WHERE id = $4",
     )
     .bind(new_status)
     .bind(payload.rejection_reason.clone())
@@ -809,7 +809,7 @@ pub async fn upload_evidence(
             file_size_bytes, mime_type, sha256_hash, duration_seconds, resolution,
             device_fingerprint, watermark_verified, verification_score, verification_checks,
             captured_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)",
     )
     .bind(&evidence_id)
     .bind(&session.id)
@@ -862,7 +862,7 @@ pub async fn upload_evidence(
 
     // Completion is derived from what is genuinely on file, not on assumption.
     let (kinds, roster_error) = match sqlx::query(
-        "SELECT media_type FROM live_proof_evidences WHERE session_id = ?",
+        "SELECT media_type FROM live_proof_evidences WHERE session_id = $1",
     )
     .bind(&session.id)
     .fetch_all(&state.db)
@@ -899,8 +899,8 @@ pub async fn upload_evidence(
              roster could not be read: {reason}"
         )),
         None => match sqlx::query(
-            "UPDATE live_proof_sessions SET status = ?, completed_at = COALESCE(completed_at, ?),
-                    updated_at = ? WHERE id = ?",
+            "UPDATE live_proof_sessions SET status = $1, completed_at = COALESCE(completed_at, $2),
+                    updated_at = $3 WHERE id = $4",
         )
         .bind(new_status)
         .bind(if complete { Some(captured_at.clone()) } else { None })
@@ -1002,7 +1002,7 @@ pub async fn evidence_media(
 
     let row = sqlx::query(
         "SELECT file_path, mime_type FROM live_proof_evidences
-         WHERE id = ? AND session_id = ?",
+         WHERE id = $1 AND session_id = $2",
     )
     .bind(&evidence_id)
     .bind(&session_id)

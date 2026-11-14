@@ -262,7 +262,7 @@ pub async fn update_config(
              sp_entity_id, sp_acs_url, enforced_domains, jit_provisioning_enabled,
              default_role, allow_unlinked_passwords, attribute_mapping,
              created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
         ON CONFLICT(id) DO UPDATE SET
             is_enabled = excluded.is_enabled,
             provider_type = excluded.provider_type,
@@ -776,7 +776,7 @@ pub async fn test_connection(
         })
     } else {
         match sqlx::query(
-            "UPDATE sso_configs SET last_tested_at = ?, last_test_status = ?, last_test_message = ? WHERE id = ?",
+            "UPDATE sso_configs SET last_tested_at = $1, last_test_status = $2, last_test_message = $3 WHERE id = $4",
         )
         .bind(&now)
         .bind(status)

@@ -340,7 +340,7 @@ struct TrackerRow {
     updated_at: Option<String>,
 }
 
-const SELECT_TRACKER: &str = "SELECT id, provider, account_name, is_enabled, test_mode, credentials, config, last_tested_at, last_test_status, created_at, updated_at FROM issue_tracker_configs WHERE provider = ?";
+const SELECT_TRACKER: &str = "SELECT id, provider, account_name, is_enabled, test_mode, credentials, config, last_tested_at, last_test_status, created_at, updated_at FROM issue_tracker_configs WHERE provider = $1";
 
 impl TrackerRow {
     fn creds(&self) -> Value {
@@ -432,7 +432,7 @@ async fn write_tracker_test_result(
     provider: &str,
     status: &str,
 ) -> Value {
-    let result = sqlx::query("UPDATE issue_tracker_configs SET last_tested_at = ?, last_test_status = ? WHERE provider = ?")
+    let result = sqlx::query("UPDATE issue_tracker_configs SET last_tested_at = $1, last_test_status = $2 WHERE provider = $3")
         .bind(Utc::now().to_rfc3339())
         .bind(status)
         .bind(provider)
@@ -602,7 +602,7 @@ pub async fn update_tracker_config(
     let result = sqlx::query(
         r#"
         INSERT INTO issue_tracker_configs (id, provider, account_name, is_enabled, test_mode, credentials, config, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         ON CONFLICT(provider) DO UPDATE SET
             account_name = excluded.account_name,
             is_enabled = excluded.is_enabled,
@@ -1399,7 +1399,7 @@ pub async fn create_linked_issue(
             id, conversation_id, ticket_id, provider, external_issue_id, issue_key, issue_url,
             title, status, priority, assigned_to, created_by_email, sync_status, metadata_json,
             created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
         "#,
     )
     .bind(&id)
@@ -1441,7 +1441,7 @@ pub async fn create_linked_issue(
     let activity = match payload.ticket_id.as_deref().filter(|v| !v.trim().is_empty()) {
         Some(ticket_id) => persistence_json(
             sqlx::query(
-                "INSERT INTO ticket_activities (id, ticket_id, author_id, author_name, activity_type, message, activity_metadata, created_at) VALUES (?, ?, NULL, ?, 'external_issue', ?, ?, ?)",
+                "INSERT INTO ticket_activities (id, ticket_id, author_id, author_name, activity_type, message, activity_metadata, created_at) VALUES ($1, $2, NULL, $3, 'external_issue', $4, $5, $6)",
             )
             .bind(Uuid::new_v4().simple().to_string())
             .bind(ticket_id)
@@ -1494,7 +1494,7 @@ pub async fn create_linked_issue(
 /// provider; a failed read leaves the stored status untouched and says so.
 pub async fn sync_issue_status(State(state): State<AppState>, Path(id): Path<String>) -> Response {
     let row = match sqlx::query_as::<_, (String, Option<String>, String, String, Option<String>)>(
-        "SELECT provider, external_issue_id, issue_key, issue_url, ticket_id FROM linked_issues WHERE id = ?",
+        "SELECT provider, external_issue_id, issue_key, issue_url, ticket_id FROM linked_issues WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -1668,7 +1668,7 @@ pub async fn sync_issue_status(State(state): State<AppState>, Path(id): Path<Str
     match fetched_status {
         Some(status) => {
             let stored = persistence_json(
-                sqlx::query("UPDATE linked_issues SET status = ?, sync_status = 'synced', updated_at = ? WHERE id = ?")
+                sqlx::query("UPDATE linked_issues SET status = $1, sync_status = 'synced', updated_at = $2 WHERE id = $3")
                     .bind(&status)
                     .bind(&now)
                     .bind(&id)
@@ -1681,7 +1681,7 @@ pub async fn sync_issue_status(State(state): State<AppState>, Path(id): Path<Str
             let activity = match ticket_id.as_deref().filter(|v| !v.trim().is_empty()) {
                 Some(ticket_id) => persistence_json(
                     sqlx::query(
-                        "INSERT INTO ticket_activities (id, ticket_id, author_id, author_name, activity_type, message, activity_metadata, created_at) VALUES (?, ?, NULL, ?, 'external_issue', ?, '{}', ?)",
+                        "INSERT INTO ticket_activities (id, ticket_id, author_id, author_name, activity_type, message, activity_metadata, created_at) VALUES ($1, $2, NULL, $3, 'external_issue', $4, '{}', $5)",
                     )
                     .bind(Uuid::new_v4().simple().to_string())
                     .bind(ticket_id)
@@ -1720,7 +1720,7 @@ pub async fn sync_issue_status(State(state): State<AppState>, Path(id): Path<Str
         }
         None => {
             let stored = persistence_json(
-                sqlx::query("UPDATE linked_issues SET sync_status = 'error', updated_at = ? WHERE id = ?")
+                sqlx::query("UPDATE linked_issues SET sync_status = 'error', updated_at = $1 WHERE id = $2")
                     .bind(&now)
                     .bind(&id)
                     .execute(&state.db)
@@ -1822,7 +1822,7 @@ async fn create_settings_row(state: &AppState) -> Result<SettingsRow, sqlx::Erro
     let now = Utc::now().to_rfc3339();
     let id = Uuid::new_v4().simple().to_string();
     let result = sqlx::query(
-        "INSERT INTO integration_settings (id, tenant_key, whatsapp_provider, updated_at) VALUES (?, ?, 'meta', ?)",
+        "INSERT INTO integration_settings (id, tenant_key, whatsapp_provider, updated_at) VALUES ($1, $2, 'meta', $3)",
     )
     .bind(&id)
     .bind(env_value("DEFAULT_TENANT_KEY"))
@@ -2038,7 +2038,7 @@ pub async fn update_integration_settings(
                     rejected.push(format!("{key} (not a boolean)"));
                     continue;
                 };
-                sqlx::query(&format!("UPDATE integration_settings SET {key} = ?, updated_at = ? WHERE id = ?"))
+                sqlx::query(&format!("UPDATE integration_settings SET {key} = $1, updated_at = $2 WHERE id = $3"))
                     .bind(flag)
                     .bind(Utc::now().to_rfc3339())
                     .bind(&row.id)
@@ -2060,7 +2060,7 @@ pub async fn update_integration_settings(
                     rejected.push(format!("{key} = {number} is outside 0-23/0-24"));
                     continue;
                 }
-                sqlx::query(&format!("UPDATE integration_settings SET {key} = ?, updated_at = ? WHERE id = ?"))
+                sqlx::query(&format!("UPDATE integration_settings SET {key} = $1, updated_at = $2 WHERE id = $3"))
                     .bind(number)
                     .bind(Utc::now().to_rfc3339())
                     .bind(&row.id)
@@ -2080,7 +2080,7 @@ pub async fn update_integration_settings(
                         continue;
                     }
                 };
-                sqlx::query(&format!("UPDATE integration_settings SET {key} = ?, updated_at = ? WHERE id = ?"))
+                sqlx::query(&format!("UPDATE integration_settings SET {key} = $1, updated_at = $2 WHERE id = $3"))
                     .bind(&text)
                     .bind(Utc::now().to_rfc3339())
                     .bind(&row.id)
@@ -2515,7 +2515,7 @@ async fn persist_verification(state: &AppState, verified_name: &str, display_num
         Ok(Some(row)) => (
             "updated",
             sqlx::query(
-                "UPDATE integration_settings SET whatsapp_verified_at = ?, whatsapp_verified_name = ?, whatsapp_display_number = ?, updated_at = ? WHERE id = ?",
+                "UPDATE integration_settings SET whatsapp_verified_at = $1, whatsapp_verified_name = $2, whatsapp_display_number = $3, updated_at = $4 WHERE id = $5",
             )
             .bind(&now)
             .bind(verified_name)
@@ -2529,7 +2529,7 @@ async fn persist_verification(state: &AppState, verified_name: &str, display_num
         Ok(None) => (
             "inserted",
             sqlx::query(
-                "INSERT INTO integration_settings (id, tenant_key, whatsapp_provider, whatsapp_verified_at, whatsapp_verified_name, whatsapp_display_number, updated_at) VALUES (?, ?, 'meta', ?, ?, ?, ?)",
+                "INSERT INTO integration_settings (id, tenant_key, whatsapp_provider, whatsapp_verified_at, whatsapp_verified_name, whatsapp_display_number, updated_at) VALUES ($1, $2, 'meta', $3, $4, $5, $6)",
             )
             .bind(Uuid::new_v4().simple().to_string())
             .bind(env_value("DEFAULT_TENANT_KEY"))
@@ -2575,7 +2575,7 @@ async fn clear_verification(state: &AppState) -> Value {
     };
     persistence_json(
         sqlx::query(
-            "UPDATE integration_settings SET whatsapp_verified_at = NULL, whatsapp_verified_name = '', whatsapp_display_number = '', updated_at = ? WHERE id = ?",
+            "UPDATE integration_settings SET whatsapp_verified_at = NULL, whatsapp_verified_name = '', whatsapp_display_number = '', updated_at = $1 WHERE id = $2",
         )
         .bind(Utc::now().to_rfc3339())
         .bind(&row.id)

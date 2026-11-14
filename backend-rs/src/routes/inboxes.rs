@@ -247,7 +247,7 @@ async fn gateway_row_for_view(
     gateway_type: &str,
 ) -> (Option<GatewayRow>, Option<String>) {
     match sqlx::query_as::<_, GatewayRow>(
-        "SELECT id, gateway_type, provider, name, is_default, is_active, credentials, config, test_status, latency_ms, last_tested_at, created_at, updated_at FROM channel_gateway_connections WHERE gateway_type = ? AND is_active = 1 LIMIT 1",
+        "SELECT id, gateway_type, provider, name, is_default, is_active, credentials, config, test_status, latency_ms, last_tested_at, created_at, updated_at FROM channel_gateway_connections WHERE gateway_type = $1 AND is_active = 1 LIMIT 1",
     )
     .bind(gateway_type)
     .fetch_optional(pool)
@@ -320,7 +320,7 @@ async fn ensure_outbound_conversation(
     // A missing inbox row is tolerable (the conversation can still be created
     // without one), but an unreadable `inboxes` table is not: reported as "no
     // inbox row" it would tell the operator the channel is unconfigured.
-    let inbox_id: Option<String> = match sqlx::query("SELECT id FROM inboxes WHERE channel_type = ? ORDER BY updated_at DESC LIMIT 1")
+    let inbox_id: Option<String> = match sqlx::query("SELECT id FROM inboxes WHERE channel_type = $1 ORDER BY updated_at DESC LIMIT 1")
         .bind(channel)
         .fetch_optional(pool)
         .await
@@ -458,7 +458,7 @@ async fn record_outbound_message(
         INSERT INTO messages (
             id, conversation_id, direction, channel, body, provider,
             provider_message_id, status, provider_metadata, sent_at, sender_type
-        ) VALUES (?, ?, 'outbound', ?, ?, ?, ?, ?, ?, ?, 'agent')
+        ) VALUES ($1, $2, 'outbound', $3, $4, $5, $6, $7, $8, $9, 'agent')
         "#,
     )
     .bind(&id)
@@ -855,7 +855,7 @@ async fn query_inbox_by_channels_checked(
     pool: &DbPool,
     channel_types: &[&str],
 ) -> Result<Option<InboxRow>, sqlx::Error> {
-    let placeholders = channel_types.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+    let placeholders = (1..=channel_types.len()).map(|i| format!("${i}")).collect::<Vec<_>>().join(",");
     let query_str = format!(
         "SELECT id, name, channel_type, phone_number, avatar_url, is_active, credentials, greeting_enabled, greeting_message, out_of_office_enabled, out_of_office_message, csat_enabled, auto_read_receipts, working_hours_enabled, working_hours_start, working_hours_end, timezone, created_at, updated_at FROM inboxes WHERE channel_type IN ({}) ORDER BY is_active DESC, updated_at DESC LIMIT 1",
         placeholders
@@ -880,7 +880,7 @@ async fn inbox_row_checked(
 }
 
 async fn query_channel_events(pool: &DbPool, channels: &[&str]) -> Result<Vec<serde_json::Value>, sqlx::Error> {
-    let placeholders = channels.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+    let placeholders = (1..=channels.len()).map(|i| format!("${i}")).collect::<Vec<_>>().join(",");
     let query_str = format!(
         "SELECT id, conversation_id, direction, channel, body, provider, provider_message_id, status, provider_metadata, sent_at, intent, is_private, sender_type, sender_name FROM messages WHERE channel IN ({}) ORDER BY sent_at DESC LIMIT 50",
         placeholders
@@ -1072,7 +1072,7 @@ async fn set_credential_key(
     }
     let raw = serde_json::to_string(&Value::Object(creds)).unwrap_or_else(|_| "{}".to_string());
     let now = Utc::now().to_rfc3339();
-    let result = sqlx::query("UPDATE inboxes SET credentials = ?, updated_at = ? WHERE id = ?")
+    let result = sqlx::query("UPDATE inboxes SET credentials = $1, updated_at = $2 WHERE id = $3")
         .bind(&raw)
         .bind(&now)
         .bind(&inbox.id)
@@ -1115,7 +1115,7 @@ async fn twilio_creds(state: &AppState, channel_types: &[&str], gateway_type: &s
         .map(|i| parse_json_obj(&i.credentials))
         .unwrap_or_default();
     let gateway = sqlx::query_as::<_, GatewayRow>(
-        "SELECT id, gateway_type, provider, name, is_default, is_active, credentials, config, test_status, latency_ms, last_tested_at, created_at, updated_at FROM channel_gateway_connections WHERE gateway_type = ? AND is_active = 1 LIMIT 1",
+        "SELECT id, gateway_type, provider, name, is_default, is_active, credentials, config, test_status, latency_ms, last_tested_at, created_at, updated_at FROM channel_gateway_connections WHERE gateway_type = $1 AND is_active = 1 LIMIT 1",
     )
     .bind(gateway_type)
     .fetch_optional(&state.db)
@@ -1374,11 +1374,11 @@ async fn update_inbox_record(
     let result = sqlx::query(
         r#"
         UPDATE inboxes
-        SET name = ?, phone_number = ?, credentials = ?, greeting_enabled = ?,
-            greeting_message = ?, out_of_office_enabled = ?, out_of_office_message = ?,
-            csat_enabled = ?, working_hours_enabled = ?, working_hours_start = ?,
-            working_hours_end = ?, timezone = ?, updated_at = ?
-        WHERE id = ?
+        SET name = $1, phone_number = $2, credentials = $3, greeting_enabled = $4,
+            greeting_message = $5, out_of_office_enabled = $6, out_of_office_message = $7,
+            csat_enabled = $8, working_hours_enabled = $9, working_hours_start = $10,
+            working_hours_end = $11, timezone = $12, updated_at = $13
+        WHERE id = $14
         "#,
     )
     .bind(new_name)
