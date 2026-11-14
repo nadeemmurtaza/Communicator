@@ -269,7 +269,7 @@ pub async fn list_discovery_templates(
     }
 
     let rows = sqlx::query_as::<_, FlowRow>(&format!(
-        "SELECT {FLOW_COLUMNS} FROM discovery_flow_templates WHERE tenant_key = ? ORDER BY created_at ASC"
+        "SELECT {FLOW_COLUMNS} FROM discovery_flow_templates WHERE tenant_key = $1 ORDER BY created_at ASC"
     ))
     .bind(&tenant_key)
     .fetch_all(&state.db)
@@ -354,10 +354,10 @@ pub async fn list_inquiries(
     // `tenant_key = ?` is unconditional: inquiries.tenant_key is NOT NULL with
     // no schema default, so an unscoped read would blend two organizations'
     // funnels into one list.
-    let mut sql = format!("SELECT {INQUIRY_COLUMNS} FROM inquiries WHERE tenant_key = ?");
+    let mut sql = format!("SELECT {INQUIRY_COLUMNS} FROM inquiries WHERE tenant_key = $1");
     let status = q.status.clone().filter(|s| !s.trim().is_empty());
     if status.is_some() {
-        sql.push_str(" AND status = ?");
+        sql.push_str(" AND status = $2");
     }
     sql.push_str(" ORDER BY created_at DESC");
 
@@ -401,7 +401,7 @@ pub async fn get_inquiry(
     }
 
     match sqlx::query_as::<_, InquiryRow>(&format!(
-        "SELECT {INQUIRY_COLUMNS} FROM inquiries WHERE id = ? AND tenant_key = ? LIMIT 1"
+        "SELECT {INQUIRY_COLUMNS} FROM inquiries WHERE id = $1 AND tenant_key = $2 LIMIT 1"
     ))
     .bind(&id)
     .bind(&tenant_key)
@@ -414,7 +414,7 @@ pub async fn get_inquiry(
             // unlinked inquiry by accident.
             let conv_raw = sqlx::query_scalar::<_, String>(
                 "SELECT json_object('id', id, 'state', state, 'channel', channel, 'assignedToName', assigned_to_name) \
-                 FROM conversations WHERE id = (SELECT conversation_id FROM inquiries WHERE id = ? AND tenant_key = ?) LIMIT 1",
+                 FROM conversations WHERE id = (SELECT conversation_id FROM inquiries WHERE id = $1 AND tenant_key = $2) LIMIT 1",
             )
             .bind(&id)
             .bind(&tenant_key)
@@ -497,11 +497,11 @@ pub async fn list_campaign_templates(
         return refusal;
     }
 
-    let mut sql = format!("SELECT {CAMPAIGN_COLUMNS} FROM campaign_templates WHERE tenant_key = ?");
+    let mut sql = format!("SELECT {CAMPAIGN_COLUMNS} FROM campaign_templates WHERE tenant_key = $1");
     let channel = q.channel.clone().filter(|s| !s.trim().is_empty());
     // A channel filter keeps that channel's templates plus every shared one.
     if channel.is_some() {
-        sql.push_str(" AND (channel = ? OR channel = '' OR channel IS NULL)");
+        sql.push_str(" AND (channel = $2 OR channel = '' OR channel IS NULL)");
     }
     sql.push_str(" ORDER BY created_at ASC");
 
@@ -604,7 +604,7 @@ async fn resolve_meta_credentials(
     // `Err` here means the credential situation is unknown, which the callers
     // report as such instead of claiming Meta was never configured.
     let row: Option<(Option<String>, Option<String>)> = sqlx::query_as(
-        "SELECT meta_access_token, meta_waba_id FROM integration_settings WHERE tenant_key = ? LIMIT 1",
+        "SELECT meta_access_token, meta_waba_id FROM integration_settings WHERE tenant_key = $1 LIMIT 1",
     )
     .bind(tenant_key)
     .fetch_optional(&state.db)
@@ -888,7 +888,7 @@ pub async fn sync_campaign_template_status(
         // The rows this loop writes back to, so a failed read is fatal to the
         // request rather than an "everything is up to date" answer.
         match sqlx::query_as::<_, (String, String, String)>(
-            "SELECT id, meta_template_name, COALESCE(meta_status, '') FROM campaign_templates WHERE tenant_key = ?",
+            "SELECT id, meta_template_name, COALESCE(meta_status, '') FROM campaign_templates WHERE tenant_key = $1",
         )
         .bind(&tenant_key)
         .fetch_all(&state.db)
@@ -913,7 +913,7 @@ pub async fn sync_campaign_template_status(
                     continue;
                 }
                 let res = sqlx::query(
-                    "UPDATE campaign_templates SET meta_status = ?, meta_category = ?, meta_language = ?, updated_at = ? WHERE id = ? AND tenant_key = ?",
+                    "UPDATE campaign_templates SET meta_status = $1, meta_category = $2, meta_language = $3, updated_at = $4 WHERE id = $5 AND tenant_key = $6",
                 )
                 .bind(&remote.status)
                 .bind(&remote.category)

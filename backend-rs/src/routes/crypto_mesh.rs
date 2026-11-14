@@ -86,7 +86,7 @@ pub async fn ingress(State(state): State<AppState>, Json(envelope): Json<Transit
 
     let stored = sqlx::query(
         "INSERT INTO ecosystem_events (id, event_name, source, tenant_id, payload, outcome, received_at) \
-         VALUES (?, ?, ?, ?, ?, ?, ?)",
+         VALUES ($1, $2, $3, $4, $5, $6, $7)",
     )
     .bind(uuid::Uuid::new_v4().simple().to_string())
     .bind(&event_name)
@@ -261,7 +261,7 @@ async fn deliver_or_store(
                 // accepted -- the operator has to see that and the response says
                 // so instead of reporting a clean dispatch.
                 let superseded = sqlx::query(
-                    "UPDATE ecosystem_egress_outbox SET status = 'superseded' WHERE id = ? AND status = 'pending'",
+                    "UPDATE ecosystem_egress_outbox SET status = 'superseded' WHERE id = $1 AND status = 'pending'",
                 )
                 .bind(event_id)
                 .execute(&state.db)
@@ -339,7 +339,7 @@ async fn store_outbox(
     let result = sqlx::query(
         "INSERT INTO ecosystem_egress_outbox \
          (id, event_name, recipient_id, tenant_id, organization_id, correlation_id, envelope, status, attempts, last_error, created_at) \
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 1, ?, ?)",
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', 1, $8, $9)",
     )
     .bind(event_id)
     .bind(event_name)
@@ -550,7 +550,7 @@ async fn mark_attempt(
     delivered: bool,
 ) -> Result<u64, sqlx::Error> {
     sqlx::query(
-        "UPDATE ecosystem_egress_outbox SET attempts = ?, last_error = ?, status = ?, sent_at = ? WHERE id = ?",
+        "UPDATE ecosystem_egress_outbox SET attempts = $1, last_error = $2, status = $3, sent_at = $4 WHERE id = $5",
     )
     .bind(attempts)
     .bind(reason)
