@@ -471,7 +471,7 @@ async fn persist_customizer(
             let mut creds = serde_json::Map::new();
             creds.insert("websiteToken".to_string(), json!(token));
             let insert = sqlx::query(
-                "INSERT INTO inboxes (id, name, channel_type, credentials, created_at, updated_at) VALUES (?, ?, 'website', ?, ?, ?)",
+                "INSERT INTO inboxes (id, name, channel_type, credentials, created_at, updated_at) VALUES ($1, $2, 'website', $3, $4, $5)",
             )
             .bind(&id)
             .bind("Website Live Chat")
@@ -605,7 +605,7 @@ async fn persist_customizer(
     let creds_str = creds.to_string();
 
     let result = sqlx::query(
-        "UPDATE inboxes SET name = ?, avatar_url = ?, credentials = ?, updated_at = ? WHERE id = ?",
+        "UPDATE inboxes SET name = $1, avatar_url = $2, credentials = $3, updated_at = $4 WHERE id = $5",
     )
     .bind(&name)
     .bind(&avatar)
@@ -1049,12 +1049,12 @@ pub async fn get_audit_logs(
     let count_query = r#"
         SELECT COUNT(*)
         FROM audit_logs
-        WHERE (? = '' OR LOWER(severity) = LOWER(?))
-          AND (? = '' OR LOWER(compliance_category) = LOWER(?))
-          AND (? = '' OR LOWER(action) LIKE '%' || LOWER(?) || '%')
-          AND (? = '' OR LOWER(actor) LIKE '%' || LOWER(?) || '%')
-          AND (? = '' OR LOWER(entity_type) = LOWER(?))
-          AND (? = '' OR LOWER(action) LIKE '%' || LOWER(?) || '%' OR LOWER(actor) LIKE '%' || LOWER(?) || '%' OR LOWER(COALESCE(description, '')) LIKE '%' || LOWER(?) || '%' OR LOWER(COALESCE(ip_address, '')) LIKE '%' || LOWER(?) || '%')
+        WHERE ($1 = '' OR LOWER(severity) = LOWER($2))
+          AND ($3 = '' OR LOWER(compliance_category) = LOWER($4))
+          AND ($5 = '' OR LOWER(action) LIKE '%' || LOWER($6) || '%')
+          AND ($7 = '' OR LOWER(actor) LIKE '%' || LOWER($8) || '%')
+          AND ($9 = '' OR LOWER(entity_type) = LOWER($10))
+          AND ($11 = '' OR LOWER(action) LIKE '%' || LOWER($12) || '%' OR LOWER(actor) LIKE '%' || LOWER($13) || '%' OR LOWER(COALESCE(description, '')) LIKE '%' || LOWER($14) || '%' OR LOWER(COALESCE(ip_address, '')) LIKE '%' || LOWER($15) || '%')
     "#;
 
     let total: i64 = match sqlx::query_scalar(count_query)
@@ -1085,14 +1085,14 @@ pub async fn get_audit_logs(
         SELECT id, entity_type, entity_id, action, actor, actor_email, actor_name, actor_role,
                severity, compliance_category, description, ip_address, user_agent, details, created_at
         FROM audit_logs
-        WHERE (? = '' OR LOWER(severity) = LOWER(?))
-          AND (? = '' OR LOWER(compliance_category) = LOWER(?))
-          AND (? = '' OR LOWER(action) LIKE '%' || LOWER(?) || '%')
-          AND (? = '' OR LOWER(actor) LIKE '%' || LOWER(?) || '%')
-          AND (? = '' OR LOWER(entity_type) = LOWER(?))
-          AND (? = '' OR LOWER(action) LIKE '%' || LOWER(?) || '%' OR LOWER(actor) LIKE '%' || LOWER(?) || '%' OR LOWER(COALESCE(description, '')) LIKE '%' || LOWER(?) || '%' OR LOWER(COALESCE(ip_address, '')) LIKE '%' || LOWER(?) || '%')
+        WHERE ($1 = '' OR LOWER(severity) = LOWER($2))
+          AND ($3 = '' OR LOWER(compliance_category) = LOWER($4))
+          AND ($5 = '' OR LOWER(action) LIKE '%' || LOWER($6) || '%')
+          AND ($7 = '' OR LOWER(actor) LIKE '%' || LOWER($8) || '%')
+          AND ($9 = '' OR LOWER(entity_type) = LOWER($10))
+          AND ($11 = '' OR LOWER(action) LIKE '%' || LOWER($12) || '%' OR LOWER(actor) LIKE '%' || LOWER($13) || '%' OR LOWER(COALESCE(description, '')) LIKE '%' || LOWER($14) || '%' OR LOWER(COALESCE(ip_address, '')) LIKE '%' || LOWER($15) || '%')
         ORDER BY created_at DESC
-        LIMIT ? OFFSET ?
+        LIMIT $16 OFFSET $17
     "#;
 
     let rows = match sqlx::query_as::<_, AuditLogRow>(select_query)
@@ -1569,7 +1569,7 @@ pub async fn record_audit_event(
     let result = sqlx::query(
         r#"
         INSERT INTO audit_logs (id, entity_type, entity_id, action, actor, actor_email, actor_name, actor_role, severity, compliance_category, description, ip_address, user_agent, details, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
         "#
     )
     .bind(&id)
@@ -1745,7 +1745,7 @@ pub async fn list_roles(State(state): State<AppState>) -> Response {
             _ => Vec::new(),
         };
 
-        let member_count: i64 = match sqlx::query_scalar("SELECT COUNT(*) FROM team_members WHERE role = ?")
+        let member_count: i64 = match sqlx::query_scalar("SELECT COUNT(*) FROM team_members WHERE role = $1")
             .bind(&r.name)
             .fetch_one(&state.db)
             .await
@@ -1812,7 +1812,7 @@ pub async fn get_role_detail(
     }
 
     let role = match sqlx::query_as::<_, RawRole>(
-        "SELECT id, name, display_name, description, is_system_role, permissions FROM role_definitions WHERE id = ? OR name = ? LIMIT 1"
+        "SELECT id, name, display_name, description, is_system_role, permissions FROM role_definitions WHERE id = $1 OR name = $2 LIMIT 1"
     )
     .bind(&id)
     .bind(&id)
@@ -1887,7 +1887,7 @@ pub async fn create_role(
     let now = Utc::now().to_rfc3339();
 
     let result = sqlx::query(
-        "INSERT INTO role_definitions (id, name, display_name, description, is_system_role, permissions, created_at, updated_at) VALUES (?, ?, ?, ?, 0, ?, ?, ?)"
+        "INSERT INTO role_definitions (id, name, display_name, description, is_system_role, permissions, created_at, updated_at) VALUES ($1, $2, $3, $4, 0, $5, $6, $7)"
     )
     .bind(&id)
     .bind(name)
@@ -1948,11 +1948,11 @@ pub async fn update_role(
 
     let result = sqlx::query(
         "UPDATE role_definitions \
-         SET display_name = COALESCE(?, display_name), \
-             description = COALESCE(?, description), \
-             permissions = COALESCE(?, permissions), \
-             updated_at = ? \
-         WHERE id = ? OR name = ?"
+         SET display_name = COALESCE($1, display_name), \
+             description = COALESCE($2, description), \
+             permissions = COALESCE($3, permissions), \
+             updated_at = $4 \
+         WHERE id = $5 OR name = $6"
     )
     .bind(display.as_deref())
     .bind(desc.as_deref())
@@ -1990,7 +1990,7 @@ pub async fn delete_role(
     Path(id): Path<String>,
 ) -> Response {
     let is_sys: Option<bool> = match sqlx::query_scalar(
-        "SELECT is_system_role FROM role_definitions WHERE id = ? OR name = ?"
+        "SELECT is_system_role FROM role_definitions WHERE id = $1 OR name = $2"
     )
     .bind(&id)
     .bind(&id)
@@ -2008,7 +2008,7 @@ pub async fn delete_role(
         ).into_response();
     }
 
-    let result = sqlx::query("DELETE FROM role_definitions WHERE id = ? OR name = ?")
+    let result = sqlx::query("DELETE FROM role_definitions WHERE id = $1 OR name = $2")
         .bind(&id)
         .bind(&id)
         .execute(&state.db)
@@ -2055,7 +2055,7 @@ pub async fn assign_member_role(
             .into_response();
     };
 
-    let result = sqlx::query("UPDATE team_members SET role = ? WHERE id = ? OR email = ?")
+    let result = sqlx::query("UPDATE team_members SET role = $1 WHERE id = $2 OR email = $3")
         .bind(role)
         .bind(&id)
         .bind(&id)
@@ -2146,7 +2146,7 @@ pub async fn check_member_permission(
     }
 
     let role = sqlx::query_scalar::<_, String>(
-        "SELECT role FROM team_members WHERE id = ? OR email = ? LIMIT 1",
+        "SELECT role FROM team_members WHERE id = $1 OR email = $2 LIMIT 1",
     )
     .bind(&id)
     .bind(&id)
@@ -2192,7 +2192,7 @@ pub async fn check_member_permission(
     };
 
     let stored = sqlx::query_scalar::<_, Option<String>>(
-        "SELECT permissions FROM role_definitions WHERE name = ? OR id = ? LIMIT 1",
+        "SELECT permissions FROM role_definitions WHERE name = $1 OR id = $2 LIMIT 1",
     )
     .bind(&role)
     .bind(&role)
@@ -2313,7 +2313,7 @@ async fn load_definitions(
     // (`load_attribute` and the list query) still return the stored pattern.
     sqlx::query_as::<_, AttrDef>(
         "SELECT name, attribute_type, options, is_required \
-         FROM custom_attribute_definitions WHERE attribute_model = ?",
+         FROM custom_attribute_definitions WHERE attribute_model = $1",
     )
     .bind(model)
     .fetch_all(&state.db)
@@ -2422,7 +2422,7 @@ async fn load_attribute(
     const BASE: &str = "SELECT id, name, display_name, description, attribute_model, attribute_type, default_value, options, is_required, regex_pattern, regex_cue, created_at, updated_at FROM custom_attribute_definitions";
     match model_filter.map(str::trim).filter(|m| !m.is_empty()) {
         Some(model) => {
-            let sql = format!("{BASE} WHERE (id = ? OR name = ?) AND attribute_model = ? LIMIT 1");
+            let sql = format!("{BASE} WHERE (id = $1 OR name = $2) AND attribute_model = $3 LIMIT 1");
             sqlx::query_as::<_, AttributeRow>(&sql)
                 .bind(id_or_name)
                 .bind(id_or_name)
@@ -2431,7 +2431,7 @@ async fn load_attribute(
                 .await
         }
         None => {
-            let sql = format!("{BASE} WHERE (id = ? OR name = ?) LIMIT 1");
+            let sql = format!("{BASE} WHERE (id = $1 OR name = $2) LIMIT 1");
             sqlx::query_as::<_, AttributeRow>(&sql)
                 .bind(id_or_name)
                 .bind(id_or_name)
@@ -2453,7 +2453,7 @@ pub async fn get_custom_attributes(
     const BASE: &str = "SELECT id, name, display_name, description, attribute_model, attribute_type, default_value, options, is_required, regex_pattern, regex_cue, created_at, updated_at FROM custom_attribute_definitions";
     let rows = match q.attribute_model.as_deref().map(str::trim).filter(|m| !m.is_empty()) {
         Some(model) => {
-            let sql = format!("{BASE} WHERE attribute_model = ? ORDER BY display_name ASC");
+            let sql = format!("{BASE} WHERE attribute_model = $1 ORDER BY display_name ASC");
             sqlx::query_as::<_, AttributeRow>(&sql)
                 .bind(model)
                 .fetch_all(&state.db)
@@ -2753,7 +2753,7 @@ pub async fn create_custom_attribute(
     let now = Utc::now().to_rfc3339();
 
     let result = sqlx::query(
-        "INSERT INTO custom_attribute_definitions (id, name, display_name, description, attribute_model, attribute_type, default_value, options, is_required, regex_pattern, regex_cue, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO custom_attribute_definitions (id, name, display_name, description, attribute_model, attribute_type, default_value, options, is_required, regex_pattern, regex_cue, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
     )
     .bind(&id)
     .bind(&slug)
@@ -2925,7 +2925,7 @@ pub async fn update_custom_attribute(
     let id = existing.id.clone();
     let now = Utc::now().to_rfc3339();
     let result = sqlx::query(
-        "UPDATE custom_attribute_definitions SET display_name = ?, description = ?, options = ?, default_value = ?, is_required = ?, regex_pattern = ?, regex_cue = ?, updated_at = ? WHERE id = ?"
+        "UPDATE custom_attribute_definitions SET display_name = $1, description = $2, options = $3, default_value = $4, is_required = $5, regex_pattern = $6, regex_cue = $7, updated_at = $8 WHERE id = $9"
     )
     .bind(&display)
     .bind(desc.as_deref())
@@ -2979,7 +2979,7 @@ pub async fn delete_custom_attribute(
 
     let id = existing.id.clone();
     let name = existing.name.clone();
-    let result = sqlx::query("DELETE FROM custom_attribute_definitions WHERE id = ?")
+    let result = sqlx::query("DELETE FROM custom_attribute_definitions WHERE id = $1")
         .bind(&id)
         .execute(&state.db)
         .await;
@@ -3042,7 +3042,7 @@ async fn write_entity_attribute_values(
 
     // Entity must exist and belong to this tenant.
     let exists_sql = format!(
-        "SELECT 1 FROM {table} WHERE id = ? AND COALESCE(tenant_key, '') = ? LIMIT 1"
+        "SELECT 1 FROM {table} WHERE id = $1 AND COALESCE(tenant_key, '') = $2 LIMIT 1"
     );
     let exists = match sqlx::query_scalar::<_, i64>(&exists_sql)
         .bind(id)
@@ -3076,7 +3076,7 @@ async fn write_entity_attribute_values(
     }
 
     // Current stored JSON object, if any.
-    let select_sql = format!("SELECT {column} FROM {table} WHERE id = ?");
+    let select_sql = format!("SELECT {column} FROM {table} WHERE id = $1");
     let raw: Option<Option<String>> = match sqlx::query_scalar::<_, Option<String>>(&select_sql)
         .bind(id)
         .fetch_optional(&state.db)
@@ -3133,7 +3133,7 @@ async fn write_entity_attribute_values(
 
     let now = Utc::now().to_rfc3339();
     let merged_str = Value::Object(merged.clone()).to_string();
-    let update_sql = format!("UPDATE {table} SET {column} = ?, updated_at = ? WHERE id = ? AND COALESCE(tenant_key, '') = ?");
+    let update_sql = format!("UPDATE {table} SET {column} = $1, updated_at = $2 WHERE id = $3 AND COALESCE(tenant_key, '') = $4");
     let result = sqlx::query(&update_sql)
         .bind(&merged_str)
         .bind(&now)
@@ -3328,7 +3328,7 @@ pub async fn create_organization(
     let mut suffix = 1usize;
     loop {
         let taken = match sqlx::query_scalar::<_, i64>(
-            "SELECT 1 FROM tenants WHERE tenant_key = ? LIMIT 1",
+            "SELECT 1 FROM tenants WHERE tenant_key = $1 LIMIT 1",
         )
         .bind(&tenant_key)
         .fetch_optional(&state.db)
@@ -3355,7 +3355,7 @@ pub async fn create_organization(
     let now = Utc::now().to_rfc3339();
 
     let result = sqlx::query(
-        "INSERT INTO tenants (id, tenant_key, name, owner_account_id, created_at) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO tenants (id, tenant_key, name, owner_account_id, created_at) VALUES ($1, $2, $3, $4, $5)",
     )
     .bind(&id)
     .bind(&tenant_key)
@@ -3496,7 +3496,7 @@ pub async fn export_segment(State(state): State<AppState>, Path(id): Path<String
                 "SELECT COALESCE(c.name, ''), c.phone_number, c.channel \
                  FROM segment_members sm \
                  JOIN contacts c ON c.id = sm.contact_id \
-                 WHERE sm.segment_id = ? \
+                 WHERE sm.segment_id = $1 \
                  ORDER BY c.name ASC",
             )
             .bind(&id)
@@ -3757,7 +3757,7 @@ pub async fn get_live_report(
     let mut agents_online = Vec::new();
     for m in members {
         let active_chats: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM conversations WHERE assigned_to_id = ? AND state NOT IN ('RESOLVED', 'CLOSED', 'ARCHIVED')",
+            "SELECT COUNT(*) FROM conversations WHERE assigned_to_id = $1 AND state NOT IN ('RESOLVED', 'CLOSED', 'ARCHIVED')",
         )
         .bind(&m.id)
         .fetch_one(&state.db)
@@ -3849,14 +3849,14 @@ fn scoped_sql(
     with_channel: bool,
 ) -> String {
     let mut sql = format!(
-        "{select_and_from} WHERE DATE({window_col}::TIMESTAMPTZ) >= ?"
+        "{select_and_from} WHERE DATE({window_col}::TIMESTAMPTZ) >= $1"
     );
     if !extra_where.is_empty() {
         sql.push_str(" AND ");
         sql.push_str(extra_where);
     }
     if with_channel {
-        sql.push_str(" AND channel = ?");
+        sql.push_str(" AND channel = $2");
     }
     sql
 }
@@ -4078,7 +4078,7 @@ pub async fn get_conversation_reports(
     // First response time is measured from the message log: the gap between the
     // first inbound and the first later outbound message per conversation.
     let frt_channel_clause = if channel.is_some() {
-        "\n                  AND channel = ?"
+        "\n                  AND channel = $2"
     } else {
         ""
     };
@@ -4092,7 +4092,7 @@ pub async fn get_conversation_reports(
                 SELECT conversation_id, direction,
                        replace(substr(COALESCE(NULLIF(sent_at, ''), created_at), 1, 19), 'T', ' ') AS dt
                 FROM messages
-                WHERE DATE(COALESCE(NULLIF(sent_at, ''), created_at)::TIMESTAMPTZ) >= ?{frt_channel_clause}
+                WHERE DATE(COALESCE(NULLIF(sent_at, ''), created_at)::TIMESTAMPTZ) >= $1{frt_channel_clause}
             )
             GROUP BY conversation_id
         ) WHERE first_in IS NOT NULL AND first_out IS NOT NULL AND first_out >= first_in
@@ -4118,7 +4118,7 @@ pub async fn get_conversation_reports(
     // on rows that are resolved; there is no separate resolved_at column, and that
     // is stated rather than hidden.
     let art_channel_clause = if channel.is_some() {
-        " AND channel = ?"
+        " AND channel = $2"
     } else {
         ""
     };
@@ -4128,7 +4128,7 @@ pub async fn get_conversation_reports(
         FROM conversations
         WHERE state IN ('RESOLVED', 'CLOSED')
           AND created_at IS NOT NULL AND created_at <> ''
-          AND DATE(COALESCE(NULLIF(created_at, ''), updated_at)::TIMESTAMPTZ) >= ?{art_channel_clause}
+          AND DATE(COALESCE(NULLIF(created_at, ''), updated_at)::TIMESTAMPTZ) >= $1{art_channel_clause}
         "#
     );
     let mut art_query = sqlx::query_scalar::<_, Option<f64>>(&art_sql).bind(&cutoff);
@@ -4212,15 +4212,15 @@ fn windowed_conversation_sql(
     with_channel: bool,
 ) -> String {
     let mut sql = format!(
-        "{select} FROM conversations WHERE {owner_column} = ? \
-         AND DATE(COALESCE(NULLIF(created_at, ''), updated_at)::TIMESTAMPTZ) >= ?"
+        "{select} FROM conversations WHERE {owner_column} = $1 \
+         AND DATE(COALESCE(NULLIF(created_at, ''), updated_at)::TIMESTAMPTZ) >= $2"
     );
     if !extra_where.is_empty() {
         sql.push_str(" AND ");
         sql.push_str(extra_where);
     }
     if with_channel {
-        sql.push_str(" AND channel = ?");
+        sql.push_str(" AND channel = $3");
     }
     sql
 }
@@ -4603,11 +4603,11 @@ pub async fn get_csat_report(
          FROM conversations c \
          LEFT JOIN contacts ct ON ct.id = c.contact_id \
          LEFT JOIN team_members tm ON tm.id = c.assigned_to_id \
-         WHERE DATE(c.updated_at::TIMESTAMPTZ) >= ? \
+         WHERE DATE(c.updated_at::TIMESTAMPTZ) >= $1 \
            AND c.csat_score IS NOT NULL"
     );
     if channel.is_some() {
-        feedback_sql.push_str(" AND c.channel = ?");
+        feedback_sql.push_str(" AND c.channel = $2");
     }
     feedback_sql.push_str(" ORDER BY c.updated_at DESC LIMIT 50");
 

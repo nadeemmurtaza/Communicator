@@ -155,7 +155,7 @@ pub async fn get_conversation(
         LEFT JOIN broadcasts b ON c.broadcast_id = b.id
         LEFT JOIN teams tm ON c.team_id = tm.id
         LEFT JOIN team_members u ON c.assigned_to_id = u.id
-        WHERE c.id = ?
+        WHERE c.id = $1
         "#,
     )
     .bind(&id)
@@ -201,7 +201,7 @@ pub async fn get_conversation(
             voice_duration,
             transcription_text
         FROM messages
-        WHERE conversation_id = ?
+        WHERE conversation_id = $1
         ORDER BY sent_at ASC
         "#,
     )
@@ -226,7 +226,7 @@ pub async fn get_conversation(
     let feedback_rows: Vec<MessageFeedback> = if message_ids.is_empty() {
         Vec::new()
     } else {
-        let placeholders: Vec<String> = (0..message_ids.len()).map(|i| format!("?{}", i + 1)).collect();
+        let placeholders: Vec<String> = (0..message_ids.len()).map(|i| format!("${}", i + 1)).collect();
         let query_text = format!(
             "SELECT id, message_id, conversation_id, rating, comment, author_type, author_id, created_at \
              FROM message_feedback WHERE message_id IN ({})",
@@ -292,7 +292,7 @@ pub async fn get_conversation(
         FROM sla_policies
         WHERE is_active = 1
         ORDER BY CASE 
-            WHEN priorities LIKE '%' || ? || '%' THEN 0 
+            WHEN priorities LIKE '%' || $1 || '%' THEN 0
             ELSE 1 
         END, first_response_time_threshold ASC
         LIMIT 1
@@ -433,7 +433,7 @@ pub async fn get_conversation(
             r#"
             SELECT id, expires_at, is_active
             FROM whatsapp_session_windows
-            WHERE contact_id = ?1 AND is_active = 1
+            WHERE contact_id = $1 AND is_active = 1
             ORDER BY expires_at DESC
             LIMIT 1
             "#
@@ -605,7 +605,7 @@ pub async fn send_conversation_message(
         LEFT JOIN broadcasts b ON c.broadcast_id = b.id
         LEFT JOIN teams tm ON c.team_id = tm.id
         LEFT JOIN team_members u ON c.assigned_to_id = u.id
-        WHERE c.id = ?
+        WHERE c.id = $1
         "#,
     )
     .bind(&id)
@@ -859,7 +859,7 @@ pub async fn send_conversation_message(
         INSERT INTO messages (
             id, conversation_id, direction, channel, body, status, delivery_status, sent_at,
             provider, provider_message_id, is_private, sender, sender_type, sender_name, created_at
-        ) VALUES (?, ?, 'outbound', ?, ?, ?, ?, ?, ?, ?, ?, 'agent', 'agent', ?, ?)
+        ) VALUES ($1, $2, 'outbound', $3, $4, $5, $6, $7, $8, $9, $10, 'agent', 'agent', $11, $12)
         "#,
     )
     .bind(&msg_id)
@@ -899,8 +899,8 @@ pub async fn send_conversation_message(
     let timestamp_updated = match sqlx::query(
         r#"
         UPDATE conversations
-        SET updated_at = ?, last_outbound_at = ?
-        WHERE id = ?
+        SET updated_at = $1, last_outbound_at = $2
+        WHERE id = $3
         "#,
     )
     .bind(&now)
@@ -967,7 +967,7 @@ pub async fn resolve_conversation(
 ) -> impl IntoResponse {
     let now = Utc::now().to_rfc3339();
     let res = sqlx::query(
-        "UPDATE conversations SET state = 'RESOLVED', resolution_type = 'resolved', updated_at = ? WHERE id = ?",
+        "UPDATE conversations SET state = 'RESOLVED', resolution_type = 'resolved', updated_at = $1 WHERE id = $2",
     )
     .bind(&now)
     .bind(&id)
@@ -1002,7 +1002,7 @@ pub async fn update_priority(
     Json(payload): Json<PriorityPayload>,
 ) -> impl IntoResponse {
     let now = Utc::now().to_rfc3339();
-    let res = sqlx::query("UPDATE conversations SET priority = ?, updated_at = ? WHERE id = ?")
+    let res = sqlx::query("UPDATE conversations SET priority = $1, updated_at = $2 WHERE id = $3")
         .bind(&payload.priority)
         .bind(&now)
         .bind(&id)
@@ -1033,7 +1033,7 @@ pub async fn assign_team(
     Json(payload): Json<AssignTeamPayload>,
 ) -> impl IntoResponse {
     let now = Utc::now().to_rfc3339();
-    let res = sqlx::query("UPDATE conversations SET team_id = ?, updated_at = ? WHERE id = ?")
+    let res = sqlx::query("UPDATE conversations SET team_id = $1, updated_at = $2 WHERE id = $3")
         .bind(&payload.team_id)
         .bind(&now)
         .bind(&id)
@@ -1064,7 +1064,7 @@ pub async fn assign_agent(
     Json(payload): Json<AssignAgentPayload>,
 ) -> impl IntoResponse {
     let now = Utc::now().to_rfc3339();
-    let res = sqlx::query("UPDATE conversations SET assigned_to_id = ?, updated_at = ? WHERE id = ?")
+    let res = sqlx::query("UPDATE conversations SET assigned_to_id = $1, updated_at = $2 WHERE id = $3")
         .bind(&payload.agent_id)
         .bind(&now)
         .bind(&id)
@@ -1095,7 +1095,7 @@ pub async fn snooze_conversation(
     Json(payload): Json<SnoozePayload>,
 ) -> impl IntoResponse {
     let now = Utc::now().to_rfc3339();
-    let res = sqlx::query("UPDATE conversations SET snoozed_until = ?, updated_at = ? WHERE id = ?")
+    let res = sqlx::query("UPDATE conversations SET snoozed_until = $1, updated_at = $2 WHERE id = $3")
         .bind(&payload.snoozed_until)
         .bind(&now)
         .bind(&id)
@@ -1127,7 +1127,7 @@ pub async fn update_custom_attributes(
 ) -> impl IntoResponse {
     let now = Utc::now().to_rfc3339();
     let attr_str = payload.attributes.to_string();
-    let res = sqlx::query("UPDATE conversations SET custom_attributes = ?, updated_at = ? WHERE id = ?")
+    let res = sqlx::query("UPDATE conversations SET custom_attributes = $1, updated_at = $2 WHERE id = $3")
         .bind(&attr_str)
         .bind(&now)
         .bind(&id)
@@ -1164,7 +1164,7 @@ pub async fn list_contact_notes(
     // A failed read is not "this contact has no notes": an empty array would
     // answer as if the database had looked and found nothing.
     let notes = match sqlx::query_as::<_, NoteRow>(
-        "SELECT id, contact_id, body, author_name, created_at FROM contact_notes WHERE contact_id = ? ORDER BY created_at DESC",
+        "SELECT id, contact_id, body, author_name, created_at FROM contact_notes WHERE contact_id = $1 ORDER BY created_at DESC",
     )
     .bind(&contact_id)
     .fetch_all(&state.db)
@@ -1250,7 +1250,7 @@ pub async fn add_contact_note(
     }
 
     match sqlx::query(
-        "INSERT INTO contact_notes (id, contact_id, body, author_name, created_at) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO contact_notes (id, contact_id, body, author_name, created_at) VALUES ($1, $2, $3, $4, $5)",
     )
     .bind(&id)
     .bind(&contact_id)
@@ -1304,7 +1304,7 @@ pub async fn enroll_sequence(
     Query(query): Query<EnrollSequenceQuery>,
 ) -> impl IntoResponse {
     let now = Utc::now().to_rfc3339();
-    let res = sqlx::query("UPDATE conversations SET sequence_id = ?, updated_at = ? WHERE id = ?")
+    let res = sqlx::query("UPDATE conversations SET sequence_id = $1, updated_at = $2 WHERE id = $3")
         .bind(&query.sequence_id)
         .bind(&now)
         .bind(&id)
@@ -1409,7 +1409,7 @@ pub async fn auto_assign(
             FROM team_members tm
             JOIN team_memberships tms ON tm.id = tms.team_member_id
             LEFT JOIN conversations c ON c.assigned_to_id = tm.id AND LOWER(c.state) NOT IN ('resolved', 'closed_won', 'closed_lost', 'opted_out')
-            WHERE tms.team_id = ? AND (tm.availability_status = 'online' OR tm.availability_status IS NULL)
+            WHERE tms.team_id = $1 AND (tm.availability_status = 'online' OR tm.availability_status IS NULL)
             GROUP BY tm.id
             ORDER BY COUNT(c.id) ASC
             LIMIT 1
@@ -1501,7 +1501,7 @@ pub async fn auto_assign(
     // The conversation is only "assigned" once that UPDATE actually touched its
     // row; 0 rows means the id is absent and nothing was linked.
     match sqlx::query(
-        "UPDATE conversations SET assigned_to_id = ?, team_id = COALESCE(?, team_id), updated_at = ? WHERE id = ?",
+        "UPDATE conversations SET assigned_to_id = $1, team_id = COALESCE($2, team_id), updated_at = $3 WHERE id = $4",
     )
     .bind(&m.id)
     .bind(&payload.team_id)
@@ -1526,7 +1526,7 @@ pub async fn auto_assign(
     // Auxiliary: the member's stamp. A failure here is logged, not hidden, and
     // reported through `memberStamped` because the assignment above stands.
     let member_stamped = crate::db::report_write(
-        sqlx::query("UPDATE team_members SET last_assigned_at = ? WHERE id = ?")
+        sqlx::query("UPDATE team_members SET last_assigned_at = $1 WHERE id = $2")
             .bind(&now)
             .bind(&m.id)
             .execute(&state.db)
@@ -1598,7 +1598,7 @@ pub async fn submit_message_feedback(
 
     // Verify the message exists and belongs to a conversation
     let msg_row: Option<(String, String)> = match sqlx::query_as(
-        "SELECT id, conversation_id FROM messages WHERE id = ?",
+        "SELECT id, conversation_id FROM messages WHERE id = $1",
     )
     .bind(&message_id)
     .fetch_optional(&state.db)
@@ -1624,7 +1624,7 @@ pub async fn submit_message_feedback(
 
     // Check if this author already rated this message — update if so
     let existing: Option<String> = match sqlx::query_scalar::<_, String>(
-        "SELECT id FROM message_feedback WHERE message_id = ? AND author_type = ?",
+        "SELECT id FROM message_feedback WHERE message_id = $1 AND author_type = $2",
     )
     .bind(&msg_id)
     .bind(&author_type)
@@ -1638,7 +1638,7 @@ pub async fn submit_message_feedback(
     let feedback_stored = if let Some(existing_id) = existing {
         // Update existing feedback
         match sqlx::query(
-            "UPDATE message_feedback SET rating = ?, comment = ?, created_at = ? WHERE id = ?",
+            "UPDATE message_feedback SET rating = $1, comment = $2, created_at = $3 WHERE id = $4",
         )
         .bind(&payload.rating)
         .bind(&payload.comment)
@@ -1664,7 +1664,7 @@ pub async fn submit_message_feedback(
                 let fb_id = Uuid::new_v4().to_string();
                 match sqlx::query(
                     "INSERT INTO message_feedback (id, message_id, conversation_id, rating, comment, author_type, author_id, created_at) \
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
                 )
                 .bind(&fb_id)
                 .bind(&msg_id)
@@ -1687,7 +1687,7 @@ pub async fn submit_message_feedback(
         let fb_id = Uuid::new_v4().to_string();
         match sqlx::query(
             "INSERT INTO message_feedback (id, message_id, conversation_id, rating, comment, author_type, author_id, created_at) \
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
         )
         .bind(&fb_id)
         .bind(&msg_id)

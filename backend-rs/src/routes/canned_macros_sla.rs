@@ -162,7 +162,7 @@ pub async fn create_canned_response(
 
     // Check duplicate short_code
     let existing: Option<String> = sqlx::query_scalar(
-        "SELECT id FROM canned_responses WHERE LOWER(short_code) = LOWER(?) LIMIT 1",
+        "SELECT id FROM canned_responses WHERE LOWER(short_code) = LOWER($1) LIMIT 1",
     )
     .bind(&code)
     .fetch_optional(&state.db)
@@ -182,7 +182,7 @@ pub async fn create_canned_response(
     let now = Utc::now().to_rfc3339();
 
     let res = sqlx::query(
-        "INSERT INTO canned_responses (id, short_code, content, category, created_at) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO canned_responses (id, short_code, content, category, created_at) VALUES ($1, $2, $3, $4, $5)",
     )
     .bind(&id)
     .bind(&code)
@@ -224,7 +224,7 @@ pub async fn update_canned_response(
     Json(payload): Json<UpdateCannedPayload>,
 ) -> impl IntoResponse {
     let existing = sqlx::query_as::<_, CannedResponseRow>(
-        "SELECT id, short_code, content, category, created_at FROM canned_responses WHERE id = ? LIMIT 1",
+        "SELECT id, short_code, content, category, created_at FROM canned_responses WHERE id = $1 LIMIT 1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -253,7 +253,7 @@ pub async fn update_canned_response(
         }
         if code.to_lowercase() != current.short_code.to_lowercase() {
             let dup: Option<String> = sqlx::query_scalar(
-                "SELECT id FROM canned_responses WHERE LOWER(short_code) = LOWER(?) AND id != ? LIMIT 1",
+                "SELECT id FROM canned_responses WHERE LOWER(short_code) = LOWER($1) AND id != $2 LIMIT 1",
             )
             .bind(&code)
             .bind(&id)
@@ -283,7 +283,7 @@ pub async fn update_canned_response(
     // The response below serializes the intended row, so the UPDATE itself has to
     // be proven: an error or 0 rows means nothing changed.
     let updated = sqlx::query(
-        "UPDATE canned_responses SET short_code = ?, content = ?, category = ? WHERE id = ?",
+        "UPDATE canned_responses SET short_code = $1, content = $2, category = $3 WHERE id = $4",
     )
     .bind(&current.short_code)
     .bind(&current.content)
@@ -314,7 +314,7 @@ pub async fn delete_canned_response(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    let res = sqlx::query("DELETE FROM canned_responses WHERE id = ?")
+    let res = sqlx::query("DELETE FROM canned_responses WHERE id = $1")
         .bind(&id)
         .execute(&state.db)
         .await;
@@ -349,7 +349,7 @@ pub async fn expand_canned_response(
     let code = payload.short_code.trim().trim_start_matches('/').to_string();
 
     let canned = sqlx::query_as::<_, CannedResponseRow>(
-        "SELECT id, short_code, content, category, created_at FROM canned_responses WHERE LOWER(short_code) = LOWER(?) LIMIT 1",
+        "SELECT id, short_code, content, category, created_at FROM canned_responses WHERE LOWER(short_code) = LOWER($1) LIMIT 1",
     )
     .bind(&code)
     .fetch_optional(&state.db)
@@ -388,7 +388,7 @@ pub async fn expand_canned_response(
         }
 
         let conv = sqlx::query_as::<_, ConvContext>(
-            "SELECT id, contact_id, assigned_to_id FROM conversations WHERE id = ? LIMIT 1",
+            "SELECT id, contact_id, assigned_to_id FROM conversations WHERE id = $1 LIMIT 1",
         )
         .bind(conv_id)
         .fetch_optional(&state.db)
@@ -403,7 +403,7 @@ pub async fn expand_canned_response(
 
             if let Some(ref agent_id) = c.assigned_to_id {
                 let agent_name: Option<String> = sqlx::query_scalar(
-                    "SELECT name FROM team_members WHERE id = ? LIMIT 1",
+                    "SELECT name FROM team_members WHERE id = $1 LIMIT 1",
                 )
                 .bind(agent_id)
                 .fetch_optional(&state.db)
@@ -424,7 +424,7 @@ pub async fn expand_canned_response(
                 }
 
                 let contact = sqlx::query_as::<_, ContactRow>(
-                    "SELECT person_name, channel FROM contacts WHERE id = ? LIMIT 1",
+                    "SELECT person_name, channel FROM contacts WHERE id = $1 LIMIT 1",
                 )
                 .bind(contact_id)
                 .fetch_optional(&state.db)
@@ -554,7 +554,7 @@ pub async fn create_macro(
 
     // The macro object built below is only true once the INSERT lands.
     let stored = sqlx::query(
-        "INSERT INTO macros (id, name, description, actions, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO macros (id, name, description, actions, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6)",
     )
     .bind(&id)
     .bind(payload.name.trim())
@@ -588,7 +588,7 @@ pub async fn get_macro(
     Path(id): Path<String>,
 ) -> impl IntoResponse {
     let m = sqlx::query_as::<_, MacroItem>(
-        "SELECT id, name, description, actions, created_at, updated_at FROM macros WHERE id = ?",
+        "SELECT id, name, description, actions, created_at, updated_at FROM macros WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -619,7 +619,7 @@ pub async fn update_macro(
     Json(payload): Json<UpdateMacroPayload>,
 ) -> impl IntoResponse {
     let m = sqlx::query_as::<_, MacroItem>(
-        "SELECT id, name, description, actions, created_at, updated_at FROM macros WHERE id = ?",
+        "SELECT id, name, description, actions, created_at, updated_at FROM macros WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -651,7 +651,7 @@ pub async fn update_macro(
 
     // The serialized macro returned below carries these exact values, so the
     // UPDATE has to be proven before they can be reported as stored.
-    let updated = sqlx::query("UPDATE macros SET name = ?, description = ?, actions = ?, updated_at = ? WHERE id = ?")
+    let updated = sqlx::query("UPDATE macros SET name = $1, description = $2, actions = $3, updated_at = $4 WHERE id = $5")
         .bind(&current.name)
         .bind(&current.description)
         .bind(&current.actions)
@@ -675,7 +675,7 @@ pub async fn delete_macro(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    let res = sqlx::query("DELETE FROM macros WHERE id = ?")
+    let res = sqlx::query("DELETE FROM macros WHERE id = $1")
         .bind(&id)
         .execute(&state.db)
         .await;
@@ -705,7 +705,7 @@ pub struct ExecuteMacroPayload {
 /// or reports exactly what it could not do -- no "executed" for a no-op.
 async fn run_macro(state: &AppState, conversation_id: String, macro_id: String, agent_name: String) -> Response {
     let macro_row = sqlx::query_as::<_, MacroItem>(
-        "SELECT id, name, description, actions, created_at, updated_at FROM macros WHERE id = ?",
+        "SELECT id, name, description, actions, created_at, updated_at FROM macros WHERE id = $1",
     )
     .bind(&macro_id)
     .fetch_optional(&state.db)
@@ -736,7 +736,7 @@ async fn run_macro(state: &AppState, conversation_id: String, macro_id: String, 
     }
 
     let conv = sqlx::query_as::<_, ConvItem>(
-        "SELECT id, contact_id, state, priority, resolution_type, custom_attributes, team_id, assigned_to_id FROM conversations WHERE id = ?",
+        "SELECT id, contact_id, state, priority, resolution_type, custom_attributes, team_id, assigned_to_id FROM conversations WHERE id = $1",
     )
     .bind(&conversation_id)
     .fetch_optional(&state.db)
@@ -797,7 +797,7 @@ async fn run_macro(state: &AppState, conversation_id: String, macro_id: String, 
     }
     let send_target = if let Some(ref contact_id) = conversation.contact_id {
         sqlx::query_as::<_, SendTarget>(
-            "SELECT channel, value AS phone, email FROM contacts WHERE id = ? LIMIT 1",
+            "SELECT channel, value AS phone, email FROM contacts WHERE id = $1 LIMIT 1",
         )
         .bind(contact_id)
         .fetch_optional(&state.db)
@@ -854,7 +854,7 @@ async fn run_macro(state: &AppState, conversation_id: String, macro_id: String, 
                     executed_actions.push(json!({ "action": a_type, "teamId": tid, "status": "applied" }));
                 } else if let Some(tname) = team_name {
                     let matched: Option<String> = sqlx::query_scalar(
-                        "SELECT id FROM teams WHERE LOWER(name) LIKE LOWER(?) LIMIT 1",
+                        "SELECT id FROM teams WHERE LOWER(name) LIKE LOWER($1) LIMIT 1",
                     )
                     .bind(format!("%{tname}%"))
                     .fetch_optional(&state.db)
@@ -889,7 +889,7 @@ async fn run_macro(state: &AppState, conversation_id: String, macro_id: String, 
                 let agent_lookup = action.get("agent_name").and_then(|v| v.as_str());
                 let resolved: Option<(String, String)> = if let Some(aid) = agent_id {
                     sqlx::query_as::<_, (String, String)>(
-                        "SELECT id, name FROM team_members WHERE id = ? LIMIT 1",
+                        "SELECT id, name FROM team_members WHERE id = $1 LIMIT 1",
                     )
                     .bind(aid)
                     .fetch_optional(&state.db)
@@ -897,7 +897,7 @@ async fn run_macro(state: &AppState, conversation_id: String, macro_id: String, 
                     .unwrap_or(None)
                 } else if let Some(aname) = agent_lookup {
                     sqlx::query_as::<_, (String, String)>(
-                        "SELECT id, name FROM team_members WHERE LOWER(name) LIKE LOWER(?) LIMIT 1",
+                        "SELECT id, name FROM team_members WHERE LOWER(name) LIKE LOWER($1) LIMIT 1",
                     )
                     .bind(format!("%{aname}%"))
                     .fetch_optional(&state.db)
@@ -1025,7 +1025,7 @@ async fn run_macro(state: &AppState, conversation_id: String, macro_id: String, 
 
                 // Persist the message first, with the delivery state we can prove.
                 if let Err(err) = sqlx::query(
-                    "INSERT INTO messages (id, conversation_id, sender, sender_name, direction, channel, body, status, delivery_status, sent_at, created_at, provider) VALUES (?, ?, 'agent', ?, 'outbound', ?, ?, 'pending', 'pending', ?, ?, 'macro_executor')",
+                    "INSERT INTO messages (id, conversation_id, sender, sender_name, direction, channel, body, status, delivery_status, sent_at, created_at, provider) VALUES ($1, $2, 'agent', $3, 'outbound', $4, $5, 'pending', 'pending', $6, $7, 'macro_executor')",
                 )
                 .bind(&msg_id)
                 .bind(&conversation_id)
@@ -1060,7 +1060,7 @@ async fn run_macro(state: &AppState, conversation_id: String, macro_id: String, 
                 if dispatched_ok {
                     dispatched += 1;
                     if let Err(err) = sqlx::query(
-                        "UPDATE messages SET status = 'sent', delivery_status = 'sent', provider_message_id = ?, sent_at = ? WHERE id = ?",
+                        "UPDATE messages SET status = 'sent', delivery_status = 'sent', provider_message_id = $1, sent_at = $2 WHERE id = $3",
                     )
                     .bind(outcome["providerMessageId"].as_str().unwrap_or(""))
                     .bind(&now)
@@ -1070,7 +1070,7 @@ async fn run_macro(state: &AppState, conversation_id: String, macro_id: String, 
                     {
                         state_errors.push(format!("delivered but the message row still reads 'pending': {err}"));
                     }
-                    if let Err(err) = sqlx::query("UPDATE conversations SET last_outbound_at = ? WHERE id = ?")
+                    if let Err(err) = sqlx::query("UPDATE conversations SET last_outbound_at = $1 WHERE id = $2")
                         .bind(&now)
                         .bind(&conversation_id)
                         .execute(&state.db)
@@ -1081,7 +1081,7 @@ async fn run_macro(state: &AppState, conversation_id: String, macro_id: String, 
                 } else {
                     deferred += 1;
                     if let Err(err) = sqlx::query(
-                        "UPDATE messages SET status = 'failed', delivery_status = 'failed' WHERE id = ?",
+                        "UPDATE messages SET status = 'failed', delivery_status = 'failed' WHERE id = $1",
                     )
                     .bind(&msg_id)
                     .execute(&state.db)
@@ -1104,7 +1104,7 @@ async fn run_macro(state: &AppState, conversation_id: String, macro_id: String, 
                 if let Some(note) = action.get("note").and_then(|v| v.as_str()) {
                     let msg_id = Uuid::new_v4().to_string();
                     let res = sqlx::query(
-                        "INSERT INTO messages (id, conversation_id, direction, channel, body, status, sent_at, created_at, is_private, sender, sender_name, provider) VALUES (?, ?, 'outbound', 'whatsapp', ?, 'internal', ?, ?, 1, ?, ?, 'macro_executor')",
+                        "INSERT INTO messages (id, conversation_id, direction, channel, body, status, sent_at, created_at, is_private, sender, sender_name, provider) VALUES ($1, $2, 'outbound', 'whatsapp', $3, 'internal', $4, $5, 1, $6, $7, 'macro_executor')",
                     )
                     .bind(&msg_id)
                     .bind(&conversation_id)
@@ -1148,7 +1148,7 @@ async fn run_macro(state: &AppState, conversation_id: String, macro_id: String, 
                 let hours = action.get("duration_hours").and_then(|v| v.as_i64()).unwrap_or(24);
                 let snooze_until = Utc::now() + Duration::hours(hours);
                 let snooze_str = snooze_until.to_rfc3339();
-                let res = sqlx::query("UPDATE conversations SET snoozed_until = ? WHERE id = ?")
+                let res = sqlx::query("UPDATE conversations SET snoozed_until = $1 WHERE id = $2")
                     .bind(&snooze_str)
                     .bind(&conversation_id)
                     .execute(&state.db)
@@ -1200,7 +1200,7 @@ async fn run_macro(state: &AppState, conversation_id: String, macro_id: String, 
     let attrs_str = serde_json::to_string(&attrs).unwrap_or_else(|_| "{}".to_string());
 
     let update_res = sqlx::query(
-        "UPDATE conversations SET state = ?, priority = ?, resolution_type = ?, custom_attributes = ?, team_id = ?, assigned_to_id = ?, updated_at = ? WHERE id = ?",
+        "UPDATE conversations SET state = $1, priority = $2, resolution_type = $3, custom_attributes = $4, team_id = $5, assigned_to_id = $6, updated_at = $7 WHERE id = $8",
     )
     .bind(&conversation.state)
     .bind(&conversation.priority)
@@ -1225,7 +1225,7 @@ async fn run_macro(state: &AppState, conversation_id: String, macro_id: String, 
     let audit_id = Uuid::new_v4().to_string();
     let audit_details = serde_json::to_string(&execution_record).unwrap_or_else(|_| "{}".to_string());
     let audit_res = sqlx::query(
-        "INSERT INTO audit_logs (id, entity_type, entity_id, action, actor, actor_name, severity, compliance_category, description, details, created_at) VALUES (?, 'macro', ?, 'macro_executed', ?, ?, 'info', 'audit_trail', ?, ?, ?)",
+        "INSERT INTO audit_logs (id, entity_type, entity_id, action, actor, actor_name, severity, compliance_category, description, details, created_at) VALUES ($1, 'macro', $2, 'macro_executed', $3, $4, 'info', 'audit_trail', $5, $6, $7)",
     )
     .bind(&audit_id)
     .bind(&conversation_id)
@@ -1479,7 +1479,7 @@ pub async fn get_sla_policy(
     Path(id): Path<String>,
 ) -> impl IntoResponse {
     let p = sqlx::query_as::<_, SlaPolicyRow>(
-        "SELECT id, name, description, first_response_time_threshold, resolution_time_threshold, only_during_business_hours, priorities, inbox_ids, is_active, created_at, updated_at FROM sla_policies WHERE id = ?",
+        "SELECT id, name, description, first_response_time_threshold, resolution_time_threshold, only_during_business_hours, priorities, inbox_ids, is_active, created_at, updated_at FROM sla_policies WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -1549,7 +1549,7 @@ pub async fn create_sla_policy(
 
     // The policy object returned below is only real once the INSERT lands.
     let stored = sqlx::query(
-        "INSERT INTO sla_policies (id, name, description, first_response_time_threshold, resolution_time_threshold, only_during_business_hours, priorities, inbox_ids, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)",
+        "INSERT INTO sla_policies (id, name, description, first_response_time_threshold, resolution_time_threshold, only_during_business_hours, priorities, inbox_ids, is_active, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1, $9, $10)",
     )
     .bind(&id)
     .bind(payload.name.trim())
@@ -1615,7 +1615,7 @@ pub async fn update_sla_policy(
     Json(payload): Json<UpdateSlaPayload>,
 ) -> impl IntoResponse {
     let p = sqlx::query_as::<_, SlaPolicyRow>(
-        "SELECT id, name, description, first_response_time_threshold, resolution_time_threshold, only_during_business_hours, priorities, inbox_ids, is_active, created_at, updated_at FROM sla_policies WHERE id = ?",
+        "SELECT id, name, description, first_response_time_threshold, resolution_time_threshold, only_during_business_hours, priorities, inbox_ids, is_active, created_at, updated_at FROM sla_policies WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -1663,7 +1663,7 @@ pub async fn update_sla_policy(
     // The policy returned below is the row as this handler believes it now is, so
     // the UPDATE has to be proven rather than assumed.
     let updated = sqlx::query(
-        "UPDATE sla_policies SET name = ?, description = ?, first_response_time_threshold = ?, resolution_time_threshold = ?, only_during_business_hours = ?, priorities = ?, inbox_ids = ?, is_active = ?, updated_at = ? WHERE id = ?",
+        "UPDATE sla_policies SET name = $1, description = $2, first_response_time_threshold = $3, resolution_time_threshold = $4, only_during_business_hours = $5, priorities = $6, inbox_ids = $7, is_active = $8, updated_at = $9 WHERE id = $10",
     )
     .bind(&current.name)
     .bind(&current.description)
@@ -1698,7 +1698,7 @@ pub async fn delete_sla_policy(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    let res = sqlx::query("DELETE FROM sla_policies WHERE id = ?")
+    let res = sqlx::query("DELETE FROM sla_policies WHERE id = $1")
         .bind(&id)
         .execute(&state.db)
         .await;
@@ -1829,7 +1829,7 @@ async fn evaluate_single_conversation_sla(
     }
 
     let first_msg = sqlx::query_as::<_, MsgRow>(
-        "SELECT sent_at, created_at FROM messages WHERE conversation_id = ? AND LOWER(direction) = 'outbound' AND (is_private IS NULL OR is_private = 0) ORDER BY COALESCE(sent_at, created_at) ASC LIMIT 1",
+        "SELECT sent_at, created_at FROM messages WHERE conversation_id = $1 AND LOWER(direction) = 'outbound' AND (is_private IS NULL OR is_private = 0) ORDER BY COALESCE(sent_at, created_at) ASC LIMIT 1",
     )
     .bind(&conv.id)
     .fetch_optional(db)
@@ -1966,7 +1966,7 @@ pub async fn evaluate_conversation_sla(
 ) -> impl IntoResponse {
 
     let conv = sqlx::query_as::<_, ConversationRowForSla>(
-        "SELECT id, contact_id, state, priority, inbox_id, custom_attributes, created_at, updated_at FROM conversations WHERE id = ?",
+        "SELECT id, contact_id, state, priority, inbox_id, custom_attributes, created_at, updated_at FROM conversations WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -2039,7 +2039,7 @@ pub async fn evaluate_conversation_sla(
     attrs.insert("tags".to_string(), json!(tags));
 
     let attrs_str = serde_json::to_string(&attrs).unwrap_or_else(|_| "{}".to_string());
-    let stored = sqlx::query("UPDATE conversations SET custom_attributes = ? WHERE id = ?")
+    let stored = sqlx::query("UPDATE conversations SET custom_attributes = $1 WHERE id = $2")
         .bind(&attrs_str)
         .bind(&id)
         .execute(&state.db)
@@ -2223,7 +2223,7 @@ pub async fn get_sla_breaches(State(state): State<AppState>) -> impl IntoRespons
 
             let contact = if let Some(ref cid) = c.contact_id {
                 sqlx::query_as::<_, ContactInfo>(
-                    "SELECT person_name, value, channel FROM contacts WHERE id = ? LIMIT 1",
+                    "SELECT person_name, value, channel FROM contacts WHERE id = $1 LIMIT 1",
                 )
                 .bind(cid)
                 .fetch_optional(&state.db)

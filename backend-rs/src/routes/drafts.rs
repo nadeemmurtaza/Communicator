@@ -108,7 +108,7 @@ pub async fn list_drafts(
     let status_filter = query.status.unwrap_or_else(|| "pending_review".to_string());
 
     let rows = match sqlx::query(&format!(
-        "SELECT {DRAFT_COLUMNS} FROM drafts WHERE status = ? ORDER BY created_at DESC"
+        "SELECT {DRAFT_COLUMNS} FROM drafts WHERE status = $1 ORDER BY created_at DESC"
     ))
     .bind(&status_filter)
     .fetch_all(&state.db)
@@ -225,7 +225,7 @@ pub async fn edit_draft(
             .into_response();
     }
 
-    let current = match sqlx::query(&format!("SELECT {DRAFT_COLUMNS}, reviewer_feedback FROM drafts WHERE id = ? LIMIT 1"))
+    let current = match sqlx::query(&format!("SELECT {DRAFT_COLUMNS}, reviewer_feedback FROM drafts WHERE id = $1 LIMIT 1"))
         .bind(&id)
         .fetch_optional(&state.db)
         .await
@@ -282,7 +282,7 @@ pub async fn edit_draft(
 
     let now = Utc::now().to_rfc3339();
     let updated = sqlx::query(
-        "UPDATE drafts SET body = ?, status = 'pending_review', updated_at = ? WHERE id = ?",
+        "UPDATE drafts SET body = $1, status = 'pending_review', updated_at = $2 WHERE id = $3",
     )
     .bind(&payload.body)
     .bind(&now)

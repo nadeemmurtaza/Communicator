@@ -336,7 +336,7 @@ async fn resolve_customer(
 
     // Try to find existing channel ID mapping
     let existing: Option<CustomerChannelId> = sqlx::query_as(
-        "SELECT * FROM customer_channel_ids WHERE channel_type = ? AND channel_identifier = ?",
+        "SELECT * FROM customer_channel_ids WHERE channel_type = $1 AND channel_identifier = $2",
     )
     .bind(&req.channel_type)
     .bind(&req.channel_identifier)
@@ -359,8 +359,8 @@ async fn resolve_customer(
         );
 
         sqlx::query(
-            "INSERT OR IGNORE INTO customers (id, tenant_key, customer_id, display_name, phone, email) 
-             VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT OR IGNORE INTO customers (id, tenant_key, customer_id, display_name, phone, email)
+             VALUES ($1, $2, $3, $4, $5, $6)",
         )
         .bind(&customer_id)
         .bind(&tenant_key)
@@ -386,8 +386,8 @@ async fn resolve_customer(
         // Create channel ID mapping
         let channel_id = format!("cc_{}", Uuid::new_v4());
         sqlx::query(
-            "INSERT INTO customer_channel_ids (id, customer_id, channel_type, channel_identifier, is_primary) 
-             VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO customer_channel_ids (id, customer_id, channel_type, channel_identifier, is_primary)
+             VALUES ($1, $2, $3, $4, $5)",
         )
         .bind(&channel_id)
         .bind(&customer_id)
@@ -468,9 +468,9 @@ async fn create_customer(
     );
 
     sqlx::query(
-        "INSERT INTO customers (id, tenant_key, customer_id, display_name, first_name, last_name, 
-         email, phone, company, designation, role, brand_id) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO customers (id, tenant_key, customer_id, display_name, first_name, last_name,
+         email, phone, company, designation, role, brand_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
     )
     .bind(&id)
     .bind(&tenant_key)
@@ -491,7 +491,7 @@ async fn create_customer(
         Json(serde_json::json!({ "error": e.to_string() })),
     ))?;
 
-    let customer = sqlx::query_as::<_, Customer>("SELECT * FROM customers WHERE id = ?")
+    let customer = sqlx::query_as::<_, Customer>("SELECT * FROM customers WHERE id = $1")
         .bind(&id)
         .fetch_one(db)
         .await
@@ -508,7 +508,7 @@ async fn get_customer(
     Path(id): Path<String>,
 ) -> Result<Json<Customer>, (StatusCode, Json<serde_json::Value>)> {
     let db = &state.db;
-    let customer = sqlx::query_as::<_, Customer>("SELECT * FROM customers WHERE id = ?")
+    let customer = sqlx::query_as::<_, Customer>("SELECT * FROM customers WHERE id = $1")
         .bind(&id)
         .fetch_one(db)
         .await
@@ -528,57 +528,68 @@ async fn update_customer(
     let db = &state.db;
 
     // Build dynamic update query
-    let mut sets = Vec::new();
+    let mut sets: Vec<String> = Vec::new();
     let mut binds: Vec<&str> = Vec::new();
+    let mut idx = 1;
 
     if let Some(ref name) = req.first_name {
-        sets.push("first_name = ?");
+        sets.push(format!("first_name = ${idx}"));
         binds.push(name);
+        idx += 1;
     }
     if let Some(ref name) = req.last_name {
-        sets.push("last_name = ?");
+        sets.push(format!("last_name = ${idx}"));
         binds.push(name);
+        idx += 1;
     }
     if let Some(ref email) = req.email {
-        sets.push("email = ?");
+        sets.push(format!("email = ${idx}"));
         binds.push(email);
+        idx += 1;
     }
     if let Some(ref phone) = req.phone {
-        sets.push("phone = ?");
+        sets.push(format!("phone = ${idx}"));
         binds.push(phone);
+        idx += 1;
     }
     if let Some(ref company) = req.company {
-        sets.push("company = ?");
+        sets.push(format!("company = ${idx}"));
         binds.push(company);
+        idx += 1;
     }
     if let Some(ref designation) = req.designation {
-        sets.push("designation = ?");
+        sets.push(format!("designation = ${idx}"));
         binds.push(designation);
+        idx += 1;
     }
     if let Some(ref role) = req.role {
-        sets.push("role = ?");
+        sets.push(format!("role = ${idx}"));
         binds.push(role);
+        idx += 1;
     }
     if let Some(ref notes) = req.notes {
-        sets.push("notes = ?");
+        sets.push(format!("notes = ${idx}"));
         binds.push(notes);
+        idx += 1;
     }
     if let Some(ref tier) = req.customer_tier {
-        sets.push("customer_tier = ?");
+        sets.push(format!("customer_tier = ${idx}"));
         binds.push(tier);
+        idx += 1;
     }
     if let Some(ref segment) = req.customer_segment {
-        sets.push("customer_segment = ?");
+        sets.push(format!("customer_segment = ${idx}"));
         binds.push(segment);
+        idx += 1;
     }
-    sets.push("updated_at = NOW()");
+    sets.push("updated_at = NOW()".to_string());
     binds.push("");
 
     if sets.is_empty() {
         return get_customer(State(state), Path(id)).await;
     }
 
-    let query = format!("UPDATE customers SET {} WHERE id = ?", sets.join(", "));
+    let query = format!("UPDATE customers SET {} WHERE id = ${idx}", sets.join(", "));
     sqlx::query(&query)
         .bind(&id)
         .execute(db)
@@ -588,7 +599,7 @@ async fn update_customer(
             Json(serde_json::json!({ "error": e.to_string() })),
         ))?;
 
-    let customer = sqlx::query_as::<_, Customer>("SELECT * FROM customers WHERE id = ?")
+    let customer = sqlx::query_as::<_, Customer>("SELECT * FROM customers WHERE id = $1")
         .bind(&id)
         .fetch_one(db)
         .await
@@ -605,7 +616,7 @@ async fn delete_customer(
     Path(id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
     let db = &state.db;
-    sqlx::query("DELETE FROM customers WHERE id = ?")
+    sqlx::query("DELETE FROM customers WHERE id = $1")
         .bind(&id)
         .execute(db)
         .await
@@ -628,7 +639,7 @@ async fn get_customer_profile_impl(
     db: &sqlx::PgPool,
     customer_id: &str,
 ) -> Result<Json<UnifiedCustomerProfile>, (StatusCode, Json<serde_json::Value>)> {
-    let customer = sqlx::query_as::<_, Customer>("SELECT * FROM customers WHERE id = ?")
+    let customer = sqlx::query_as::<_, Customer>("SELECT * FROM customers WHERE id = $1")
         .bind(customer_id)
         .fetch_one(db)
         .await
@@ -638,7 +649,7 @@ async fn get_customer_profile_impl(
         ))?;
 
     let channel_ids = sqlx::query_as::<_, CustomerChannelId>(
-        "SELECT * FROM customer_channel_ids WHERE customer_id = ? ORDER BY is_primary DESC",
+        "SELECT * FROM customer_channel_ids WHERE customer_id = $1 ORDER BY is_primary DESC",
     )
     .bind(customer_id)
     .fetch_all(db)
@@ -646,7 +657,7 @@ async fn get_customer_profile_impl(
     .unwrap_or_default();
 
     let preferences = sqlx::query_as::<_, ClientPreference>(
-        "SELECT * FROM client_preferences WHERE customer_id = ?",
+        "SELECT * FROM client_preferences WHERE customer_id = $1",
     )
     .bind(customer_id)
     .fetch_all(db)
@@ -654,7 +665,7 @@ async fn get_customer_profile_impl(
     .unwrap_or_default();
 
     let insights = sqlx::query_as::<_, ClientLearningInsight>(
-        "SELECT * FROM client_learning_insights WHERE customer_id = ? ORDER BY created_at DESC",
+        "SELECT * FROM client_learning_insights WHERE customer_id = $1 ORDER BY created_at DESC",
     )
     .bind(customer_id)
     .fetch_all(db)
@@ -662,7 +673,7 @@ async fn get_customer_profile_impl(
     .unwrap_or_default();
 
     let patterns = sqlx::query_as::<_, ClientLearningPattern>(
-        "SELECT * FROM client_learning_patterns WHERE customer_id = ?",
+        "SELECT * FROM client_learning_patterns WHERE customer_id = $1",
     )
     .bind(customer_id)
     .fetch_all(db)
@@ -670,7 +681,7 @@ async fn get_customer_profile_impl(
     .unwrap_or_default();
 
     let orders = sqlx::query_as::<_, ClientOrder>(
-        "SELECT * FROM client_orders WHERE customer_id = ? ORDER BY order_date DESC",
+        "SELECT * FROM client_orders WHERE customer_id = $1 ORDER BY order_date DESC",
     )
     .bind(customer_id)
     .fetch_all(db)
@@ -678,7 +689,7 @@ async fn get_customer_profile_impl(
     .unwrap_or_default();
 
     let invoices = sqlx::query_as::<_, ClientInvoice>(
-        "SELECT * FROM client_invoices WHERE customer_id = ? ORDER BY invoice_date DESC",
+        "SELECT * FROM client_invoices WHERE customer_id = $1 ORDER BY invoice_date DESC",
     )
     .bind(customer_id)
     .fetch_all(db)
@@ -686,7 +697,7 @@ async fn get_customer_profile_impl(
     .unwrap_or_default();
 
     let payment_details = sqlx::query_as::<_, ClientPaymentDetail>(
-        "SELECT * FROM client_payment_details WHERE customer_id = ?",
+        "SELECT * FROM client_payment_details WHERE customer_id = $1",
     )
     .bind(customer_id)
     .fetch_all(db)
@@ -694,7 +705,7 @@ async fn get_customer_profile_impl(
     .unwrap_or_default();
 
     let contact_points = sqlx::query_as::<_, ClientContactPoint>(
-        "SELECT * FROM client_contact_points WHERE customer_id = ? ORDER BY is_primary DESC",
+        "SELECT * FROM client_contact_points WHERE customer_id = $1 ORDER BY is_primary DESC",
     )
     .bind(customer_id)
     .fetch_all(db)
@@ -702,7 +713,7 @@ async fn get_customer_profile_impl(
     .unwrap_or_default();
 
     let order_stage = sqlx::query_as::<_, ClientOrderStage>(
-        "SELECT * FROM client_order_stage WHERE customer_id = ? ORDER BY created_at DESC LIMIT 1",
+        "SELECT * FROM client_order_stage WHERE customer_id = $1 ORDER BY created_at DESC LIMIT 1",
     )
     .bind(customer_id)
     .fetch_optional(db)
@@ -710,7 +721,7 @@ async fn get_customer_profile_impl(
     .unwrap_or_default();
 
     let task_checklists = sqlx::query_as::<_, ClientTaskChecklist>(
-        "SELECT * FROM client_task_checklists WHERE customer_id = ? AND is_active = 1",
+        "SELECT * FROM client_task_checklists WHERE customer_id = $1 AND is_active = 1",
     )
     .bind(customer_id)
     .fetch_all(db)
@@ -718,7 +729,7 @@ async fn get_customer_profile_impl(
     .unwrap_or_default();
 
     let interaction_history = sqlx::query_as::<_, ClientInteractionHistory>(
-        "SELECT * FROM client_interaction_history WHERE customer_id = ? ORDER BY interaction_date DESC LIMIT 100",
+        "SELECT * FROM client_interaction_history WHERE customer_id = $1 ORDER BY interaction_date DESC LIMIT 100",
     )
     .bind(customer_id)
     .fetch_all(db)
@@ -726,7 +737,7 @@ async fn get_customer_profile_impl(
     .unwrap_or_default();
 
     let custom_sections = sqlx::query_as::<_, ClientCustomSection>(
-        "SELECT * FROM client_custom_sections WHERE customer_id = ? AND is_active = 1 ORDER BY display_order",
+        "SELECT * FROM client_custom_sections WHERE customer_id = $1 AND is_active = 1 ORDER BY display_order",
     )
     .bind(customer_id)
     .fetch_all(db)
@@ -734,7 +745,7 @@ async fn get_customer_profile_impl(
     .unwrap_or_default();
 
     let profile_sources = sqlx::query_as::<_, ClientProfileSource>(
-        "SELECT * FROM client_profile_sources WHERE customer_id = ?",
+        "SELECT * FROM client_profile_sources WHERE customer_id = $1",
     )
     .bind(customer_id)
     .fetch_all(db)
@@ -742,7 +753,7 @@ async fn get_customer_profile_impl(
     .unwrap_or_default();
 
     let rag_mappings = sqlx::query_as::<_, ClientRagMapping>(
-        "SELECT * FROM client_rag_mapping WHERE customer_id = ?",
+        "SELECT * FROM client_rag_mapping WHERE customer_id = $1",
     )
     .bind(customer_id)
     .fetch_all(db)
@@ -777,7 +788,7 @@ async fn list_channel_ids(
     Path(customer_id): Path<String>,
 ) -> Result<Json<Vec<CustomerChannelId>>, (StatusCode, Json<serde_json::Value>)> {
     let channel_ids = sqlx::query_as::<_, CustomerChannelId>(
-        "SELECT * FROM customer_channel_ids WHERE customer_id = ?",
+        "SELECT * FROM customer_channel_ids WHERE customer_id = $1",
     )
     .bind(&customer_id)
     .fetch_all(&state.db)
@@ -799,8 +810,8 @@ async fn create_channel_id(
     let id = format!("cc_{}", Uuid::new_v4());
 
     sqlx::query(
-        "INSERT INTO customer_channel_ids (id, customer_id, channel_type, channel_identifier, is_primary) 
-         VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO customer_channel_ids (id, customer_id, channel_type, channel_identifier, is_primary)
+         VALUES ($1, $2, $3, $4, $5)",
     )
     .bind(&id)
     .bind(&customer_id)
@@ -814,7 +825,7 @@ async fn create_channel_id(
         Json(serde_json::json!({ "error": e.to_string() })),
     ))?;
 
-    let channel_id = sqlx::query_as::<_, CustomerChannelId>("SELECT * FROM customer_channel_ids WHERE id = ?")
+    let channel_id = sqlx::query_as::<_, CustomerChannelId>("SELECT * FROM customer_channel_ids WHERE id = $1")
         .bind(&id)
         .fetch_one(db)
         .await
@@ -830,7 +841,7 @@ async fn delete_channel_id(
     State(state): State<AppState>,
     Path((customer_id, channel_id)): Path<(String, String)>,
 ) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
-    sqlx::query("DELETE FROM customer_channel_ids WHERE id = ? AND customer_id = ?")
+    sqlx::query("DELETE FROM customer_channel_ids WHERE id = $1 AND customer_id = $2")
         .bind(&channel_id)
         .bind(&customer_id)
         .execute(&state.db)
@@ -852,7 +863,7 @@ async fn list_insights(
     Path(customer_id): Path<String>,
 ) -> Result<Json<Vec<ClientLearningInsight>>, (StatusCode, Json<serde_json::Value>)> {
     let insights = sqlx::query_as::<_, ClientLearningInsight>(
-        "SELECT * FROM client_learning_insights WHERE customer_id = ? ORDER BY created_at DESC",
+        "SELECT * FROM client_learning_insights WHERE customer_id = $1 ORDER BY created_at DESC",
     )
     .bind(&customer_id)
     .fetch_all(&state.db)
@@ -877,7 +888,7 @@ async fn create_insight(
     sqlx::query(
         "INSERT INTO client_learning_insights (id, customer_id, insight_type, category, insight, 
          confidence, source_conversation_id, source_message_id, extracted_at) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
     )
     .bind(&id)
     .bind(&customer_id)
@@ -895,7 +906,7 @@ async fn create_insight(
         Json(serde_json::json!({ "error": e.to_string() })),
     ))?;
 
-    let insight = sqlx::query_as::<_, ClientLearningInsight>("SELECT * FROM client_learning_insights WHERE id = ?")
+    let insight = sqlx::query_as::<_, ClientLearningInsight>("SELECT * FROM client_learning_insights WHERE id = $1")
         .bind(&id)
         .fetch_one(db)
         .await
@@ -912,7 +923,7 @@ async fn get_insight(
     Path((_customer_id, insight_id)): Path<(String, String)>,
 ) -> Result<Json<ClientLearningInsight>, (StatusCode, Json<serde_json::Value>)> {
     let insight = sqlx::query_as::<_, ClientLearningInsight>(
-        "SELECT * FROM client_learning_insights WHERE id = ?",
+        "SELECT * FROM client_learning_insights WHERE id = $1",
     )
     .bind(&insight_id)
     .fetch_one(&state.db)
@@ -933,8 +944,8 @@ async fn update_insight(
     let db = &state.db;
 
     sqlx::query(
-        "UPDATE client_learning_insights SET insight_type = ?, category = ?, insight = ?, 
-         confidence = ?, updated_at = NOW() WHERE id = ?",
+        "UPDATE client_learning_insights SET insight_type = $1, category = $2, insight = $3,
+         confidence = $4, updated_at = NOW() WHERE id = $5",
     )
     .bind(&req.insight_type)
     .bind(&req.category)
@@ -948,7 +959,7 @@ async fn update_insight(
         Json(serde_json::json!({ "error": e.to_string() })),
     ))?;
 
-    let insight = sqlx::query_as::<_, ClientLearningInsight>("SELECT * FROM client_learning_insights WHERE id = ?")
+    let insight = sqlx::query_as::<_, ClientLearningInsight>("SELECT * FROM client_learning_insights WHERE id = $1")
         .bind(&insight_id)
         .fetch_one(db)
         .await
@@ -964,7 +975,7 @@ async fn delete_insight(
     State(state): State<AppState>,
     Path((_customer_id, insight_id)): Path<(String, String)>,
 ) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
-    sqlx::query("DELETE FROM client_learning_insights WHERE id = ?")
+    sqlx::query("DELETE FROM client_learning_insights WHERE id = $1")
         .bind(&insight_id)
         .execute(&state.db)
         .await
@@ -985,7 +996,7 @@ async fn list_patterns(
     Path(customer_id): Path<String>,
 ) -> Result<Json<Vec<ClientLearningPattern>>, (StatusCode, Json<serde_json::Value>)> {
     let patterns = sqlx::query_as::<_, ClientLearningPattern>(
-        "SELECT * FROM client_learning_patterns WHERE customer_id = ?",
+        "SELECT * FROM client_learning_patterns WHERE customer_id = $1",
     )
     .bind(&customer_id)
     .fetch_all(&state.db)
@@ -1018,7 +1029,7 @@ async fn create_pattern(
     sqlx::query(
         "INSERT INTO client_learning_patterns (id, customer_id, pattern_type, pattern_data, 
          confidence, sample_size, last_updated) 
-         VALUES (?, ?, ?, ?, ?, ?, ?)",
+         VALUES ($1, $2, $3, $4, $5, $6, $7)",
     )
     .bind(&id)
     .bind(&customer_id)
@@ -1034,7 +1045,7 @@ async fn create_pattern(
         Json(serde_json::json!({ "error": e.to_string() })),
     ))?;
 
-    let pattern = sqlx::query_as::<_, ClientLearningPattern>("SELECT * FROM client_learning_patterns WHERE id = ?")
+    let pattern = sqlx::query_as::<_, ClientLearningPattern>("SELECT * FROM client_learning_patterns WHERE id = $1")
         .bind(&id)
         .fetch_one(db)
         .await
@@ -1050,7 +1061,7 @@ async fn delete_pattern(
     State(state): State<AppState>,
     Path((_customer_id, pattern_id)): Path<(String, String)>,
 ) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
-    sqlx::query("DELETE FROM client_learning_patterns WHERE id = ?")
+    sqlx::query("DELETE FROM client_learning_patterns WHERE id = $1")
         .bind(&pattern_id)
         .execute(&state.db)
         .await
@@ -1071,7 +1082,7 @@ async fn list_preferences(
     Path(customer_id): Path<String>,
 ) -> Result<Json<Vec<ClientPreference>>, (StatusCode, Json<serde_json::Value>)> {
     let preferences = sqlx::query_as::<_, ClientPreference>(
-        "SELECT * FROM client_preferences WHERE customer_id = ?",
+        "SELECT * FROM client_preferences WHERE customer_id = $1",
     )
     .bind(&customer_id)
     .fetch_all(&state.db)
@@ -1094,7 +1105,7 @@ async fn create_preference(
 
     sqlx::query(
         "INSERT INTO client_preferences (id, customer_id, preference_type, preference_value, source) 
-         VALUES (?, ?, ?, ?, ?)",
+         VALUES ($1, $2, $3, $4, $5)",
     )
     .bind(&id)
     .bind(&customer_id)
@@ -1108,7 +1119,7 @@ async fn create_preference(
         Json(serde_json::json!({ "error": e.to_string() })),
     ))?;
 
-    let preference = sqlx::query_as::<_, ClientPreference>("SELECT * FROM client_preferences WHERE id = ?")
+    let preference = sqlx::query_as::<_, ClientPreference>("SELECT * FROM client_preferences WHERE id = $1")
         .bind(&id)
         .fetch_one(db)
         .await
@@ -1124,7 +1135,7 @@ async fn delete_preference(
     State(state): State<AppState>,
     Path((_customer_id, pref_id)): Path<(String, String)>,
 ) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
-    sqlx::query("DELETE FROM client_preferences WHERE id = ?")
+    sqlx::query("DELETE FROM client_preferences WHERE id = $1")
         .bind(&pref_id)
         .execute(&state.db)
         .await
@@ -1145,7 +1156,7 @@ async fn list_orders(
     Path(customer_id): Path<String>,
 ) -> Result<Json<Vec<ClientOrder>>, (StatusCode, Json<serde_json::Value>)> {
     let orders = sqlx::query_as::<_, ClientOrder>(
-        "SELECT * FROM client_orders WHERE customer_id = ? ORDER BY order_date DESC",
+        "SELECT * FROM client_orders WHERE customer_id = $1 ORDER BY order_date DESC",
     )
     .bind(&customer_id)
     .fetch_all(&state.db)
@@ -1169,7 +1180,7 @@ async fn create_order(
     sqlx::query(
         "INSERT INTO client_orders (id, customer_id, order_number, order_date, total_amount, 
          currency, items, payment_method, channel) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
     )
     .bind(&id)
     .bind(&customer_id)
@@ -1187,7 +1198,7 @@ async fn create_order(
         Json(serde_json::json!({ "error": e.to_string() })),
     ))?;
 
-    let order = sqlx::query_as::<_, ClientOrder>("SELECT * FROM client_orders WHERE id = ?")
+    let order = sqlx::query_as::<_, ClientOrder>("SELECT * FROM client_orders WHERE id = $1")
         .bind(&id)
         .fetch_one(db)
         .await
@@ -1203,7 +1214,7 @@ async fn get_order(
     State(state): State<AppState>,
     Path((_customer_id, order_id)): Path<(String, String)>,
 ) -> Result<Json<ClientOrder>, (StatusCode, Json<serde_json::Value>)> {
-    let order = sqlx::query_as::<_, ClientOrder>("SELECT * FROM client_orders WHERE id = ?")
+    let order = sqlx::query_as::<_, ClientOrder>("SELECT * FROM client_orders WHERE id = $1")
         .bind(&order_id)
         .fetch_one(&state.db)
         .await
@@ -1228,19 +1239,22 @@ async fn update_order(
 ) -> Result<Json<ClientOrder>, (StatusCode, Json<serde_json::Value>)> {
     let db = &state.db;
 
-    let mut sets = Vec::new();
-    if let Some(ref status) = req.status {
-        sets.push("status = ?");
+    let mut sets: Vec<String> = Vec::new();
+    let mut idx = 1;
+    if req.status.is_some() {
+        sets.push(format!("status = ${idx}"));
+        idx += 1;
     }
-    if let Some(ref ps) = req.payment_status {
-        sets.push("payment_status = ?");
+    if req.payment_status.is_some() {
+        sets.push(format!("payment_status = ${idx}"));
+        idx += 1;
     }
     if sets.is_empty() {
         return get_order(State(state), Path((_customer_id, order_id))).await;
     }
-    sets.push("updated_at = NOW()");
+    sets.push("updated_at = NOW()".to_string());
 
-    let sql = format!("UPDATE client_orders SET {} WHERE id = ?", sets.join(", "));
+    let sql = format!("UPDATE client_orders SET {} WHERE id = ${idx}", sets.join(", "));
     let mut query = sqlx::query(&sql);
     if let Some(ref status) = req.status {
         query = query.bind(status);
@@ -1256,7 +1270,7 @@ async fn update_order(
             Json(serde_json::json!({ "error": e.to_string() })),
         ))?;
 
-    let order = sqlx::query_as::<_, ClientOrder>("SELECT * FROM client_orders WHERE id = ?")
+    let order = sqlx::query_as::<_, ClientOrder>("SELECT * FROM client_orders WHERE id = $1")
         .bind(&order_id)
         .fetch_one(db)
         .await
@@ -1272,7 +1286,7 @@ async fn delete_order(
     State(state): State<AppState>,
     Path((_customer_id, order_id)): Path<(String, String)>,
 ) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
-    sqlx::query("DELETE FROM client_orders WHERE id = ?")
+    sqlx::query("DELETE FROM client_orders WHERE id = $1")
         .bind(&order_id)
         .execute(&state.db)
         .await
@@ -1293,7 +1307,7 @@ async fn list_invoices(
     Path(customer_id): Path<String>,
 ) -> Result<Json<Vec<ClientInvoice>>, (StatusCode, Json<serde_json::Value>)> {
     let invoices = sqlx::query_as::<_, ClientInvoice>(
-        "SELECT * FROM client_invoices WHERE customer_id = ? ORDER BY invoice_date DESC",
+        "SELECT * FROM client_invoices WHERE customer_id = $1 ORDER BY invoice_date DESC",
     )
     .bind(&customer_id)
     .fetch_all(&state.db)
@@ -1317,7 +1331,7 @@ async fn create_invoice(
     sqlx::query(
         "INSERT INTO client_invoices (id, customer_id, invoice_number, order_id, invoice_date, 
          due_date, total_amount, currency) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
     )
     .bind(&id)
     .bind(&customer_id)
@@ -1334,7 +1348,7 @@ async fn create_invoice(
         Json(serde_json::json!({ "error": e.to_string() })),
     ))?;
 
-    let invoice = sqlx::query_as::<_, ClientInvoice>("SELECT * FROM client_invoices WHERE id = ?")
+    let invoice = sqlx::query_as::<_, ClientInvoice>("SELECT * FROM client_invoices WHERE id = $1")
         .bind(&id)
         .fetch_one(db)
         .await
@@ -1350,7 +1364,7 @@ async fn get_invoice(
     State(state): State<AppState>,
     Path((_customer_id, invoice_id)): Path<(String, String)>,
 ) -> Result<Json<ClientInvoice>, (StatusCode, Json<serde_json::Value>)> {
-    let invoice = sqlx::query_as::<_, ClientInvoice>("SELECT * FROM client_invoices WHERE id = ?")
+    let invoice = sqlx::query_as::<_, ClientInvoice>("SELECT * FROM client_invoices WHERE id = $1")
         .bind(&invoice_id)
         .fetch_one(&state.db)
         .await
@@ -1377,7 +1391,7 @@ async fn update_invoice(
 
     if let Some(ref status) = req.status {
         sqlx::query(
-            "UPDATE client_invoices SET status = ?, updated_at = NOW() WHERE id = ?",
+            "UPDATE client_invoices SET status = $1, updated_at = NOW() WHERE id = $2",
         )
         .bind(status)
         .bind(&invoice_id)
@@ -1389,7 +1403,7 @@ async fn update_invoice(
         ))?;
     }
 
-    let invoice = sqlx::query_as::<_, ClientInvoice>("SELECT * FROM client_invoices WHERE id = ?")
+    let invoice = sqlx::query_as::<_, ClientInvoice>("SELECT * FROM client_invoices WHERE id = $1")
         .bind(&invoice_id)
         .fetch_one(db)
         .await
@@ -1405,7 +1419,7 @@ async fn delete_invoice(
     State(state): State<AppState>,
     Path((_customer_id, invoice_id)): Path<(String, String)>,
 ) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
-    sqlx::query("DELETE FROM client_invoices WHERE id = ?")
+    sqlx::query("DELETE FROM client_invoices WHERE id = $1")
         .bind(&invoice_id)
         .execute(&state.db)
         .await
@@ -1426,7 +1440,7 @@ async fn list_payment_details(
     Path(customer_id): Path<String>,
 ) -> Result<Json<Vec<ClientPaymentDetail>>, (StatusCode, Json<serde_json::Value>)> {
     let details = sqlx::query_as::<_, ClientPaymentDetail>(
-        "SELECT * FROM client_payment_details WHERE customer_id = ?",
+        "SELECT * FROM client_payment_details WHERE customer_id = $1",
     )
     .bind(&customer_id)
     .fetch_all(&state.db)
@@ -1450,7 +1464,7 @@ async fn create_payment_detail(
     sqlx::query(
         "INSERT INTO client_payment_details (id, customer_id, detail_type, account_holder, 
          account_number, bank_name, routing_number, card_last_four, is_default) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
     )
     .bind(&id)
     .bind(&customer_id)
@@ -1468,7 +1482,7 @@ async fn create_payment_detail(
         Json(serde_json::json!({ "error": e.to_string() })),
     ))?;
 
-    let detail = sqlx::query_as::<_, ClientPaymentDetail>("SELECT * FROM client_payment_details WHERE id = ?")
+    let detail = sqlx::query_as::<_, ClientPaymentDetail>("SELECT * FROM client_payment_details WHERE id = $1")
         .bind(&id)
         .fetch_one(db)
         .await
@@ -1484,7 +1498,7 @@ async fn delete_payment_detail(
     State(state): State<AppState>,
     Path((_customer_id, detail_id)): Path<(String, String)>,
 ) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
-    sqlx::query("DELETE FROM client_payment_details WHERE id = ?")
+    sqlx::query("DELETE FROM client_payment_details WHERE id = $1")
         .bind(&detail_id)
         .execute(&state.db)
         .await
@@ -1505,7 +1519,7 @@ async fn list_contact_points(
     Path(customer_id): Path<String>,
 ) -> Result<Json<Vec<ClientContactPoint>>, (StatusCode, Json<serde_json::Value>)> {
     let points = sqlx::query_as::<_, ClientContactPoint>(
-        "SELECT * FROM client_contact_points WHERE customer_id = ? ORDER BY is_primary DESC",
+        "SELECT * FROM client_contact_points WHERE customer_id = $1 ORDER BY is_primary DESC",
     )
     .bind(&customer_id)
     .fetch_all(&state.db)
@@ -1528,7 +1542,7 @@ async fn create_contact_point(
 
     sqlx::query(
         "INSERT INTO client_contact_points (id, customer_id, contact_type, contact_value, is_primary) 
-         VALUES (?, ?, ?, ?, ?)",
+         VALUES ($1, $2, $3, $4, $5)",
     )
     .bind(&id)
     .bind(&customer_id)
@@ -1542,7 +1556,7 @@ async fn create_contact_point(
         Json(serde_json::json!({ "error": e.to_string() })),
     ))?;
 
-    let point = sqlx::query_as::<_, ClientContactPoint>("SELECT * FROM client_contact_points WHERE id = ?")
+    let point = sqlx::query_as::<_, ClientContactPoint>("SELECT * FROM client_contact_points WHERE id = $1")
         .bind(&id)
         .fetch_one(db)
         .await
@@ -1558,7 +1572,7 @@ async fn delete_contact_point(
     State(state): State<AppState>,
     Path((_customer_id, point_id)): Path<(String, String)>,
 ) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
-    sqlx::query("DELETE FROM client_contact_points WHERE id = ?")
+    sqlx::query("DELETE FROM client_contact_points WHERE id = $1")
         .bind(&point_id)
         .execute(&state.db)
         .await
@@ -1579,7 +1593,7 @@ async fn get_order_stage(
     Path(customer_id): Path<String>,
 ) -> Result<Json<Option<ClientOrderStage>>, (StatusCode, Json<serde_json::Value>)> {
     let stage = sqlx::query_as::<_, ClientOrderStage>(
-        "SELECT * FROM client_order_stage WHERE customer_id = ? ORDER BY created_at DESC LIMIT 1",
+        "SELECT * FROM client_order_stage WHERE customer_id = $1 ORDER BY created_at DESC LIMIT 1",
     )
     .bind(&customer_id)
     .fetch_optional(&state.db)
@@ -1601,9 +1615,9 @@ async fn create_order_stage(
     let id = format!("stage_{}", Uuid::new_v4());
 
     sqlx::query(
-        "INSERT INTO client_order_stage (id, customer_id, stage_name, stage_value, probability, 
-         expected_close_date, notes) 
-         VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO client_order_stage (id, customer_id, stage_name, stage_value, probability,
+         expected_close_date, notes)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)",
     )
     .bind(&id)
     .bind(&customer_id)
@@ -1619,7 +1633,7 @@ async fn create_order_stage(
         Json(serde_json::json!({ "error": e.to_string() })),
     ))?;
 
-    let stage = sqlx::query_as::<_, ClientOrderStage>("SELECT * FROM client_order_stage WHERE id = ?")
+    let stage = sqlx::query_as::<_, ClientOrderStage>("SELECT * FROM client_order_stage WHERE id = $1")
         .bind(&id)
         .fetch_one(db)
         .await
@@ -1647,22 +1661,25 @@ async fn update_order_stage(
 ) -> Result<Json<ClientOrderStage>, (StatusCode, Json<serde_json::Value>)> {
     let db = &state.db;
 
-    let mut sets = Vec::new();
+    let mut sets: Vec<String> = Vec::new();
     let mut binds: Vec<&str> = Vec::new();
+    let mut idx = 1;
 
     if let Some(ref name) = req.stage_name {
-        sets.push("stage_name = ?");
+        sets.push(format!("stage_name = ${idx}"));
         binds.push(name);
+        idx += 1;
     }
     if let Some(ref notes) = req.notes {
-        sets.push("notes = ?");
+        sets.push(format!("notes = ${idx}"));
         binds.push(notes);
+        idx += 1;
     }
-    sets.push("updated_at = NOW()");
+    sets.push("updated_at = NOW()".to_string());
     binds.push("");
 
     if sets.is_empty() {
-        let stage = sqlx::query_as::<_, ClientOrderStage>("SELECT * FROM client_order_stage WHERE id = ?")
+        let stage = sqlx::query_as::<_, ClientOrderStage>("SELECT * FROM client_order_stage WHERE id = $1")
             .bind(&stage_id)
             .fetch_one(db)
             .await
@@ -1673,7 +1690,7 @@ async fn update_order_stage(
         return Ok(Json(stage));
     }
 
-    let query = format!("UPDATE client_order_stage SET {} WHERE id = ?", sets.join(", "));
+    let query = format!("UPDATE client_order_stage SET {} WHERE id = ${idx}", sets.join(", "));
     sqlx::query(&query)
         .bind(&stage_id)
         .execute(db)
@@ -1683,7 +1700,7 @@ async fn update_order_stage(
             Json(serde_json::json!({ "error": e.to_string() })),
         ))?;
 
-    let stage = sqlx::query_as::<_, ClientOrderStage>("SELECT * FROM client_order_stage WHERE id = ?")
+    let stage = sqlx::query_as::<_, ClientOrderStage>("SELECT * FROM client_order_stage WHERE id = $1")
         .bind(&stage_id)
         .fetch_one(db)
         .await
@@ -1699,7 +1716,7 @@ async fn delete_order_stage(
     State(state): State<AppState>,
     Path((_customer_id, stage_id)): Path<(String, String)>,
 ) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
-    sqlx::query("DELETE FROM client_order_stage WHERE id = ?")
+    sqlx::query("DELETE FROM client_order_stage WHERE id = $1")
         .bind(&stage_id)
         .execute(&state.db)
         .await
@@ -1720,7 +1737,7 @@ async fn list_checklists(
     Path(customer_id): Path<String>,
 ) -> Result<Json<Vec<ClientTaskChecklist>>, (StatusCode, Json<serde_json::Value>)> {
     let checklists = sqlx::query_as::<_, ClientTaskChecklist>(
-        "SELECT * FROM client_task_checklists WHERE customer_id = ? AND is_active = 1",
+        "SELECT * FROM client_task_checklists WHERE customer_id = $1 AND is_active = 1",
     )
     .bind(&customer_id)
     .fetch_all(&state.db)
@@ -1742,8 +1759,8 @@ async fn create_checklist(
     let id = format!("checklist_{}", Uuid::new_v4());
 
     sqlx::query(
-        "INSERT INTO client_task_checklists (id, customer_id, checklist_name, checklist_type) 
-         VALUES (?, ?, ?, ?)",
+        "INSERT INTO client_task_checklists (id, customer_id, checklist_name, checklist_type)
+         VALUES ($1, $2, $3, $4)",
     )
     .bind(&id)
     .bind(&customer_id)
@@ -1756,7 +1773,7 @@ async fn create_checklist(
         Json(serde_json::json!({ "error": e.to_string() })),
     ))?;
 
-    let checklist = sqlx::query_as::<_, ClientTaskChecklist>("SELECT * FROM client_task_checklists WHERE id = ?")
+    let checklist = sqlx::query_as::<_, ClientTaskChecklist>("SELECT * FROM client_task_checklists WHERE id = $1")
         .bind(&id)
         .fetch_one(db)
         .await
@@ -1773,7 +1790,7 @@ async fn get_checklist(
     Path((_customer_id, checklist_id)): Path<(String, String)>,
 ) -> Result<Json<ClientTaskChecklist>, (StatusCode, Json<serde_json::Value>)> {
     let checklist = sqlx::query_as::<_, ClientTaskChecklist>(
-        "SELECT * FROM client_task_checklists WHERE id = ?",
+        "SELECT * FROM client_task_checklists WHERE id = $1",
     )
     .bind(&checklist_id)
     .fetch_one(&state.db)
@@ -1790,7 +1807,7 @@ async fn delete_checklist(
     State(state): State<AppState>,
     Path((_customer_id, checklist_id)): Path<(String, String)>,
 ) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
-    sqlx::query("DELETE FROM client_task_checklists WHERE id = ?")
+    sqlx::query("DELETE FROM client_task_checklists WHERE id = $1")
         .bind(&checklist_id)
         .execute(&state.db)
         .await
@@ -1811,7 +1828,7 @@ async fn list_task_items(
     Path((_customer_id, checklist_id)): Path<(String, String)>,
 ) -> Result<Json<Vec<ClientTaskItem>>, (StatusCode, Json<serde_json::Value>)> {
     let items = sqlx::query_as::<_, ClientTaskItem>(
-        "SELECT * FROM client_task_items WHERE checklist_id = ? ORDER BY display_order",
+        "SELECT * FROM client_task_items WHERE checklist_id = $1 ORDER BY display_order",
     )
     .bind(&checklist_id)
     .fetch_all(&state.db)
@@ -1833,9 +1850,9 @@ async fn create_task_item(
     let id = format!("task_{}", Uuid::new_v4());
 
     sqlx::query(
-        "INSERT INTO client_task_items (id, checklist_id, task_name, task_description, priority, 
-         due_date, display_order) 
-         VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO client_task_items (id, checklist_id, task_name, task_description, priority,
+         due_date, display_order)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)",
     )
     .bind(&id)
     .bind(&checklist_id)
@@ -1851,7 +1868,7 @@ async fn create_task_item(
         Json(serde_json::json!({ "error": e.to_string() })),
     ))?;
 
-    let item = sqlx::query_as::<_, ClientTaskItem>("SELECT * FROM client_task_items WHERE id = ?")
+    let item = sqlx::query_as::<_, ClientTaskItem>("SELECT * FROM client_task_items WHERE id = $1")
         .bind(&id)
         .fetch_one(db)
         .await
@@ -1879,26 +1896,31 @@ async fn update_task_item(
 ) -> Result<Json<ClientTaskItem>, (StatusCode, Json<serde_json::Value>)> {
     let db = &state.db;
 
-    let mut sets = Vec::new();
+    let mut sets: Vec<String> = Vec::new();
     let mut binds: Vec<&str> = Vec::new();
+    let mut idx = 1;
 
     if let Some(ref name) = req.task_name {
-        sets.push("task_name = ?");
+        sets.push(format!("task_name = ${idx}"));
         binds.push(name);
+        idx += 1;
     }
     if let Some(ref desc) = req.task_description {
-        sets.push("task_description = ?");
+        sets.push(format!("task_description = ${idx}"));
         binds.push(desc);
+        idx += 1;
     }
     if let Some(completed) = req.is_completed {
-        sets.push("is_completed = ?");
+        sets.push(format!("is_completed = ${idx}"));
         binds.push(if completed { "1" } else { "0" });
+        idx += 1;
     }
     if let Some(ref priority) = req.priority {
-        sets.push("priority = ?");
+        sets.push(format!("priority = ${idx}"));
         binds.push(priority);
+        idx += 1;
     }
-    sets.push("updated_at = NOW()");
+    sets.push("updated_at = NOW()".to_string());
     binds.push("");
 
     if sets.is_empty() {
@@ -1918,7 +1940,7 @@ async fn update_task_item(
         }));
     }
 
-    let query = format!("UPDATE client_task_items SET {} WHERE id = ?", sets.join(", "));
+    let query = format!("UPDATE client_task_items SET {} WHERE id = ${idx}", sets.join(", "));
     sqlx::query(&query)
         .bind(&item_id)
         .execute(db)
@@ -1928,7 +1950,7 @@ async fn update_task_item(
             Json(serde_json::json!({ "error": e.to_string() })),
         ))?;
 
-    let item = sqlx::query_as::<_, ClientTaskItem>("SELECT * FROM client_task_items WHERE id = ?")
+    let item = sqlx::query_as::<_, ClientTaskItem>("SELECT * FROM client_task_items WHERE id = $1")
         .bind(&item_id)
         .fetch_one(db)
         .await
@@ -1944,7 +1966,7 @@ async fn delete_task_item(
     State(state): State<AppState>,
     Path((_customer_id, _checklist_id, item_id)): Path<(String, String, String)>,
 ) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
-    sqlx::query("DELETE FROM client_task_items WHERE id = ?")
+    sqlx::query("DELETE FROM client_task_items WHERE id = $1")
         .bind(&item_id)
         .execute(&state.db)
         .await
@@ -1965,7 +1987,7 @@ async fn list_interactions(
     Path(customer_id): Path<String>,
 ) -> Result<Json<Vec<ClientInteractionHistory>>, (StatusCode, Json<serde_json::Value>)> {
     let interactions = sqlx::query_as::<_, ClientInteractionHistory>(
-        "SELECT * FROM client_interaction_history WHERE customer_id = ? ORDER BY interaction_date DESC LIMIT 100",
+        "SELECT * FROM client_interaction_history WHERE customer_id = $1 ORDER BY interaction_date DESC LIMIT 100",
     )
     .bind(&customer_id)
     .fetch_all(&state.db)
@@ -1990,7 +2012,7 @@ async fn create_interaction(
     sqlx::query(
         "INSERT INTO client_interaction_history (id, customer_id, interaction_type, channel, 
          direction, summary, sentiment, duration_seconds, interaction_date, metadata) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
     )
     .bind(&id)
     .bind(&customer_id)
@@ -2010,7 +2032,7 @@ async fn create_interaction(
     ))?;
 
     let interaction = sqlx::query_as::<_, ClientInteractionHistory>(
-        "SELECT * FROM client_interaction_history WHERE id = ?",
+        "SELECT * FROM client_interaction_history WHERE id = $1",
     )
     .bind(&id)
     .fetch_one(db)
@@ -2027,7 +2049,7 @@ async fn delete_interaction(
     State(state): State<AppState>,
     Path((_customer_id, interaction_id)): Path<(String, String)>,
 ) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
-    sqlx::query("DELETE FROM client_interaction_history WHERE id = ?")
+    sqlx::query("DELETE FROM client_interaction_history WHERE id = $1")
         .bind(&interaction_id)
         .execute(&state.db)
         .await
@@ -2048,7 +2070,7 @@ async fn list_custom_sections(
     Path(customer_id): Path<String>,
 ) -> Result<Json<Vec<ClientCustomSection>>, (StatusCode, Json<serde_json::Value>)> {
     let sections = sqlx::query_as::<_, ClientCustomSection>(
-        "SELECT * FROM client_custom_sections WHERE customer_id = ? AND is_active = 1 ORDER BY display_order",
+        "SELECT * FROM client_custom_sections WHERE customer_id = $1 AND is_active = 1 ORDER BY display_order",
     )
     .bind(&customer_id)
     .fetch_all(&state.db)
@@ -2070,9 +2092,9 @@ async fn create_custom_section(
     let id = format!("section_{}", Uuid::new_v4());
 
     sqlx::query(
-        "INSERT INTO client_custom_sections (id, customer_id, section_name, section_type, 
-         section_source, display_order) 
-         VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO client_custom_sections (id, customer_id, section_name, section_type,
+         section_source, display_order)
+         VALUES ($1, $2, $3, $4, $5, $6)",
     )
     .bind(&id)
     .bind(&customer_id)
@@ -2087,7 +2109,7 @@ async fn create_custom_section(
         Json(serde_json::json!({ "error": e.to_string() })),
     ))?;
 
-    let section = sqlx::query_as::<_, ClientCustomSection>("SELECT * FROM client_custom_sections WHERE id = ?")
+    let section = sqlx::query_as::<_, ClientCustomSection>("SELECT * FROM client_custom_sections WHERE id = $1")
         .bind(&id)
         .fetch_one(db)
         .await
@@ -2104,7 +2126,7 @@ async fn get_custom_section(
     Path((_customer_id, section_id)): Path<(String, String)>,
 ) -> Result<Json<ClientCustomSection>, (StatusCode, Json<serde_json::Value>)> {
     let section = sqlx::query_as::<_, ClientCustomSection>(
-        "SELECT * FROM client_custom_sections WHERE id = ?",
+        "SELECT * FROM client_custom_sections WHERE id = $1",
     )
     .bind(&section_id)
     .fetch_one(&state.db)
@@ -2130,20 +2152,23 @@ async fn update_custom_section(
 ) -> Result<Json<ClientCustomSection>, (StatusCode, Json<serde_json::Value>)> {
     let db = &state.db;
 
-    let mut sets = Vec::new();
-    if let Some(ref name) = req.section_name {
-        sets.push("section_name = ?");
+    let mut sets: Vec<String> = Vec::new();
+    let mut idx = 1;
+    if req.section_name.is_some() {
+        sets.push(format!("section_name = ${idx}"));
+        idx += 1;
     }
-    if let Some(active) = req.is_active {
-        sets.push("is_active = ?");
+    if req.is_active.is_some() {
+        sets.push(format!("is_active = ${idx}"));
+        idx += 1;
     }
-    sets.push("updated_at = NOW()");
+    sets.push("updated_at = NOW()".to_string());
 
     if sets.is_empty() {
         return get_custom_section(State(state), Path((_customer_id, section_id))).await;
     }
 
-    let query = format!("UPDATE client_custom_sections SET {} WHERE id = ?", sets.join(", "));
+    let query = format!("UPDATE client_custom_sections SET {} WHERE id = ${idx}", sets.join(", "));
     sqlx::query(&query)
         .bind(&section_id)
         .execute(db)
@@ -2153,7 +2178,7 @@ async fn update_custom_section(
             Json(serde_json::json!({ "error": e.to_string() })),
         ))?;
 
-    let section = sqlx::query_as::<_, ClientCustomSection>("SELECT * FROM client_custom_sections WHERE id = ?")
+    let section = sqlx::query_as::<_, ClientCustomSection>("SELECT * FROM client_custom_sections WHERE id = $1")
         .bind(&section_id)
         .fetch_one(db)
         .await
@@ -2169,7 +2194,7 @@ async fn delete_custom_section(
     State(state): State<AppState>,
     Path((_customer_id, section_id)): Path<(String, String)>,
 ) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
-    sqlx::query("DELETE FROM client_custom_sections WHERE id = ?")
+    sqlx::query("DELETE FROM client_custom_sections WHERE id = $1")
         .bind(&section_id)
         .execute(&state.db)
         .await
@@ -2190,7 +2215,7 @@ async fn list_custom_section_data(
     Path((_customer_id, section_id)): Path<(String, String)>,
 ) -> Result<Json<Vec<ClientCustomSectionData>>, (StatusCode, Json<serde_json::Value>)> {
     let data = sqlx::query_as::<_, ClientCustomSectionData>(
-        "SELECT * FROM client_custom_section_data WHERE section_id = ? ORDER BY display_order",
+        "SELECT * FROM client_custom_section_data WHERE section_id = $1 ORDER BY display_order",
     )
     .bind(&section_id)
     .fetch_all(&state.db)
@@ -2212,9 +2237,9 @@ async fn create_custom_section_data(
     let id = format!("data_{}", Uuid::new_v4());
 
     sqlx::query(
-        "INSERT INTO client_custom_section_data (id, section_id, row_key, field_key, field_value, 
-         field_type, display_order) 
-         VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO client_custom_section_data (id, section_id, row_key, field_key, field_value,
+         field_type, display_order)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)",
     )
     .bind(&id)
     .bind(&section_id)
@@ -2230,7 +2255,7 @@ async fn create_custom_section_data(
         Json(serde_json::json!({ "error": e.to_string() })),
     ))?;
 
-    let data = sqlx::query_as::<_, ClientCustomSectionData>("SELECT * FROM client_custom_section_data WHERE id = ?")
+    let data = sqlx::query_as::<_, ClientCustomSectionData>("SELECT * FROM client_custom_section_data WHERE id = $1")
         .bind(&id)
         .fetch_one(db)
         .await
@@ -2250,8 +2275,8 @@ async fn update_custom_section_data(
     let db = &state.db;
 
     sqlx::query(
-        "UPDATE client_custom_section_data SET field_key = ?, field_value = ?, field_type = ?, 
-         updated_at = NOW() WHERE id = ?",
+        "UPDATE client_custom_section_data SET field_key = $1, field_value = $2, field_type = $3,
+         updated_at = NOW() WHERE id = $4",
     )
     .bind(&req.field_key)
     .bind(&req.field_value)
@@ -2264,7 +2289,7 @@ async fn update_custom_section_data(
         Json(serde_json::json!({ "error": e.to_string() })),
     ))?;
 
-    let data = sqlx::query_as::<_, ClientCustomSectionData>("SELECT * FROM client_custom_section_data WHERE id = ?")
+    let data = sqlx::query_as::<_, ClientCustomSectionData>("SELECT * FROM client_custom_section_data WHERE id = $1")
         .bind(&data_id)
         .fetch_one(db)
         .await
@@ -2280,7 +2305,7 @@ async fn delete_custom_section_data(
     State(state): State<AppState>,
     Path((_customer_id, _section_id, data_id)): Path<(String, String, String)>,
 ) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
-    sqlx::query("DELETE FROM client_custom_section_data WHERE id = ?")
+    sqlx::query("DELETE FROM client_custom_section_data WHERE id = $1")
         .bind(&data_id)
         .execute(&state.db)
         .await
@@ -2301,7 +2326,7 @@ async fn list_profile_sources(
     Path(customer_id): Path<String>,
 ) -> Result<Json<Vec<ClientProfileSource>>, (StatusCode, Json<serde_json::Value>)> {
     let sources = sqlx::query_as::<_, ClientProfileSource>(
-        "SELECT * FROM client_profile_sources WHERE customer_id = ?",
+        "SELECT * FROM client_profile_sources WHERE customer_id = $1",
     )
     .bind(&customer_id)
     .fetch_all(&state.db)
@@ -2323,9 +2348,9 @@ async fn create_profile_source(
     let id = format!("source_{}", Uuid::new_v4());
 
     sqlx::query(
-        "INSERT INTO client_profile_sources (id, customer_id, field_name, source_type, 
-         source_user_name, source_record_id, source_url, confidence_score) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO client_profile_sources (id, customer_id, field_name, source_type,
+         source_user_name, source_record_id, source_url, confidence_score)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
     )
     .bind(&id)
     .bind(&customer_id)
@@ -2342,7 +2367,7 @@ async fn create_profile_source(
         Json(serde_json::json!({ "error": e.to_string() })),
     ))?;
 
-    let source = sqlx::query_as::<_, ClientProfileSource>("SELECT * FROM client_profile_sources WHERE id = ?")
+    let source = sqlx::query_as::<_, ClientProfileSource>("SELECT * FROM client_profile_sources WHERE id = $1")
         .bind(&id)
         .fetch_one(db)
         .await
@@ -2358,7 +2383,7 @@ async fn delete_profile_source(
     State(state): State<AppState>,
     Path((_customer_id, source_id)): Path<(String, String)>,
 ) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
-    sqlx::query("DELETE FROM client_profile_sources WHERE id = ?")
+    sqlx::query("DELETE FROM client_profile_sources WHERE id = $1")
         .bind(&source_id)
         .execute(&state.db)
         .await
@@ -2379,7 +2404,7 @@ async fn list_rag_mappings(
     Path(customer_id): Path<String>,
 ) -> Result<Json<Vec<ClientRagMapping>>, (StatusCode, Json<serde_json::Value>)> {
     let mappings = sqlx::query_as::<_, ClientRagMapping>(
-        "SELECT * FROM client_rag_mapping WHERE customer_id = ?",
+        "SELECT * FROM client_rag_mapping WHERE customer_id = $1",
     )
     .bind(&customer_id)
     .fetch_all(&state.db)
@@ -2401,8 +2426,8 @@ async fn create_rag_mapping(
     let id = format!("rag_{}", Uuid::new_v4());
 
     sqlx::query(
-        "INSERT INTO client_rag_mapping (id, customer_id, section_type, section_id, is_indexed) 
-         VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO client_rag_mapping (id, customer_id, section_type, section_id, is_indexed)
+         VALUES ($1, $2, $3, $4, $5)",
     )
     .bind(&id)
     .bind(&customer_id)
@@ -2416,7 +2441,7 @@ async fn create_rag_mapping(
         Json(serde_json::json!({ "error": e.to_string() })),
     ))?;
 
-    let mapping = sqlx::query_as::<_, ClientRagMapping>("SELECT * FROM client_rag_mapping WHERE id = ?")
+    let mapping = sqlx::query_as::<_, ClientRagMapping>("SELECT * FROM client_rag_mapping WHERE id = $1")
         .bind(&id)
         .fetch_one(db)
         .await
@@ -2432,7 +2457,7 @@ async fn delete_rag_mapping(
     State(state): State<AppState>,
     Path((_customer_id, mapping_id)): Path<(String, String)>,
 ) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
-    sqlx::query("DELETE FROM client_rag_mapping WHERE id = ?")
+    sqlx::query("DELETE FROM client_rag_mapping WHERE id = $1")
         .bind(&mapping_id)
         .execute(&state.db)
         .await
