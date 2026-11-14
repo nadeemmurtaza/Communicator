@@ -349,7 +349,7 @@ struct LeadFacts {
 async fn load_history(state: &AppState, conversation_id: &str) -> Result<Thread, ReplyError> {
     let rows = sqlx::query(
         "SELECT direction, body, COALESCE(sender_name, '') AS sender_name FROM messages \
-         WHERE conversation_id = ? ORDER BY COALESCE(sent_at, created_at) ASC LIMIT ?",
+         WHERE conversation_id = $1 ORDER BY COALESCE(sent_at, created_at) ASC LIMIT $2",
     )
     .bind(conversation_id)
     .bind(MAX_HISTORY_MESSAGES)
@@ -412,7 +412,7 @@ async fn service_context(
     let rows = match sqlx::query(
         "SELECT name, COALESCE(summary, '') AS summary, COALESCE(details, '') AS details, \
                 COALESCE(target_institution_types, '[]') AS targets \
-         FROM services WHERE COALESCE(tenant_key, '') = ? ORDER BY name ASC",
+         FROM services WHERE COALESCE(tenant_key, '') = $1 ORDER BY name ASC",
     )
     .bind(tenant_key)
     .fetch_all(&state.db)
@@ -478,8 +478,8 @@ async fn knowledge_context(
     warnings: &mut Vec<String>,
 ) -> String {
     let rows = match sqlx::query(
-        "SELECT title, content FROM knowledge_base_entries WHERE COALESCE(tenant_key, '') = ? \
-         ORDER BY updated_at DESC LIMIT ?",
+        "SELECT title, content FROM knowledge_base_entries WHERE COALESCE(tenant_key, '') = $1 \
+         ORDER BY updated_at DESC LIMIT $2",
     )
     .bind(tenant_key)
     .bind(MAX_KB_ENTRIES)
@@ -523,7 +523,7 @@ async fn memory_context(
     }
     let rows = match sqlx::query(
         "SELECT fact, COALESCE(category, '') AS category, confidence FROM contact_memories \
-         WHERE contact_id = ? ORDER BY COALESCE(noted_at, created_at) DESC LIMIT ?",
+         WHERE contact_id = $1 ORDER BY COALESCE(noted_at, created_at) DESC LIMIT $2",
     )
     .bind(contact_id)
     .bind(MAX_MEMORIES)
@@ -606,7 +606,7 @@ async fn build_user_prompt(
             "SELECT name, COALESCE(institution_type, '') AS institution_type, \
                     COALESCE(city, '') AS city, \
                     COALESCE(qualification_rationale, '') AS qualification_rationale \
-             FROM leads WHERE id = ? LIMIT 1",
+             FROM leads WHERE id = $1 LIMIT 1",
         )
         .bind(&lead_id)
         .fetch_optional(&state.db)
@@ -730,7 +730,7 @@ pub async fn generate_reply(
     let conversation = sqlx::query(
         "SELECT id, COALESCE(contact_id, '') AS contact_id, state, \
                 COALESCE(resolution_type, '') AS resolution_type \
-         FROM conversations WHERE id = ? LIMIT 1",
+         FROM conversations WHERE id = $1 LIMIT 1",
     )
     .bind(conversation_id)
     .fetch_optional(&state.db)
@@ -761,7 +761,7 @@ pub async fn generate_reply(
 
     let (projection, _missing) = crate::routes::contacts::contact_projection(&state.db).await;
     let select_sql = format!(
-        "SELECT {} FROM contacts WHERE id = ? LIMIT 1",
+        "SELECT {} FROM contacts WHERE id = $1 LIMIT 1",
         projection.join(", ")
     );
     let contact = sqlx::query(&select_sql)
@@ -785,7 +785,7 @@ pub async fn generate_reply(
         .flatten()
         .filter(|v| !v.trim().is_empty());
     let conv_tenant: Option<String> = sqlx::query_scalar::<_, Option<String>>(
-        "SELECT tenant_key FROM conversations WHERE id = ? LIMIT 1",
+        "SELECT tenant_key FROM conversations WHERE id = $1 LIMIT 1",
     )
     .bind(conversation_id)
     .fetch_optional(&state.db)
@@ -874,7 +874,7 @@ pub async fn generate_reply(
                 .ok()
                 .flatten();
             if stored_language.as_deref() != Some(detected) {
-                let updated = sqlx::query("UPDATE contacts SET language = ? WHERE id = ?")
+                let updated = sqlx::query("UPDATE contacts SET language = $1 WHERE id = $2")
                     .bind(detected)
                     .bind(&contact_id)
                     .execute(&state.db)
@@ -1003,7 +1003,7 @@ pub async fn generate_reply(
         conversation_state = Some("hot_lead".to_string());
     }
     if let Some(new_state) = conversation_state.as_deref() {
-        let updated = sqlx::query("UPDATE conversations SET state = ? WHERE id = ?")
+        let updated = sqlx::query("UPDATE conversations SET state = $1 WHERE id = $2")
             .bind(new_state)
             .bind(conversation_id)
             .execute(&state.db)
@@ -1026,7 +1026,7 @@ pub async fn generate_reply(
         }
     }
     if let Some(resolution) = resolution_type.as_deref() {
-        let updated = sqlx::query("UPDATE conversations SET resolution_type = ? WHERE id = ?")
+        let updated = sqlx::query("UPDATE conversations SET resolution_type = $1 WHERE id = $2")
             .bind(resolution)
             .bind(conversation_id)
             .execute(&state.db)
@@ -1058,7 +1058,7 @@ pub async fn generate_reply(
 
     let inserted = sqlx::query(
         "INSERT INTO drafts (id, conversation_id, body, confidence, citations, status, created_at, updated_at) \
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
     )
     .bind(&draft_id)
     .bind(conversation_id)
@@ -1211,7 +1211,7 @@ async fn maybe_handle_refund_claim(
 
     // Reuse a pending session for this conversation instead of opening a second.
     let existing = sqlx::query(
-        "SELECT id, session_token FROM live_proof_sessions WHERE conversation_id = ? \
+        "SELECT id, session_token FROM live_proof_sessions WHERE conversation_id = $1 \
          AND status = 'pending' ORDER BY created_at DESC LIMIT 1",
     )
     .bind(conversation_id)

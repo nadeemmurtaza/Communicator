@@ -295,9 +295,9 @@ pub async fn refresh_channel_info(state: &AppState) -> Value {
         let now = chrono::Utc::now().to_rfc3339();
         let updated = sqlx::query(
             "UPDATE integration_settings SET \
-               whatsapp_display_number = COALESCE(NULLIF(?, ''), whatsapp_display_number), \
-               whatsapp_verified_name = COALESCE(NULLIF(?, ''), whatsapp_verified_name), \
-               whatsapp_verified_at = ?, updated_at = ? \
+               whatsapp_display_number = COALESCE(NULLIF($1, ''), whatsapp_display_number), \
+               whatsapp_verified_name = COALESCE(NULLIF($2, ''), whatsapp_verified_name), \
+               whatsapp_verified_at = $3, updated_at = $4 \
              WHERE id = (SELECT id FROM integration_settings LIMIT 1)",
         )
         .bind(&profile.display_phone_number)
@@ -330,7 +330,7 @@ pub async fn refresh_channel_info(state: &AppState) -> Value {
             let settings_id = uuid::Uuid::new_v4().simple().to_string();
             let inserted = sqlx::query(
                 "INSERT INTO integration_settings (id, whatsapp_display_number, \
-                 whatsapp_verified_name, whatsapp_verified_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+                 whatsapp_verified_name, whatsapp_verified_at, updated_at) VALUES ($1, $2, $3, $4, $5)",
             )
             .bind(&settings_id)
             .bind(&profile.display_phone_number)

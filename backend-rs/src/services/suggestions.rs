@@ -185,7 +185,7 @@ async fn get_conversation_context(
 
     let messages: Vec<MessageRow> = sqlx::query_as(
         "SELECT id, body, sender, direction, created_at
-         FROM messages WHERE conversation_id = ?
+         FROM messages WHERE conversation_id = $1
          ORDER BY created_at ASC LIMIT 50",
     )
     .bind(conversation_id)
@@ -220,7 +220,7 @@ async fn get_conversation_context(
     let contact_name: Option<String> = sqlx::query_scalar(
         "SELECT c.person_name FROM contacts c
          JOIN conversations cv ON cv.contact_id = c.id
-         WHERE cv.id = ?",
+         WHERE cv.id = $1",
     )
     .bind(conversation_id)
     .fetch_optional(&state.db)
@@ -230,7 +230,7 @@ async fn get_conversation_context(
     let contact_channel: Option<String> = sqlx::query_scalar(
         "SELECT c.channel FROM contacts c
          JOIN conversations cv ON cv.contact_id = c.id
-         WHERE cv.id = ?",
+         WHERE cv.id = $1",
     )
     .bind(conversation_id)
     .fetch_optional(&state.db)
@@ -371,7 +371,7 @@ async fn store_suggestion(
 
     // Check for duplicates
     let duplicate: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM suggestions WHERE title = ? AND status = 'suggested'",
+        "SELECT COUNT(*) FROM suggestions WHERE title = $1 AND status = 'suggested'",
     )
     .bind(&title)
     .fetch_one(&state.db)
@@ -390,7 +390,7 @@ async fn store_suggestion(
         "INSERT INTO suggestions (id, suggestion_type, title, description, suggested_content,
          source_feedback_id, source_conversation_id, source_message_body, confidence, category,
          status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'suggested', ?, ?)",
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'suggested', $11, $12)",
     )
     .bind(&id)
     .bind(&suggestion_type)
@@ -565,7 +565,7 @@ pub async fn approve_suggestion(
     let now = Utc::now().to_rfc3339();
 
     sqlx::query(
-        "UPDATE suggestions SET status = 'approved', approved_by = ?, approved_at = ?, updated_at = ? WHERE id = ?",
+        "UPDATE suggestions SET status = 'approved', approved_by = $1, approved_at = $2, updated_at = $3 WHERE id = $4",
     )
     .bind(approved_by)
     .bind(&now)
@@ -587,7 +587,7 @@ pub async fn dismiss_suggestion(
     let now = Utc::now().to_rfc3339();
 
     sqlx::query(
-        "UPDATE suggestions SET status = 'dismissed', updated_at = ? WHERE id = ?",
+        "UPDATE suggestions SET status = 'dismissed', updated_at = $1 WHERE id = $2",
     )
     .bind(&now)
     .bind(suggestion_id)
@@ -601,7 +601,7 @@ pub async fn dismiss_suggestion(
 /// Get a suggestion by ID.
 async fn get_suggestion_by_id(state: &AppState, id: &str) -> Result<Suggestion, String> {
     let row = sqlx::query(
-        "SELECT id, suggestion_type, title, description, suggested_content, source_feedback_id, source_conversation_id, source_message_body, confidence, category, status, approved_by, approved_at, created_at, updated_at FROM suggestions WHERE id = ?",
+        "SELECT id, suggestion_type, title, description, suggested_content, source_feedback_id, source_conversation_id, source_message_body, confidence, category, status, approved_by, approved_at, created_at, updated_at FROM suggestions WHERE id = $1",
     )
     .bind(id)
     .fetch_one(&state.db)
@@ -641,7 +641,7 @@ pub async fn batch_analyze_negative_feedback(
     let feedback_ids: Vec<String> = sqlx::query_scalar(
         "SELECT mf.id FROM message_feedback mf
          WHERE mf.rating = -1
-         AND mf.created_at >= datetime('now', ? || ' hours')
+         AND mf.created_at >= datetime('now', $1 || ' hours')
          AND NOT EXISTS (
              SELECT 1 FROM suggestions s WHERE s.source_feedback_id = mf.id
          )

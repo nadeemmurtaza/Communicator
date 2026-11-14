@@ -185,7 +185,7 @@ async fn fetch_conversation_messages(
 
     let rows: Vec<MessageRow> = sqlx::query_as(
         "SELECT sender, direction, body FROM messages
-         WHERE conversation_id = ? ORDER BY created_at DESC LIMIT 30",
+         WHERE conversation_id = $1 ORDER BY created_at DESC LIMIT 30",
     )
     .bind(conversation_id)
     .fetch_all(&state.db)
@@ -427,7 +427,7 @@ async fn store_topic(state: &AppState, topic: &ConversationTopic) -> Result<(), 
 
     // Upsert: delete old and insert new
     let _ = sqlx::query(
-        "DELETE FROM conversation_topics WHERE conversation_id = ? AND is_overridden = 0",
+        "DELETE FROM conversation_topics WHERE conversation_id = $1 AND is_overridden = 0",
     )
     .bind(&topic.conversation_id)
     .execute(&state.db)
@@ -436,7 +436,7 @@ async fn store_topic(state: &AppState, topic: &ConversationTopic) -> Result<(), 
     sqlx::query(
         "INSERT INTO conversation_topics (id, conversation_id, topic, subtopic, confidence,
          keywords, is_overridden, overridden_by, categorized_at, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
     )
     .bind(&topic.id)
     .bind(&topic.conversation_id)
@@ -591,7 +591,7 @@ pub async fn get_topic_summary(state: &AppState) -> Result<TopicSummary, String>
     // Current period
     let current_rows: Vec<TopicCountRow> = sqlx::query_as(
         "SELECT topic, COUNT(DISTINCT conversation_id) as count
-         FROM conversation_topics WHERE categorized_at >= ?
+         FROM conversation_topics WHERE categorized_at >= $1
          GROUP BY topic",
     )
     .bind(&seven_days_ago)
@@ -602,7 +602,7 @@ pub async fn get_topic_summary(state: &AppState) -> Result<TopicSummary, String>
     // Previous period
     let previous_rows: Vec<TopicCountRow> = sqlx::query_as(
         "SELECT topic, COUNT(DISTINCT conversation_id) as count
-         FROM conversation_topics WHERE categorized_at >= ? AND categorized_at < ?
+         FROM conversation_topics WHERE categorized_at >= $1 AND categorized_at < $2
          GROUP BY topic",
     )
     .bind(&fourteen_days_ago)
@@ -678,7 +678,7 @@ pub async fn override_topic(
 
     // Delete non-overridden entry if exists
     let _ = sqlx::query(
-        "DELETE FROM conversation_topics WHERE conversation_id = ? AND is_overridden = 0",
+        "DELETE FROM conversation_topics WHERE conversation_id = $1 AND is_overridden = 0",
     )
     .bind(conversation_id)
     .execute(&state.db)

@@ -750,7 +750,7 @@ fn row_to_settings(row: &sqlx::postgres::PgRow) -> IntegrationSettings {
 /// saved for this tenant -- callers that must not write use this instead of
 /// `get_or_create`.
 pub async fn load(pool: &DbPool, tenant_key: &str) -> Result<Option<IntegrationSettings>, sqlx::Error> {
-    let sql = format!("SELECT {SELECT_COLUMNS} FROM integration_settings WHERE tenant_key = ? LIMIT 1");
+    let sql = format!("SELECT {SELECT_COLUMNS} FROM integration_settings WHERE tenant_key = $1 LIMIT 1");
     let row = sqlx::query(&sql)
         .bind(tenant_key)
         .fetch_optional(pool)
@@ -786,7 +786,7 @@ pub async fn get_or_create(
     sqlx::query(
         "INSERT INTO integration_settings (id, tenant_key, whatsapp_provider, meta_access_token, \
          meta_phone_number_id, meta_app_secret, meta_webhook_verify_token, business_timezone, \
-         updated_at) VALUES (?, ?, 'meta', ?, ?, ?, ?, 'UTC', ?)",
+         updated_at) VALUES ($1, $2, 'meta', $3, $4, $5, $6, 'UTC', $7)",
     )
     .bind(&id)
     .bind(tenant_key)
@@ -812,7 +812,13 @@ pub async fn update(
     patch: &Value,
 ) -> Result<UpdateReport, sqlx::Error> {
     let columns = writable_columns();
-    let mut sets: Vec<String> = Vec::new();
+    // Built per-type so the SQL fragment order matches the order values are
+    // actually bound below (binds_text, then binds_int, then binds_bool) --
+    // not the sorted-key iteration order, which would otherwise interleave
+    // types and misalign positional placeholders with their bound values.
+    let mut sets_text: Vec<String> = Vec::new();
+    let mut sets_int: Vec<String> = Vec::new();
+    let mut sets_bool: Vec<String> = Vec::new();
     let mut applied: Vec<String> = Vec::new();
     let mut rejected: Vec<String> = Vec::new();
     let mut object: HashMap<&str, &Value> = HashMap::new();
@@ -835,7 +841,7 @@ pub async fn update(
         match columns.get(key) {
             Some(ColumnType::Text) => {
                 let value = object[key].as_str().unwrap_or_default().to_string();
-                sets.push(format!("{key} = ?"));
+                sets_text.push(format!("{key} = ?"));
                 binds_text.push(value);
                 applied.push(key.to_string());
             }
@@ -844,7 +850,7 @@ pub async fn update(
                     .as_i64()
                     .or_else(|| object[key].as_str().and_then(|s| s.parse().ok()))
                     .unwrap_or(0);
-                sets.push(format!("{key} = ?"));
+                sets_int.push(format!("{key} = ?"));
                 binds_int.push(value);
                 applied.push(key.to_string());
             }
@@ -859,7 +865,7 @@ pub async fn update(
                     ),
                     _ => false,
                 };
-                sets.push(format!("{key} = ?"));
+                sets_bool.push(format!("{key} = ?"));
                 binds_bool.push(value);
                 applied.push(key.to_string());
             }
@@ -867,7 +873,7 @@ pub async fn update(
         }
     }
 
-    if sets.is_empty() {
+    if sets_text.is_empty() && sets_int.is_empty() && sets_bool.is_empty() {
         return Ok(UpdateReport {
             rows_affected: 0,
             applied,
@@ -875,10 +881,24 @@ pub async fn update(
         });
     }
 
+    // Concatenate in the same order as the binds applied below, then number
+    // the placeholders left-to-right over that order.
+    let mut sets: Vec<String> = Vec::new();
+    sets.extend(sets_text);
+    sets.extend(sets_int);
+    sets.extend(sets_bool);
     sets.push("updated_at = ?".to_string());
+
+    let mut placeholder = 0;
+    for s in sets.iter_mut() {
+        placeholder += 1;
+        *s = s.replacen('?', &format!("${placeholder}"), 1);
+    }
+    let tenant_placeholder = placeholder + 1;
+
     let now = chrono::Utc::now().to_rfc3339();
     let sql = format!(
-        "UPDATE integration_settings SET {} WHERE tenant_key = ?",
+        "UPDATE integration_settings SET {} WHERE tenant_key = ${tenant_placeholder}",
         sets.join(", ")
     );
 

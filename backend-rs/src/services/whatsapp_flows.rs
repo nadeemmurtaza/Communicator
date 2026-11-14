@@ -106,7 +106,7 @@ impl WhatsAppFlowsService {
         let now = chrono::Utc::now().to_rfc3339();
 
         sqlx::query(
-            "INSERT INTO industries (id, name, description, icon, is_active, created_at) VALUES (?, ?, ?, ?, 1, ?)"
+            "INSERT INTO industries (id, name, description, icon, is_active, created_at) VALUES ($1, $2, $3, $4, 1, $5)"
         )
         .bind(&id)
         .bind(name)
@@ -157,23 +157,23 @@ impl WhatsAppFlowsService {
         is_active: Option<bool>,
     ) -> Result<(), String> {
         let now = chrono::Utc::now().to_rfc3339();
-        let mut sets = Vec::new();
+        let mut sets: Vec<String> = Vec::new();
         let mut binds: Vec<&str> = Vec::new();
 
         if let Some(n) = name {
-            sets.push("name = ?");
+            sets.push("name = ?".to_string());
             binds.push(n);
         }
         if let Some(d) = description {
-            sets.push("description = ?");
+            sets.push("description = ?".to_string());
             binds.push(d);
         }
         if let Some(i) = icon {
-            sets.push("icon = ?");
+            sets.push("icon = ?".to_string());
             binds.push(i);
         }
         if let Some(a) = is_active {
-            sets.push("is_active = ?");
+            sets.push("is_active = ?".to_string());
             binds.push(&if a { "1" } else { "0" });
         }
 
@@ -181,12 +181,22 @@ impl WhatsAppFlowsService {
             return Ok(());
         }
 
-        sets.push("updated_at = ?");
+        sets.push("updated_at = ?".to_string());
         binds.push(&now);
 
+        // `sets` and `binds` are built in lockstep above, plus the trailing
+        // WHERE-clause bind, so numbering by position keeps every
+        // placeholder aligned with the value bound for it below.
+        let numbered_sets: Vec<String> = sets
+            .iter()
+            .enumerate()
+            .map(|(i, s)| s.replace('?', &format!("${}", i + 1)))
+            .collect();
+        let where_placeholder = sets.len() + 1;
+
         let query = format!(
-            "UPDATE industries SET {} WHERE id = ?",
-            sets.join(", ")
+            "UPDATE industries SET {} WHERE id = ${where_placeholder}",
+            numbered_sets.join(", ")
         );
 
         let mut query_builder = sqlx::query(&query);
@@ -203,7 +213,7 @@ impl WhatsAppFlowsService {
     }
 
     pub async fn delete_industry(&self, industry_id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM industries WHERE id = ?")
+        sqlx::query("DELETE FROM industries WHERE id = $1")
             .bind(industry_id)
             .execute(&self.pool)
             .await
@@ -227,7 +237,7 @@ impl WhatsAppFlowsService {
         let now = chrono::Utc::now().to_rfc3339();
 
         sqlx::query(
-            "INSERT INTO template_groups (id, brand_id, industry_id, name, description, sort_order, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+            "INSERT INTO template_groups (id, brand_id, industry_id, name, description, sort_order, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)"
         )
         .bind(&id)
         .bind(brand_id)
@@ -257,9 +267,9 @@ impl WhatsAppFlowsService {
         industry_id: Option<&str>,
     ) -> Result<Vec<TemplateGroup>, String> {
         let query_str = if industry_id.is_some() {
-            "SELECT id, brand_id, industry_id, name, description, sort_order, created_at FROM template_groups WHERE brand_id = ?1 AND industry_id = ?2 ORDER BY sort_order, name"
+            "SELECT id, brand_id, industry_id, name, description, sort_order, created_at FROM template_groups WHERE brand_id = $1 AND industry_id = $2 ORDER BY sort_order, name"
         } else {
-            "SELECT id, brand_id, industry_id, name, description, sort_order, created_at FROM template_groups WHERE brand_id = ?1 ORDER BY sort_order, name"
+            "SELECT id, brand_id, industry_id, name, description, sort_order, created_at FROM template_groups WHERE brand_id = $1 ORDER BY sort_order, name"
         };
 
         let rows = if let Some(ind) = industry_id {
@@ -298,27 +308,37 @@ impl WhatsAppFlowsService {
         description: Option<&str>,
         sort_order: Option<i32>,
     ) -> Result<(), String> {
-        let mut sets = Vec::new();
+        let mut sets: Vec<String> = Vec::new();
 
         if name.is_some() {
-            sets.push("name = ?");
+            sets.push("name = ?".to_string());
         }
         if description.is_some() {
-            sets.push("description = ?");
+            sets.push("description = ?".to_string());
         }
         if sort_order.is_some() {
-            sets.push("sort_order = ?");
+            sets.push("sort_order = ?".to_string());
         }
 
         if sets.is_empty() {
             return Ok(());
         }
 
-        sets.push("updated_at = ?");
+        sets.push("updated_at = ?".to_string());
+
+        // `sets` is built in the same conditional order the binds are
+        // applied just below, plus the trailing WHERE-clause bind, so
+        // numbering by position keeps placeholders aligned with values.
+        let numbered_sets: Vec<String> = sets
+            .iter()
+            .enumerate()
+            .map(|(i, s)| s.replace('?', &format!("${}", i + 1)))
+            .collect();
+        let where_placeholder = sets.len() + 1;
 
         let query = format!(
-            "UPDATE template_groups SET {} WHERE id = ?",
-            sets.join(", ")
+            "UPDATE template_groups SET {} WHERE id = ${where_placeholder}",
+            numbered_sets.join(", ")
         );
 
         let now = chrono::Utc::now().to_rfc3339();
@@ -342,7 +362,7 @@ impl WhatsAppFlowsService {
     }
 
     pub async fn delete_template_group(&self, group_id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM template_groups WHERE id = ?")
+        sqlx::query("DELETE FROM template_groups WHERE id = $1")
             .bind(group_id)
             .execute(&self.pool)
             .await
@@ -374,7 +394,7 @@ impl WhatsAppFlowsService {
 
         sqlx::query(
             "INSERT INTO whatsapp_template_flows (id, brand_id, group_id, industry_id, name, type, category, body, header, footer, buttons, sections, language, status, is_active, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', 1, ?, ?)"
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'draft', 1, $14, $15)"
         )
         .bind(&id)
         .bind(brand_id)
@@ -421,7 +441,7 @@ impl WhatsAppFlowsService {
         let row = sqlx::query(
             "SELECT id, brand_id, group_id, industry_id, name, type, category, body,
                     header, footer, buttons, sections, language, status, is_active, metadata, created_at, updated_at
-             FROM whatsapp_template_flows WHERE id = ?1 LIMIT 1"
+             FROM whatsapp_template_flows WHERE id = $1 LIMIT 1"
         )
         .bind(flow_id)
         .fetch_one(&self.pool)
@@ -471,7 +491,7 @@ impl WhatsAppFlowsService {
         let rows = sqlx::query(
             "SELECT id, brand_id, group_id, industry_id, name, type, category, body,
              header, footer, buttons, sections, language, status, is_active, metadata, created_at, updated_at
-             FROM whatsapp_template_flows WHERE brand_id = ?1 ORDER BY name"
+             FROM whatsapp_template_flows WHERE brand_id = $1 ORDER BY name"
         )
         .bind(brand_id)
         .fetch_all(&self.pool)
@@ -542,39 +562,39 @@ impl WhatsAppFlowsService {
         is_active: Option<bool>,
     ) -> Result<(), String> {
         let now = chrono::Utc::now().to_rfc3339();
-        let mut sets = Vec::new();
+        let mut sets: Vec<String> = Vec::new();
         let mut binds: Vec<String> = Vec::new();
 
         if let Some(n) = name {
-            sets.push("name = ?");
+            sets.push("name = ?".to_string());
             binds.push(n.to_string());
         }
         if let Some(b) = body {
-            sets.push("body = ?");
+            sets.push("body = ?".to_string());
             binds.push(b.to_string());
         }
         if let Some(h) = header {
-            sets.push("header = ?");
+            sets.push("header = ?".to_string());
             binds.push(h.to_string());
         }
         if let Some(f) = footer {
-            sets.push("footer = ?");
+            sets.push("footer = ?".to_string());
             binds.push(f.to_string());
         }
         if let Some(b) = buttons {
-            sets.push("buttons = ?");
+            sets.push("buttons = ?".to_string());
             binds.push(b.to_string());
         }
         if let Some(s) = sections {
-            sets.push("sections = ?");
+            sets.push("sections = ?".to_string());
             binds.push(s.to_string());
         }
         if let Some(st) = status {
-            sets.push("status = ?");
+            sets.push("status = ?".to_string());
             binds.push(st.to_string());
         }
         if let Some(a) = is_active {
-            sets.push("is_active = ?");
+            sets.push("is_active = ?".to_string());
             binds.push(if a { "1".to_string() } else { "0".to_string() });
         }
 
@@ -582,12 +602,22 @@ impl WhatsAppFlowsService {
             return Ok(());
         }
 
-        sets.push("updated_at = ?");
+        sets.push("updated_at = ?".to_string());
         binds.push(now);
 
+        // `sets` and `binds` are built in lockstep above, plus the trailing
+        // WHERE-clause bind, so numbering by position keeps every
+        // placeholder aligned with the value bound for it below.
+        let numbered_sets: Vec<String> = sets
+            .iter()
+            .enumerate()
+            .map(|(i, s)| s.replace('?', &format!("${}", i + 1)))
+            .collect();
+        let where_placeholder = sets.len() + 1;
+
         let query = format!(
-            "UPDATE whatsapp_template_flows SET {} WHERE id = ?",
-            sets.join(", ")
+            "UPDATE whatsapp_template_flows SET {} WHERE id = ${where_placeholder}",
+            numbered_sets.join(", ")
         );
 
         let mut qb = sqlx::query(&query);
@@ -604,13 +634,13 @@ impl WhatsAppFlowsService {
 
     pub async fn delete_template_flow(&self, flow_id: &str) -> Result<(), String> {
         // Delete steps first
-        sqlx::query("DELETE FROM whatsapp_flow_steps WHERE flow_id = ?")
+        sqlx::query("DELETE FROM whatsapp_flow_steps WHERE flow_id = $1")
             .bind(flow_id)
             .execute(&self.pool)
             .await
             .map_err(|e| format!("DB error: {}", e))?;
 
-        sqlx::query("DELETE FROM whatsapp_template_flows WHERE id = ?")
+        sqlx::query("DELETE FROM whatsapp_template_flows WHERE id = $1")
             .bind(flow_id)
             .execute(&self.pool)
             .await
@@ -623,7 +653,7 @@ impl WhatsAppFlowsService {
         let row = sqlx::query(
             "SELECT id, brand_id, group_id, industry_id, name, type, category, body,
                     header, footer, buttons, sections, language, status, is_active, metadata, created_at, updated_at
-             FROM whatsapp_template_flows WHERE id = ?1 LIMIT 1"
+             FROM whatsapp_template_flows WHERE id = $1 LIMIT 1"
         )
         .bind(flow_id)
         .fetch_one(&self.pool)
@@ -654,7 +684,7 @@ impl WhatsAppFlowsService {
 
         sqlx::query(
             "INSERT INTO whatsapp_template_flows (id, brand_id, group_id, industry_id, name, type, category, body, header, footer, buttons, sections, language, status, is_active, metadata, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', 0, ?, ?, ?)"
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'draft', 0, $14, $15, $16)"
         )
         .bind(&new_id)
         .bind(&brand_id)
@@ -683,7 +713,7 @@ impl WhatsAppFlowsService {
         let mut errors = Vec::new();
 
         let row = sqlx::query(
-            "SELECT name, body, header FROM whatsapp_template_flows WHERE id = ?1 LIMIT 1"
+            "SELECT name, body, header FROM whatsapp_template_flows WHERE id = $1 LIMIT 1"
         )
         .bind(flow_id)
         .fetch_optional(&self.pool)
@@ -736,7 +766,7 @@ impl WhatsAppFlowsService {
 
         sqlx::query(
             "INSERT INTO whatsapp_flow_steps (id, flow_id, step_number, condition, action_type, action_config, next_step_id, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
         )
         .bind(&id)
         .bind(flow_id)
@@ -765,7 +795,7 @@ impl WhatsAppFlowsService {
     pub async fn list_flow_steps(&self, flow_id: &str) -> Result<Vec<WhatsAppFlowStep>, String> {
         let rows = sqlx::query(
             "SELECT id, flow_id, step_number, condition, action_type, action_config, next_step_id, created_at
-             FROM whatsapp_flow_steps WHERE flow_id = ?1 ORDER BY step_number"
+             FROM whatsapp_flow_steps WHERE flow_id = $1 ORDER BY step_number"
         )
         .bind(flow_id)
         .fetch_all(&self.pool)
@@ -797,27 +827,27 @@ impl WhatsAppFlowsService {
         next_step_id: Option<&str>,
     ) -> Result<(), String> {
         let now = chrono::Utc::now().to_rfc3339();
-        let mut sets = Vec::new();
+        let mut sets: Vec<String> = Vec::new();
         let mut binds: Vec<String> = Vec::new();
 
         if let Some(sn) = step_number {
-            sets.push("step_number = ?");
+            sets.push("step_number = ?".to_string());
             binds.push(sn.to_string());
         }
         if let Some(c) = condition {
-            sets.push("condition = ?");
+            sets.push("condition = ?".to_string());
             binds.push(c.to_string());
         }
         if let Some(at) = action_type {
-            sets.push("action_type = ?");
+            sets.push("action_type = ?".to_string());
             binds.push(at.to_string());
         }
         if let Some(ac) = action_config {
-            sets.push("action_config = ?");
+            sets.push("action_config = ?".to_string());
             binds.push(ac.to_string());
         }
         if let Some(ns) = next_step_id {
-            sets.push("next_step_id = ?");
+            sets.push("next_step_id = ?".to_string());
             binds.push(ns.to_string());
         }
 
@@ -825,12 +855,22 @@ impl WhatsAppFlowsService {
             return Ok(());
         }
 
-        sets.push("updated_at = ?");
+        sets.push("updated_at = ?".to_string());
         binds.push(now);
 
+        // `sets` and `binds` are built in lockstep above, plus the trailing
+        // WHERE-clause bind, so numbering by position keeps every
+        // placeholder aligned with the value bound for it below.
+        let numbered_sets: Vec<String> = sets
+            .iter()
+            .enumerate()
+            .map(|(i, s)| s.replace('?', &format!("${}", i + 1)))
+            .collect();
+        let where_placeholder = sets.len() + 1;
+
         let query = format!(
-            "UPDATE whatsapp_flow_steps SET {} WHERE id = ?",
-            sets.join(", ")
+            "UPDATE whatsapp_flow_steps SET {} WHERE id = ${where_placeholder}",
+            numbered_sets.join(", ")
         );
 
         let mut qb = sqlx::query(&query);
@@ -846,7 +886,7 @@ impl WhatsAppFlowsService {
     }
 
     pub async fn delete_flow_step(&self, step_id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM whatsapp_flow_steps WHERE id = ?")
+        sqlx::query("DELETE FROM whatsapp_flow_steps WHERE id = $1")
             .bind(step_id)
             .execute(&self.pool)
             .await

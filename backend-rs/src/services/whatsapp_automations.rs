@@ -46,7 +46,7 @@ impl WhatsAppAutomationEngine {
             }
             Some("#resolve") => {
                 let _ = sqlx::query(
-                    "UPDATE conversations SET state = 'resolved' WHERE id = ?1"
+                    "UPDATE conversations SET state = 'resolved' WHERE id = $1"
                 )
                 .bind(conversation_id)
                 .execute(&self.pool)
@@ -55,7 +55,7 @@ impl WhatsAppAutomationEngine {
             }
             Some("#close") => {
                 let _ = sqlx::query(
-                    "UPDATE conversations SET state = 'closed' WHERE id = ?1"
+                    "UPDATE conversations SET state = 'closed' WHERE id = $1"
                 )
                 .bind(conversation_id)
                 .execute(&self.pool)
@@ -71,7 +71,7 @@ impl WhatsAppAutomationEngine {
                 if parts.len() >= 2 {
                     let tag = parts[1..].join(" ");
                     let _ = sqlx::query(
-                        "INSERT OR IGNORE INTO contact_tags (id, contact_id, tag, created_at) VALUES (?1, ?2, ?3, NOW()::TEXT)"
+                        "INSERT OR IGNORE INTO contact_tags (id, contact_id, tag, created_at) VALUES ($1, $2, $3, NOW()::TEXT)"
                     )
                     .bind(uuid::Uuid::new_v4().to_string())
                     .bind(contact_id)
@@ -94,7 +94,7 @@ impl WhatsAppAutomationEngine {
     async fn send_csat_survey(&self, brand_id: &str, contact_id: &str) -> Result<String, String> {
         // Get brand name for personalization
         let brand_name: Option<(String,)> = sqlx::query_as(
-            "SELECT name FROM brands WHERE id = ?1 LIMIT 1"
+            "SELECT name FROM brands WHERE id = $1 LIMIT 1"
         )
         .bind(brand_id)
         .fetch_optional(&self.pool)
@@ -149,7 +149,7 @@ impl WhatsAppAutomationEngine {
 
         // Update conversation CSAT score
         let _ = sqlx::query(
-            "UPDATE conversations SET csat_score = ?1 WHERE id = ?2"
+            "UPDATE conversations SET csat_score = $1 WHERE id = $2"
         )
         .bind(score)
         .bind(conversation_id)
@@ -159,7 +159,7 @@ impl WhatsAppAutomationEngine {
         // Tag contact based on score
         let tag = if score >= 4 { "csat_promoter" } else if score >= 3 { "csat_passive" } else { "csat_detractor" };
         let _ = sqlx::query(
-            "INSERT OR IGNORE INTO contact_tags (id, contact_id, tag, created_at) VALUES (?1, ?2, ?3, NOW()::TEXT)"
+            "INSERT OR IGNORE INTO contact_tags (id, contact_id, tag, created_at) VALUES ($1, $2, $3, NOW()::TEXT)"
         )
         .bind(uuid::Uuid::new_v4().to_string())
         .bind(contact_id)
@@ -200,7 +200,7 @@ impl WhatsAppAutomationEngine {
 
         if let Some((agent_id, agent_name)) = agent {
             let _ = sqlx::query(
-                "UPDATE conversations SET assigned_to_id = ?1, assigned_to_name = ?2, human_takeover = 1 WHERE id = ?3"
+                "UPDATE conversations SET assigned_to_id = $1, assigned_to_name = $2, human_takeover = 1 WHERE id = $3"
             )
             .bind(&agent_id)
             .bind(&agent_name)
@@ -241,7 +241,7 @@ impl WhatsAppAutomationEngine {
 
     async fn send_main_menu(&self, brand_id: &str, contact_id: &str) -> Result<String, String> {
         let brand_name: Option<(String,)> = sqlx::query_as(
-            "SELECT name FROM brands WHERE id = ?1 LIMIT 1"
+            "SELECT name FROM brands WHERE id = $1 LIMIT 1"
         )
         .bind(brand_id)
         .fetch_optional(&self.pool)
@@ -276,7 +276,7 @@ impl WhatsAppAutomationEngine {
     async fn send_services_menu(&self, brand_id: &str, contact_id: &str) -> Result<String, String> {
         // Get services from brand profile
         let services: Option<(String,)> = sqlx::query_as(
-            "SELECT services FROM brands WHERE id = ?1 LIMIT 1"
+            "SELECT services FROM brands WHERE id = $1 LIMIT 1"
         )
         .bind(brand_id)
         .fetch_optional(&self.pool)
@@ -321,7 +321,7 @@ impl WhatsAppAutomationEngine {
     async fn send_pricing_menu(&self, brand_id: &str, contact_id: &str) -> Result<String, String> {
         // Get prices from brand profile
         let prices: Option<(String,)> = sqlx::query_as(
-            "SELECT prices FROM brands WHERE id = ?1 LIMIT 1"
+            "SELECT prices FROM brands WHERE id = $1 LIMIT 1"
         )
         .bind(brand_id)
         .fetch_optional(&self.pool)
@@ -367,7 +367,7 @@ impl WhatsAppAutomationEngine {
 
     async fn send_location_info(&self, brand_id: &str, contact_id: &str) -> Result<String, String> {
         let address: Option<(String,)> = sqlx::query_as(
-            "SELECT address FROM brands WHERE id = ?1 LIMIT 1"
+            "SELECT address FROM brands WHERE id = $1 LIMIT 1"
         )
         .bind(brand_id)
         .fetch_optional(&self.pool)
@@ -423,7 +423,7 @@ impl WhatsAppAutomationEngine {
         } else {
             // Check if this is a new conversation
             let msg_count: Option<(i64,)> = sqlx::query_as(
-                "SELECT COUNT(*) FROM messages WHERE conversation_id = ?1"
+                "SELECT COUNT(*) FROM messages WHERE conversation_id = $1"
             )
             .bind(conversation_id)
             .fetch_optional(&self.pool)
@@ -441,7 +441,7 @@ impl WhatsAppAutomationEngine {
         contact_id: &str,
     ) -> Result<String, String> {
         let brand_name: Option<(String,)> = sqlx::query_as(
-            "SELECT name FROM brands WHERE id = ?1 LIMIT 1"
+            "SELECT name FROM brands WHERE id = $1 LIMIT 1"
         )
         .bind(brand_id)
         .fetch_optional(&self.pool)
@@ -452,7 +452,7 @@ impl WhatsAppAutomationEngine {
 
         // Get business hours from brand profile
         let bio: Option<(String,)> = sqlx::query_as(
-            "SELECT bio FROM brands WHERE id = ?1 LIMIT 1"
+            "SELECT bio FROM brands WHERE id = $1 LIMIT 1"
         )
         .bind(brand_id)
         .fetch_optional(&self.pool)
@@ -503,7 +503,7 @@ impl WhatsAppAutomationEngine {
     ) -> Result<Option<(String, String, Option<String>)>, String> {
         let rules: Vec<(String, String, Option<String>, String, Option<String>, String)> =
             sqlx::query_as(
-                "SELECT id, trigger_type, trigger_value, action_type, action_config, name FROM whatsapp_automation_rules WHERE brand_id = ?1 AND is_active = 1 ORDER BY priority DESC"
+                "SELECT id, trigger_type, trigger_value, action_type, action_config, name FROM whatsapp_automation_rules WHERE brand_id = $1 AND is_active = 1 ORDER BY priority DESC"
             )
             .bind(brand_id)
             .fetch_all(&self.pool)
@@ -598,7 +598,7 @@ impl WhatsAppAutomationEngine {
                 let tag = cfg["tag"].as_str().unwrap_or("");
                 if !tag.is_empty() {
                     let _ = sqlx::query(
-                        "INSERT OR IGNORE INTO contact_tags (id, contact_id, tag, created_at) VALUES (?1, ?2, ?3, NOW()::TEXT)"
+                        "INSERT OR IGNORE INTO contact_tags (id, contact_id, tag, created_at) VALUES ($1, $2, $3, NOW()::TEXT)"
                     )
                     .bind(uuid::Uuid::new_v4().to_string())
                     .bind(contact_id)
@@ -628,7 +628,7 @@ impl WhatsAppAutomationEngine {
         // Find expired session windows
         let now = chrono::Utc::now().to_rfc3339();
         let expired: Vec<(String, String)> = sqlx::query_as(
-            "SELECT id, contact_id FROM whatsapp_session_windows WHERE brand_id = ?1 AND is_active = 1 AND expires_at < ?2"
+            "SELECT id, contact_id FROM whatsapp_session_windows WHERE brand_id = $1 AND is_active = 1 AND expires_at < $2"
         )
         .bind(brand_id)
         .bind(&now)
@@ -640,7 +640,7 @@ impl WhatsAppAutomationEngine {
         for (_id, contact_id) in expired {
             // Deactivate session
             let _ = sqlx::query(
-                "UPDATE whatsapp_session_windows SET is_active = 0 WHERE brand_id = ?1 AND contact_id = ?2"
+                "UPDATE whatsapp_session_windows SET is_active = 0 WHERE brand_id = $1 AND contact_id = $2"
             )
             .bind(brand_id)
             .bind(&contact_id)
@@ -678,13 +678,13 @@ impl WhatsAppAutomationEngine {
 
         let _ = sqlx::query(
             "INSERT INTO whatsapp_customer_profiles (id, brand_id, wa_id, profile_name, profile_picture_url, about, created_at, updated_at, last_fetched_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7, ?7)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $7)
              ON CONFLICT(wa_id) DO UPDATE SET
-             profile_name = COALESCE(?4, profile_name),
-             profile_picture_url = COALESCE(?5, profile_picture_url),
-             about = COALESCE(?6, about),
-             updated_at = ?7,
-             last_fetched_at = ?7"
+             profile_name = COALESCE($4, profile_name),
+             profile_picture_url = COALESCE($5, profile_picture_url),
+             about = COALESCE($6, about),
+             updated_at = $7,
+             last_fetched_at = $7"
         )
         .bind(&id)
         .bind(brand_id)

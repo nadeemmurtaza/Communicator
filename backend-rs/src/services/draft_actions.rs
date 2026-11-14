@@ -91,7 +91,7 @@ pub async fn record_draft_audit(
     let result = sqlx::query(
         "INSERT INTO audit_logs (id, entity_type, entity_id, action, actor, severity, \
          compliance_category, description, details, created_at) \
-         VALUES (?, 'draft', ?, ?, ?, 'info', 'audit_trail', ?, ?, ?)",
+         VALUES ($1, 'draft', $2, $3, $4, 'info', 'audit_trail', $5, $6, $7)",
     )
     .bind(&id)
     .bind(entity_id)
@@ -144,7 +144,7 @@ impl ApprovalReport {
 async fn load_draft(state: &AppState, draft_id: &str) -> Result<Option<sqlx::postgres::PgRow>, DraftActionError> {
     sqlx::query(
         "SELECT id, conversation_id, body, confidence, citations, status, created_at \
-         FROM drafts WHERE id = ? LIMIT 1",
+         FROM drafts WHERE id = $1 LIMIT 1",
     )
     .bind(draft_id)
     .fetch_optional(&state.db)
@@ -200,7 +200,7 @@ pub async fn approve_and_send(
 
     let conversation = sqlx::query(
         "SELECT id, COALESCE(contact_id, '') AS contact_id, COALESCE(inbox_id, '') AS inbox_id, \
-                COALESCE(channel, '') AS channel FROM conversations WHERE id = ? LIMIT 1",
+                COALESCE(channel, '') AS channel FROM conversations WHERE id = $1 LIMIT 1",
     )
     .bind(&conversation_id)
     .fetch_optional(&state.db)
@@ -220,7 +220,7 @@ pub async fn approve_and_send(
 
     let (projection, _missing) = crate::routes::contacts::contact_projection(&state.db).await;
     let select_sql = format!(
-        "SELECT {} FROM contacts WHERE id = ? LIMIT 1",
+        "SELECT {} FROM contacts WHERE id = $1 LIMIT 1",
         projection.join(", ")
     );
     let contact = sqlx::query(&select_sql)
@@ -330,7 +330,7 @@ pub async fn approve_and_send(
     let new_status = if accepted { "sent" } else { "send_failed" };
 
     let now = chrono::Utc::now().to_rfc3339();
-    let updated = sqlx::query("UPDATE drafts SET status = ?, updated_at = ? WHERE id = ?")
+    let updated = sqlx::query("UPDATE drafts SET status = $1, updated_at = $2 WHERE id = $3")
         .bind(new_status)
         .bind(&now)
         .bind(draft_id)
@@ -407,8 +407,8 @@ pub async fn reject_draft(
 
     let now = chrono::Utc::now().to_rfc3339();
     let result = sqlx::query(
-        "UPDATE drafts SET status = 'rejected', reviewer = ?, reviewer_feedback = ?, updated_at = ? \
-         WHERE id = ?",
+        "UPDATE drafts SET status = 'rejected', reviewer = $1, reviewer_feedback = $2, updated_at = $3 \
+         WHERE id = $4",
     )
     .bind(actor)
     .bind(reason)
@@ -480,7 +480,7 @@ pub async fn dispatch_auto_approved(
         "SELECT d.id AS id FROM drafts d \
          JOIN conversations c ON c.id = d.conversation_id \
          JOIN contacts ct ON ct.id = c.contact_id \
-         WHERE d.status = 'auto_approved' AND COALESCE(ct.tenant_key, '') = ? \
+         WHERE d.status = 'auto_approved' AND COALESCE(ct.tenant_key, '') = $1 \
          ORDER BY d.created_at",
     )
     .bind(tenant_key)
