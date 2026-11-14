@@ -156,7 +156,10 @@ async fn purge_demo_rows(pool: &DbPool) {
         if !table_exists(pool, table).await {
             return;
         }
-        let placeholders = vec!["?"; values.len()].join(", ");
+        let placeholders = (1..=values.len())
+            .map(|i| format!("${i}"))
+            .collect::<Vec<_>>()
+            .join(", ");
         let sql = format!("{sql_head} IN ({placeholders}){sql_tail}");
         let mut query = sqlx::query(&sql);
         for value in values {
