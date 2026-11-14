@@ -380,7 +380,7 @@ async fn load_settings(pool: &PgPool) -> Result<Value, sqlx::Error> {
         "SELECT id, is_enabled, auto_translate_inbound, auto_translate_outbound,
                 agent_primary_language, preferred_engine, confidence_threshold,
                 enabled_languages, created_at, updated_at
-         FROM translation_settings WHERE id = ?",
+         FROM translation_settings WHERE id = $1",
     )
     .bind(SETTINGS_ID)
     .fetch_optional(pool)
@@ -542,7 +542,7 @@ pub async fn update_translation_settings(
         "INSERT INTO translation_settings (id, is_enabled, auto_translate_inbound,
             auto_translate_outbound, agent_primary_language, preferred_engine,
             confidence_threshold, enabled_languages, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          ON CONFLICT(id) DO UPDATE SET
             is_enabled = excluded.is_enabled,
             auto_translate_inbound = excluded.auto_translate_inbound,
@@ -691,7 +691,7 @@ pub async fn translate_message(
         .trim()
         .to_lowercase();
 
-    let row = match sqlx::query("SELECT body, channel, provider_metadata FROM messages WHERE id = ?")
+    let row = match sqlx::query("SELECT body, channel, provider_metadata FROM messages WHERE id = $1")
         .bind(&message_id)
         .fetch_optional(&state.db)
         .await
@@ -753,7 +753,7 @@ pub async fn translate_message(
         Value::Object(by_language)
     };
     let serialized = serde_json::to_string(&existing).unwrap_or_else(|_| "{}".to_string());
-    if let Err(err) = sqlx::query("UPDATE messages SET provider_metadata = ? WHERE id = ?")
+    if let Err(err) = sqlx::query("UPDATE messages SET provider_metadata = $1 WHERE id = $2")
         .bind(&serialized)
         .bind(&message_id)
         .execute(&state.db)
@@ -786,7 +786,7 @@ pub async fn prepare_outbound(
         "SELECT c.contact_id, ct.language, ct.person_name
          FROM conversations c
          LEFT JOIN contacts ct ON ct.id = c.contact_id
-         WHERE c.id = ?",
+         WHERE c.id = $1",
     )
     .bind(&conversation_id)
     .fetch_optional(&state.db)
@@ -820,7 +820,7 @@ pub async fn prepare_outbound(
         Some(known) => (known, "contact_record".to_string()),
         None => {
             let last = sqlx::query(
-                "SELECT body FROM messages WHERE conversation_id = ? AND direction = 'inbound'
+                "SELECT body FROM messages WHERE conversation_id = $1 AND direction = 'inbound'
                  ORDER BY sent_at DESC LIMIT 1",
             )
             .bind(&conversation_id)
