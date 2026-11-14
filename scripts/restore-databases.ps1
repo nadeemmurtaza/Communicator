@@ -10,20 +10,22 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$RepoRoot = Split-Path -Parent $PSScriptRoot
 
 $PgBin = "C:\Program Files\PostgreSQL\16\bin"
 $PgHost = "127.0.0.1"
 $PgPort = "5432"
 $PgUser = "postgres"
 
+# This repo's own SQLite file only -- a sibling repo's database (e.g.
+# AegisDesk) is that repo's restore script's job, not this one's.
 $SqliteTargets = @(
-    @{ Name = "communicator.db"; Path = Join-Path $PSScriptRoot "communicator.db" },
-    @{ Name = "desktop-v2.db"; Path = "C:\Users\nommi\Downloads\scraper\AegisDesk\.freebuff\desktop-v2.db" }
+    @{ Name = "communicator.db"; Path = Join-Path $RepoRoot "communicator.db" }
 )
 
 # List available backups
 if ($ListBackups) {
-    $BackupRoot = Join-Path $PSScriptRoot "backups"
+    $BackupRoot = Join-Path $RepoRoot "backups"
 
     if (-not (Test-Path $BackupRoot)) {
         Write-Host "No backups found." -ForegroundColor Red
@@ -60,7 +62,7 @@ if (-not $BackupDir) {
 }
 
 if (-not ([System.IO.Path]::IsPathRooted($BackupDir))) {
-    $BackupDir = Join-Path $PSScriptRoot $BackupDir
+    $BackupDir = Join-Path $RepoRoot $BackupDir
 }
 
 if (-not (Test-Path $BackupDir)) {

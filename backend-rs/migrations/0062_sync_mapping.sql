@@ -1,4 +1,4 @@
-﻿-- Migration 0015: Sync mapping tables for external e-commerce platforms
+-- Migration 0015: Sync mapping tables for external e-commerce platforms
 -- These tables enable bidirectional sync by tracking external IDs
 
 -- Maps our products to external platform product IDs

@@ -1,4 +1,4 @@
-﻿-- Discounts, Coupons, and Memberships
+-- Discounts, Coupons, and Memberships
 
 -- ---------------------------------------------------------------------------
 -- Coupons

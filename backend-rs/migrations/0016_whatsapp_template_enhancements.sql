@@ -1,4 +1,4 @@
-﻿-- Enhanced WhatsApp Template Management: Quality scores, variables, multi-language
+-- Enhanced WhatsApp Template Management: Quality scores, variables, multi-language
 
 -- Add quality score and rating columns to whatsapp_templates
 ALTER TABLE whatsapp_templates ADD COLUMN quality_score INTEGER;

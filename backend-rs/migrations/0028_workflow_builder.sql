@@ -1,4 +1,4 @@
-﻿-- Phase 20: Visual Workflow Builder â€” No-code automation engine
+-- Phase 20: Visual Workflow Builder â€” No-code automation engine
 -- Enables creating multi-step workflows with conditional branching,
 -- assignment rules, and trigger-based execution, mirroring Intercom's
 -- visual workflow builder capability.

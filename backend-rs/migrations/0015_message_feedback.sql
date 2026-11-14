@@ -1,4 +1,4 @@
-﻿-- Migration 0015: Message Feedback Collection Loop
+-- Migration 0015: Message Feedback Collection Loop
 --
 -- Allows customers and agents to rate AI-generated outbound messages with
 -- thumbs up / thumbs down, optionally adding a short comment.  The data

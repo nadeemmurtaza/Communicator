@@ -1,4 +1,4 @@
-﻿-- Phase 18: AI Procedures & Actions â€” Multi-step AI workflows and external API actions
+-- Phase 18: AI Procedures & Actions â€” Multi-step AI workflows and external API actions
 
 -- Procedures: natural-language multi-step workflows that teach the AI how to handle complex processes
 CREATE TABLE IF NOT EXISTS procedures (

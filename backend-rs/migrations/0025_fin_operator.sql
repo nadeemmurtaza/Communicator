@@ -1,4 +1,4 @@
-﻿-- Phase 17: Fin Operator â€” Meta-agent for autonomous self-improvement
+-- Phase 17: Fin Operator â€” Meta-agent for autonomous self-improvement
 
 -- Operator proposals: AI-generated improvement suggestions with review workflow
 CREATE TABLE IF NOT EXISTS operator_proposals (

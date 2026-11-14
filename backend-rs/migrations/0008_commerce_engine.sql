@@ -1,4 +1,4 @@
-﻿-- Commerce Engine: Product Catalog, Shopping Cart, Orders, Payments, and Sync
+-- Commerce Engine: Product Catalog, Shopping Cart, Orders, Payments, and Sync
 
 -- ---------------------------------------------------------------------------
 -- Product Categories

@@ -1,4 +1,4 @@
-﻿-- Phase 21: Public Help Center â€” Customer-facing self-service portal
+-- Phase 21: Public Help Center â€” Customer-facing self-service portal
 -- Provides a searchable, categorized help center with articles that customers
 -- can browse before contacting support, reducing AI load and improving
 -- self-service resolution rates. Mirrors Intercom's Help Center feature.

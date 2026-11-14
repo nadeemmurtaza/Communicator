@@ -9,17 +9,19 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$RepoRoot = Split-Path -Parent $PSScriptRoot
 $Timestamp = Get-Date -Format "yyyy-MM-dd_HHmm"
-$BackupDir = Join-Path $PSScriptRoot (Join-Path $BackupRoot $Timestamp)
+$BackupDir = Join-Path $RepoRoot (Join-Path $BackupRoot $Timestamp)
 
 $PgBin = "C:\Program Files\PostgreSQL\16\bin"
 $PgHost = "127.0.0.1"
 $PgPort = "5432"
 $PgUser = "postgres"
 
+# This repo's own SQLite file only -- a sibling repo's database (e.g.
+# AegisDesk) is that repo's backup script's job, not this one's.
 $SqliteFiles = @(
-    @{ Name = "communicator.db"; Path = Join-Path $PSScriptRoot "communicator.db" },
-    @{ Name = "desktop-v2.db"; Path = "C:\Users\nommi\Downloads\scraper\AegisDesk\.freebuff\desktop-v2.db" }
+    @{ Name = "communicator.db"; Path = Join-Path $RepoRoot "communicator.db" }
 )
 
 Write-Host "========================================" -ForegroundColor Cyan
@@ -128,7 +130,7 @@ Write-Host "  Location: $BackupDir" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-$Backups = Get-ChildItem -Path (Join-Path $PSScriptRoot $BackupRoot) -Directory -ErrorAction SilentlyContinue | Sort-Object Name
+$Backups = Get-ChildItem -Path (Join-Path $RepoRoot $BackupRoot) -Directory -ErrorAction SilentlyContinue | Sort-Object Name
 if ($Backups.Count -gt 10) {
     $ToRemove = $Backups.Count - 10
     Write-Host "  [INFO] $ToRemove old backup(s) exist. Consider cleaning up." -ForegroundColor DarkYellow

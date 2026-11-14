@@ -1,4 +1,4 @@
-﻿-- WhatsApp Channel: Templates, Customer Profiles, Session Windows, Automation State
+-- WhatsApp Channel: Templates, Customer Profiles, Session Windows, Automation State
 
 -- WhatsApp templates cached from Meta Graph API
 CREATE TABLE IF NOT EXISTS whatsapp_templates (

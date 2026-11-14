@@ -1,4 +1,4 @@
-﻿-- Phase 24: Discord Channel Integration
+-- Phase 24: Discord Channel Integration
 -- Adds Discord as a supported channel in the unified inbox, enabling
 -- two-way messaging via Discord bot integration. Mirrors Intercom's
 -- Discord channel support.

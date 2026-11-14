@@ -10,10 +10,11 @@ this repo relates to the other six repos in the NEWAX ecosystem.
 
 See `CONVENTIONS.md` for the ecosystem-wide rules on folder layout,
 module/service naming, file naming, renaming, branches, worktrees,
-commits, and merge strategy — identical across every NEWAX repo. It
-also lists this repo's current gaps against that layout (root-level
-debug logs, `erp-schema/*.prisma`, archive folders mixed into `src/`)
-so they aren't mistaken for the target shape.
+commits, and merge strategy — identical across every NEWAX repo. This
+repo's layout gaps against it (root-level debug logs, `erp-schema/`
+naming, archive folders, `backend-rs/`'s module split) were resolved
+in the 2026-11-14 audit — see `CONVENTIONS.md`'s "Resolved" section
+for what moved where.
 
 See `COMMUNICATION.md` for how this repo is meant to talk to nID and
 the rest of the ecosystem (Module Gateway/gRPC, the NATS event bus,

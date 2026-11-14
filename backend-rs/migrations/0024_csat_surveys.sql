@@ -1,4 +1,4 @@
-﻿-- Phase 15: CSAT Surveys & Customer Satisfaction Tracking
+-- Phase 15: CSAT Surveys & Customer Satisfaction Tracking
 
 -- Survey templates define the structure of CSAT surveys
 CREATE TABLE IF NOT EXISTS csat_survey_templates (

@@ -1,4 +1,4 @@
-﻿-- Delivery Tracking and Shipping
+-- Delivery Tracking and Shipping
 
 -- ---------------------------------------------------------------------------
 -- Shipping Methods

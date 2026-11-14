@@ -1,4 +1,4 @@
-﻿-- WhatsApp Campaigns, Templates, Flows, Industries, and Message Limits
+-- WhatsApp Campaigns, Templates, Flows, Industries, and Message Limits
 
 -- Industry definitions for template/flow grouping
 CREATE TABLE IF NOT EXISTS industries (

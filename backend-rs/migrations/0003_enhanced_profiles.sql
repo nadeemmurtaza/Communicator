@@ -1,4 +1,4 @@
-﻿-- Migration 0003: Enhanced Profiles with Data Sources, Live Sync, Conflicts, and Custom Sections
+-- Migration 0003: Enhanced Profiles with Data Sources, Live Sync, Conflicts, and Custom Sections
 -- Adds unique IDs, source tracking, sync status, conflict resolution, custom sections,
 -- pricing packages, promotions, auto-vouchers, and message triggers
 
