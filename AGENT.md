@@ -6,6 +6,15 @@ in this repo, for agents/tools that read `AGENT.md` instead. See
 suites unless asked, skip CI/lint ceremony) and `ECOSYSTEM.md` for how
 this repo relates to the other six repos in the NEWAX ecosystem.
 
+## Repo Structure & Naming Conventions
+
+See `CONVENTIONS.md` for the ecosystem-wide rules on folder layout,
+module/service naming, file naming, renaming, branches, worktrees,
+commits, and merge strategy — identical across every NEWAX repo. It
+also lists this repo's current gaps against that layout (root-level
+debug logs, `erp-schema/*.prisma`, archive folders mixed into `src/`)
+so they aren't mistaken for the target shape.
+
 ## NEWAX Ecosystem — Technology Stack & Architecture Plan
 
 > Applies to every repo in the ecosystem (nID, Communicator, core-newax,

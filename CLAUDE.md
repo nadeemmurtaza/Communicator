@@ -32,6 +32,15 @@ already-merged or already-reviewed work (e.g. the Phase 0-2 foundation
 and the CI/CodeQL/Semgrep/Dependabot/SECURITY.md setup already in
 place) -- those stay as they are.
 
+## Repo Structure & Naming Conventions
+
+See `CONVENTIONS.md` for the ecosystem-wide rules on folder layout,
+module/service naming, file naming, renaming, branches, worktrees,
+commits, and merge strategy — identical across every NEWAX repo. It
+also lists this repo's current gaps against that layout (root-level
+debug logs, `erp-schema/*.prisma`, archive folders mixed into `src/`)
+so they aren't mistaken for the target shape.
+
 ## NEWAX Ecosystem — Technology Stack & Architecture Plan
 
 > Applies to every repo in the ecosystem (nID, Communicator, core-newax,
