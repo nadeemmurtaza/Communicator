@@ -1494,7 +1494,7 @@ pub async fn create_linked_issue(
 /// provider; a failed read leaves the stored status untouched and says so.
 pub async fn sync_issue_status(State(state): State<AppState>, Path(id): Path<String>) -> Response {
     let row = match sqlx::query_as::<_, (String, Option<String>, String, String, Option<String>)>(
-        "SELECT provider, external_issue_id, issue_key, issue_url, ticket_id FROM linked_issues WHERE id = ?",
+        "SELECT provider, external_issue_id, issue_key, issue_url, ticket_id FROM linked_issues WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)

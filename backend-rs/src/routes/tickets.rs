@@ -116,7 +116,7 @@ async fn fetch_full_ticket_by_id(db: &sqlx::PgPool, id: &str) -> Result<Option<V
         LEFT JOIN contacts c ON t.contact_id = c.id
         LEFT JOIN tickets p ON t.tracker_id = p.id
         LEFT JOIN team_members tm ON t.assigned_to_id = tm.id
-        WHERE t.id = ?
+        WHERE t.id = $1
     "#;
     let row = match sqlx::query(sql).bind(id).fetch_optional(db).await {
         Ok(Some(r)) => r,
@@ -126,7 +126,7 @@ async fn fetch_full_ticket_by_id(db: &sqlx::PgPool, id: &str) -> Result<Option<V
     let mut val = format_ticket_row(&row);
 
     let act_rows = sqlx::query(
-        "SELECT id, ticket_id, author_id, author_name, activity_type, message, activity_metadata, created_at FROM ticket_activities WHERE ticket_id = ? ORDER BY created_at ASC"
+        "SELECT id, ticket_id, author_id, author_name, activity_type, message, activity_metadata, created_at FROM ticket_activities WHERE ticket_id = $1 ORDER BY created_at ASC"
     )
     .bind(id)
     .fetch_all(db)
@@ -173,7 +173,7 @@ async fn fetch_full_ticket_by_id(db: &sqlx::PgPool, id: &str) -> Result<Option<V
                t.conversation_id, t.contact_id, c.person_name as contact_name, t.created_at
         FROM tickets t
         LEFT JOIN contacts c ON t.contact_id = c.id
-        WHERE t.tracker_id = ?
+        WHERE t.tracker_id = $1
         ORDER BY t.created_at ASC
         "#
     )
@@ -240,9 +240,11 @@ pub async fn list_tickets(
         WHERE 1=1
     "#);
 
+    let mut n: i32 = 0;
     if let Some(ref tt) = query.ticket_type {
         if !tt.is_empty() && tt != "all" {
-            sql.push_str(" AND t.ticket_type = ?");
+            n += 1;
+            sql.push_str(&format!(" AND t.ticket_type = ${n}"));
         }
     }
     if let Some(ref st) = query.status {
@@ -250,28 +252,35 @@ pub async fn list_tickets(
             if st == "resolved" {
                 sql.push_str(" AND t.status IN ('resolved', 'closed')");
             } else {
-                sql.push_str(" AND t.status = ?");
+                n += 1;
+                sql.push_str(&format!(" AND t.status = ${n}"));
             }
         }
     }
     if let Some(ref dept) = query.department {
         if !dept.is_empty() && dept != "all" {
-            sql.push_str(" AND t.department = ?");
+            n += 1;
+            sql.push_str(&format!(" AND t.department = ${n}"));
         }
     }
     if let Some(ref tr_id) = query.tracker_id {
         if !tr_id.is_empty() {
-            sql.push_str(" AND t.tracker_id = ?");
+            n += 1;
+            sql.push_str(&format!(" AND t.tracker_id = ${n}"));
         }
     }
     if let Some(ref conv_id) = query.conversation_id {
         if !conv_id.is_empty() {
-            sql.push_str(" AND t.conversation_id = ?");
+            n += 1;
+            sql.push_str(&format!(" AND t.conversation_id = ${n}"));
         }
     }
     if let Some(ref s) = query.search {
         if !s.is_empty() {
-            sql.push_str(" AND (t.ticket_number LIKE ? OR t.title LIKE ? OR t.description LIKE ? OR c.person_name LIKE ?)");
+            sql.push_str(&format!(
+                " AND (t.ticket_number LIKE ${} OR t.title LIKE ${} OR t.description LIKE ${} OR c.person_name LIKE ${})",
+                n + 1, n + 2, n + 3, n + 4
+            ));
         }
     }
     sql.push_str(" ORDER BY t.created_at DESC");
@@ -527,7 +536,7 @@ pub async fn create_ticket(
         INSERT INTO tickets (
             id, ticket_number, title, description, ticket_type, department,
             priority, status, conversation_id, contact_id, tracker_id, assigned_to_id, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         "#,
     )
     .bind(&id)
@@ -570,7 +579,7 @@ pub async fn create_ticket(
     let act_msg = format!("Ticket created ({}) in department {} with priority {}", tt, dept, prio);
     let mut activity_errors: Vec<String> = Vec::new();
     if let Err(e) = sqlx::query(
-        "INSERT INTO ticket_activities (id, ticket_id, author_id, author_name, activity_type, message, activity_metadata, created_at) VALUES (?, ?, NULL, ?, 'creation', ?, '{}', ?)"
+        "INSERT INTO ticket_activities (id, ticket_id, author_id, author_name, activity_type, message, activity_metadata, created_at) VALUES ($1, $2, NULL, $3, 'creation', $4, '{}', $5)"
     )
     .bind(&act_id)
     .bind(&id)
@@ -613,7 +622,7 @@ pub async fn update_ticket(
     let now = Utc::now().to_rfc3339();
 
     // Check if ticket exists
-    let existing = match sqlx::query("SELECT status, priority, department, title, description, tracker_id, assigned_to_id, resolution_summary FROM tickets WHERE id = ?")
+    let existing = match sqlx::query("SELECT status, priority, department, title, description, tracker_id, assigned_to_id, resolution_summary FROM tickets WHERE id = $1")
         .bind(&id)
         .fetch_optional(&state.db)
         .await
@@ -685,10 +694,10 @@ pub async fn update_ticket(
     let updated = match sqlx::query(
         r#"
         UPDATE tickets
-        SET status = ?, priority = ?, department = ?, title = ?, description = ?,
-            tracker_id = ?, assigned_to_id = ?, resolution_summary = ?,
-            resolved_at = COALESCE(?, resolved_at), updated_at = ?
-        WHERE id = ?
+        SET status = $1, priority = $2, department = $3, title = $4, description = $5,
+            tracker_id = $6, assigned_to_id = $7, resolution_summary = $8,
+            resolved_at = COALESCE($9, resolved_at), updated_at = $10
+        WHERE id = $11
         "#
     )
     .bind(new_status)
@@ -733,7 +742,7 @@ pub async fn update_ticket(
             None => format!("Status set to '{}'; previous value was unreadable", new_status.unwrap_or("null")),
         };
         if let Err(e) = sqlx::query(
-            "INSERT INTO ticket_activities (id, ticket_id, author_id, author_name, activity_type, message, activity_metadata, created_at) VALUES (?, ?, NULL, ?, 'status_change', ?, '{}', ?)"
+            "INSERT INTO ticket_activities (id, ticket_id, author_id, author_name, activity_type, message, activity_metadata, created_at) VALUES ($1, $2, NULL, $3, 'status_change', $4, '{}', $5)"
         )
         .bind(&act_id)
         .bind(&id)
@@ -753,7 +762,7 @@ pub async fn update_ticket(
             None => format!("Priority set to '{}'; previous value was unreadable", new_priority.unwrap_or("null")),
         };
         if let Err(e) = sqlx::query(
-            "INSERT INTO ticket_activities (id, ticket_id, author_id, author_name, activity_type, message, activity_metadata, created_at) VALUES (?, ?, NULL, ?, 'priority_change', ?, '{}', ?)"
+            "INSERT INTO ticket_activities (id, ticket_id, author_id, author_name, activity_type, message, activity_metadata, created_at) VALUES ($1, $2, NULL, $3, 'priority_change', $4, '{}', $5)"
         )
         .bind(&act_id)
         .bind(&id)
@@ -811,7 +820,7 @@ pub async fn add_ticket_activity(
 
     // The activity row has no FK enforcement, so the ticket is checked first:
     // otherwise an activity for a missing ticket would be reported as added.
-    let ticket_exists = match sqlx::query_scalar::<_, i64>("SELECT count(*) FROM tickets WHERE id = ?")
+    let ticket_exists = match sqlx::query_scalar::<_, i64>("SELECT count(*) FROM tickets WHERE id = $1")
         .bind(&id)
         .fetch_one(&state.db)
         .await
@@ -830,7 +839,7 @@ pub async fn add_ticket_activity(
     }
 
     let inserted = match sqlx::query(
-        "INSERT INTO ticket_activities (id, ticket_id, author_id, author_name, activity_type, message, activity_metadata, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO ticket_activities (id, ticket_id, author_id, author_name, activity_type, message, activity_metadata, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
     )
     .bind(&act_id)
     .bind(&id)
@@ -863,7 +872,7 @@ pub async fn add_ticket_activity(
 
     // The touch is cosmetic: report a failure instead of swallowing it.
     let mut touch_errors: Vec<String> = Vec::new();
-    match sqlx::query("UPDATE tickets SET updated_at = ? WHERE id = ?")
+    match sqlx::query("UPDATE tickets SET updated_at = $1 WHERE id = $2")
         .bind(&now)
         .bind(&id)
         .execute(&state.db)
@@ -907,7 +916,7 @@ pub async fn link_ticket_to_tracker(
     let now = Utc::now().to_rfc3339();
     let author: Option<String> = payload.author_name.filter(|s| !s.trim().is_empty());
 
-    let tracker_info = match sqlx::query("SELECT ticket_number, title FROM tickets WHERE id = ?")
+    let tracker_info = match sqlx::query("SELECT ticket_number, title FROM tickets WHERE id = $1")
         .bind(&payload.tracker_id)
         .fetch_optional(&state.db)
         .await
@@ -931,7 +940,7 @@ pub async fn link_ticket_to_tracker(
     let tr_num: Option<String> = tracker_info.try_get("ticket_number").ok().flatten();
     let tr_title: Option<String> = tracker_info.try_get("title").ok().flatten();
 
-    let linked = match sqlx::query("UPDATE tickets SET tracker_id = ?, updated_at = ? WHERE id = ?")
+    let linked = match sqlx::query("UPDATE tickets SET tracker_id = $1, updated_at = $2 WHERE id = $3")
         .bind(&payload.tracker_id)
         .bind(&now)
         .bind(&id)
@@ -964,7 +973,7 @@ pub async fn link_ticket_to_tracker(
     );
     let mut activity_errors: Vec<String> = Vec::new();
     if let Err(e) = sqlx::query(
-        "INSERT INTO ticket_activities (id, ticket_id, author_id, author_name, activity_type, message, activity_metadata, created_at) VALUES (?, ?, NULL, ?, 'tracker_link', ?, '{}', ?)"
+        "INSERT INTO ticket_activities (id, ticket_id, author_id, author_name, activity_type, message, activity_metadata, created_at) VALUES ($1, $2, NULL, $3, 'tracker_link', $4, '{}', $5)"
     )
     .bind(&act_id)
     .bind(&id)
@@ -1015,7 +1024,7 @@ pub async fn broadcast_tracker_update(
     let send_customer = payload.send_customer_message.unwrap_or(false);
     let message_text = payload.broadcast_message.trim();
 
-    let tracker_row = match sqlx::query("SELECT ticket_number, title FROM tickets WHERE id = ?")
+    let tracker_row = match sqlx::query("SELECT ticket_number, title FROM tickets WHERE id = $1")
         .bind(&id)
         .fetch_optional(&state.db)
         .await
@@ -1053,7 +1062,7 @@ pub async fn broadcast_tracker_update(
             .into_response();
     }
 
-    let child_rows = match sqlx::query("SELECT id, ticket_number, conversation_id, status FROM tickets WHERE tracker_id = ?")
+    let child_rows = match sqlx::query("SELECT id, ticket_number, conversation_id, status FROM tickets WHERE tracker_id = $1")
         .bind(&id)
         .fetch_all(&state.db)
         .await
@@ -1102,7 +1111,7 @@ pub async fn broadcast_tracker_update(
                     let route = sqlx::query(
                         "SELECT COALESCE(c.channel, '') AS channel, COALESCE(c.contact_id, '') AS contact_id, \
                          ct.value AS contact_value, c.tenant_key AS tenant_key \
-                         FROM conversations c LEFT JOIN contacts ct ON ct.id = c.contact_id WHERE c.id = ?",
+                         FROM conversations c LEFT JOIN contacts ct ON ct.id = c.contact_id WHERE c.id = $1",
                     )
                     .bind(&cid)
                     .fetch_optional(&state.db)
@@ -1243,7 +1252,7 @@ pub async fn broadcast_tracker_update(
         if resolve_all {
             if let Some(ref child_id) = child_id {
                 let res_summary = format!("Auto-resolved via incident tracker {} broadcast: {}", tracker_num_label, payload.broadcast_message);
-                let res = sqlx::query("UPDATE tickets SET status = 'resolved', resolution_summary = ?, resolved_at = ?, updated_at = ? WHERE id = ?")
+                let res = sqlx::query("UPDATE tickets SET status = 'resolved', resolution_summary = $1, resolved_at = $2, updated_at = $3 WHERE id = $4")
                     .bind(&res_summary)
                     .bind(&now)
                     .bind(&now)
@@ -1262,7 +1271,7 @@ pub async fn broadcast_tracker_update(
                 let act_id = Uuid::new_v4().to_string();
                 let act_msg = format!("Resolved via broadcast from {}: {}", tracker_num_label, payload.broadcast_message);
                 if let Err(e) = sqlx::query(
-                    "INSERT INTO ticket_activities (id, ticket_id, author_id, author_name, activity_type, message, activity_metadata, created_at) VALUES (?, ?, NULL, ?, 'broadcast', ?, '{}', ?)"
+                    "INSERT INTO ticket_activities (id, ticket_id, author_id, author_name, activity_type, message, activity_metadata, created_at) VALUES ($1, $2, NULL, $3, 'broadcast', $4, '{}', $5)"
                 )
                 .bind(&act_id)
                 .bind(child_id)
@@ -1290,7 +1299,7 @@ pub async fn broadcast_tracker_update(
     // customer_broadcast_sent is only set when a customer message really landed.
     let customers_notified = send_customer && messages_sent > 0;
     let tracker_update = sqlx::query(
-        "UPDATE tickets SET status = 'resolved', resolution_summary = ?, customer_broadcast_sent = ?, resolved_at = ?, updated_at = ? WHERE id = ?"
+        "UPDATE tickets SET status = 'resolved', resolution_summary = $1, customer_broadcast_sent = $2, resolved_at = $3, updated_at = $4 WHERE id = $5"
     )
     .bind(&tracker_summary)
     .bind(customers_notified)
@@ -1325,7 +1334,7 @@ pub async fn broadcast_tracker_update(
         }
     };
     if let Err(e) = sqlx::query(
-        "INSERT INTO ticket_activities (id, ticket_id, author_id, author_name, activity_type, message, activity_metadata, created_at) VALUES (?, ?, NULL, ?, 'broadcast', ?, ?, ?)"
+        "INSERT INTO ticket_activities (id, ticket_id, author_id, author_name, activity_type, message, activity_metadata, created_at) VALUES ($1, $2, NULL, $3, 'broadcast', $4, $5, $6)"
     )
     .bind(&act_id)
     .bind(&id)
@@ -1459,11 +1468,11 @@ pub async fn list_linked_issues(
 
     if let Some(ref tid) = query.ticket_id {
         if !tid.is_empty() {
-            sql.push_str(" AND ticket_id = ?");
+            sql.push_str(" AND ticket_id = $1");
         }
     } else if let Some(ref cid) = query.conversation_id {
         if !cid.is_empty() {
-            sql.push_str(" AND conversation_id = ?");
+            sql.push_str(" AND conversation_id = $1");
         }
     }
     sql.push_str(" ORDER BY created_at DESC");
@@ -1497,7 +1506,7 @@ pub async fn unlink_issue(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    let issue = match sqlx::query("SELECT ticket_id, issue_key FROM linked_issues WHERE id = ?")
+    let issue = match sqlx::query("SELECT ticket_id, issue_key FROM linked_issues WHERE id = $1")
         .bind(&id)
         .fetch_optional(&state.db)
         .await
@@ -1512,7 +1521,7 @@ pub async fn unlink_issue(
 
     // Delete first: an "Unlinked" activity written before a failed delete would
     // describe a change that never happened.
-    let deleted = match sqlx::query("DELETE FROM linked_issues WHERE id = ?")
+    let deleted = match sqlx::query("DELETE FROM linked_issues WHERE id = $1")
         .bind(&id)
         .execute(&state.db)
         .await
@@ -1545,7 +1554,7 @@ pub async fn unlink_issue(
             let now = Utc::now().to_rfc3339();
             let msg = format!("Unlinked external issue [{}]", key.unwrap_or_else(|| "unknown key".to_string()));
             if let Err(e) = sqlx::query(
-                "INSERT INTO ticket_activities (id, ticket_id, author_id, author_name, activity_type, message, activity_metadata, created_at) VALUES (?, ?, NULL, 'External Sync', 'external_issue', ?, '{}', ?)"
+                "INSERT INTO ticket_activities (id, ticket_id, author_id, author_name, activity_type, message, activity_metadata, created_at) VALUES ($1, $2, NULL, 'External Sync', 'external_issue', $3, '{}', $4)"
             )
             .bind(&act_id)
             .bind(t)
@@ -1623,7 +1632,7 @@ pub async fn sync_conversation_to_slack(
     let now = Utc::now().to_rfc3339();
     let cid = payload.conversation_id;
 
-    let conversation_exists = match sqlx::query_scalar::<_, i64>("SELECT count(*) FROM conversations WHERE id = ?")
+    let conversation_exists = match sqlx::query_scalar::<_, i64>("SELECT count(*) FROM conversations WHERE id = $1")
         .bind(&cid)
         .fetch_one(&state.db)
         .await
@@ -1651,7 +1660,7 @@ pub async fn sync_conversation_to_slack(
     };
 
     let existing = match sqlx::query(
-        "SELECT id, slack_channel_id, slack_channel_name, slack_thread_ts, is_synced, last_synced_at FROM slack_conversation_syncs WHERE conversation_id = ?"
+        "SELECT id, slack_channel_id, slack_channel_name, slack_thread_ts, is_synced, last_synced_at FROM slack_conversation_syncs WHERE conversation_id = $1"
     )
     .bind(&cid)
     .fetch_optional(&state.db)
@@ -1703,7 +1712,7 @@ pub async fn sync_conversation_to_slack(
     let upserted = match sqlx::query(
         r#"
         INSERT INTO slack_conversation_syncs (id, conversation_id, slack_channel_id, slack_channel_name, slack_thread_ts, is_synced, last_synced_at, created_at)
-        VALUES (?, ?, ?, ?, ?, 0, NULL, ?)
+        VALUES ($1, $2, $3, $4, $5, 0, NULL, $6)
         ON CONFLICT(conversation_id) DO UPDATE SET
             slack_channel_id = excluded.slack_channel_id,
             slack_channel_name = excluded.slack_channel_name
@@ -1769,7 +1778,7 @@ pub async fn get_slack_sync_status(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    let row = match sqlx::query("SELECT id, conversation_id, slack_channel_id, slack_channel_name, slack_thread_ts, is_synced, last_synced_at, created_at FROM slack_conversation_syncs WHERE conversation_id = ?")
+    let row = match sqlx::query("SELECT id, conversation_id, slack_channel_id, slack_channel_name, slack_thread_ts, is_synced, last_synced_at, created_at FROM slack_conversation_syncs WHERE conversation_id = $1")
         .bind(&id)
         .fetch_optional(&state.db)
         .await

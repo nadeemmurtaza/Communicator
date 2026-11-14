@@ -1770,9 +1770,9 @@ async fn process_campaigns_inner(state: &AppState, opts: &RunQuery, tenant_key: 
 
     let rows = match sqlx::query_as::<_, (String, String, Option<String>)>(
         "SELECT id, name, scheduled_at FROM broadcasts \
-         WHERE status = 'scheduled' AND COALESCE(tenant_key, '') = ? \
+         WHERE status = 'scheduled' AND COALESCE(tenant_key, '') = $1 \
          AND scheduled_at IS NOT NULL AND scheduled_at <> '' \
-         ORDER BY scheduled_at ASC LIMIT ?",
+         ORDER BY scheduled_at ASC LIMIT $2",
     )
     .bind(tenant_key)
     .bind(opts.max() as i64)

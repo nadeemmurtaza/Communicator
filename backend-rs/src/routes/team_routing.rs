@@ -139,7 +139,7 @@ const MEMBER_COLUMNS: &str = "id, name, email, role, availability_status, max_co
 
 async fn load_member(db: &sqlx::PgPool, id: &str) -> Result<Option<MemberRow>, sqlx::Error> {
     sqlx::query_as::<_, MemberRow>(&format!(
-        "SELECT {MEMBER_COLUMNS} FROM team_members WHERE id = ?"
+        "SELECT {MEMBER_COLUMNS} FROM team_members WHERE id = $1"
     ))
     .bind(id)
     .fetch_optional(db)
@@ -249,7 +249,7 @@ pub async fn create_team_member(
     // A failed duplicate check is not "no duplicate": inserting anyway could
     // create a second member with the same address.
     let dup: Option<String> = match sqlx::query_scalar(
-        "SELECT id FROM team_members WHERE email = ? AND email <> '' LIMIT 1",
+        "SELECT id FROM team_members WHERE email = $1 AND email <> '' LIMIT 1",
     )
     .bind(&email)
     .fetch_optional(&state.db)
@@ -277,7 +277,7 @@ pub async fn create_team_member(
         .unwrap_or_else(|| "Agent".to_string());
 
     let res = sqlx::query(
-        "INSERT INTO team_members (id, name, email, role, availability_status, max_concurrent_conversations) VALUES (?, ?, ?, ?, 'offline', ?)",
+        "INSERT INTO team_members (id, name, email, role, availability_status, max_concurrent_conversations) VALUES ($1, $2, $3, $4, 'offline', $5)",
     )
     .bind(&id)
     .bind(name)
@@ -335,7 +335,7 @@ pub async fn delete_team_member(
     if let Err(r) = require_table(&state.db, "team_members").await {
         return r;
     }
-    match sqlx::query("DELETE FROM team_members WHERE id = ?")
+    match sqlx::query("DELETE FROM team_members WHERE id = $1")
         .bind(&id)
         .execute(&state.db)
         .await
@@ -351,7 +351,7 @@ pub async fn delete_team_member(
             // name them, so the answer cannot claim a clean deletion.
             let now = Utc::now().to_rfc3339();
             let unassigned = match sqlx::query(
-                "UPDATE conversations SET assigned_to_id = NULL, updated_at = ? WHERE assigned_to_id = ?",
+                "UPDATE conversations SET assigned_to_id = NULL, updated_at = $1 WHERE assigned_to_id = $2",
             )
             .bind(&now)
             .bind(&id)
@@ -373,7 +373,7 @@ pub async fn delete_team_member(
             // 0 rows here is legitimate: the agent may never have joined a
             // team, so the actual count is reported instead of claiming a
             // membership deletion that did not happen.
-            let memberships_removed = match sqlx::query("DELETE FROM team_memberships WHERE team_member_id = ?")
+            let memberships_removed = match sqlx::query("DELETE FROM team_memberships WHERE team_member_id = $1")
                 .bind(&id)
                 .execute(&state.db)
                 .await
@@ -418,7 +418,7 @@ pub async fn assign_conversation_team(
     Query(query): Query<AssignQuery>,
 ) -> impl IntoResponse {
     // A failed existence read is not "the conversation is missing".
-    let exists = sqlx::query_scalar::<_, String>("SELECT id FROM conversations WHERE id = ? LIMIT 1")
+    let exists = sqlx::query_scalar::<_, String>("SELECT id FROM conversations WHERE id = $1 LIMIT 1")
         .bind(&conversation_id)
         .fetch_optional(&state.db)
         .await;
@@ -458,7 +458,7 @@ pub async fn assign_conversation_team(
         // The JSON below claims this conversation is assigned, so the UPDATE
         // has to be proven: an error is a 500, 0 rows is a 404 naming the id.
         let assigned = sqlx::query(
-            "UPDATE conversations SET assigned_to_id = ?, assigned_to_name = ?, updated_at = ? WHERE id = ?",
+            "UPDATE conversations SET assigned_to_id = $1, assigned_to_name = $2, updated_at = $3 WHERE id = $4",
         )
         .bind(&member.id)
         .bind(&member.name)
@@ -483,7 +483,7 @@ pub async fn assign_conversation_team(
         // Auxiliary bookkeeping: the response claims the assignment (proven
         // above), not the roster timestamp, so a failure is logged, not lost.
         crate::db::report_write(
-            sqlx::query("UPDATE team_members SET last_assigned_at = ? WHERE id = ?")
+            sqlx::query("UPDATE team_members SET last_assigned_at = $1 WHERE id = $2")
                 .bind(&now)
                 .bind(&member.id)
                 .execute(&state.db)
@@ -509,7 +509,7 @@ pub async fn assign_conversation_team(
     // Explicit unassignment (mirrors Python member_id=None).
     let now = Utc::now().to_rfc3339();
     let unassigned = sqlx::query(
-        "UPDATE conversations SET assigned_to_id = NULL, assigned_to_name = NULL, updated_at = ? WHERE id = ?",
+        "UPDATE conversations SET assigned_to_id = NULL, assigned_to_name = NULL, updated_at = $1 WHERE id = $2",
     )
     .bind(&now)
     .bind(&conversation_id)
@@ -543,7 +543,7 @@ pub async fn set_human_takeover(
     Query(query): Query<TakeoverQuery>,
 ) -> impl IntoResponse {
     let now = Utc::now().to_rfc3339();
-    match sqlx::query("UPDATE conversations SET human_takeover = ?, updated_at = ? WHERE id = ?")
+    match sqlx::query("UPDATE conversations SET human_takeover = $1, updated_at = $2 WHERE id = $3")
         .bind(query.enabled)
         .bind(&now)
         .bind(&conversation_id)
@@ -588,7 +588,7 @@ async fn team_members_of(
         SELECT tm.id, tm.name, COALESCE(tm.email, '') AS email
         FROM team_members tm
         JOIN team_memberships tms ON tms.team_member_id = tm.id
-        WHERE tms.team_id = ?
+        WHERE tms.team_id = $1
         ORDER BY tm.name ASC
         "#,
     )
@@ -684,7 +684,7 @@ pub async fn create_team(
     }
     // A failed duplicate read is not "no duplicate": reporting 400/201 off it
     // would guess either way.
-    let dup: Option<String> = match sqlx::query_scalar("SELECT id FROM teams WHERE name = ? LIMIT 1")
+    let dup: Option<String> = match sqlx::query_scalar("SELECT id FROM teams WHERE name = $1 LIMIT 1")
         .bind(name)
         .fetch_optional(&state.db)
         .await
@@ -727,7 +727,7 @@ pub async fn create_team(
 
     // The team is echoed back below, so the INSERT itself has to be proven.
     let stored = sqlx::query(
-        "INSERT INTO teams (id, name, description, auto_assign, created_at) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO teams (id, name, description, auto_assign, created_at) VALUES ($1, $2, $3, $4, $5)",
     )
     .bind(&id)
     .bind(name)
@@ -755,7 +755,7 @@ pub async fn create_team(
     }
 
     let row = sqlx::query_as::<_, TeamRow>(&format!(
-        "SELECT {TEAM_COLUMNS} FROM teams WHERE id = ?"
+        "SELECT {TEAM_COLUMNS} FROM teams WHERE id = $1"
     ))
     .bind(&id)
     .fetch_optional(&state.db)
@@ -790,7 +790,7 @@ pub async fn delete_team(State(state): State<AppState>, Path(id): Path<String>) 
     if let Err(r) = require_table(&state.db, "teams").await {
         return r;
     }
-    match sqlx::query("DELETE FROM teams WHERE id = ?")
+    match sqlx::query("DELETE FROM teams WHERE id = $1")
         .bind(&id)
         .execute(&state.db)
         .await
@@ -803,7 +803,7 @@ pub async fn delete_team(State(state): State<AppState>, Path(id): Path<String>) 
             // so the actual count is reported instead of claiming memberships
             // were deleted. A failure leaves stale rows pointing at a dead team,
             // which the answer has to name.
-            let memberships_removed = match sqlx::query("DELETE FROM team_memberships WHERE team_id = ?")
+            let memberships_removed = match sqlx::query("DELETE FROM team_memberships WHERE team_id = $1")
                 .bind(&id)
                 .execute(&state.db)
                 .await
@@ -851,7 +851,7 @@ pub async fn add_member_to_team(
         }
     }
 
-    let team = sqlx::query_as::<_, TeamRow>(&format!("SELECT {TEAM_COLUMNS} FROM teams WHERE id = ?"))
+    let team = sqlx::query_as::<_, TeamRow>(&format!("SELECT {TEAM_COLUMNS} FROM teams WHERE id = $1"))
         .bind(&id)
         .fetch_optional(&state.db)
         .await;
@@ -874,7 +874,7 @@ pub async fn add_member_to_team(
 
     // A failed existence read is not "not a member yet".
     let already: Option<i64> = match sqlx::query_scalar(
-        "SELECT 1 FROM team_memberships WHERE team_id = ? AND team_member_id = ? LIMIT 1",
+        "SELECT 1 FROM team_memberships WHERE team_id = $1 AND team_member_id = $2 LIMIT 1",
     )
     .bind(&id)
     .bind(&member.id)
@@ -895,7 +895,7 @@ pub async fn add_member_to_team(
 
     if already.is_none() {
         let inserted = sqlx::query(
-            "INSERT INTO team_memberships (team_id, team_member_id) VALUES (?, ?)",
+            "INSERT INTO team_memberships (team_id, team_member_id) VALUES ($1, $2)",
         )
         .bind(&id)
         .bind(&member.id)
@@ -948,7 +948,7 @@ pub async fn remove_member_from_team(
         }
     }
 
-    let team = sqlx::query_as::<_, TeamRow>(&format!("SELECT {TEAM_COLUMNS} FROM teams WHERE id = ?"))
+    let team = sqlx::query_as::<_, TeamRow>(&format!("SELECT {TEAM_COLUMNS} FROM teams WHERE id = $1"))
         .bind(&id)
         .fetch_optional(&state.db)
         .await;
@@ -958,7 +958,7 @@ pub async fn remove_member_from_team(
         Err(e) => return db_err(e),
     };
 
-    match sqlx::query("DELETE FROM team_memberships WHERE team_id = ? AND team_member_id = ?")
+    match sqlx::query("DELETE FROM team_memberships WHERE team_id = $1 AND team_member_id = $2")
         .bind(&id)
         .bind(&member_id)
         .execute(&state.db)
@@ -1049,7 +1049,7 @@ pub async fn update_agent_status(
         );
     }
 
-    match sqlx::query("UPDATE team_members SET availability_status = ? WHERE id = ?")
+    match sqlx::query("UPDATE team_members SET availability_status = $1 WHERE id = $2")
         .bind(&status)
         .bind(&id)
         .execute(&state.db)
@@ -1110,7 +1110,7 @@ pub async fn update_agent_capacity(
     }
 
     match sqlx::query(
-        "UPDATE team_members SET max_concurrent_conversations = ? WHERE id = ?",
+        "UPDATE team_members SET max_concurrent_conversations = $1 WHERE id = $2",
     )
     .bind(payload.max_capacity)
     .bind(&id)
@@ -1173,7 +1173,7 @@ pub async fn get_capacity_overview(
     let scoped = query.team_id.as_deref().filter(|t| !t.is_empty());
     let sql = if scoped.is_some() {
         format!(
-            "SELECT {MEMBER_COLUMNS} FROM team_members WHERE id IN (SELECT team_member_id FROM team_memberships WHERE team_id = ?)"
+            "SELECT {MEMBER_COLUMNS} FROM team_members WHERE id IN (SELECT team_member_id FROM team_memberships WHERE team_id = $1)"
         )
     } else {
         format!("SELECT {MEMBER_COLUMNS} FROM team_members")
@@ -1328,7 +1328,7 @@ pub async fn batch_auto_assign(
     }
 
     let members_sql = if scoped.is_some() {
-        format!("SELECT {MEMBER_COLUMNS} FROM team_members WHERE id IN (SELECT team_member_id FROM team_memberships WHERE team_id = ?) ORDER BY name ASC")
+        format!("SELECT {MEMBER_COLUMNS} FROM team_members WHERE id IN (SELECT team_member_id FROM team_memberships WHERE team_id = $1) ORDER BY name ASC")
     } else {
         format!("SELECT {MEMBER_COLUMNS} FROM team_members ORDER BY name ASC")
     };
@@ -1379,7 +1379,7 @@ pub async fn batch_auto_assign(
             Some(agent) => {
                 let now = Utc::now().to_rfc3339();
                 let res = sqlx::query(
-                    "UPDATE conversations SET assigned_to_id = ?, assigned_to_name = ?, updated_at = ? WHERE id = ? AND assigned_to_id IS NULL",
+                    "UPDATE conversations SET assigned_to_id = $1, assigned_to_name = $2, updated_at = $3 WHERE id = $4 AND assigned_to_id IS NULL",
                 )
                 .bind(&agent.id)
                 .bind(&agent.name)
@@ -1395,7 +1395,7 @@ pub async fn batch_auto_assign(
                         // assignment (proven by the UPDATE above), not the
                         // roster timestamp, so a failure is logged, not lost.
                         crate::db::report_write(
-                            sqlx::query("UPDATE team_members SET last_assigned_at = ? WHERE id = ?")
+                            sqlx::query("UPDATE team_members SET last_assigned_at = $1 WHERE id = $2")
                                 .bind(&now)
                                 .bind(&agent.id)
                                 .execute(&state.db)
