@@ -15,6 +15,12 @@ also lists this repo's current gaps against that layout (root-level
 debug logs, `erp-schema/*.prisma`, archive folders mixed into `src/`)
 so they aren't mistaken for the target shape.
 
+See `COMMUNICATION.md` for how this repo is meant to talk to nID and
+the rest of the ecosystem (Module Gateway/gRPC, the NATS event bus,
+per-ID ownership), how modules talk to each other inside this one
+repo, and how third-party platforms (Shopify, Meta, TikTok) fit in.
+None of the cross-repo pieces exist yet — see its audit note.
+
 ## NEWAX Ecosystem — Technology Stack & Architecture Plan
 
 > Applies to every repo in the ecosystem (nID, Communicator, core-newax,
@@ -143,6 +149,31 @@ in pnpm's favor:
   nID's exactly; `apps/web/package.json` depends on
   `"@newax/design-tokens": "workspace:*"`, same as nID's apps. Run
   `pnpm install` at the repo root, not `npm install`.
+
+#### Tech-stack compliance audit (2026-11-14)
+
+Honest status against the plan above, not papered over:
+
+- **Backend wire protocol: not compliant.** `backend-rs` is Axum +
+  plain REST/JSON today — no `tonic`/`prost`/`.proto` anywhere in this
+  repo. The gRPC/Connect plan above is the target for new cross-repo
+  communication (see `COMMUNICATION.md`) and for a future deliberate
+  migration, not a description of what's running. Don't assume any
+  existing endpoint speaks gRPC.
+- **Database: compliant.** SQLx + PostgreSQL, as planned.
+  `erp-schema/*.prisma` is schema-*modeling* only — confirmed no
+  `@prisma/client` dependency anywhere in this repo.
+- **Cache: not implemented.** No `moka`, no Redis, in this repo today.
+  There is currently no caching layer at all, not a non-compliant one.
+- **Frontend: not compliant, and not a quick fix.** `apps/web` is
+  React + Vite + Tailwind, not Svelte, and talks REST, not Connect.
+  This is ~150 existing pages, not a prototype stub — re-platforming
+  it to Svelte/WASM-core/Connect would be a ground-up rewrite, not an
+  audit fix, and isn't something to do without an explicit decision to
+  spend that effort. Until that decision is made, treat the
+  Svelte/WASM plan as the target for *new* client surfaces (iOS,
+  Android, Windows, or a second web app), not a mandate to rewrite
+  this one.
 
 ### Why this combination and not the obvious alternatives
 
