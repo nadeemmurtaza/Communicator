@@ -481,7 +481,7 @@ pub async fn list_organizations(
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
 
-    let rows = sqlx::query("SELECT * FROM organizations WHERE tenant_key = ? ORDER BY name")
+    let rows = sqlx::query("SELECT * FROM organizations WHERE tenant_key = $1 ORDER BY name")
         .bind(&tenant_key)
         .fetch_all(&state.db)
         .await
@@ -526,7 +526,7 @@ pub async fn create_organization(
 
     sqlx::query(
         "INSERT INTO organizations (id, tenant_key, name, description, industry, website, email, phone, address, timezone, settings)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
     )
     .bind(&id)
     .bind(&tenant_key)
@@ -552,7 +552,7 @@ pub async fn create_organization(
     let brand_id = gen_id();
     let brand_slug = format!("{}-brand", slug);
     sqlx::query(
-        "INSERT INTO brands (id, organization_id, name, slug, description) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO brands (id, organization_id, name, slug, description) VALUES ($1, $2, $3, $4, $5)",
     )
     .bind(&brand_id)
     .bind(&id)
@@ -579,7 +579,7 @@ pub async fn get_organization(
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
 
-    let row = sqlx::query("SELECT * FROM organizations WHERE id = ? AND tenant_key = ?")
+    let row = sqlx::query("SELECT * FROM organizations WHERE id = $1 AND tenant_key = $2")
         .bind(&id)
         .bind(&tenant_key)
         .fetch_optional(&state.db)
@@ -658,7 +658,7 @@ pub async fn update_organization(
     }
 
     let query = format!(
-        "UPDATE organizations SET {} WHERE id = ? AND tenant_key = ?",
+        "UPDATE organizations SET {} WHERE id = $1 AND tenant_key = $2",
         sets.join(", ")
     );
 
@@ -687,7 +687,7 @@ pub async fn delete_organization(
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
 
-    sqlx::query("DELETE FROM organizations WHERE id = ? AND tenant_key = ?")
+    sqlx::query("DELETE FROM organizations WHERE id = $1 AND tenant_key = $2")
         .bind(&id)
         .bind(&tenant_key)
         .execute(&state.db)
@@ -717,12 +717,12 @@ pub async fn list_brands(
     let query = if org_id.is_some() {
         "SELECT b.*, o.tenant_key FROM brands b
          JOIN organizations o ON b.organization_id = o.id
-         WHERE o.tenant_key = ? AND b.organization_id = ?
+         WHERE o.tenant_key = $1 AND b.organization_id = $2
          ORDER BY b.name"
     } else {
         "SELECT b.*, o.tenant_key FROM brands b
          JOIN organizations o ON b.organization_id = o.id
-         WHERE o.tenant_key = ?
+         WHERE o.tenant_key = $1
          ORDER BY b.name"
     };
 
@@ -765,7 +765,7 @@ pub async fn create_brand(
     let tenant_key = resolve_tenant_key(&headers).await?;
 
     // Verify organization belongs to tenant
-    let org = sqlx::query("SELECT id FROM organizations WHERE id = ? AND tenant_key = ?")
+    let org = sqlx::query("SELECT id FROM organizations WHERE id = $1 AND tenant_key = $2")
         .bind(&body.organization_id)
         .bind(&tenant_key)
         .fetch_optional(&state.db)
@@ -793,7 +793,7 @@ pub async fn create_brand(
         "INSERT INTO brands (id, organization_id, name, slug, description, logo_url, tagline,
          color_scheme, bio, website, email, phone, address, social_links, products, services,
          prices, policies, rules, tone_guidelines, keywords)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)",
     )
     .bind(&id)
     .bind(&body.organization_id)
@@ -844,7 +844,7 @@ pub async fn get_brand(
     let row = sqlx::query(
         "SELECT b.*, o.tenant_key FROM brands b
          JOIN organizations o ON b.organization_id = o.id
-         WHERE b.id = ? AND o.tenant_key = ?",
+         WHERE b.id = $1 AND o.tenant_key = $2",
     )
     .bind(&id)
     .bind(&tenant_key)
@@ -904,7 +904,7 @@ pub async fn update_brand(
     let existing = sqlx::query(
         "SELECT b.id FROM brands b
          JOIN organizations o ON b.organization_id = o.id
-         WHERE b.id = ? AND o.tenant_key = ?",
+         WHERE b.id = $1 AND o.tenant_key = $2",
     )
     .bind(&id)
     .bind(&tenant_key)
@@ -991,7 +991,7 @@ pub async fn update_brand(
         return Ok(Json(serde_json::json!({ "message": "No changes" })));
     }
 
-    let query = format!("UPDATE brands SET {} WHERE id = ?", sets.join(", "));
+    let query = format!("UPDATE brands SET {} WHERE id = $1", sets.join(", "));
     sqlx::query(&query)
         .bind(&id)
         .execute(&state.db)
@@ -1019,7 +1019,7 @@ pub async fn delete_brand(
     let existing = sqlx::query(
         "SELECT b.id FROM brands b
          JOIN organizations o ON b.organization_id = o.id
-         WHERE b.id = ? AND o.tenant_key = ?",
+         WHERE b.id = $1 AND o.tenant_key = $2",
     )
     .bind(&id)
     .bind(&tenant_key)
@@ -1039,7 +1039,7 @@ pub async fn delete_brand(
         ));
     }
 
-    sqlx::query("DELETE FROM brands WHERE id = ?")
+    sqlx::query("DELETE FROM brands WHERE id = $1")
         .bind(&id)
         .execute(&state.db)
         .await
@@ -1064,7 +1064,7 @@ pub async fn get_brand_profile(
     let brand_row = sqlx::query(
         "SELECT b.*, o.tenant_key FROM brands b
          JOIN organizations o ON b.organization_id = o.id
-         WHERE b.id = ? AND o.tenant_key = ?",
+         WHERE b.id = $1 AND o.tenant_key = $2",
     )
     .bind(&id)
     .bind(&tenant_key)
@@ -1110,7 +1110,7 @@ pub async fn get_brand_profile(
 
     // Fetch organization
     let org_id_val = brand_row.try_get::<String, _>("organization_id").unwrap_or_default();
-    let org_row = sqlx::query("SELECT * FROM organizations WHERE id = ?")
+    let org_row = sqlx::query("SELECT * FROM organizations WHERE id = $1")
         .bind(&org_id_val)
         .fetch_optional(&state.db)
         .await
@@ -1130,7 +1130,7 @@ pub async fn get_brand_profile(
     };
 
     // Fetch AI config
-    let ai_row = sqlx::query("SELECT * FROM brand_ai_config WHERE brand_id = ? AND is_active = 1")
+    let ai_row = sqlx::query("SELECT * FROM brand_ai_config WHERE brand_id = $1 AND is_active = 1")
         .bind(&id)
         .fetch_optional(&state.db)
         .await
@@ -1150,7 +1150,7 @@ pub async fn get_brand_profile(
 
     // Count knowledge entries
     let kb_count: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM brand_knowledge_entries WHERE brand_id = ?",
+        "SELECT COUNT(*) FROM brand_knowledge_entries WHERE brand_id = $1",
     )
     .bind(&id)
     .fetch_one(&state.db)
@@ -1180,7 +1180,7 @@ pub async fn list_credentials(
     let brand = sqlx::query(
         "SELECT b.id FROM brands b
          JOIN organizations o ON b.organization_id = o.id
-         WHERE b.id = ? AND o.tenant_key = ?",
+         WHERE b.id = $1 AND o.tenant_key = $2",
     )
     .bind(&id)
     .bind(&tenant_key)
@@ -1202,7 +1202,7 @@ pub async fn list_credentials(
 
     let rows = sqlx::query(
         "SELECT id, brand_id, channel_type, is_active, last_verified_at, created_at, updated_at
-         FROM brand_credentials WHERE brand_id = ?",
+         FROM brand_credentials WHERE brand_id = $1",
     )
     .bind(&id)
     .fetch_all(&state.db)
@@ -1242,7 +1242,7 @@ pub async fn upsert_credentials(
     let brand = sqlx::query(
         "SELECT b.id FROM brands b
          JOIN organizations o ON b.organization_id = o.id
-         WHERE b.id = ? AND o.tenant_key = ?",
+         WHERE b.id = $1 AND o.tenant_key = $2",
     )
     .bind(&id)
     .bind(&tenant_key)
@@ -1266,7 +1266,7 @@ pub async fn upsert_credentials(
 
     // Check if credentials already exist for this channel
     let existing = sqlx::query(
-        "SELECT id FROM brand_credentials WHERE brand_id = ? AND channel_type = ?",
+        "SELECT id FROM brand_credentials WHERE brand_id = $1 AND channel_type = $2",
     )
     .bind(&id)
     .bind(&channel)
@@ -1282,8 +1282,8 @@ pub async fn upsert_credentials(
     if let Some(row) = existing {
         let cred_id = row.try_get::<String, _>("id").unwrap_or_default();
         sqlx::query(
-            "UPDATE brand_credentials SET credentials = ?, updated_at = NOW()
-             WHERE id = ?",
+            "UPDATE brand_credentials SET credentials = $1, updated_at = NOW()
+             WHERE id = $2",
         )
         .bind(&credentials_json)
         .bind(&cred_id)
@@ -1305,7 +1305,7 @@ pub async fn upsert_credentials(
     } else {
         let cred_id = gen_id();
         sqlx::query(
-            "INSERT INTO brand_credentials (id, brand_id, channel_type, credentials) VALUES (?, ?, ?, ?)",
+            "INSERT INTO brand_credentials (id, brand_id, channel_type, credentials) VALUES ($1, $2, $3, $4)",
         )
         .bind(&cred_id)
         .bind(&id)
@@ -1339,7 +1339,7 @@ pub async fn delete_credentials(
     let brand = sqlx::query(
         "SELECT b.id FROM brands b
          JOIN organizations o ON b.organization_id = o.id
-         WHERE b.id = ? AND o.tenant_key = ?",
+         WHERE b.id = $1 AND o.tenant_key = $2",
     )
     .bind(&id)
     .bind(&tenant_key)
@@ -1359,7 +1359,7 @@ pub async fn delete_credentials(
         ));
     }
 
-    sqlx::query("DELETE FROM brand_credentials WHERE brand_id = ? AND channel_type = ?")
+    sqlx::query("DELETE FROM brand_credentials WHERE brand_id = $1 AND channel_type = $2")
         .bind(&id)
         .bind(&channel)
         .execute(&state.db)
@@ -1385,7 +1385,7 @@ pub async fn verify_credentials(
     let brand = sqlx::query(
         "SELECT b.id FROM brands b
          JOIN organizations o ON b.organization_id = o.id
-         WHERE b.id = ? AND o.tenant_key = ?",
+         WHERE b.id = $1 AND o.tenant_key = $2",
     )
     .bind(&id)
     .bind(&tenant_key)
@@ -1407,7 +1407,7 @@ pub async fn verify_credentials(
 
     // Fetch credentials for this brand + channel
     let row = sqlx::query(
-        "SELECT credentials FROM brand_credentials WHERE brand_id = ? AND channel_type = ? AND is_active = 1",
+        "SELECT credentials FROM brand_credentials WHERE brand_id = $1 AND channel_type = $2 AND is_active = 1",
     )
     .bind(&id)
     .bind(&channel)
@@ -1446,7 +1446,7 @@ pub async fn verify_credentials(
     // Update last_verified_at
     sqlx::query(
         "UPDATE brand_credentials SET last_verified_at = NOW()
-         WHERE brand_id = ? AND channel_type = ?",
+         WHERE brand_id = $1 AND channel_type = $2",
     )
     .bind(&id)
     .bind(&channel)
@@ -1617,7 +1617,7 @@ pub async fn get_ai_config(
     let brand = sqlx::query(
         "SELECT b.id FROM brands b
          JOIN organizations o ON b.organization_id = o.id
-         WHERE b.id = ? AND o.tenant_key = ?",
+         WHERE b.id = $1 AND o.tenant_key = $2",
     )
     .bind(&id)
     .bind(&tenant_key)
@@ -1638,7 +1638,7 @@ pub async fn get_ai_config(
     }
 
     let row = sqlx::query(
-        "SELECT * FROM brand_ai_config WHERE brand_id = ? ORDER BY is_active DESC LIMIT 1",
+        "SELECT * FROM brand_ai_config WHERE brand_id = $1 ORDER BY is_active DESC LIMIT 1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -1690,7 +1690,7 @@ pub async fn upsert_ai_config(
     let brand = sqlx::query(
         "SELECT b.id FROM brands b
          JOIN organizations o ON b.organization_id = o.id
-         WHERE b.id = ? AND o.tenant_key = ?",
+         WHERE b.id = $1 AND o.tenant_key = $2",
     )
     .bind(&id)
     .bind(&tenant_key)
@@ -1711,7 +1711,7 @@ pub async fn upsert_ai_config(
     }
 
     // Check if config already exists
-    let existing = sqlx::query("SELECT id FROM brand_ai_config WHERE brand_id = ?")
+    let existing = sqlx::query("SELECT id FROM brand_ai_config WHERE brand_id = $1")
         .bind(&id)
         .fetch_optional(&state.db)
         .await
@@ -1761,7 +1761,7 @@ pub async fn upsert_ai_config(
         sets.push("updated_at = NOW()".to_string());
 
         let query = format!(
-            "UPDATE brand_ai_config SET {} WHERE id = ?",
+            "UPDATE brand_ai_config SET {} WHERE id = $1",
             sets.join(", ")
         );
         sqlx::query(&query)
@@ -1786,7 +1786,7 @@ pub async fn upsert_ai_config(
             "INSERT INTO brand_ai_config (id, brand_id, ai_provider, api_key, model_id, base_url,
              temperature, max_tokens, system_prompt, rag_enabled, embedding_provider,
              embedding_api_key, embedding_model)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
         )
         .bind(&config_id)
         .bind(&id)
@@ -1833,7 +1833,7 @@ pub async fn list_knowledge_entries(
     let brand = sqlx::query(
         "SELECT b.id FROM brands b
          JOIN organizations o ON b.organization_id = o.id
-         WHERE b.id = ? AND o.tenant_key = ?",
+         WHERE b.id = $1 AND o.tenant_key = $2",
     )
     .bind(&id)
     .bind(&tenant_key)
@@ -1854,14 +1854,16 @@ pub async fn list_knowledge_entries(
     }
 
     let mut query = String::from(
-        "SELECT * FROM brand_knowledge_entries WHERE brand_id = ?",
+        "SELECT * FROM brand_knowledge_entries WHERE brand_id = $1",
     );
 
+    let mut idx = 2;
     if let Some(ref _q) = params.q {
-        query.push_str(" AND (title LIKE ? OR content LIKE ?)");
+        query.push_str(&format!(" AND (title LIKE ${} OR content LIKE ${})", idx, idx + 1));
+        idx += 2;
     }
     if let Some(ref _topic) = params.topic {
-        query.push_str(" AND topic = ?");
+        query.push_str(&format!(" AND topic = ${idx}"));
     }
     query.push_str(" ORDER BY created_at DESC");
 
@@ -1906,7 +1908,7 @@ pub async fn create_knowledge_entry(
     let brand = sqlx::query(
         "SELECT b.id FROM brands b
          JOIN organizations o ON b.organization_id = o.id
-         WHERE b.id = ? AND o.tenant_key = ?",
+         WHERE b.id = $1 AND o.tenant_key = $2",
     )
     .bind(&id)
     .bind(&tenant_key)
@@ -1929,7 +1931,7 @@ pub async fn create_knowledge_entry(
     let entry_id = gen_id();
     sqlx::query(
         "INSERT INTO brand_knowledge_entries (id, brand_id, title, content, source_type, topic, tags)
-         VALUES (?, ?, ?, ?, ?, ?, ?)",
+         VALUES ($1, $2, $3, $4, $5, $6, $7)",
     )
     .bind(&entry_id)
     .bind(&id)
@@ -1965,7 +1967,7 @@ pub async fn get_knowledge_entry(
     let brand = sqlx::query(
         "SELECT b.id FROM brands b
          JOIN organizations o ON b.organization_id = o.id
-         WHERE b.id = ? AND o.tenant_key = ?",
+         WHERE b.id = $1 AND o.tenant_key = $2",
     )
     .bind(&id)
     .bind(&tenant_key)
@@ -1986,7 +1988,7 @@ pub async fn get_knowledge_entry(
     }
 
     let row = sqlx::query(
-        "SELECT * FROM brand_knowledge_entries WHERE id = ? AND brand_id = ?",
+        "SELECT * FROM brand_knowledge_entries WHERE id = $1 AND brand_id = $2",
     )
     .bind(&entry_id)
     .bind(&id)
@@ -2030,7 +2032,7 @@ pub async fn update_knowledge_entry(
     let brand = sqlx::query(
         "SELECT b.id FROM brands b
          JOIN organizations o ON b.organization_id = o.id
-         WHERE b.id = ? AND o.tenant_key = ?",
+         WHERE b.id = $1 AND o.tenant_key = $2",
     )
     .bind(&id)
     .bind(&tenant_key)
@@ -2073,7 +2075,7 @@ pub async fn update_knowledge_entry(
     }
 
     let query = format!(
-        "UPDATE brand_knowledge_entries SET {} WHERE id = ? AND brand_id = ?",
+        "UPDATE brand_knowledge_entries SET {} WHERE id = $1 AND brand_id = $2",
         sets.join(", ")
     );
     sqlx::query(&query)
@@ -2104,7 +2106,7 @@ pub async fn delete_knowledge_entry(
     let brand = sqlx::query(
         "SELECT b.id FROM brands b
          JOIN organizations o ON b.organization_id = o.id
-         WHERE b.id = ? AND o.tenant_key = ?",
+         WHERE b.id = $1 AND o.tenant_key = $2",
     )
     .bind(&id)
     .bind(&tenant_key)
@@ -2125,7 +2127,7 @@ pub async fn delete_knowledge_entry(
     }
 
     sqlx::query(
-        "DELETE FROM brand_knowledge_entries WHERE id = ? AND brand_id = ?",
+        "DELETE FROM brand_knowledge_entries WHERE id = $1 AND brand_id = $2",
     )
     .bind(&entry_id)
     .bind(&id)
@@ -2151,11 +2153,11 @@ pub async fn list_profile_sources(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    let rows = sqlx::query("SELECT * FROM brand_profile_sources WHERE brand_id = ? ORDER BY field_name")
+    let rows = sqlx::query("SELECT * FROM brand_profile_sources WHERE brand_id = $1 ORDER BY field_name")
         .bind(&id).fetch_all(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     let sources: Vec<serde_json::Value> = rows.iter().map(|r| serde_json::json!({
@@ -2176,13 +2178,13 @@ pub async fn upsert_profile_source(
     Json(body): Json<UpsertProfileSourceRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
     let source_id = gen_id();
     let now = chrono::Utc::now().to_rfc3339();
-    sqlx::query("INSERT INTO brand_profile_sources (id, brand_id, field_name, source_platform, source_user_id, source_user_name, source_record_id, source_url, synced_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    sqlx::query("INSERT INTO brand_profile_sources (id, brand_id, field_name, source_platform, source_user_id, source_user_name, source_record_id, source_url, synced_at, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)")
         .bind(&source_id).bind(&id).bind(&body.field_name).bind(&body.source_platform)
         .bind(body.source_user_id.as_deref().unwrap_or("")).bind(body.source_user_name.as_deref().unwrap_or(""))
         .bind(body.source_record_id.as_deref().unwrap_or("")).bind(body.source_url.as_deref().unwrap_or(""))
@@ -2198,11 +2200,11 @@ pub async fn delete_profile_source(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    sqlx::query("DELETE FROM brand_profile_sources WHERE id = ? AND brand_id = ?")
+    sqlx::query("DELETE FROM brand_profile_sources WHERE id = $1 AND brand_id = $2")
         .bind(&source_id).bind(&id).execute(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     Ok(Json(serde_json::json!({ "deleted": true })))
@@ -2218,11 +2220,11 @@ pub async fn list_sync_status(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    let rows = sqlx::query("SELECT * FROM brand_sync_status WHERE brand_id = ? ORDER BY platform")
+    let rows = sqlx::query("SELECT * FROM brand_sync_status WHERE brand_id = $1 ORDER BY platform")
         .bind(&id).fetch_all(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     let statuses: Vec<serde_json::Value> = rows.iter().map(|r| serde_json::json!({
@@ -2242,13 +2244,13 @@ pub async fn upsert_sync_status(
     Json(body): Json<UpsertSyncStatusRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
     let now = chrono::Utc::now().to_rfc3339();
     let sync_id = gen_id();
-    sqlx::query("INSERT INTO brand_sync_status (id, brand_id, platform, sync_interval_seconds, next_sync_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+    sqlx::query("INSERT INTO brand_sync_status (id, brand_id, platform, sync_interval_seconds, next_sync_at, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)")
         .bind(&sync_id).bind(&id).bind(&body.platform)
         .bind(body.sync_interval_seconds.unwrap_or(3600)).bind(&now).bind(&now).bind(&now)
         .execute(&state.db).await
@@ -2262,7 +2264,7 @@ pub async fn sync_now(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
@@ -2275,13 +2277,13 @@ pub async fn sync_now(
     };
     match result {
         Ok(data) => {
-            sqlx::query("UPDATE brand_sync_status SET last_synced_at = ?, connection_status = 'connected', platform_data = ?, updated_at = ? WHERE brand_id = ? AND platform = ?")
+            sqlx::query("UPDATE brand_sync_status SET last_synced_at = $1, connection_status = 'connected', platform_data = $2, updated_at = $3 WHERE brand_id = $4 AND platform = $5")
                 .bind(&now).bind(serde_json::to_string(&data).unwrap_or_default()).bind(&now)
                 .bind(&id).bind(&platform).execute(&state.db).await.ok();
             Ok(Json(serde_json::json!({ "status": "synced", "platform": platform, "data": data, "syncedAt": now })))
         }
         Err(e) => {
-            sqlx::query("UPDATE brand_sync_status SET last_synced_at = ?, connection_status = 'error', last_error = ?, updated_at = ? WHERE brand_id = ? AND platform = ?")
+            sqlx::query("UPDATE brand_sync_status SET last_synced_at = $1, connection_status = 'error', last_error = $2, updated_at = $3 WHERE brand_id = $4 AND platform = $5")
                 .bind(&now).bind(e.to_string()).bind(&now).bind(&id).bind(&platform).execute(&state.db).await.ok();
             let mut map = serde_json::Map::new();
             map.insert("error".to_string(), serde_json::json!(e.to_string()));
@@ -2292,7 +2294,7 @@ pub async fn sync_now(
 }
 
 async fn sync_whatsapp_profile(state: &AppState, brand_id: &str) -> Result<serde_json::Value, Box<dyn std::error::Error + Send + Sync>> {
-    let creds = sqlx::query("SELECT credentials FROM brand_credentials WHERE brand_id = ? AND channel_type = 'whatsapp' AND is_active = 1")
+    let creds = sqlx::query("SELECT credentials FROM brand_credentials WHERE brand_id = $1 AND channel_type = 'whatsapp' AND is_active = 1")
         .bind(brand_id).fetch_optional(&state.db).await?;
     let Some(creds) = creds else { return Err("No WhatsApp credentials found".into()); };
     let cred_json: serde_json::Value = serde_json::from_str(&creds.try_get::<String, _>("credentials").unwrap_or_default())?;
@@ -2316,7 +2318,7 @@ async fn sync_whatsapp_profile(state: &AppState, brand_id: &str) -> Result<serde
 }
 
 async fn sync_telegram_profile(state: &AppState, brand_id: &str) -> Result<serde_json::Value, Box<dyn std::error::Error + Send + Sync>> {
-    let creds = sqlx::query("SELECT credentials FROM brand_credentials WHERE brand_id = ? AND channel_type = 'telegram' AND is_active = 1")
+    let creds = sqlx::query("SELECT credentials FROM brand_credentials WHERE brand_id = $1 AND channel_type = 'telegram' AND is_active = 1")
         .bind(brand_id).fetch_optional(&state.db).await?;
     let Some(creds) = creds else { return Err("No Telegram credentials found".into()); };
     let cred_json: serde_json::Value = serde_json::from_str(&creds.try_get::<String, _>("credentials").unwrap_or_default())?;
@@ -2328,7 +2330,7 @@ async fn sync_telegram_profile(state: &AppState, brand_id: &str) -> Result<serde
 }
 
 async fn sync_line_profile(state: &AppState, brand_id: &str) -> Result<serde_json::Value, Box<dyn std::error::Error + Send + Sync>> {
-    let creds = sqlx::query("SELECT credentials FROM brand_credentials WHERE brand_id = ? AND channel_type = 'line' AND is_active = 1")
+    let creds = sqlx::query("SELECT credentials FROM brand_credentials WHERE brand_id = $1 AND channel_type = 'line' AND is_active = 1")
         .bind(brand_id).fetch_optional(&state.db).await?;
     let Some(creds) = creds else { return Err("No LINE credentials found".into()); };
     let cred_json: serde_json::Value = serde_json::from_str(&creds.try_get::<String, _>("credentials").unwrap_or_default())?;
@@ -2342,7 +2344,7 @@ async fn sync_line_profile(state: &AppState, brand_id: &str) -> Result<serde_jso
 async fn cache_platform_data(pool: &sqlx::PgPool, entity_type: &str, entity_id: &str, platform: &str, data_key: &str, data_value: String, synced_at: &str) {
     let id = Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
-    sqlx::query("INSERT INTO platform_data_cache (id, entity_type, entity_id, platform, data_key, data_value, synced_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+    sqlx::query("INSERT INTO platform_data_cache (id, entity_type, entity_id, platform, data_key, data_value, synced_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)")
         .bind(&id).bind(entity_type).bind(entity_id).bind(platform)
         .bind(data_key).bind(&data_value).bind(synced_at).bind(&now)
         .execute(pool).await.ok();
@@ -2358,11 +2360,11 @@ pub async fn list_conflicts(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    let rows = sqlx::query("SELECT * FROM profile_conflicts WHERE entity_type = 'brand' AND entity_id = ? ORDER BY created_at DESC")
+    let rows = sqlx::query("SELECT * FROM profile_conflicts WHERE entity_type = 'brand' AND entity_id = $1 ORDER BY created_at DESC")
         .bind(&id).fetch_all(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     let conflicts: Vec<serde_json::Value> = rows.iter().map(|r| serde_json::json!({
@@ -2385,14 +2387,14 @@ pub async fn resolve_conflict(
     Json(body): Json<ResolveConflictRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
     let now = chrono::Utc::now().to_rfc3339();
     let resolved_by = body.resolved_by.as_deref().unwrap_or("system");
     let status = if resolved_by == "system" { "auto_resolved" } else { "manual_resolved" };
-    sqlx::query("UPDATE profile_conflicts SET resolution_status = ?, resolved_value = ?, resolved_by = ?, resolved_at = ? WHERE id = ? AND entity_type = 'brand' AND entity_id = ?")
+    sqlx::query("UPDATE profile_conflicts SET resolution_status = $1, resolved_value = $2, resolved_by = $3, resolved_at = $4 WHERE id = $5 AND entity_type = 'brand' AND entity_id = $6")
         .bind(status).bind(&body.resolved_value).bind(resolved_by).bind(&now)
         .bind(&conflict_id).bind(&id).execute(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
@@ -2409,11 +2411,11 @@ pub async fn list_custom_sections(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    let rows = sqlx::query("SELECT * FROM profile_custom_sections WHERE entity_type = 'brand' AND entity_id = ? AND is_active = 1 ORDER BY display_order")
+    let rows = sqlx::query("SELECT * FROM profile_custom_sections WHERE entity_type = 'brand' AND entity_id = $1 AND is_active = 1 ORDER BY display_order")
         .bind(&id).fetch_all(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     let sections: Vec<serde_json::Value> = rows.iter().map(|r| serde_json::json!({
@@ -2432,13 +2434,13 @@ pub async fn create_custom_section(
     Json(body): Json<CreateCustomSectionRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
     let section_id = gen_id();
     let now = chrono::Utc::now().to_rfc3339();
-    sqlx::query("INSERT INTO profile_custom_sections (id, entity_type, entity_id, section_name, section_type, display_order, created_at, updated_at) VALUES (?, 'brand', ?, ?, ?, ?, ?, ?)")
+    sqlx::query("INSERT INTO profile_custom_sections (id, entity_type, entity_id, section_name, section_type, display_order, created_at, updated_at) VALUES ($1, 'brand', $2, $3, $4, $5, $6, $7)")
         .bind(&section_id).bind(&id).bind(&body.section_name).bind(&body.section_type)
         .bind(body.display_order.unwrap_or(0)).bind(&now).bind(&now)
         .execute(&state.db).await
@@ -2452,11 +2454,11 @@ pub async fn get_custom_section(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    let row = sqlx::query("SELECT * FROM profile_custom_sections WHERE id = ? AND entity_type = 'brand' AND entity_id = ?")
+    let row = sqlx::query("SELECT * FROM profile_custom_sections WHERE id = $1 AND entity_type = 'brand' AND entity_id = $2")
         .bind(&section_id).bind(&id).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     let Some(row) = row else { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Section not found" })))); };
@@ -2474,7 +2476,7 @@ pub async fn update_custom_section(
     Json(body): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
@@ -2482,7 +2484,7 @@ pub async fn update_custom_section(
     if let Some(name) = body.get("sectionName").and_then(|v| v.as_str()) {
         sets.push(format!("section_name = '{}'", name.replace('\'', "''")));
     }
-    let query = format!("UPDATE profile_custom_sections SET {} WHERE id = ? AND entity_id = ?", sets.join(", "));
+    let query = format!("UPDATE profile_custom_sections SET {} WHERE id = $1 AND entity_id = $2", sets.join(", "));
     sqlx::query(&query).bind(&section_id).bind(&id).execute(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     Ok(Json(serde_json::json!({ "id": section_id, "updatedAt": chrono::Utc::now().to_rfc3339() })))
@@ -2494,11 +2496,11 @@ pub async fn delete_custom_section(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    sqlx::query("DELETE FROM profile_custom_sections WHERE id = ? AND entity_id = ?")
+    sqlx::query("DELETE FROM profile_custom_sections WHERE id = $1 AND entity_id = $2")
         .bind(&section_id).bind(&id).execute(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     Ok(Json(serde_json::json!({ "deleted": true })))
@@ -2510,11 +2512,11 @@ pub async fn get_section_data(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    let rows = sqlx::query("SELECT * FROM profile_custom_section_data WHERE section_id = ? ORDER BY display_order, row_key")
+    let rows = sqlx::query("SELECT * FROM profile_custom_section_data WHERE section_id = $1 ORDER BY display_order, row_key")
         .bind(&section_id).fetch_all(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     let data: Vec<serde_json::Value> = rows.iter().map(|r| serde_json::json!({
@@ -2533,13 +2535,13 @@ pub async fn upsert_section_data(
     Json(body): Json<UpsertSectionDataRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
     let data_id = gen_id();
     let now = chrono::Utc::now().to_rfc3339();
-    sqlx::query("INSERT INTO profile_custom_section_data (id, section_id, row_key, field_key, field_value, field_type, display_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    sqlx::query("INSERT INTO profile_custom_section_data (id, section_id, row_key, field_key, field_value, field_type, display_order, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)")
         .bind(&data_id).bind(&section_id)
         .bind(body.row_key.as_deref().unwrap_or(""))
         .bind(&body.field_key).bind(&body.field_value)
@@ -2556,11 +2558,11 @@ pub async fn delete_section_data(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    sqlx::query("DELETE FROM profile_custom_section_data WHERE id = ? AND section_id = ?")
+    sqlx::query("DELETE FROM profile_custom_section_data WHERE id = $1 AND section_id = $2")
         .bind(&data_id).bind(&section_id).execute(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     Ok(Json(serde_json::json!({ "deleted": true })))
@@ -2576,11 +2578,11 @@ pub async fn list_packages(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    let rows = sqlx::query("SELECT * FROM brand_packages WHERE brand_id = ? AND is_active = 1 ORDER BY display_order")
+    let rows = sqlx::query("SELECT * FROM brand_packages WHERE brand_id = $1 AND is_active = 1 ORDER BY display_order")
         .bind(&id).fetch_all(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     let packages: Vec<serde_json::Value> = rows.iter().map(|r| serde_json::json!({
@@ -2600,13 +2602,13 @@ pub async fn create_package(
     Json(body): Json<CreatePackageRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
     let pkg_id = gen_id();
     let now = chrono::Utc::now().to_rfc3339();
-    sqlx::query("INSERT INTO brand_packages (id, brand_id, name, description, price, currency, duration_type, duration_value, features, display_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    sqlx::query("INSERT INTO brand_packages (id, brand_id, name, description, price, currency, duration_type, duration_value, features, display_order, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)")
         .bind(&pkg_id).bind(&id).bind(&body.name).bind(body.description.as_deref().unwrap_or(""))
         .bind(body.price).bind(body.currency.as_deref().unwrap_or("USD"))
         .bind(body.duration_type.as_deref().unwrap_or(""))
@@ -2624,11 +2626,11 @@ pub async fn get_package(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    let row = sqlx::query("SELECT * FROM brand_packages WHERE id = ? AND brand_id = ?")
+    let row = sqlx::query("SELECT * FROM brand_packages WHERE id = $1 AND brand_id = $2")
         .bind(&package_id).bind(&id).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     let Some(row) = row else { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Package not found" })))); };
@@ -2646,14 +2648,14 @@ pub async fn update_package(
     Json(body): Json<UpdatePackageRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
     let mut sets = vec!["updated_at = NOW()".to_string()];
     if let Some(name) = &body.name { sets.push(format!("name = '{}'", name.replace('\'', "''"))); }
     if let Some(price) = body.price { sets.push(format!("price = {}", price)); }
-    let query = format!("UPDATE brand_packages SET {} WHERE id = ? AND brand_id = ?", sets.join(", "));
+    let query = format!("UPDATE brand_packages SET {} WHERE id = $1 AND brand_id = $2", sets.join(", "));
     sqlx::query(&query).bind(&package_id).bind(&id).execute(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     Ok(Json(serde_json::json!({ "id": package_id, "updatedAt": chrono::Utc::now().to_rfc3339() })))
@@ -2665,11 +2667,11 @@ pub async fn delete_package(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    sqlx::query("DELETE FROM brand_packages WHERE id = ? AND brand_id = ?")
+    sqlx::query("DELETE FROM brand_packages WHERE id = $1 AND brand_id = $2")
         .bind(&package_id).bind(&id).execute(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     Ok(Json(serde_json::json!({ "deleted": true })))
@@ -2681,11 +2683,11 @@ pub async fn list_promotions(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    let rows = sqlx::query("SELECT * FROM brand_promotions WHERE brand_id = ? ORDER BY start_date DESC")
+    let rows = sqlx::query("SELECT * FROM brand_promotions WHERE brand_id = $1 ORDER BY start_date DESC")
         .bind(&id).fetch_all(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     let promos: Vec<serde_json::Value> = rows.iter().map(|r| serde_json::json!({
@@ -2706,13 +2708,13 @@ pub async fn create_promotion(
     Json(body): Json<CreatePromotionRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
     let promo_id = gen_id();
     let now = chrono::Utc::now().to_rfc3339();
-    sqlx::query("INSERT INTO brand_promotions (id, brand_id, name, description, discount_type, discount_value, start_date, end_date, applicable_packages, usage_limit, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    sqlx::query("INSERT INTO brand_promotions (id, brand_id, name, description, discount_type, discount_value, start_date, end_date, applicable_packages, usage_limit, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)")
         .bind(&promo_id).bind(&id).bind(&body.name).bind(body.description.as_deref().unwrap_or(""))
         .bind(&body.discount_type).bind(body.discount_value)
         .bind(&body.start_date).bind(&body.end_date)
@@ -2729,11 +2731,11 @@ pub async fn get_promotion(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    let row = sqlx::query("SELECT * FROM brand_promotions WHERE id = ? AND brand_id = ?")
+    let row = sqlx::query("SELECT * FROM brand_promotions WHERE id = $1 AND brand_id = $2")
         .bind(&promo_id).bind(&id).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     let Some(row) = row else { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Promotion not found" })))); };
@@ -2751,13 +2753,13 @@ pub async fn update_promotion(
     Json(body): Json<UpdatePromotionRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
     let mut sets = vec!["updated_at = NOW()".to_string()];
     if let Some(name) = &body.name { sets.push(format!("name = '{}'", name.replace('\'', "''"))); }
-    let query = format!("UPDATE brand_promotions SET {} WHERE id = ? AND brand_id = ?", sets.join(", "));
+    let query = format!("UPDATE brand_promotions SET {} WHERE id = $1 AND brand_id = $2", sets.join(", "));
     sqlx::query(&query).bind(&promo_id).bind(&id).execute(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     Ok(Json(serde_json::json!({ "id": promo_id, "updatedAt": chrono::Utc::now().to_rfc3339() })))
@@ -2769,11 +2771,11 @@ pub async fn delete_promotion(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    sqlx::query("DELETE FROM brand_promotions WHERE id = ? AND brand_id = ?")
+    sqlx::query("DELETE FROM brand_promotions WHERE id = $1 AND brand_id = $2")
         .bind(&promo_id).bind(&id).execute(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     Ok(Json(serde_json::json!({ "deleted": true })))
@@ -2785,11 +2787,11 @@ pub async fn get_voucher_settings(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    let row = sqlx::query("SELECT * FROM brand_voucher_settings WHERE brand_id = ?")
+    let row = sqlx::query("SELECT * FROM brand_voucher_settings WHERE brand_id = $1")
         .bind(&id).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     match row {
@@ -2809,13 +2811,13 @@ pub async fn upsert_voucher_settings(
     Json(body): Json<UpsertVoucherSettingsRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
     let now = chrono::Utc::now().to_rfc3339();
     let vs_id = gen_id();
-    sqlx::query("INSERT INTO brand_voucher_settings (id, brand_id, auto_generate, voucher_prefix, voucher_length, discount_type, discount_value, validity_days, trigger_event, max_uses_per_customer, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    sqlx::query("INSERT INTO brand_voucher_settings (id, brand_id, auto_generate, voucher_prefix, voucher_length, discount_type, discount_value, validity_days, trigger_event, max_uses_per_customer, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)")
         .bind(&vs_id).bind(&id)
         .bind(if body.auto_generate.unwrap_or(false) { 1i64 } else { 0 })
         .bind(body.voucher_prefix.as_deref().unwrap_or("VOUCHER"))
@@ -2837,11 +2839,11 @@ pub async fn list_message_triggers(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    let rows = sqlx::query("SELECT * FROM message_triggers WHERE brand_id = ? ORDER BY created_at DESC")
+    let rows = sqlx::query("SELECT * FROM message_triggers WHERE brand_id = $1 ORDER BY created_at DESC")
         .bind(&id).fetch_all(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     let triggers: Vec<serde_json::Value> = rows.iter().map(|r| serde_json::json!({
@@ -2861,13 +2863,13 @@ pub async fn create_message_trigger(
     Json(body): Json<CreateMessageTriggerRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
     let trigger_id = gen_id();
     let now = chrono::Utc::now().to_rfc3339();
-    sqlx::query("INSERT INTO message_triggers (id, brand_id, name, description, trigger_type, trigger_event, trigger_schedule, trigger_conditions, preferred_channel, message_template, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    sqlx::query("INSERT INTO message_triggers (id, brand_id, name, description, trigger_type, trigger_event, trigger_schedule, trigger_conditions, preferred_channel, message_template, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)")
         .bind(&trigger_id).bind(&id).bind(&body.name).bind(body.description.as_deref().unwrap_or(""))
         .bind(&body.trigger_type).bind(body.trigger_event.as_deref().unwrap_or(""))
         .bind(body.trigger_schedule.as_deref().unwrap_or(""))
@@ -2885,11 +2887,11 @@ pub async fn get_message_trigger(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    let row = sqlx::query("SELECT * FROM message_triggers WHERE id = ? AND brand_id = ?")
+    let row = sqlx::query("SELECT * FROM message_triggers WHERE id = $1 AND brand_id = $2")
         .bind(&trigger_id).bind(&id).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     let Some(row) = row else { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Trigger not found" })))); };
@@ -2907,13 +2909,13 @@ pub async fn update_message_trigger(
     Json(body): Json<UpdateMessageTriggerRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
     let mut sets = vec!["updated_at = NOW()".to_string()];
     if let Some(name) = &body.name { sets.push(format!("name = '{}'", name.replace('\'', "''"))); }
-    let query = format!("UPDATE message_triggers SET {} WHERE id = ? AND brand_id = ?", sets.join(", "));
+    let query = format!("UPDATE message_triggers SET {} WHERE id = $1 AND brand_id = $2", sets.join(", "));
     sqlx::query(&query).bind(&trigger_id).bind(&id).execute(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     Ok(Json(serde_json::json!({ "id": trigger_id, "updatedAt": chrono::Utc::now().to_rfc3339() })))
@@ -2925,11 +2927,11 @@ pub async fn delete_message_trigger(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    sqlx::query("DELETE FROM message_triggers WHERE id = ? AND brand_id = ?")
+    sqlx::query("DELETE FROM message_triggers WHERE id = $1 AND brand_id = $2")
         .bind(&trigger_id).bind(&id).execute(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     Ok(Json(serde_json::json!({ "deleted": true })))
@@ -2941,11 +2943,11 @@ pub async fn get_trigger_logs(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    let rows = sqlx::query("SELECT * FROM message_trigger_logs WHERE trigger_id = ? ORDER BY executed_at DESC LIMIT 100")
+    let rows = sqlx::query("SELECT * FROM message_trigger_logs WHERE trigger_id = $1 ORDER BY executed_at DESC LIMIT 100")
         .bind(&trigger_id).fetch_all(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     let logs: Vec<serde_json::Value> = rows.iter().map(|r| serde_json::json!({
@@ -2961,11 +2963,11 @@ pub async fn list_platform_cache(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    let rows = sqlx::query("SELECT * FROM platform_data_cache WHERE entity_type = 'brand' AND entity_id = ? ORDER BY synced_at DESC")
+    let rows = sqlx::query("SELECT * FROM platform_data_cache WHERE entity_type = 'brand' AND entity_id = $1 ORDER BY synced_at DESC")
         .bind(&id).fetch_all(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     let cache: Vec<serde_json::Value> = rows.iter().map(|r| serde_json::json!({
@@ -2983,11 +2985,11 @@ pub async fn get_platform_cache(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ? AND o.tenant_key = ?")
+    let brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
-    let rows = sqlx::query("SELECT * FROM platform_data_cache WHERE entity_type = 'brand' AND entity_id = ? AND platform = ? ORDER BY synced_at DESC")
+    let rows = sqlx::query("SELECT * FROM platform_data_cache WHERE entity_type = 'brand' AND entity_id = $1 AND platform = $2 ORDER BY synced_at DESC")
         .bind(&id).bind(&platform).fetch_all(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     let mut map = serde_json::Map::new();
@@ -3009,11 +3011,11 @@ pub async fn list_org_profile_sources(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = ? AND o.tenant_key = ?")
+    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if org.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Organization not found" })))); }
-    let rows = sqlx::query("SELECT * FROM org_profile_sources WHERE organization_id = ? ORDER BY field_name")
+    let rows = sqlx::query("SELECT * FROM org_profile_sources WHERE organization_id = $1 ORDER BY field_name")
         .bind(&id).fetch_all(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     let sources: Vec<serde_json::Value> = rows.iter().map(|r| serde_json::json!({
@@ -3030,13 +3032,13 @@ pub async fn upsert_org_profile_source(
     Json(body): Json<UpsertProfileSourceRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = ? AND o.tenant_key = ?")
+    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if org.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Organization not found" })))); }
     let source_id = gen_id();
     let now = chrono::Utc::now().to_rfc3339();
-    sqlx::query("INSERT INTO org_profile_sources (id, organization_id, field_name, source_platform, source_user_id, source_user_name, source_record_id, source_url, synced_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    sqlx::query("INSERT INTO org_profile_sources (id, organization_id, field_name, source_platform, source_user_id, source_user_name, source_record_id, source_url, synced_at, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)")
         .bind(&source_id).bind(&id).bind(&body.field_name).bind(&body.source_platform)
         .bind(body.source_user_id.as_deref().unwrap_or("")).bind(body.source_user_name.as_deref().unwrap_or(""))
         .bind(body.source_record_id.as_deref().unwrap_or("")).bind(body.source_url.as_deref().unwrap_or(""))
@@ -3052,11 +3054,11 @@ pub async fn list_org_sync_status(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = ? AND o.tenant_key = ?")
+    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if org.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Organization not found" })))); }
-    let rows = sqlx::query("SELECT * FROM org_sync_status WHERE organization_id = ? ORDER BY platform")
+    let rows = sqlx::query("SELECT * FROM org_sync_status WHERE organization_id = $1 ORDER BY platform")
         .bind(&id).fetch_all(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     let statuses: Vec<serde_json::Value> = rows.iter().map(|r| serde_json::json!({
@@ -3074,13 +3076,13 @@ pub async fn upsert_org_sync_status(
     Json(body): Json<UpsertSyncStatusRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = ? AND o.tenant_key = ?")
+    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if org.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Organization not found" })))); }
     let now = chrono::Utc::now().to_rfc3339();
     let sync_id = gen_id();
-    sqlx::query("INSERT INTO org_sync_status (id, organization_id, platform, sync_interval_seconds, next_sync_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+    sqlx::query("INSERT INTO org_sync_status (id, organization_id, platform, sync_interval_seconds, next_sync_at, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)")
         .bind(&sync_id).bind(&id).bind(&body.platform)
         .bind(body.sync_interval_seconds.unwrap_or(3600)).bind(&now).bind(&now).bind(&now)
         .execute(&state.db).await
@@ -3094,11 +3096,11 @@ pub async fn list_org_conflicts(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = ? AND o.tenant_key = ?")
+    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if org.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Organization not found" })))); }
-    let rows = sqlx::query("SELECT * FROM profile_conflicts WHERE entity_type = 'organization' AND entity_id = ? ORDER BY created_at DESC")
+    let rows = sqlx::query("SELECT * FROM profile_conflicts WHERE entity_type = 'organization' AND entity_id = $1 ORDER BY created_at DESC")
         .bind(&id).fetch_all(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     let conflicts: Vec<serde_json::Value> = rows.iter().map(|r| serde_json::json!({
@@ -3115,11 +3117,11 @@ pub async fn list_org_custom_sections(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = ? AND o.tenant_key = ?")
+    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if org.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Organization not found" })))); }
-    let rows = sqlx::query("SELECT * FROM profile_custom_sections WHERE entity_type = 'organization' AND entity_id = ? AND is_active = 1 ORDER BY display_order")
+    let rows = sqlx::query("SELECT * FROM profile_custom_sections WHERE entity_type = 'organization' AND entity_id = $1 AND is_active = 1 ORDER BY display_order")
         .bind(&id).fetch_all(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     let sections: Vec<serde_json::Value> = rows.iter().map(|r| serde_json::json!({
@@ -3137,13 +3139,13 @@ pub async fn create_org_custom_section(
     Json(body): Json<CreateCustomSectionRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = ? AND o.tenant_key = ?")
+    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if org.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Organization not found" })))); }
     let section_id = gen_id();
     let now = chrono::Utc::now().to_rfc3339();
-    sqlx::query("INSERT INTO profile_custom_sections (id, entity_type, entity_id, section_name, section_type, display_order, created_at, updated_at) VALUES (?, 'organization', ?, ?, ?, ?, ?, ?)")
+    sqlx::query("INSERT INTO profile_custom_sections (id, entity_type, entity_id, section_name, section_type, display_order, created_at, updated_at) VALUES ($1, 'organization', $2, $3, $4, $5, $6, $7)")
         .bind(&section_id).bind(&id).bind(&body.section_name).bind(&body.section_type)
         .bind(body.display_order.unwrap_or(0)).bind(&now).bind(&now)
         .execute(&state.db).await
@@ -3157,11 +3159,11 @@ pub async fn get_org_custom_section(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = ? AND o.tenant_key = ?")
+    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if org.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Organization not found" })))); }
-    let row = sqlx::query("SELECT * FROM profile_custom_sections WHERE id = ? AND entity_type = 'organization' AND entity_id = ?")
+    let row = sqlx::query("SELECT * FROM profile_custom_sections WHERE id = $1 AND entity_type = 'organization' AND entity_id = $2")
         .bind(&section_id).bind(&id).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     let Some(row) = row else { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Section not found" })))); };
@@ -3178,7 +3180,7 @@ pub async fn update_org_custom_section(
     Json(body): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = ? AND o.tenant_key = ?")
+    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if org.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Organization not found" })))); }
@@ -3186,7 +3188,7 @@ pub async fn update_org_custom_section(
     if let Some(name) = body.get("sectionName").and_then(|v| v.as_str()) {
         sets.push(format!("section_name = '{}'", name.replace('\'', "''")));
     }
-    let query = format!("UPDATE profile_custom_sections SET {} WHERE id = ? AND entity_id = ?", sets.join(", "));
+    let query = format!("UPDATE profile_custom_sections SET {} WHERE id = $1 AND entity_id = $2", sets.join(", "));
     sqlx::query(&query).bind(&section_id).bind(&id).execute(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     Ok(Json(serde_json::json!({ "id": section_id, "updatedAt": chrono::Utc::now().to_rfc3339() })))
@@ -3198,11 +3200,11 @@ pub async fn delete_org_custom_section(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = ? AND o.tenant_key = ?")
+    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if org.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Organization not found" })))); }
-    sqlx::query("DELETE FROM profile_custom_sections WHERE id = ? AND entity_id = ?")
+    sqlx::query("DELETE FROM profile_custom_sections WHERE id = $1 AND entity_id = $2")
         .bind(&section_id).bind(&id).execute(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     Ok(Json(serde_json::json!({ "deleted": true })))
@@ -3214,11 +3216,11 @@ pub async fn get_org_section_data(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = ? AND o.tenant_key = ?")
+    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if org.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Organization not found" })))); }
-    let rows = sqlx::query("SELECT * FROM profile_custom_section_data WHERE section_id = ? ORDER BY display_order, row_key")
+    let rows = sqlx::query("SELECT * FROM profile_custom_section_data WHERE section_id = $1 ORDER BY display_order, row_key")
         .bind(&section_id).fetch_all(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     let data: Vec<serde_json::Value> = rows.iter().map(|r| serde_json::json!({
@@ -3235,13 +3237,13 @@ pub async fn upsert_org_section_data(
     Json(body): Json<UpsertSectionDataRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = ? AND o.tenant_key = ?")
+    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if org.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Organization not found" })))); }
     let data_id = gen_id();
     let now = chrono::Utc::now().to_rfc3339();
-    sqlx::query("INSERT INTO profile_custom_section_data (id, section_id, row_key, field_key, field_value, field_type, display_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    sqlx::query("INSERT INTO profile_custom_section_data (id, section_id, row_key, field_key, field_value, field_type, display_order, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)")
         .bind(&data_id).bind(&section_id)
         .bind(body.row_key.as_deref().unwrap_or(""))
         .bind(&body.field_key).bind(&body.field_value)
@@ -3258,11 +3260,11 @@ pub async fn delete_org_section_data(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = ? AND o.tenant_key = ?")
+    let org = sqlx::query("SELECT o.id FROM organizations o WHERE o.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if org.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Organization not found" })))); }
-    sqlx::query("DELETE FROM profile_custom_section_data WHERE id = ? AND section_id = ?")
+    sqlx::query("DELETE FROM profile_custom_section_data WHERE id = $1 AND section_id = $2")
         .bind(&data_id).bind(&section_id).execute(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     Ok(Json(serde_json::json!({ "deleted": true })))
@@ -3299,7 +3301,7 @@ pub async fn whatsapp_health(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let brand_row = sqlx::query_as::<_, (String, String)>("SELECT b.id, b.name FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+    let brand_row = sqlx::query_as::<_, (String, String)>("SELECT b.id, b.name FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     let brand_name = match &brand_row {
@@ -3308,7 +3310,7 @@ pub async fn whatsapp_health(
     };
 
     let creds: Option<(String,)> = sqlx::query_as(
-        "SELECT credentials FROM brand_credentials WHERE brand_id = ?1 AND channel_type = 'whatsapp' AND is_active = 1 LIMIT 1"
+        "SELECT credentials FROM brand_credentials WHERE brand_id = $1 AND channel_type = 'whatsapp' AND is_active = 1 LIMIT 1"
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -3363,7 +3365,7 @@ pub async fn whatsapp_health(
     }
 
     let profile: Option<(Option<String>, Option<String>, Option<String>)> = sqlx::query_as(
-        "SELECT verified_name, messaging_limit_tier, quality_rating FROM whatsapp_business_profile_cache WHERE brand_id = ?1 LIMIT 1"
+        "SELECT verified_name, messaging_limit_tier, quality_rating FROM whatsapp_business_profile_cache WHERE brand_id = $1 LIMIT 1"
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -3428,7 +3430,7 @@ pub async fn whatsapp_health(
         let _ = sqlx::query(
             "INSERT INTO whatsapp_quality_history (id, brand_id, quality_rating, quality_score, 
              messaging_limit_tier, messaging_limit_value, block_reasons, spam_flags, matched_conversations) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)"
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0)"
         )
         .bind(&snapshot_id)
         .bind(&id)
@@ -3620,19 +3622,19 @@ pub async fn list_whatsapp_templates(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
 
-    let rows = sqlx::query("SELECT * FROM whatsapp_templates WHERE brand_id = ?1 ORDER BY name")
+    let rows = sqlx::query("SELECT * FROM whatsapp_templates WHERE brand_id = $1 ORDER BY name")
         .bind(&id)
         .fetch_all(&state.db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
 
     // Get template usage counts
-    let usage_rows = sqlx::query("SELECT template_name, sent_count, last_sent_at FROM whatsapp_template_usage WHERE brand_id = ?1")
+    let usage_rows = sqlx::query("SELECT template_name, sent_count, last_sent_at FROM whatsapp_template_usage WHERE brand_id = $1")
         .bind(&id)
         .fetch_all(&state.db)
         .await
@@ -3739,7 +3741,7 @@ pub async fn create_whatsapp_template(
     Json(body): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
@@ -3812,7 +3814,7 @@ pub async fn create_whatsapp_template(
                 if status.is_success() {
                     // Success - store locally
                     let _ = sqlx::query(
-                        "INSERT INTO whatsapp_templates (id, brand_id, name, category, language, status, body, components, header_text, footer_text, variables, quality_score, updated_at, last_synced_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?13)"
+                        "INSERT INTO whatsapp_templates (id, brand_id, name, category, language, status, body, components, header_text, footer_text, variables, quality_score, updated_at, last_synced_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $13)"
                     )
                     .bind(&tmpl_id).bind(&id).bind(name).bind(category).bind(language)
                     .bind("approved").bind(body_text).bind(&components_str)
@@ -3837,7 +3839,7 @@ pub async fn create_whatsapp_template(
 
     // If Meta API failed or not configured, store locally as pending
     let _ = sqlx::query(
-        "INSERT INTO whatsapp_templates (id, brand_id, name, category, language, status, body, components, header_text, footer_text, variables, quality_score, updated_at, last_synced_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?13)"
+        "INSERT INTO whatsapp_templates (id, brand_id, name, category, language, status, body, components, header_text, footer_text, variables, quality_score, updated_at, last_synced_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $13)"
     )
     .bind(&tmpl_id).bind(&id).bind(name).bind(category).bind(language)
     .bind("pending").bind(body_text).bind(&components_str)
@@ -3861,7 +3863,7 @@ pub async fn sync_whatsapp_templates(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
@@ -3896,7 +3898,7 @@ pub async fn sync_whatsapp_templates(
     let now = chrono::Utc::now().to_rfc3339();
     let cache_id = gen_id();
     let _ = sqlx::query(
-        "INSERT INTO whatsapp_business_profile_cache (id, brand_id, verified_name, messaging_limit_tier, quality_rating, updated_at, last_synced_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)"
+        "INSERT INTO whatsapp_business_profile_cache (id, brand_id, verified_name, messaging_limit_tier, quality_rating, updated_at, last_synced_at) VALUES ($1, $2, $3, $4, $5, $6, $6)"
     )
     .bind(&cache_id).bind(&id)
     .bind(data.get("verified_name").and_then(|v| v.as_str()).map(|s| s.to_string()))
@@ -3968,7 +3970,7 @@ pub async fn sync_whatsapp_templates(
 
                             let tmpl_id = gen_id();
                             let _ = sqlx::query(
-                                "INSERT INTO whatsapp_templates (id, brand_id, name, category, language, status, body, components, quality_score, variables, header_text, footer_text, updated_at, last_synced_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?13)"
+                                "INSERT INTO whatsapp_templates (id, brand_id, name, category, language, status, body, components, quality_score, variables, header_text, footer_text, updated_at, last_synced_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $13)"
                             )
                             .bind(&tmpl_id).bind(&id).bind(name).bind(category).bind(language)
                             .bind(status).bind(body_text).bind(&components)
@@ -3999,7 +4001,7 @@ pub async fn sync_whatsapp_profile_now(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
@@ -4037,7 +4039,7 @@ pub async fn sync_whatsapp_profile_now(
     });
 
     let _ = sqlx::query(
-        "INSERT INTO whatsapp_business_profile_cache (id, brand_id, verified_name, about, address, description, email, websites, vertical, profile_picture_url, messaging_limit_tier, quality_rating, account_mode, updated_at, last_synced_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?14)"
+        "INSERT INTO whatsapp_business_profile_cache (id, brand_id, verified_name, about, address, description, email, websites, vertical, profile_picture_url, messaging_limit_tier, quality_rating, account_mode, updated_at, last_synced_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $14)"
     )
     .bind(&cache_id).bind(&id)
     .bind(data.get("verified_name").and_then(|v| v.as_str()).map(|s| s.to_string()))
@@ -4069,12 +4071,12 @@ pub async fn list_whatsapp_customers(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
 
-    let rows = sqlx::query("SELECT * FROM whatsapp_customer_profiles WHERE brand_id = ?1 ORDER BY last_fetched_at DESC")
+    let rows = sqlx::query("SELECT * FROM whatsapp_customer_profiles WHERE brand_id = $1 ORDER BY last_fetched_at DESC")
         .bind(&id)
         .fetch_all(&state.db)
         .await
@@ -4099,7 +4101,7 @@ pub async fn send_whatsapp_test(
     Json(body): Json<SendWhatsAppTestRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
@@ -4173,12 +4175,12 @@ pub async fn list_whatsapp_rules(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
 
-    let rows = sqlx::query("SELECT * FROM whatsapp_automation_rules WHERE brand_id = ?1 ORDER BY priority DESC")
+    let rows = sqlx::query("SELECT * FROM whatsapp_automation_rules WHERE brand_id = $1 ORDER BY priority DESC")
         .bind(&id)
         .fetch_all(&state.db)
         .await
@@ -4205,7 +4207,7 @@ pub async fn create_whatsapp_rule(
     Json(body): Json<CreateWhatsAppRuleRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
@@ -4213,7 +4215,7 @@ pub async fn create_whatsapp_rule(
     let rule_id = gen_id();
     let now = chrono::Utc::now().to_rfc3339();
     sqlx::query(
-        "INSERT INTO whatsapp_automation_rules (id, brand_id, name, description, trigger_type, trigger_value, action_type, action_config, is_active, priority, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 1, ?9, ?10, ?10)"
+        "INSERT INTO whatsapp_automation_rules (id, brand_id, name, description, trigger_type, trigger_value, action_type, action_config, is_active, priority, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1, $9, $10, $10)"
     )
     .bind(&rule_id).bind(&id).bind(&body.name).bind(body.description.as_deref())
     .bind(&body.trigger_type).bind(body.trigger_value.as_deref())
@@ -4233,14 +4235,14 @@ pub async fn update_whatsapp_rule(
     Json(body): Json<CreateWhatsAppRuleRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
 
     let now = chrono::Utc::now().to_rfc3339();
     sqlx::query(
-        "UPDATE whatsapp_automation_rules SET name = ?1, description = ?2, trigger_type = ?3, trigger_value = ?4, action_type = ?5, action_config = ?6, priority = ?7, updated_at = ?8 WHERE id = ?9 AND brand_id = ?10"
+        "UPDATE whatsapp_automation_rules SET name = $1, description = $2, trigger_type = $3, trigger_value = $4, action_type = $5, action_config = $6, priority = $7, updated_at = $8 WHERE id = $9 AND brand_id = $10"
     )
     .bind(&body.name).bind(body.description.as_deref()).bind(&body.trigger_type)
     .bind(body.trigger_value.as_deref()).bind(&body.action_type).bind(body.action_config.as_deref())
@@ -4258,12 +4260,12 @@ pub async fn delete_whatsapp_rule(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
 
-    sqlx::query("DELETE FROM whatsapp_automation_rules WHERE id = ?1 AND brand_id = ?2")
+    sqlx::query("DELETE FROM whatsapp_automation_rules WHERE id = $1 AND brand_id = $2")
         .bind(&rule_id).bind(&id)
         .execute(&state.db)
         .await
@@ -4278,14 +4280,14 @@ pub async fn run_whatsapp_nudges(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
 
     let now = chrono::Utc::now().to_rfc3339();
     let expired: Vec<(String, String)> = sqlx::query_as(
-        "SELECT id, contact_id FROM whatsapp_session_windows WHERE brand_id = ?1 AND is_active = 1 AND expires_at < ?2"
+        "SELECT id, contact_id FROM whatsapp_session_windows WHERE brand_id = $1 AND is_active = 1 AND expires_at < $2"
     )
     .bind(&id).bind(&now)
     .fetch_all(&state.db)
@@ -4295,7 +4297,7 @@ pub async fn run_whatsapp_nudges(
     let mut count = 0;
     for (_id, contact_id) in &expired {
         let _ = sqlx::query(
-            "UPDATE whatsapp_session_windows SET is_active = 0 WHERE brand_id = ?1 AND contact_id = ?2"
+            "UPDATE whatsapp_session_windows SET is_active = 0 WHERE brand_id = $1 AND contact_id = $2"
         )
         .bind(&id).bind(contact_id)
         .execute(&state.db).await;
@@ -4327,7 +4329,7 @@ pub async fn send_whatsapp_template(
     Json(body): Json<SendWhatsAppTemplateRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
@@ -4379,7 +4381,7 @@ pub async fn send_whatsapp_interactive(
     Json(body): Json<SendWhatsAppInteractiveRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
@@ -4450,7 +4452,7 @@ pub async fn whatsapp_quality_history(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if _brand.is_none() {
@@ -4462,7 +4464,7 @@ pub async fn whatsapp_quality_history(
         "SELECT quality_rating, quality_score, messaging_limit_tier, messaging_limit_value, \
          block_reasons, spam_flags, matched_conversations, created_at \
          FROM whatsapp_quality_history \
-         WHERE brand_id = ?1 AND created_at >= datetime('now', '-30 days') \
+         WHERE brand_id = $1 AND created_at >= datetime('now', '-30 days') \
          ORDER BY created_at ASC"
     )
     .bind(&id)
@@ -4532,7 +4534,7 @@ pub async fn whatsapp_quality_history(
     let recommendations_rows = sqlx::query(
         "SELECT recommendation_type, severity, title, description, created_at \
          FROM whatsapp_quality_recommendations \
-         WHERE brand_id = ?1 AND is_resolved = 0 \
+         WHERE brand_id = $1 AND is_resolved = 0 \
          ORDER BY \
          CASE severity WHEN 'critical' THEN 1 WHEN 'warning' THEN 2 ELSE 3 END, \
          created_at DESC \
@@ -4589,7 +4591,7 @@ pub async fn send_whatsapp_media(
     Json(body): Json<SendWhatsAppMediaRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
@@ -4616,7 +4618,7 @@ pub async fn send_whatsapp_media(
                 "INSERT INTO messages (id, conversation_id, direction, channel, body, status, \
                  provider_message_id, provider_metadata, media_type, media_url, media_filename, \
                  media_mimetype, sent_at) \
-                 VALUES (?, 'outbound', 'whatsapp', ?, 'sent', ?, '{}', ?, ?, ?, ?, ?)"
+                 VALUES ($1, 'outbound', 'whatsapp', $2, 'sent', $3, '{}', $4, $5, $6, $7, $8)"
             )
             .bind(&msg_id)
             .bind(&body.conversation_id)
@@ -4663,7 +4665,7 @@ pub async fn send_whatsapp_voice(
     Json(body): Json<SendWhatsAppVoiceRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
@@ -4689,8 +4691,8 @@ pub async fn send_whatsapp_voice(
                 "INSERT INTO messages (id, conversation_id, direction, channel, body, status, \
                  provider_message_id, provider_metadata, media_type, media_url, media_filename, \
                  media_mimetype, voice_duration, transcription_text, sent_at) \
-                 VALUES (?, 'outbound', 'whatsapp', ?, 'sent', ?, '{}', 'audio', ?, 'voice.ogg', \
-                 'audio/ogg', ?, ?, ?)"
+                 VALUES ($1, 'outbound', 'whatsapp', $2, 'sent', $3, '{}', 'audio', $4, 'voice.ogg', \
+                 'audio/ogg', $5, $6, $7)"
             )
             .bind(&msg_id)
             .bind(&body.conversation_id)
@@ -5589,7 +5591,7 @@ pub async fn ai_suggest_campaign(
     let _brand = verify_brand(&state, &id, &tenant_key).await?;
 
     // Get brand profile for context
-    let brand_name: Option<String> = sqlx::query_scalar("SELECT name FROM brands WHERE id = ?1 LIMIT 1")
+    let brand_name: Option<String> = sqlx::query_scalar("SELECT name FROM brands WHERE id = $1 LIMIT 1")
         .bind(&id)
         .fetch_optional(&state.db)
         .await
@@ -5650,12 +5652,12 @@ pub async fn ai_generate_campaign(
     let _brand = verify_brand(&state, &id, &tenant_key).await?;
 
     // Get brand profile for context
-    let brand_name: Option<String> = sqlx::query_scalar("SELECT name FROM brands WHERE id = ?1 LIMIT 1")
+    let brand_name: Option<String> = sqlx::query_scalar("SELECT name FROM brands WHERE id = $1 LIMIT 1")
         .bind(&id)
         .fetch_optional(&state.db)
         .await
         .unwrap_or(None);
-    let brand_bio: Option<String> = sqlx::query_scalar("SELECT bio FROM brands WHERE id = ?1 LIMIT 1")
+    let brand_bio: Option<String> = sqlx::query_scalar("SELECT bio FROM brands WHERE id = $1 LIMIT 1")
         .bind(&id)
         .fetch_optional(&state.db)
         .await
@@ -5712,7 +5714,7 @@ async fn verify_brand(
     tenant_key: &str,
 ) -> Result<String, (StatusCode, Json<serde_json::Value>)> {
     let brand_id_db: Option<String> = sqlx::query_scalar(
-        "SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2"
+        "SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2"
     )
     .bind(brand_id)
     .bind(tenant_key)
@@ -5741,7 +5743,7 @@ async fn resolve_whatsapp_creds(
     brand_id: &str,
 ) -> Result<serde_json::Value, (StatusCode, Json<serde_json::Value>)> {
     let row: Option<(String,)> = sqlx::query_as(
-        "SELECT credentials FROM brand_credentials WHERE brand_id = ?1 AND channel_type = 'whatsapp' AND is_active = 1 LIMIT 1"
+        "SELECT credentials FROM brand_credentials WHERE brand_id = $1 AND channel_type = 'whatsapp' AND is_active = 1 LIMIT 1"
     )
     .bind(brand_id)
     .fetch_optional(db)
@@ -5781,7 +5783,7 @@ pub async fn whatsapp_oauth_url(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
@@ -5829,7 +5831,7 @@ pub async fn update_whatsapp_auto_sync(
     Json(body): Json<UpdateAutoSyncRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
@@ -5845,7 +5847,7 @@ pub async fn update_whatsapp_auto_sync(
 
     let _ = sqlx::query(
         "INSERT INTO integration_settings (key, value, brand_id, updated_at) \
-         VALUES ('whatsapp_auto_sync', ?, ?1, NOW()) \
+         VALUES ('whatsapp_auto_sync', $1, $2, NOW()) \
          ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, brand_id = EXCLUDED.brand_id, updated_at = EXCLUDED.updated_at"
     )
     .bind(&settings.to_string())
@@ -5877,7 +5879,7 @@ pub async fn update_whatsapp_messenger_switch(
     Json(body): Json<UpdateMessengerSwitchRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
@@ -5890,7 +5892,7 @@ pub async fn update_whatsapp_messenger_switch(
 
     let _ = sqlx::query(
         "INSERT INTO integration_settings (key, value, brand_id, updated_at) \
-         VALUES ('whatsapp_messenger_switch', ?, ?1, NOW()) \
+         VALUES ('whatsapp_messenger_switch', $1, $2, NOW()) \
          ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, brand_id = EXCLUDED.brand_id, updated_at = EXCLUDED.updated_at"
     )
     .bind(&settings.to_string())
@@ -5915,7 +5917,7 @@ pub async fn whatsapp_costs(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
     let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = ?1 AND o.tenant_key = ?2")
+    let _brand = sqlx::query("SELECT b.id FROM brands b JOIN organizations o ON b.organization_id = o.id WHERE b.id = $1 AND o.tenant_key = $2")
         .bind(&id).bind(&tenant_key).fetch_optional(&state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))))?;
     if _brand.is_none() { return Err((StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Brand not found" })))); }
@@ -5954,7 +5956,7 @@ pub async fn whatsapp_costs(
     let campaign_rows = sqlx::query(
         "SELECT c.id, c.name, c.campaign_type, c.sent_count, c.category \
          FROM whatsapp_campaigns c \
-         WHERE c.brand_id = ?1 AND c.sent_count > 0 \
+         WHERE c.brand_id = $1 AND c.sent_count > 0 \
          ORDER BY c.created_at DESC LIMIT 50"
     )
     .bind(&id)
@@ -6035,7 +6037,7 @@ pub async fn whatsapp_costs(
 
     // Get messaging tier from health
     let tier: Option<String> = sqlx::query_scalar(
-        "SELECT value FROM integration_settings WHERE brand_id = ?1 AND key = 'whatsapp_health' LIMIT 1"
+        "SELECT value FROM integration_settings WHERE brand_id = $1 AND key = 'whatsapp_health' LIMIT 1"
     )
     .bind(&id)
     .fetch_optional(&state.db)
