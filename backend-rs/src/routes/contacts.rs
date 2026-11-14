@@ -380,7 +380,7 @@ pub async fn existing_contact_id(
     value: &str,
 ) -> Result<Option<String>, sqlx::Error> {
     Ok(
-        sqlx::query_scalar::<_, String>("SELECT id FROM contacts WHERE channel = ? AND value = ? LIMIT 1")
+        sqlx::query_scalar::<_, String>("SELECT id FROM contacts WHERE channel = $1 AND value = $2 LIMIT 1")
             .bind(channel)
             .bind(value)
             .fetch_optional(db)
@@ -404,7 +404,7 @@ pub async fn attach_tag(
     }
 
     let mut wrote = false;
-    let tag_id: Option<String> = sqlx::query_scalar("SELECT id FROM tags WHERE name = ?")
+    let tag_id: Option<String> = sqlx::query_scalar("SELECT id FROM tags WHERE name = $1")
         .bind(clean)
         .fetch_optional(db)
         .await?;
@@ -413,7 +413,7 @@ pub async fn attach_tag(
         Some(id) => id,
         None => {
             let id = Uuid::new_v4().to_string();
-            sqlx::query("INSERT INTO tags (id, name, created_at, tenant_key) VALUES (?, ?, ?, ?)")
+            sqlx::query("INSERT INTO tags (id, name, created_at, tenant_key) VALUES ($1, $2, $3, $4)")
                 .bind(&id)
                 .bind(clean)
                 .bind(Utc::now().to_rfc3339())
@@ -426,7 +426,7 @@ pub async fn attach_tag(
     };
 
     let linked = sqlx::query_scalar::<_, i64>(
-        "SELECT count(*) FROM contact_tags WHERE contact_id = ? AND tag_id = ?",
+        "SELECT count(*) FROM contact_tags WHERE contact_id = $1 AND tag_id = $2",
     )
     .bind(contact_id)
     .bind(&tag_id)
@@ -434,7 +434,7 @@ pub async fn attach_tag(
     .await?;
 
     if linked == 0 {
-        sqlx::query("INSERT INTO contact_tags (contact_id, tag_id) VALUES (?, ?)")
+        sqlx::query("INSERT INTO contact_tags (contact_id, tag_id) VALUES ($1, $2)")
             .bind(contact_id)
             .bind(&tag_id)
             .execute(db)
@@ -486,7 +486,7 @@ async fn contact_matches_segment(
     }
 
     let row = sqlx::query_as::<_, SegFilters>(
-        "SELECT filters FROM contact_segments WHERE id = ?",
+        "SELECT filters FROM contact_segments WHERE id = $1",
     )
     .bind(segment_id)
     .fetch_optional(db)
@@ -701,7 +701,7 @@ pub async fn list_contacts(
         "SELECT {} FROM contacts {} ORDER BY created_at DESC",
         projection.join(", "),
         if scoped {
-            "WHERE COALESCE(tenant_key, '') = ?"
+            "WHERE COALESCE(tenant_key, '') = $1"
         } else {
             ""
         }
@@ -737,7 +737,7 @@ pub async fn list_contacts(
             SELECT t.name 
             FROM contact_tags ct 
             JOIN tags t ON ct.tag_id = t.id 
-            WHERE ct.contact_id = ?
+            WHERE ct.contact_id = $1
             ORDER BY t.name ASC
             "#,
         )
@@ -751,7 +751,7 @@ pub async fn list_contacts(
 
         // Query consent
         let opt_in: Option<String> = match sqlx::query_scalar::<_, String>(
-            "SELECT status FROM consent_records WHERE contact_id = ? ORDER BY recorded_at DESC LIMIT 1",
+            "SELECT status FROM consent_records WHERE contact_id = $1 ORDER BY recorded_at DESC LIMIT 1",
         )
         .bind(&id)
         .fetch_optional(&state.db)
@@ -862,10 +862,10 @@ pub async fn get_contact(
     let (projection, missing) = contact_projection(&state.db).await;
     let scoped = projection.contains(&"tenant_key");
     let sql = format!(
-        "SELECT {} FROM contacts WHERE id = ?{}",
+        "SELECT {} FROM contacts WHERE id = $1{}",
         projection.join(", "),
         if scoped {
-            " AND COALESCE(tenant_key, '') = ?"
+            " AND COALESCE(tenant_key, '') = $2"
         } else {
             ""
         }
@@ -894,8 +894,8 @@ pub async fn get_contact(
         r#"
         SELECT t.name 
         FROM contact_tags ct 
-        JOIN tags t ON ct.tag_id = t.id 
-        WHERE ct.contact_id = ?
+        JOIN tags t ON ct.tag_id = t.id
+        WHERE ct.contact_id = $1
         ORDER BY t.name ASC
         "#,
     )
@@ -916,7 +916,7 @@ pub async fn get_contact(
     // A failed consent read must not be reported as "no consent recorded": the
     // profile UI would show an absent opt-in for somebody who did opt in.
     let consent = match sqlx::query_as::<_, RawConsent>(
-        "SELECT status, recorded_at FROM consent_records WHERE contact_id = ? ORDER BY recorded_at DESC LIMIT 1",
+        "SELECT status, recorded_at FROM consent_records WHERE contact_id = $1 ORDER BY recorded_at DESC LIMIT 1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -951,7 +951,7 @@ pub async fn get_contact(
     }
 
     let conv = match sqlx::query_as::<_, RawConv>(
-        "SELECT id, state, priority, resolution_type, csat_score, last_inbound_at, last_outbound_at FROM conversations WHERE contact_id = ? ORDER BY updated_at DESC LIMIT 1",
+        "SELECT id, state, priority, resolution_type, csat_score, last_inbound_at, last_outbound_at FROM conversations WHERE contact_id = $1 ORDER BY updated_at DESC LIMIT 1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -965,7 +965,7 @@ pub async fn get_contact(
     let mut recent_messages_json = Vec::new();
 
     if let Some(ref cv) = conv {
-        let total_msgs: i64 = match sqlx::query_scalar("SELECT count(*) FROM messages WHERE conversation_id = ?")
+        let total_msgs: i64 = match sqlx::query_scalar("SELECT count(*) FROM messages WHERE conversation_id = $1")
             .bind(&cv.id)
             .fetch_one(&state.db)
             .await
@@ -974,7 +974,7 @@ pub async fn get_contact(
             Err(err) => return db_error_response("could not count the messages of the conversation", err),
         };
 
-        let inbound_count: i64 = match sqlx::query_scalar("SELECT count(*) FROM messages WHERE conversation_id = ? AND UPPER(direction) = 'INBOUND'")
+        let inbound_count: i64 = match sqlx::query_scalar("SELECT count(*) FROM messages WHERE conversation_id = $1 AND UPPER(direction) = 'INBOUND'")
             .bind(&cv.id)
             .fetch_one(&state.db)
             .await
@@ -983,7 +983,7 @@ pub async fn get_contact(
             Err(err) => return db_error_response("could not count the inbound messages", err),
         };
 
-        let outbound_count: i64 = match sqlx::query_scalar("SELECT count(*) FROM messages WHERE conversation_id = ? AND UPPER(direction) = 'OUTBOUND'")
+        let outbound_count: i64 = match sqlx::query_scalar("SELECT count(*) FROM messages WHERE conversation_id = $1 AND UPPER(direction) = 'OUTBOUND'")
             .bind(&cv.id)
             .fetch_one(&state.db)
             .await
@@ -999,7 +999,7 @@ pub async fn get_contact(
         }
 
         let last_inbound = match sqlx::query_as::<_, MsgSnippet>(
-            "SELECT body, sent_at FROM messages WHERE conversation_id = ? AND UPPER(direction) = 'INBOUND' ORDER BY sent_at DESC LIMIT 1",
+            "SELECT body, sent_at FROM messages WHERE conversation_id = $1 AND UPPER(direction) = 'INBOUND' ORDER BY sent_at DESC LIMIT 1",
         )
         .bind(&cv.id)
         .fetch_optional(&state.db)
@@ -1017,7 +1017,7 @@ pub async fn get_contact(
         }
 
         let last_outbound = match sqlx::query_as::<_, OutboundSnippet>(
-            "SELECT body, sent_at, status FROM messages WHERE conversation_id = ? AND UPPER(direction) = 'OUTBOUND' ORDER BY sent_at DESC LIMIT 1",
+            "SELECT body, sent_at, status FROM messages WHERE conversation_id = $1 AND UPPER(direction) = 'OUTBOUND' ORDER BY sent_at DESC LIMIT 1",
         )
         .bind(&cv.id)
         .fetch_optional(&state.db)
@@ -1054,7 +1054,7 @@ pub async fn get_contact(
         }
 
         let recents = match sqlx::query_as::<_, RecentMsg>(
-            "SELECT id, direction, body, sent_at, status FROM messages WHERE conversation_id = ? ORDER BY sent_at DESC LIMIT 15",
+            "SELECT id, direction, body, sent_at, status FROM messages WHERE conversation_id = $1 ORDER BY sent_at DESC LIMIT 15",
         )
         .bind(&cv.id)
         .fetch_all(&state.db)
@@ -1093,7 +1093,7 @@ pub async fn get_contact(
 
     let memories: Vec<MemoryItem> = if table_exists(&state.db, "contact_memories").await {
         match sqlx::query_as::<_, MemoryItem>(
-            "SELECT id, fact, category, confidence, noted_at, created_at FROM contact_memories WHERE contact_id = ? ORDER BY COALESCE(noted_at, created_at) DESC",
+            "SELECT id, fact, category, confidence, noted_at, created_at FROM contact_memories WHERE contact_id = $1 ORDER BY COALESCE(noted_at, created_at) DESC",
         )
         .bind(&id)
         .fetch_all(&state.db)
@@ -1142,7 +1142,7 @@ pub async fn get_contact(
         }
 
         match sqlx::query_as::<_, RawLead>(
-            "SELECT id, name, qualification_rationale, harvester_institution_id, institution_type, city FROM leads WHERE id = ?",
+            "SELECT id, name, qualification_rationale, harvester_institution_id, institution_type, city FROM leads WHERE id = $1",
         )
         .bind(lid)
         .fetch_optional(&state.db)
@@ -1222,7 +1222,7 @@ pub async fn add_contact_tag(
 ) -> impl IntoResponse {
     // A failed existence read must not surface as "Contact not found".
     let contact_exists: bool = match sqlx::query_scalar::<_, i64>(
-        "SELECT count(*) FROM contacts WHERE id = ?",
+        "SELECT count(*) FROM contacts WHERE id = $1",
     )
     .bind(&contact_id)
     .fetch_one(&state.db)
@@ -1248,7 +1248,7 @@ pub async fn add_contact_tag(
     let tags: Vec<String> = match sqlx::query_scalar::<_, String>(
         r#"
         SELECT t.name FROM contact_tags ct JOIN tags t ON ct.tag_id = t.id
-        WHERE ct.contact_id = ? ORDER BY t.name ASC
+        WHERE ct.contact_id = $1 ORDER BY t.name ASC
         "#,
     )
     .bind(&contact_id)
@@ -1273,7 +1273,7 @@ pub async fn remove_contact_tag(
 ) -> impl IntoResponse {
     let clean_tag = tag.trim().trim_start_matches('#');
     let result = sqlx::query(
-        "DELETE FROM contact_tags WHERE contact_id = ? AND tag_id IN (SELECT id FROM tags WHERE name = ?)",
+        "DELETE FROM contact_tags WHERE contact_id = $1 AND tag_id IN (SELECT id FROM tags WHERE name = $2)",
     )
     .bind(&contact_id)
     .bind(clean_tag)
@@ -1287,7 +1287,7 @@ pub async fn remove_contact_tag(
 
     if removed == 0 {
         let contact_exists = match sqlx::query_scalar::<_, i64>(
-            "SELECT count(*) FROM contacts WHERE id = ?",
+            "SELECT count(*) FROM contacts WHERE id = $1",
         )
         .bind(&contact_id)
         .fetch_one(&state.db)
@@ -1317,7 +1317,7 @@ pub async fn remove_contact_tag(
     let tags: Vec<String> = match sqlx::query_scalar::<_, String>(
         r#"
         SELECT t.name FROM contact_tags ct JOIN tags t ON ct.tag_id = t.id
-        WHERE ct.contact_id = ? ORDER BY t.name ASC
+        WHERE ct.contact_id = $1 ORDER BY t.name ASC
         "#,
     )
     .bind(&contact_id)
@@ -1340,7 +1340,7 @@ pub async fn toggle_contact_consent(
     // `Err` here must not become 404: a database failure is not "no such
     // contact", and the handler writes consent right after this check.
     let contact_tenant: Option<String> = match sqlx::query_scalar::<_, String>(
-        "SELECT COALESCE(tenant_key, '') FROM contacts WHERE id = ?",
+        "SELECT COALESCE(tenant_key, '') FROM contacts WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -1372,7 +1372,7 @@ pub async fn toggle_contact_consent(
     // This read decides which way the toggle goes, so a failure cannot be
     // silently treated as "no consent recorded" (that would opt people in).
     let current_status: Option<String> = match sqlx::query_scalar::<_, String>(
-        "SELECT status FROM consent_records WHERE contact_id = ? ORDER BY recorded_at DESC LIMIT 1",
+        "SELECT status FROM consent_records WHERE contact_id = $1 ORDER BY recorded_at DESC LIMIT 1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -1389,7 +1389,7 @@ pub async fn toggle_contact_consent(
     // Append-only: a consent ledger that overwrites its own history cannot
     // answer "when did this person ask us to stop?".
     let inserted = sqlx::query(
-        "INSERT INTO consent_records (id, contact_id, status, source, note, recorded_at) VALUES (?, ?, ?, 'admin_profile_action', 'Toggled via Contact Profile UI', ?)",
+        "INSERT INTO consent_records (id, contact_id, status, source, note, recorded_at) VALUES ($1, $2, $3, 'admin_profile_action', 'Toggled via Contact Profile UI', $4)",
     )
     .bind(Uuid::new_v4().to_string())
     .bind(&id)
@@ -1436,7 +1436,7 @@ pub async fn sync_contact_meta(
     }
 
     let contact = sqlx::query_as::<_, ContactInfo>(
-        "SELECT channel, value, custom_fields FROM contacts WHERE id = ? AND COALESCE(tenant_key, '') = ?",
+        "SELECT channel, value, custom_fields FROM contacts WHERE id = $1 AND COALESCE(tenant_key, '') = $2",
     )
     .bind(&id)
     .bind(&tenant_key)
@@ -1483,7 +1483,7 @@ pub async fn sync_contact_meta(
     }
     fields.insert("synced_channel".to_string(), json!(c.channel));
 
-    let updated = sqlx::query("UPDATE contacts SET custom_fields = ?, updated_at = ? WHERE id = ?")
+    let updated = sqlx::query("UPDATE contacts SET custom_fields = $1, updated_at = $2 WHERE id = $3")
         .bind(serde_json::Value::Object(fields).to_string())
         .bind(&now)
         .bind(&id)
@@ -1534,7 +1534,7 @@ pub async fn sync_meta_contacts(
     // A failed count must not be reported as "0 WhatsApp contacts"; the number
     // below is quoted back to the operator as fact.
     let whatsapp_contacts: i64 = match sqlx::query_scalar(
-        "SELECT count(*) FROM contacts WHERE channel = 'whatsapp' AND COALESCE(tenant_key, '') = ?",
+        "SELECT count(*) FROM contacts WHERE channel = 'whatsapp' AND COALESCE(tenant_key, '') = $1",
     )
     .bind(&tenant_key)
     .fetch_one(&state.db)
@@ -1578,7 +1578,7 @@ pub async fn get_or_create_contact_conversation(
     }
 
     let contact = match sqlx::query_as::<_, ContactRow>(
-        "SELECT channel, tenant_key FROM contacts WHERE id = ?",
+        "SELECT channel, tenant_key FROM contacts WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -1623,7 +1623,7 @@ pub async fn get_or_create_contact_conversation(
         };
 
     let state_value: Option<String> =
-        match sqlx::query_scalar::<_, String>("SELECT state FROM conversations WHERE id = ?")
+        match sqlx::query_scalar::<_, String>("SELECT state FROM conversations WHERE id = $1")
             .bind(&conversation_id)
             .fetch_optional(&state.db)
             .await
@@ -1763,7 +1763,7 @@ pub async fn create_contact(
     // (provisioning stamps its own clock and may keep a fallback or pre-existing
     // name), and it lets us refuse to mutate a foreign tenant's contact.
     let (read_projection, read_missing) = contact_projection(&state.db).await;
-    let read_sql = format!("SELECT {} FROM contacts WHERE id = ?", read_projection.join(", "));
+    let read_sql = format!("SELECT {} FROM contacts WHERE id = $1", read_projection.join(", "));
     let stored = match sqlx::query(&read_sql).bind(&contact_id).fetch_optional(&state.db).await {
         Ok(Some(row)) => LoadedContact::from_row(&row),
         Ok(None) => {
@@ -1817,9 +1817,9 @@ pub async fn create_contact(
             }
         };
         let sql = if language.is_some() {
-            "UPDATE contacts SET custom_fields = ?, language = ?, updated_at = ? WHERE id = ?"
+            "UPDATE contacts SET custom_fields = $1, language = $2, updated_at = $3 WHERE id = $4"
         } else {
-            "UPDATE contacts SET custom_fields = ?, updated_at = ? WHERE id = ?"
+            "UPDATE contacts SET custom_fields = $1, updated_at = $2 WHERE id = $3"
         };
         let mut query = sqlx::query(sql).bind(serialized_fields);
         if let Some(language) = language.as_deref() {
@@ -1847,7 +1847,7 @@ pub async fn create_contact(
         }
     } else if let Some(language) = language.as_deref() {
         let saved =
-            sqlx::query("UPDATE contacts SET language = ?, updated_at = ? WHERE id = ?")
+            sqlx::query("UPDATE contacts SET language = $1, updated_at = $2 WHERE id = $3")
                 .bind(language)
                 .bind(&now)
                 .bind(&contact_id)
@@ -1942,7 +1942,7 @@ async fn contact_owner(
 ) -> Result<Option<(String, Option<String>)>, sqlx::Error> {
     Ok(
         sqlx::query_as::<_, (String, Option<String>)>(
-            "SELECT channel, tenant_key FROM contacts WHERE id = ?",
+            "SELECT channel, tenant_key FROM contacts WHERE id = $1",
         )
         .bind(contact_id)
         .fetch_optional(db)
@@ -1995,7 +1995,7 @@ pub async fn list_contact_memories(
     let memories = match sqlx::query_as::<_, MemoryRow>(
         r#"SELECT id, contact_id, fact, category, confidence, noted_at, created_at
            FROM contact_memories
-           WHERE contact_id = ?
+           WHERE contact_id = $1
            ORDER BY COALESCE(noted_at, created_at) DESC"#,
     )
     .bind(&contact_id)
@@ -2085,7 +2085,7 @@ pub async fn create_contact_memory(
         .unwrap_or_else(|| "preference".to_string());
 
     if let Err(err) = sqlx::query(
-        "INSERT INTO contact_memories (id, contact_id, fact, category, confidence, noted_at, created_at) VALUES (?, ?, ?, ?, '1.0', ?, ?)",
+        "INSERT INTO contact_memories (id, contact_id, fact, category, confidence, noted_at, created_at) VALUES ($1, $2, $3, $4, '1.0', $5, $6)",
     )
     .bind(&id)
     .bind(&contact_id)
@@ -2138,7 +2138,7 @@ pub async fn delete_contact_memory(
         );
     }
 
-    let result = match sqlx::query("DELETE FROM contact_memories WHERE id = ? AND contact_id = ?")
+    let result = match sqlx::query("DELETE FROM contact_memories WHERE id = $1 AND contact_id = $2")
         .bind(&memory_id)
         .bind(&contact_id)
         .execute(&state.db)
@@ -2227,7 +2227,7 @@ async fn write_audit(
     }
     match sqlx::query(
         r#"INSERT INTO audit_logs (id, entity_type, entity_id, action, actor, actor_name, severity, description, details, created_at)
-           VALUES (?, ?, ?, ?, 'unattributed_api_call', NULL, 'info', ?, ?)"#,
+           VALUES ($1, $2, $3, $4, 'unattributed_api_call', NULL, 'info', $5, $6)"#,
     )
     .bind(Uuid::new_v4().to_string())
     .bind(entity_type)
@@ -2261,7 +2261,7 @@ pub async fn export_contacts(
         "SELECT {} FROM contacts {} ORDER BY created_at DESC",
         projection.join(", "),
         if scoped {
-            "WHERE COALESCE(tenant_key, '') = ?"
+            "WHERE COALESCE(tenant_key, '') = $1"
         } else {
             ""
         }
@@ -2286,7 +2286,7 @@ pub async fn export_contacts(
             SELECT t.name 
             FROM contact_tags ct 
             JOIN tags t ON ct.tag_id = t.id 
-            WHERE ct.contact_id = ?
+            WHERE ct.contact_id = $1
             ORDER BY t.name ASC
             "#,
         )
@@ -2620,7 +2620,7 @@ async fn write_row_attributes(
     // overwritten by whatever the next file happens to claim.
     if fill_empty_name && !row.name.trim().is_empty() {
         sqlx::query(
-            "UPDATE contacts SET person_name = ?, updated_at = ? WHERE id = ? AND (person_name IS NULL OR TRIM(person_name) = '')",
+            "UPDATE contacts SET person_name = $1, updated_at = $2 WHERE id = $3 AND (person_name IS NULL OR TRIM(person_name) = '')",
         )
         .bind(row.name.trim())
         .bind(now)
@@ -2633,7 +2633,7 @@ async fn write_row_attributes(
     // not stamp "en" onto a contact, and must not wipe a stored language either.
     match (row.language.as_deref(), has_language) {
         (Some(language), true) => {
-            sqlx::query("UPDATE contacts SET language = ?, updated_at = ? WHERE id = ?")
+            sqlx::query("UPDATE contacts SET language = $1, updated_at = $2 WHERE id = $3")
                 .bind(language)
                 .bind(now)
                 .bind(contact_id)
@@ -2650,7 +2650,7 @@ async fn write_row_attributes(
     if !row.custom_fields.is_empty() {
         if has_custom_fields {
             let current: Option<String> =
-                sqlx::query_scalar("SELECT custom_fields FROM contacts WHERE id = ?")
+                sqlx::query_scalar("SELECT custom_fields FROM contacts WHERE id = $1")
                     .bind(contact_id)
                     .fetch_optional(db)
                     .await?;
@@ -2672,7 +2672,7 @@ async fn write_row_attributes(
             if changed {
                 match serde_json::to_string(&merged) {
                     Ok(serialized) => {
-                        sqlx::query("UPDATE contacts SET custom_fields = ?, updated_at = ? WHERE id = ?")
+                        sqlx::query("UPDATE contacts SET custom_fields = $1, updated_at = $2 WHERE id = $3")
                             .bind(serialized)
                             .bind(now)
                             .bind(contact_id)
@@ -3049,7 +3049,7 @@ async fn link_customer_row(
 
     let customer: Option<(String, Option<String>)> =
         match sqlx::query_as::<_, (String, Option<String>)>(
-            "SELECT id, tenant_key FROM customers WHERE id = ?",
+            "SELECT id, tenant_key FROM customers WHERE id = $1",
         )
         .bind(customer_id)
         .fetch_optional(db)
@@ -3085,7 +3085,7 @@ async fn link_customer_row(
     }
 
     let already: Option<String> =
-        match sqlx::query_scalar::<_, String>("SELECT customer_id FROM contacts WHERE id = ?")
+        match sqlx::query_scalar::<_, String>("SELECT customer_id FROM contacts WHERE id = $1")
             .bind(contact_id)
             .fetch_optional(db)
             .await
@@ -3097,7 +3097,7 @@ async fn link_customer_row(
         return Ok(LinkOutcome::AlreadyLinked);
     }
 
-    let linked = sqlx::query("UPDATE contacts SET customer_id = ?, updated_at = ? WHERE id = ?")
+    let linked = sqlx::query("UPDATE contacts SET customer_id = $1, updated_at = $2 WHERE id = $3")
         .bind(&customer_id)
         .bind(Utc::now().to_rfc3339())
         .bind(contact_id)
@@ -3228,7 +3228,7 @@ async fn sibling_contact_ids(
         return Ok(None);
     }
     Ok(Some(
-        sqlx::query_scalar::<_, String>("SELECT id FROM contacts WHERE customer_id = ?")
+        sqlx::query_scalar::<_, String>("SELECT id FROM contacts WHERE customer_id = $1")
             .bind(&customer_id)
             .fetch_all(db)
             .await?,
@@ -3246,9 +3246,9 @@ pub async fn relationship_profile(
     let (projection, _missing) = contact_projection(&state.db).await;
     let scoped = projection.contains(&"tenant_key");
     let sql = format!(
-        "SELECT {} FROM contacts WHERE id = ?{}",
+        "SELECT {} FROM contacts WHERE id = $1{}",
         projection.join(", "),
-        if scoped { " AND COALESCE(tenant_key, '') = ?" } else { "" }
+        if scoped { " AND COALESCE(tenant_key, '') = $2" } else { "" }
     );
     let mut query = sqlx::query(&sql).bind(&contact_id);
     if scoped {
@@ -3292,7 +3292,10 @@ pub async fn relationship_profile(
 
     // channels_seen: real channel/value pairs for every linked identity.
     let mut channels_seen: Vec<serde_json::Value> = Vec::new();
-    let placeholders = vec!["?"; contact_ids.len()].join(", ");
+    let placeholders = (1..=contact_ids.len())
+        .map(|i| format!("${i}"))
+        .collect::<Vec<_>>()
+        .join(", ");
     let channel_sql = format!("SELECT channel, value FROM contacts WHERE id IN ({placeholders})");
     let mut channel_query = sqlx::query(&channel_sql);
     for id in &contact_ids {
@@ -3484,7 +3487,7 @@ pub async fn relationship_profile(
     if let Some(lead_id) = contact.lead_id.clone() {
         if table_exists(&state.db, "leads").await {
             match sqlx::query_as::<_, (Option<String>, Option<String>, Option<String>, Option<String>)>(
-                "SELECT id, name, harvester_institution_id, qualification_rationale FROM leads WHERE id = ?",
+                "SELECT id, name, harvester_institution_id, qualification_rationale FROM leads WHERE id = $1",
             )
             .bind(&lead_id)
             .fetch_optional(&state.db)
