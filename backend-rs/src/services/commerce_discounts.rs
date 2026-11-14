@@ -102,9 +102,9 @@ impl CommerceDiscountsService {
 
     pub async fn list_coupons(&self, brand_id: &str, active_only: bool) -> Result<Vec<Coupon>, String> {
         let query = if active_only {
-            "SELECT * FROM coupons WHERE brand_id = ? AND is_active = 1 ORDER BY created_at DESC"
+            "SELECT * FROM coupons WHERE brand_id = $1 AND is_active = 1 ORDER BY created_at DESC"
         } else {
-            "SELECT * FROM coupons WHERE brand_id = ? ORDER BY created_at DESC"
+            "SELECT * FROM coupons WHERE brand_id = $1 ORDER BY created_at DESC"
         };
         let rows = sqlx::query(query)
             .bind(brand_id)
@@ -118,7 +118,7 @@ impl CommerceDiscountsService {
     }
 
     pub async fn get_coupon(&self, id: &str) -> Result<Coupon, String> {
-        let row = sqlx::query("SELECT * FROM coupons WHERE id = ?")
+        let row = sqlx::query("SELECT * FROM coupons WHERE id = $1")
             .bind(id)
             .fetch_one(&self.pool)
             .await
@@ -134,7 +134,7 @@ impl CommerceDiscountsService {
         sqlx::query(
             "INSERT INTO coupons (id, brand_id, code, type, value, min_order_amount, max_discount, \
              usage_limit, starts_at, ends_at, applicable_products, applicable_categories) \
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)"
         )
         .bind(&id)
         .bind(&req.brand_id)
@@ -157,32 +157,32 @@ impl CommerceDiscountsService {
     pub async fn update_coupon(&self, id: &str, req: &UpdateCouponRequest) -> Result<Coupon, String> {
         // Use individual UPDATE statements for each field to avoid dynamic binding issues
         if let Some(ref code) = req.code {
-            sqlx::query("UPDATE coupons SET code = ?, updated_at = NOW()::TEXT WHERE id = ?")
+            sqlx::query("UPDATE coupons SET code = $1, updated_at = NOW()::TEXT WHERE id = $2")
                 .bind(code).bind(id)
                 .execute(&self.pool).await.map_err(|e| e.to_string())?;
         }
         if let Some(ref r#type) = req.r#type {
-            sqlx::query("UPDATE coupons SET `type` = ?, updated_at = NOW()::TEXT WHERE id = ?")
+            sqlx::query("UPDATE coupons SET type = $1, updated_at = NOW()::TEXT WHERE id = $2")
                 .bind(r#type).bind(id)
                 .execute(&self.pool).await.map_err(|e| e.to_string())?;
         }
         if let Some(value) = req.value {
-            sqlx::query("UPDATE coupons SET value = ?, updated_at = NOW()::TEXT WHERE id = ?")
+            sqlx::query("UPDATE coupons SET value = $1, updated_at = NOW()::TEXT WHERE id = $2")
                 .bind(&value).bind(id)
                 .execute(&self.pool).await.map_err(|e| e.to_string())?;
         }
         if let Some(ref min_order_amount) = req.min_order_amount {
-            sqlx::query("UPDATE coupons SET min_order_amount = ?, updated_at = NOW()::TEXT WHERE id = ?")
+            sqlx::query("UPDATE coupons SET min_order_amount = $1, updated_at = NOW()::TEXT WHERE id = $2")
                 .bind(min_order_amount).bind(id)
                 .execute(&self.pool).await.map_err(|e| e.to_string())?;
         }
         if let Some(ref max_discount) = req.max_discount {
-            sqlx::query("UPDATE coupons SET max_discount = ?, updated_at = NOW()::TEXT WHERE id = ?")
+            sqlx::query("UPDATE coupons SET max_discount = $1, updated_at = NOW()::TEXT WHERE id = $2")
                 .bind(max_discount).bind(id)
                 .execute(&self.pool).await.map_err(|e| e.to_string())?;
         }
         if let Some(ref is_active) = req.is_active {
-            sqlx::query("UPDATE coupons SET is_active = ?, updated_at = NOW()::TEXT WHERE id = ?")
+            sqlx::query("UPDATE coupons SET is_active = $1, updated_at = NOW()::TEXT WHERE id = $2")
                 .bind(is_active).bind(id)
                 .execute(&self.pool).await.map_err(|e| e.to_string())?;
         }
@@ -191,7 +191,7 @@ impl CommerceDiscountsService {
     }
 
     pub async fn delete_coupon(&self, id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM coupons WHERE id = ?")
+        sqlx::query("DELETE FROM coupons WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await
@@ -200,7 +200,7 @@ impl CommerceDiscountsService {
     }
 
     pub async fn validate_coupon(&self, req: &ValidateCouponRequest) -> Result<ValidateCouponResponse, String> {
-        let coupon = sqlx::query("SELECT * FROM coupons WHERE code = ? AND is_active = 1")
+        let coupon = sqlx::query("SELECT * FROM coupons WHERE code = $1 AND is_active = 1")
             .bind(&req.code)
             .fetch_optional(&self.pool)
             .await
@@ -285,7 +285,7 @@ impl CommerceDiscountsService {
         let id = Uuid::new_v4().to_string();
         sqlx::query(
             "INSERT INTO coupon_usage (id, coupon_id, order_id, customer_id, discount_amount) \
-             VALUES (?, ?, ?, ?, ?)"
+             VALUES ($1, $2, $3, $4, $5)"
         )
         .bind(&id)
         .bind(coupon_id)
@@ -297,7 +297,7 @@ impl CommerceDiscountsService {
         .map_err(|e| e.to_string())?;
 
         // Increment used_count
-        sqlx::query("UPDATE coupons SET used_count = used_count + 1, updated_at = NOW()::TEXT WHERE id = ?")
+        sqlx::query("UPDATE coupons SET used_count = used_count + 1, updated_at = NOW()::TEXT WHERE id = $1")
             .bind(coupon_id)
             .execute(&self.pool)
             .await
@@ -306,7 +306,7 @@ impl CommerceDiscountsService {
     }
 
     pub async fn coupon_usage_history(&self, coupon_id: &str) -> Result<Vec<CouponUsage>, String> {
-        let rows = sqlx::query("SELECT * FROM coupon_usage WHERE coupon_id = ? ORDER BY used_at DESC")
+        let rows = sqlx::query("SELECT * FROM coupon_usage WHERE coupon_id = $1 ORDER BY used_at DESC")
             .bind(coupon_id)
             .fetch_all(&self.pool)
             .await
@@ -322,7 +322,7 @@ impl CommerceDiscountsService {
     // ---------------------------------------------------------------------------
 
     pub async fn list_membership_tiers(&self, brand_id: &str) -> Result<Vec<MembershipTier>, String> {
-        let rows = sqlx::query("SELECT * FROM membership_tiers WHERE brand_id = ? ORDER BY name")
+        let rows = sqlx::query("SELECT * FROM membership_tiers WHERE brand_id = $1 ORDER BY name")
             .bind(brand_id)
             .fetch_all(&self.pool)
             .await
@@ -338,7 +338,7 @@ impl CommerceDiscountsService {
         let benefits = req.benefits.as_ref().map(|v| serde_json::to_string(v).unwrap_or_default());
         sqlx::query(
             "INSERT INTO membership_tiers (id, brand_id, name, discount_percent, monthly_price, benefits) \
-             VALUES (?, ?, ?, ?, ?, ?)"
+             VALUES ($1, $2, $3, $4, $5, $6)"
         )
         .bind(&id)
         .bind(&req.brand_id)
@@ -353,7 +353,7 @@ impl CommerceDiscountsService {
     }
 
     pub async fn get_membership_tier(&self, id: &str) -> Result<MembershipTier, String> {
-        let row = sqlx::query("SELECT * FROM membership_tiers WHERE id = ?")
+        let row = sqlx::query("SELECT * FROM membership_tiers WHERE id = $1")
             .bind(id)
             .fetch_one(&self.pool)
             .await
@@ -362,27 +362,31 @@ impl CommerceDiscountsService {
     }
 
     pub async fn update_membership_tier(&self, id: &str, req: &UpdateMembershipTierRequest) -> Result<MembershipTier, String> {
-        let mut sets = Vec::new();
-        if let Some(ref name) = req.name { sets.push("name = ?"); }
-        if let Some(dp) = req.discount_percent { sets.push("discount_percent = ?"); }
-        if let Some(ref is_active) = req.is_active { sets.push("is_active = ?"); }
-        sets.push("updated_at = NOW()::TEXT");
+        let mut sets: Vec<String> = Vec::new();
+        let mut n = 1;
+        if req.name.is_some() { sets.push(format!("name = ${}", n)); n += 1; }
+        if req.discount_percent.is_some() { sets.push(format!("discount_percent = ${}", n)); n += 1; }
+        if req.is_active.is_some() { sets.push(format!("is_active = ${}", n)); n += 1; }
+        sets.push("updated_at = NOW()::TEXT".to_string());
 
         if sets.len() <= 1 {
             return self.get_membership_tier(id).await;
         }
 
-        let query = format!("UPDATE membership_tiers SET {} WHERE id = ?", sets.join(", "));
-        sqlx::query(&query)
-            .bind(id)
-            .execute(&self.pool)
+        let query = format!("UPDATE membership_tiers SET {} WHERE id = ${}", sets.join(", "), n);
+        let mut q = sqlx::query(&query);
+        if let Some(ref name) = req.name { q = q.bind(name); }
+        if let Some(dp) = req.discount_percent { q = q.bind(dp); }
+        if let Some(is_active) = req.is_active { q = q.bind(is_active); }
+        q = q.bind(id);
+        q.execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
         self.get_membership_tier(id).await
     }
 
     pub async fn delete_membership_tier(&self, id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM membership_tiers WHERE id = ?")
+        sqlx::query("DELETE FROM membership_tiers WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await
@@ -395,7 +399,7 @@ impl CommerceDiscountsService {
     // ---------------------------------------------------------------------------
 
     pub async fn list_customer_memberships(&self, customer_id: &str) -> Result<Vec<CustomerMembership>, String> {
-        let rows = sqlx::query("SELECT * FROM customer_memberships WHERE customer_id = ? ORDER BY started_at DESC")
+        let rows = sqlx::query("SELECT * FROM customer_memberships WHERE customer_id = $1 ORDER BY started_at DESC")
             .bind(customer_id)
             .fetch_all(&self.pool)
             .await
@@ -410,7 +414,7 @@ impl CommerceDiscountsService {
         let id = Uuid::new_v4().to_string();
         sqlx::query(
             "INSERT INTO customer_memberships (id, customer_id, membership_tier_id, ends_at) \
-             VALUES (?, ?, ?, ?)"
+             VALUES ($1, $2, $3, $4)"
         )
         .bind(&id)
         .bind(&req.customer_id)
@@ -423,7 +427,7 @@ impl CommerceDiscountsService {
     }
 
     pub async fn get_customer_membership(&self, id: &str) -> Result<CustomerMembership, String> {
-        let row = sqlx::query("SELECT * FROM customer_memberships WHERE id = ?")
+        let row = sqlx::query("SELECT * FROM customer_memberships WHERE id = $1")
             .bind(id)
             .fetch_one(&self.pool)
             .await
@@ -433,7 +437,7 @@ impl CommerceDiscountsService {
 
     pub async fn get_active_customer_membership(&self, customer_id: &str) -> Result<Option<CustomerMembership>, String> {
         let row = sqlx::query(
-            "SELECT * FROM customer_memberships WHERE customer_id = ? AND status = 'active' \
+            "SELECT * FROM customer_memberships WHERE customer_id = $1 AND status = 'active' \
              AND (ends_at IS NULL OR ends_at > NOW()::TEXT) \
              LIMIT 1"
         )

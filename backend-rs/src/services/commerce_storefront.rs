@@ -75,7 +75,7 @@ impl CommerceStorefrontService {
     // ---------------------------------------------------------------------------
 
     pub async fn list_storefronts(&self, brand_id: &str) -> Result<Vec<Storefront>, String> {
-        let rows = sqlx::query("SELECT * FROM storefronts WHERE brand_id = ? ORDER BY created_at DESC")
+        let rows = sqlx::query("SELECT * FROM storefronts WHERE brand_id = $1 ORDER BY created_at DESC")
             .bind(brand_id)
             .fetch_all(&self.pool)
             .await
@@ -86,7 +86,7 @@ impl CommerceStorefrontService {
     }
 
     pub async fn get_storefront(&self, id: &str) -> Result<Storefront, String> {
-        let row = sqlx::query("SELECT * FROM storefronts WHERE id = ?")
+        let row = sqlx::query("SELECT * FROM storefronts WHERE id = $1")
             .bind(id)
             .fetch_one(&self.pool)
             .await
@@ -95,7 +95,7 @@ impl CommerceStorefrontService {
     }
 
     pub async fn get_storefront_by_slug(&self, slug: &str) -> Result<Option<Storefront>, String> {
-        let row = sqlx::query("SELECT * FROM storefronts WHERE slug = ? AND is_active = 1")
+        let row = sqlx::query("SELECT * FROM storefronts WHERE slug = $1 AND is_active = 1")
             .bind(slug)
             .fetch_optional(&self.pool)
             .await
@@ -111,7 +111,7 @@ impl CommerceStorefrontService {
         let theme = req.theme.as_ref().map(|v| serde_json::to_string(v).unwrap_or_default());
         sqlx::query(
             "INSERT INTO storefronts (id, brand_id, slug, title, description, theme, hero_image, \
-             seo_title, seo_description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+             seo_title, seo_description) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
         )
         .bind(&id)
         .bind(&req.brand_id)
@@ -129,26 +129,29 @@ impl CommerceStorefrontService {
     }
 
     pub async fn update_storefront(&self, id: &str, req: &UpdateStorefrontRequest) -> Result<Storefront, String> {
-        let mut sets = Vec::new();
-        if let Some(ref title) = req.title { sets.push("title = ?"); }
-        if let Some(ref is_active) = req.is_active { sets.push("is_active = ?"); }
-        sets.push("updated_at = NOW()::TEXT");
+        let mut sets: Vec<String> = Vec::new();
+        let mut n = 1;
+        if req.title.is_some() { sets.push(format!("title = ${}", n)); n += 1; }
+        if req.is_active.is_some() { sets.push(format!("is_active = ${}", n)); n += 1; }
+        sets.push("updated_at = NOW()::TEXT".to_string());
 
         if sets.len() <= 1 {
             return self.get_storefront(id).await;
         }
 
-        let query = format!("UPDATE storefronts SET {} WHERE id = ?", sets.join(", "));
-        sqlx::query(&query)
-            .bind(id)
-            .execute(&self.pool)
+        let query = format!("UPDATE storefronts SET {} WHERE id = ${}", sets.join(", "), n);
+        let mut q = sqlx::query(&query);
+        if let Some(ref title) = req.title { q = q.bind(title); }
+        if let Some(is_active) = req.is_active { q = q.bind(is_active); }
+        q = q.bind(id);
+        q.execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
         self.get_storefront(id).await
     }
 
     pub async fn delete_storefront(&self, id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM storefronts WHERE id = ?")
+        sqlx::query("DELETE FROM storefronts WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await
@@ -161,7 +164,7 @@ impl CommerceStorefrontService {
     // ---------------------------------------------------------------------------
 
     pub async fn list_sections(&self, storefront_id: &str) -> Result<Vec<StorefrontSection>, String> {
-        let rows = sqlx::query("SELECT * FROM storefront_sections WHERE storefront_id = ? ORDER BY sort_order")
+        let rows = sqlx::query("SELECT * FROM storefront_sections WHERE storefront_id = $1 ORDER BY sort_order")
             .bind(storefront_id)
             .fetch_all(&self.pool)
             .await
@@ -176,7 +179,7 @@ impl CommerceStorefrontService {
         let content = req.content.as_ref().map(|v| serde_json::to_string(v).unwrap_or_default());
         sqlx::query(
             "INSERT INTO storefront_sections (id, storefront_id, section_type, sort_order, content) \
-             VALUES (?, ?, ?, ?, ?)"
+             VALUES ($1, $2, $3, $4, $5)"
         )
         .bind(&id)
         .bind(&req.storefront_id)
@@ -190,7 +193,7 @@ impl CommerceStorefrontService {
     }
 
     pub async fn get_section(&self, id: &str) -> Result<StorefrontSection, String> {
-        let row = sqlx::query("SELECT * FROM storefront_sections WHERE id = ?")
+        let row = sqlx::query("SELECT * FROM storefront_sections WHERE id = $1")
             .bind(id)
             .fetch_one(&self.pool)
             .await
@@ -199,25 +202,28 @@ impl CommerceStorefrontService {
     }
 
     pub async fn update_section(&self, id: &str, req: &UpdateStorefrontSectionRequest) -> Result<StorefrontSection, String> {
-        let mut sets = Vec::new();
-        if let Some(ref section_type) = req.section_type { sets.push("section_type = ?"); }
-        if let Some(ref sort_order) = req.sort_order { sets.push("sort_order = ?"); }
+        let mut sets: Vec<String> = Vec::new();
+        let mut n = 1;
+        if req.section_type.is_some() { sets.push(format!("section_type = ${}", n)); n += 1; }
+        if req.sort_order.is_some() { sets.push(format!("sort_order = ${}", n)); n += 1; }
 
         if sets.is_empty() {
             return self.get_section(id).await;
         }
 
-        let query = format!("UPDATE storefront_sections SET {} WHERE id = ?", sets.join(", "));
-        sqlx::query(&query)
-            .bind(id)
-            .execute(&self.pool)
+        let query = format!("UPDATE storefront_sections SET {} WHERE id = ${}", sets.join(", "), n);
+        let mut q = sqlx::query(&query);
+        if let Some(ref section_type) = req.section_type { q = q.bind(section_type); }
+        if let Some(sort_order) = req.sort_order { q = q.bind(sort_order); }
+        q = q.bind(id);
+        q.execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
         self.get_section(id).await
     }
 
     pub async fn delete_section(&self, id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM storefront_sections WHERE id = ?")
+        sqlx::query("DELETE FROM storefront_sections WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await
@@ -242,7 +248,7 @@ impl CommerceStorefrontService {
         let products = sqlx::query(
             "SELECT id, name, description, sku, price, compare_at_price, currency, images, \
              inventory_count, is_active FROM products \
-             WHERE brand_id = ? AND is_active = 1 ORDER BY created_at DESC LIMIT 50"
+             WHERE brand_id = $1 AND is_active = 1 ORDER BY created_at DESC LIMIT 50"
         )
         .bind(brand_id)
         .fetch_all(&self.pool)
@@ -278,7 +284,7 @@ impl CommerceStorefrontService {
         let id = Uuid::new_v4().to_string();
         sqlx::query(
             "INSERT INTO storefront_visits (id, storefront_id, visitor_ip, user_agent, path) \
-             VALUES (?, ?, ?, ?, ?)"
+             VALUES ($1, $2, $3, $4, $5)"
         )
         .bind(&id)
         .bind(storefront_id)
@@ -303,7 +309,7 @@ impl CommerceStorefrontService {
         let days = if days > 0 { days } else { 30 };
         let row = sqlx::query(
             "SELECT COUNT(*) as total, COUNT(DISTINCT visitor_ip) as unique_visitors \
-             FROM storefront_visits WHERE storefront_id = ? AND visited_at >= CURRENT_DATE - ?::INTEGER"
+             FROM storefront_visits WHERE storefront_id = $1 AND visited_at >= CURRENT_DATE - $2::INTEGER"
         )
         .bind(storefront_id)
         .bind(days)

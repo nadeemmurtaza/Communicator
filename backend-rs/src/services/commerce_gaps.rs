@@ -248,7 +248,7 @@ impl CommerceGapsService {
             "SELECT id, brand_id, name, type, base_fee, per_km_fee, per_gram_fee, \
              max_distance, free_delivery_threshold, min_order_value, postal_codes, regions, \
              is_active, sort_order, created_at, updated_at \
-             FROM delivery_fee_rules WHERE brand_id = ? ORDER BY sort_order, name",
+             FROM delivery_fee_rules WHERE brand_id = $1 ORDER BY sort_order, name",
         )
         .bind(brand_id)
         .fetch_all(&self.pool)
@@ -278,7 +278,7 @@ impl CommerceGapsService {
             "INSERT INTO delivery_fee_rules (id, brand_id, name, type, base_fee, per_km_fee, per_gram_fee, \
              max_distance, free_delivery_threshold, min_order_value, postal_codes, regions, \
              is_active, sort_order, created_at, updated_at) \
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 1, $13, $14, $15)",
         )
         .bind(&id).bind(&req.brand_id).bind(&req.name).bind(&r#type)
         .bind(base_fee).bind(req.per_km_fee.unwrap_or(0.0)).bind(req.per_gram_fee.unwrap_or(0.0))
@@ -296,9 +296,9 @@ impl CommerceGapsService {
         let now = chrono::Utc::now().to_rfc3339();
         let r#type = req.r#type.clone().unwrap_or_else(|| "flat".to_string());
         sqlx::query(
-            "UPDATE delivery_fee_rules SET name = ?, type = ?, base_fee = ?, per_km_fee = ?, \
-             per_gram_fee = ?, max_distance = ?, free_delivery_threshold = ?, min_order_value = ?, \
-             postal_codes = ?, regions = ?, sort_order = ?, updated_at = ? WHERE id = ?",
+            "UPDATE delivery_fee_rules SET name = $1, type = $2, base_fee = $3, per_km_fee = $4, \
+             per_gram_fee = $5, max_distance = $6, free_delivery_threshold = $7, min_order_value = $8, \
+             postal_codes = $9, regions = $10, sort_order = $11, updated_at = $12 WHERE id = $13",
         )
         .bind(&req.name).bind(&r#type).bind(req.base_fee.unwrap_or(0.0))
         .bind(req.per_km_fee.unwrap_or(0.0)).bind(req.per_gram_fee.unwrap_or(0.0))
@@ -313,7 +313,7 @@ impl CommerceGapsService {
     }
 
     pub async fn delete_delivery_fee_rule(&self, id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM delivery_fee_rules WHERE id = ?")
+        sqlx::query("DELETE FROM delivery_fee_rules WHERE id = $1")
             .bind(id).execute(&self.pool).await
             .map_err(|e| format!("Failed to delete delivery fee rule: {e}"))?;
         Ok(())
@@ -323,7 +323,7 @@ impl CommerceGapsService {
         let r = sqlx::query(
             "SELECT id, brand_id, name, type, base_fee, per_km_fee, per_gram_fee, \
              max_distance, free_delivery_threshold, min_order_value, postal_codes, regions, \
-             is_active, sort_order, created_at, updated_at FROM delivery_fee_rules WHERE id = ?",
+             is_active, sort_order, created_at, updated_at FROM delivery_fee_rules WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("Delivery fee rule not found: {e}"))?;
@@ -380,7 +380,7 @@ impl CommerceGapsService {
         let now = chrono::Utc::now().to_rfc3339();
         sqlx::query(
             "INSERT INTO payment_proofs (id, order_id, customer_id, file_url, file_name, file_size, status, created_at) \
-             VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)",
+             VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7)",
         )
         .bind(&id).bind(&req.order_id).bind(&req.customer_id)
         .bind(&req.file_url).bind(&req.file_name).bind(&req.file_size).bind(&now)
@@ -393,7 +393,7 @@ impl CommerceGapsService {
         let (query, rows) = if let Some(oid) = order_id {
             let q = "SELECT id, order_id, customer_id, file_url, file_name, file_size, status, \
                      merchant_notes, verified_at, verified_by, created_at \
-                     FROM payment_proofs WHERE order_id = ? ORDER BY created_at DESC";
+                     FROM payment_proofs WHERE order_id = $1 ORDER BY created_at DESC";
             (q, sqlx::query(q).bind(oid).fetch_all(&self.pool).await
                 .map_err(|e| format!("Failed to list payment proofs: {e}"))?)
         } else {
@@ -415,7 +415,7 @@ impl CommerceGapsService {
     pub async fn verify_payment_proof(&self, id: &str, req: &VerifyPaymentProofRequest) -> Result<PaymentProof, String> {
         let now = chrono::Utc::now().to_rfc3339();
         sqlx::query(
-            "UPDATE payment_proofs SET status = 'verified', verified_at = ?, verified_by = ?, merchant_notes = ? WHERE id = ?",
+            "UPDATE payment_proofs SET status = 'verified', verified_at = $1, verified_by = $2, merchant_notes = $3 WHERE id = $4",
         )
         .bind(&now).bind(&req.verified_by).bind(&req.merchant_notes).bind(id)
         .execute(&self.pool).await
@@ -425,7 +425,7 @@ impl CommerceGapsService {
 
     pub async fn reject_payment_proof(&self, id: &str, notes: &str) -> Result<PaymentProof, String> {
         sqlx::query(
-            "UPDATE payment_proofs SET status = 'rejected', merchant_notes = ? WHERE id = ?",
+            "UPDATE payment_proofs SET status = 'rejected', merchant_notes = $1 WHERE id = $2",
         )
         .bind(notes).bind(id).execute(&self.pool).await
             .map_err(|e| format!("Failed to reject payment proof: {e}"))?;
@@ -435,7 +435,7 @@ impl CommerceGapsService {
     async fn get_payment_proof(&self, id: &str) -> Result<PaymentProof, String> {
         let r = sqlx::query(
             "SELECT id, order_id, customer_id, file_url, file_name, file_size, status, \
-             merchant_notes, verified_at, verified_by, created_at FROM payment_proofs WHERE id = ?",
+             merchant_notes, verified_at, verified_by, created_at FROM payment_proofs WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("Payment proof not found: {e}"))?;
@@ -456,7 +456,7 @@ impl CommerceGapsService {
         let rows = sqlx::query(
             "SELECT id, brand_id, channel_type, trigger_event, template_name, template_body, \
              is_active, created_at, updated_at \
-             FROM order_notification_templates WHERE brand_id = ? ORDER BY trigger_event",
+             FROM order_notification_templates WHERE brand_id = $1 ORDER BY trigger_event",
         )
         .bind(brand_id).fetch_all(&self.pool).await
             .map_err(|e| format!("Failed to list notification templates: {e}"))?;
@@ -474,7 +474,7 @@ impl CommerceGapsService {
         sqlx::query(
             "INSERT INTO order_notification_templates (id, brand_id, channel_type, trigger_event, \
              template_name, template_body, is_active, created_at, updated_at) \
-             VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, $6, 1, $7, $8)",
         )
         .bind(&id).bind(&req.brand_id).bind(&req.channel_type).bind(&req.trigger_event)
         .bind(&req.template_name).bind(&req.template_body).bind(&now).bind(&now)
@@ -484,7 +484,7 @@ impl CommerceGapsService {
     }
 
     pub async fn delete_notification_template(&self, id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM order_notification_templates WHERE id = ?")
+        sqlx::query("DELETE FROM order_notification_templates WHERE id = $1")
             .bind(id).execute(&self.pool).await
             .map_err(|e| format!("Failed to delete notification template: {e}"))?;
         Ok(())
@@ -493,7 +493,7 @@ impl CommerceGapsService {
     async fn get_notification_template(&self, id: &str) -> Result<OrderNotificationTemplate, String> {
         let r = sqlx::query(
             "SELECT id, brand_id, channel_type, trigger_event, template_name, template_body, \
-             is_active, created_at, updated_at FROM order_notification_templates WHERE id = ?",
+             is_active, created_at, updated_at FROM order_notification_templates WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("Notification template not found: {e}"))?;
@@ -512,7 +512,7 @@ impl CommerceGapsService {
     pub async fn list_payment_gateways(&self, brand_id: &str) -> Result<Vec<PaymentGateway>, String> {
         let rows = sqlx::query(
             "SELECT id, brand_id, name, provider, credentials, currency, is_active, sort_order, created_at, updated_at \
-             FROM payment_gateways WHERE brand_id = ? ORDER BY sort_order, name",
+             FROM payment_gateways WHERE brand_id = $1 ORDER BY sort_order, name",
         )
         .bind(brand_id).fetch_all(&self.pool).await
             .map_err(|e| format!("Failed to list payment gateways: {e}"))?;
@@ -533,7 +533,7 @@ impl CommerceGapsService {
         let sort_order = req.sort_order.unwrap_or(0);
         sqlx::query(
             "INSERT INTO payment_gateways (id, brand_id, name, provider, credentials, currency, is_active, sort_order, created_at, updated_at) \
-             VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, $6, 1, $7, $8, $9)",
         )
         .bind(&id).bind(&req.brand_id).bind(&req.name).bind(&req.provider)
         .bind(&credentials).bind(&currency).bind(sort_order as i32).bind(&now).bind(&now)
@@ -543,7 +543,7 @@ impl CommerceGapsService {
     }
 
     pub async fn delete_payment_gateway(&self, id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM payment_gateways WHERE id = ?")
+        sqlx::query("DELETE FROM payment_gateways WHERE id = $1")
             .bind(id).execute(&self.pool).await
             .map_err(|e| format!("Failed to delete payment gateway: {e}"))?;
         Ok(())
@@ -552,7 +552,7 @@ impl CommerceGapsService {
     async fn get_payment_gateway(&self, id: &str) -> Result<PaymentGateway, String> {
         let r = sqlx::query(
             "SELECT id, brand_id, name, provider, credentials, currency, is_active, sort_order, created_at, updated_at \
-             FROM payment_gateways WHERE id = ?",
+             FROM payment_gateways WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("Payment gateway not found: {e}"))?;
@@ -572,7 +572,7 @@ impl CommerceGapsService {
     pub async fn list_service_types(&self, brand_id: &str) -> Result<Vec<ServiceType>, String> {
         let rows = sqlx::query(
             "SELECT id, brand_id, name, type, description, is_active, sort_order, created_at, updated_at \
-             FROM service_types WHERE brand_id = ? ORDER BY sort_order, name",
+             FROM service_types WHERE brand_id = $1 ORDER BY sort_order, name",
         )
         .bind(brand_id).fetch_all(&self.pool).await
             .map_err(|e| format!("Failed to list service types: {e}"))?;
@@ -590,7 +590,7 @@ impl CommerceGapsService {
         let sort_order = req.sort_order.unwrap_or(0);
         sqlx::query(
             "INSERT INTO service_types (id, brand_id, name, type, description, is_active, sort_order, created_at, updated_at) \
-             VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, 1, $6, $7, $8)",
         )
         .bind(&id).bind(&req.brand_id).bind(&req.name).bind(&req.r#type)
         .bind(&req.description).bind(sort_order as i32).bind(&now).bind(&now)
@@ -600,7 +600,7 @@ impl CommerceGapsService {
     }
 
     pub async fn delete_service_type(&self, id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM service_types WHERE id = ?")
+        sqlx::query("DELETE FROM service_types WHERE id = $1")
             .bind(id).execute(&self.pool).await
             .map_err(|e| format!("Failed to delete service type: {e}"))?;
         Ok(())
@@ -609,7 +609,7 @@ impl CommerceGapsService {
     async fn get_service_type(&self, id: &str) -> Result<ServiceType, String> {
         let r = sqlx::query(
             "SELECT id, brand_id, name, type, description, is_active, sort_order, created_at, updated_at \
-             FROM service_types WHERE id = ?",
+             FROM service_types WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("Service type not found: {e}"))?;
@@ -628,7 +628,7 @@ impl CommerceGapsService {
     pub async fn list_delivery_schedules(&self, brand_id: &str) -> Result<Vec<DeliverySchedule>, String> {
         let rows = sqlx::query(
             "SELECT id, brand_id, day_of_week, start_time, end_time, cutoff_time, max_capacity, is_active, created_at, updated_at \
-             FROM delivery_schedules WHERE brand_id = ? ORDER BY day_of_week, start_time",
+             FROM delivery_schedules WHERE brand_id = $1 ORDER BY day_of_week, start_time",
         )
         .bind(brand_id).fetch_all(&self.pool).await
             .map_err(|e| format!("Failed to list delivery schedules: {e}"))?;
@@ -646,7 +646,7 @@ impl CommerceGapsService {
         let now = chrono::Utc::now().to_rfc3339();
         sqlx::query(
             "INSERT INTO delivery_schedules (id, brand_id, day_of_week, start_time, end_time, cutoff_time, max_capacity, is_active, created_at, updated_at) \
-             VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 1, $8, $9)",
         )
         .bind(&id).bind(&req.brand_id).bind(req.day_of_week as i32)
         .bind(&req.start_time).bind(&req.end_time).bind(&req.cutoff_time)
@@ -657,7 +657,7 @@ impl CommerceGapsService {
     }
 
     pub async fn delete_delivery_schedule(&self, id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM delivery_schedules WHERE id = ?")
+        sqlx::query("DELETE FROM delivery_schedules WHERE id = $1")
             .bind(id).execute(&self.pool).await
             .map_err(|e| format!("Failed to delete delivery schedule: {e}"))?;
         Ok(())
@@ -666,7 +666,7 @@ impl CommerceGapsService {
     async fn get_delivery_schedule(&self, id: &str) -> Result<DeliverySchedule, String> {
         let r = sqlx::query(
             "SELECT id, brand_id, day_of_week, start_time, end_time, cutoff_time, max_capacity, is_active, created_at, updated_at \
-             FROM delivery_schedules WHERE id = ?",
+             FROM delivery_schedules WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("Delivery schedule not found: {e}"))?;
@@ -682,10 +682,10 @@ impl CommerceGapsService {
     pub async fn list_time_slots(&self, brand_id: &str, day_of_week: Option<i32>) -> Result<Vec<DeliveryTimeSlot>, String> {
         let query = if day_of_week.is_some() {
             "SELECT id, brand_id, day_of_week, slot_start, slot_end, label, max_orders, is_active, created_at \
-             FROM delivery_time_slots WHERE brand_id = ? AND day_of_week = ? ORDER BY slot_start"
+             FROM delivery_time_slots WHERE brand_id = $1 AND day_of_week = $2 ORDER BY slot_start"
         } else {
             "SELECT id, brand_id, day_of_week, slot_start, slot_end, label, max_orders, is_active, created_at \
-             FROM delivery_time_slots WHERE brand_id = ? ORDER BY day_of_week, slot_start"
+             FROM delivery_time_slots WHERE brand_id = $1 ORDER BY day_of_week, slot_start"
         };
         let rows = if let Some(day) = day_of_week {
             sqlx::query(query).bind(brand_id).bind(day as i32).fetch_all(&self.pool).await
@@ -706,7 +706,7 @@ impl CommerceGapsService {
         let max_orders = req.max_orders.unwrap_or(10);
         sqlx::query(
             "INSERT INTO delivery_time_slots (id, brand_id, day_of_week, slot_start, slot_end, label, max_orders, is_active, created_at) \
-             VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)",
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 1, $8)",
         )
         .bind(&id).bind(&req.brand_id).bind(req.day_of_week as i32)
         .bind(&req.slot_start).bind(&req.slot_end).bind(&req.label)
@@ -717,7 +717,7 @@ impl CommerceGapsService {
     }
 
     pub async fn delete_time_slot(&self, id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM delivery_time_slots WHERE id = ?")
+        sqlx::query("DELETE FROM delivery_time_slots WHERE id = $1")
             .bind(id).execute(&self.pool).await
             .map_err(|e| format!("Failed to delete time slot: {e}"))?;
         Ok(())
@@ -726,7 +726,7 @@ impl CommerceGapsService {
     async fn get_time_slot(&self, id: &str) -> Result<DeliveryTimeSlot, String> {
         let r = sqlx::query(
             "SELECT id, brand_id, day_of_week, slot_start, slot_end, label, max_orders, is_active, created_at \
-             FROM delivery_time_slots WHERE id = ?",
+             FROM delivery_time_slots WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("Time slot not found: {e}"))?;
@@ -745,7 +745,7 @@ impl CommerceGapsService {
     pub async fn generate_invoice(&self, order_id: &str) -> Result<Invoice, String> {
         // Check if invoice already exists
         let existing = sqlx::query(
-            "SELECT id FROM invoices WHERE order_id = ?",
+            "SELECT id FROM invoices WHERE order_id = $1",
         )
         .bind(order_id).fetch_optional(&self.pool).await
             .map_err(|e| format!("Failed to check invoice: {e}"))?;
@@ -758,7 +758,7 @@ impl CommerceGapsService {
         let now = chrono::Utc::now().to_rfc3339();
         // Generate invoice number from order
         let order_row = sqlx::query(
-            "SELECT order_number FROM commerce_orders WHERE id = ?",
+            "SELECT order_number FROM commerce_orders WHERE id = $1",
         )
         .bind(order_id).fetch_one(&self.pool).await
             .map_err(|e| format!("Order not found: {e}"))?;
@@ -767,7 +767,7 @@ impl CommerceGapsService {
 
         sqlx::query(
             "INSERT INTO invoices (id, order_id, invoice_number, issued_at, status, created_at) \
-             VALUES (?, ?, ?, ?, 'issued', ?)",
+             VALUES ($1, $2, $3, $4, 'issued', $5)",
         )
         .bind(&id).bind(order_id).bind(&invoice_number).bind(&now).bind(&now)
         .execute(&self.pool).await
@@ -778,7 +778,7 @@ impl CommerceGapsService {
     pub async fn get_invoice(&self, id: &str) -> Result<Invoice, String> {
         let r = sqlx::query(
             "SELECT id, order_id, invoice_number, pdf_url, issued_at, due_date, status, created_at \
-             FROM invoices WHERE id = ?",
+             FROM invoices WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("Invoice not found: {e}"))?;
@@ -798,7 +798,7 @@ impl CommerceGapsService {
         let now = chrono::Utc::now().to_rfc3339();
         sqlx::query(
             "INSERT INTO csv_import_jobs (id, brand_id, entity_type, file_url, status, created_at) \
-             VALUES (?, ?, ?, ?, 'processing', ?)",
+             VALUES ($1, $2, $3, $4, 'processing', $5)",
         )
         .bind(&id).bind(&req.brand_id).bind(&req.entity_type)
         .bind(&req.file_url).bind(&now)
@@ -811,7 +811,7 @@ impl CommerceGapsService {
         let rows = sqlx::query(
             "SELECT id, brand_id, entity_type, file_url, status, total_rows, processed_rows, \
              error_count, errors, completed_at, created_at \
-             FROM csv_import_jobs WHERE brand_id = ? ORDER BY created_at DESC",
+             FROM csv_import_jobs WHERE brand_id = $1 ORDER BY created_at DESC",
         )
         .bind(brand_id).fetch_all(&self.pool).await
             .map_err(|e| format!("Failed to list CSV import jobs: {e}"))?;
@@ -827,7 +827,7 @@ impl CommerceGapsService {
     async fn get_csv_import_job(&self, id: &str) -> Result<CsvImportJob, String> {
         let r = sqlx::query(
             "SELECT id, brand_id, entity_type, file_url, status, total_rows, processed_rows, \
-             error_count, errors, completed_at, created_at FROM csv_import_jobs WHERE id = ?",
+             error_count, errors, completed_at, created_at FROM csv_import_jobs WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("CSV import job not found: {e}"))?;
@@ -851,7 +851,7 @@ impl CommerceGapsService {
         let password_hash = req.password.as_ref().map(|p| format!("${}", p));
         sqlx::query(
             "INSERT INTO customer_accounts (id, customer_id, email, phone, password_hash, created_at, updated_at) \
-             VALUES (?, ?, ?, ?, ?, ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, $6, $7)",
         )
         .bind(&id).bind(customer_id).bind(&req.email).bind(&req.phone)
         .bind(&password_hash).bind(&now).bind(&now)
@@ -864,11 +864,11 @@ impl CommerceGapsService {
         let query = if req.email.is_some() {
             "SELECT ca.id, ca.customer_id, ca.email, ca.phone, ca.password_hash, ca.is_verified, \
              ca.last_login_at, ca.created_at, ca.updated_at \
-             FROM customer_accounts ca WHERE ca.email = ?"
+             FROM customer_accounts ca WHERE ca.email = $1"
         } else {
             "SELECT ca.id, ca.customer_id, ca.email, ca.phone, ca.password_hash, ca.is_verified, \
              ca.last_login_at, ca.created_at, ca.updated_at \
-             FROM customer_accounts ca WHERE ca.phone = ?"
+             FROM customer_accounts ca WHERE ca.phone = $1"
         };
         let identifier = req.email.clone().unwrap_or_else(|| req.phone.clone().unwrap_or_default());
         let r = sqlx::query(query).bind(&identifier).fetch_one(&self.pool).await
@@ -883,7 +883,7 @@ impl CommerceGapsService {
 
         let id: String = r.get("id");
         let now = chrono::Utc::now().to_rfc3339();
-        sqlx::query("UPDATE customer_accounts SET last_login_at = ? WHERE id = ?")
+        sqlx::query("UPDATE customer_accounts SET last_login_at = $1 WHERE id = $2")
             .bind(&now).bind(&id).execute(&self.pool).await
             .map_err(|e| format!("Failed to update login: {e}"))?;
 
@@ -898,7 +898,7 @@ impl CommerceGapsService {
     async fn get_customer_account(&self, id: &str) -> Result<CustomerAccount, String> {
         let r = sqlx::query(
             "SELECT id, customer_id, email, phone, password_hash, is_verified, last_login_at, created_at, updated_at \
-             FROM customer_accounts WHERE id = ?",
+             FROM customer_accounts WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("Customer account not found: {e}"))?;
@@ -923,7 +923,7 @@ impl CommerceGapsService {
         let is_public = req.is_public.unwrap_or(true);
         sqlx::query(
             "INSERT INTO customer_reviews (id, order_id, customer_id, product_id, rating, comment, is_public, status, created_at, updated_at) \
-             VALUES (?, ?, ?, ?, ?, ?, ?, 'approved', ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 'approved', $8, $9)",
         )
         .bind(&id).bind(&req.order_id).bind(&req.customer_id).bind(&req.product_id)
         .bind(req.rating as i32).bind(&req.comment).bind(is_public as bool)
@@ -937,10 +937,10 @@ impl CommerceGapsService {
         let (query, rows) = if let Some(pid) = product_id {
             let q = if approved_only {
                 "SELECT id, order_id, customer_id, product_id, rating, comment, is_public, status, created_at, updated_at \
-                 FROM customer_reviews WHERE product_id = ? AND status = 'approved' AND is_public = 1 ORDER BY created_at DESC"
+                 FROM customer_reviews WHERE product_id = $1 AND status = 'approved' AND is_public = 1 ORDER BY created_at DESC"
             } else {
                 "SELECT id, order_id, customer_id, product_id, rating, comment, is_public, status, created_at, updated_at \
-                 FROM customer_reviews WHERE product_id = ? ORDER BY created_at DESC"
+                 FROM customer_reviews WHERE product_id = $1 ORDER BY created_at DESC"
             };
             (q, sqlx::query(q).bind(pid).fetch_all(&self.pool).await
                 .map_err(|e| format!("Failed to list reviews: {e}"))?)
@@ -967,7 +967,7 @@ impl CommerceGapsService {
     async fn get_review(&self, id: &str) -> Result<CustomerReview, String> {
         let r = sqlx::query(
             "SELECT id, order_id, customer_id, product_id, rating, comment, is_public, status, created_at, updated_at \
-             FROM customer_reviews WHERE id = ?",
+             FROM customer_reviews WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("Review not found: {e}"))?;
@@ -987,7 +987,7 @@ impl CommerceGapsService {
     pub async fn list_loyalty_programs(&self, brand_id: &str) -> Result<Vec<LoyaltyProgram>, String> {
         let rows = sqlx::query(
             "SELECT id, brand_id, name, points_per_currency, points_expiry_days, redemption_rate, is_active, created_at, updated_at \
-             FROM loyalty_programs WHERE brand_id = ?",
+             FROM loyalty_programs WHERE brand_id = $1",
         )
         .bind(brand_id).fetch_all(&self.pool).await
             .map_err(|e| format!("Failed to list loyalty programs: {e}"))?;
@@ -1008,7 +1008,7 @@ impl CommerceGapsService {
         let redemption_rate = req.redemption_rate.unwrap_or(100.0);
         sqlx::query(
             "INSERT INTO loyalty_programs (id, brand_id, name, points_per_currency, points_expiry_days, redemption_rate, is_active, created_at, updated_at) \
-             VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, $6, 1, $7, $8)",
         )
         .bind(&id).bind(&req.brand_id).bind(&req.name)
         .bind(points_per_currency).bind(points_expiry_days as i32).bind(redemption_rate)
@@ -1021,7 +1021,7 @@ impl CommerceGapsService {
     pub async fn get_customer_points(&self, customer_id: &str, brand_id: &str) -> Result<CustomerPoints, String> {
         // Create if not exists
         let existing = sqlx::query(
-            "SELECT id FROM customer_points WHERE customer_id = ? AND brand_id = ?",
+            "SELECT id FROM customer_points WHERE customer_id = $1 AND brand_id = $2",
         )
         .bind(customer_id).bind(brand_id).fetch_optional(&self.pool).await
             .map_err(|e| format!("Failed to check customer points: {e}"))?;
@@ -1031,7 +1031,7 @@ impl CommerceGapsService {
             let now = chrono::Utc::now().to_rfc3339();
             sqlx::query(
                 "INSERT INTO customer_points (id, customer_id, brand_id, points_balance, points_earned, points_redeemed, updated_at) \
-                 VALUES (?, ?, ?, 0, 0, 0, ?)",
+                 VALUES ($1, $2, $3, 0, 0, 0, $4)",
             )
             .bind(&id).bind(customer_id).bind(brand_id).bind(&now)
             .execute(&self.pool).await
@@ -1040,7 +1040,7 @@ impl CommerceGapsService {
 
         let r = sqlx::query(
             "SELECT id, customer_id, brand_id, points_balance, points_earned, points_redeemed, updated_at \
-             FROM customer_points WHERE customer_id = ? AND brand_id = ?",
+             FROM customer_points WHERE customer_id = $1 AND brand_id = $2",
         )
         .bind(customer_id).bind(brand_id).fetch_one(&self.pool).await
             .map_err(|e| format!("Customer points not found: {e}"))?;
@@ -1061,7 +1061,7 @@ impl CommerceGapsService {
         // Record transaction
         sqlx::query(
             "INSERT INTO points_transactions (id, customer_id, brand_id, points, transaction_type, reference_type, reference_id, description, created_at) \
-             VALUES (?, ?, ?, ?, 'earn', ?, ?, ?, ?)",
+             VALUES ($1, $2, $3, $4, 'earn', $5, $6, $7, $8)",
         )
         .bind(&id).bind(customer_id).bind(brand_id).bind(points as i32)
         .bind(reference_type).bind(reference_id).bind(description).bind(&now)
@@ -1070,8 +1070,8 @@ impl CommerceGapsService {
 
         // Update balance
         sqlx::query(
-            "UPDATE customer_points SET points_balance = points_balance + ?, points_earned = points_earned + ?, updated_at = ? \
-             WHERE customer_id = ? AND brand_id = ?",
+            "UPDATE customer_points SET points_balance = points_balance + $1, points_earned = points_earned + $2, updated_at = $3 \
+             WHERE customer_id = $4 AND brand_id = $5",
         )
         .bind(points as i32).bind(points as i32).bind(&now).bind(customer_id).bind(brand_id)
         .execute(&mut *tx).await
@@ -1084,7 +1084,7 @@ impl CommerceGapsService {
     async fn get_loyalty_program(&self, id: &str) -> Result<LoyaltyProgram, String> {
         let r = sqlx::query(
             "SELECT id, brand_id, name, points_per_currency, points_expiry_days, redemption_rate, is_active, created_at, updated_at \
-             FROM loyalty_programs WHERE id = ?",
+             FROM loyalty_programs WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("Loyalty program not found: {e}"))?;
@@ -1108,7 +1108,7 @@ impl CommerceGapsService {
         let now = chrono::Utc::now().to_rfc3339();
         sqlx::query(
             "INSERT INTO payment_reminders (id, order_id, customer_id, channel_type, reminder_type, status, created_at) \
-             VALUES (?, ?, ?, ?, ?, 'pending', ?)",
+             VALUES ($1, $2, $3, $4, $5, 'pending', $6)",
         )
         .bind(&id).bind(order_id).bind(customer_id).bind(channel_type)
         .bind(reminder_type).bind(&now)
@@ -1120,7 +1120,7 @@ impl CommerceGapsService {
     pub async fn list_payment_reminders(&self, order_id: Option<&str>) -> Result<Vec<PaymentReminder>, String> {
         let (query, rows) = if let Some(oid) = order_id {
             let q = "SELECT id, order_id, customer_id, channel_type, reminder_type, scheduled_at, sent_at, status, created_at \
-                     FROM payment_reminders WHERE order_id = ? ORDER BY created_at DESC";
+                     FROM payment_reminders WHERE order_id = $1 ORDER BY created_at DESC";
             (q, sqlx::query(q).bind(oid).fetch_all(&self.pool).await
                 .map_err(|e| format!("Failed to list payment reminders: {e}"))?)
         } else {
@@ -1140,7 +1140,7 @@ impl CommerceGapsService {
     async fn get_payment_reminder(&self, id: &str) -> Result<PaymentReminder, String> {
         let r = sqlx::query(
             "SELECT id, order_id, customer_id, channel_type, reminder_type, scheduled_at, sent_at, status, created_at \
-             FROM payment_reminders WHERE id = ?",
+             FROM payment_reminders WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("Payment reminder not found: {e}"))?;
@@ -1163,7 +1163,7 @@ impl CommerceGapsService {
         let now = chrono::Utc::now().to_rfc3339();
         sqlx::query(
             "INSERT INTO delivery_reminders (id, order_id, customer_id, channel_type, reminder_type, status, created_at) \
-             VALUES (?, ?, ?, ?, ?, 'pending', ?)",
+             VALUES ($1, $2, $3, $4, $5, 'pending', $6)",
         )
         .bind(&id).bind(order_id).bind(customer_id).bind(channel_type)
         .bind(reminder_type).bind(&now)
@@ -1175,7 +1175,7 @@ impl CommerceGapsService {
     pub async fn list_delivery_reminders(&self, order_id: Option<&str>) -> Result<Vec<DeliveryReminder>, String> {
         let (query, rows) = if let Some(oid) = order_id {
             let q = "SELECT id, order_id, customer_id, channel_type, reminder_type, scheduled_at, sent_at, status, created_at \
-                     FROM delivery_reminders WHERE order_id = ? ORDER BY created_at DESC";
+                     FROM delivery_reminders WHERE order_id = $1 ORDER BY created_at DESC";
             (q, sqlx::query(q).bind(oid).fetch_all(&self.pool).await
                 .map_err(|e| format!("Failed to list delivery reminders: {e}"))?)
         } else {
@@ -1195,7 +1195,7 @@ impl CommerceGapsService {
     async fn get_delivery_reminder(&self, id: &str) -> Result<DeliveryReminder, String> {
         let r = sqlx::query(
             "SELECT id, order_id, customer_id, channel_type, reminder_type, scheduled_at, sent_at, status, created_at \
-             FROM delivery_reminders WHERE id = ?",
+             FROM delivery_reminders WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("Delivery reminder not found: {e}"))?;
@@ -1214,7 +1214,7 @@ impl CommerceGapsService {
     pub async fn list_staff_members(&self, brand_id: &str) -> Result<Vec<StaffMember>, String> {
         let rows = sqlx::query(
             "SELECT id, brand_id, name, email, role, permissions, is_active, last_login_at, created_at, updated_at \
-             FROM staff_members WHERE brand_id = ? ORDER BY name",
+             FROM staff_members WHERE brand_id = $1 ORDER BY name",
         )
         .bind(brand_id).fetch_all(&self.pool).await
             .map_err(|e| format!("Failed to list staff members: {e}"))?;
@@ -1233,7 +1233,7 @@ impl CommerceGapsService {
         let permissions = req.permissions.as_ref().map(|v| serde_json::to_string(v).unwrap_or_default());
         sqlx::query(
             "INSERT INTO staff_members (id, brand_id, name, email, role, permissions, is_active, created_at, updated_at) \
-             VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, $6, 1, $7, $8)",
         )
         .bind(&id).bind(&req.brand_id).bind(&req.name).bind(&req.email)
         .bind(&role).bind(&permissions).bind(&now).bind(&now)
@@ -1243,7 +1243,7 @@ impl CommerceGapsService {
     }
 
     pub async fn delete_staff_member(&self, id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM staff_members WHERE id = ?")
+        sqlx::query("DELETE FROM staff_members WHERE id = $1")
             .bind(id).execute(&self.pool).await
             .map_err(|e| format!("Failed to delete staff member: {e}"))?;
         Ok(())
@@ -1252,7 +1252,7 @@ impl CommerceGapsService {
     async fn get_staff_member(&self, id: &str) -> Result<StaffMember, String> {
         let r = sqlx::query(
             "SELECT id, brand_id, name, email, role, permissions, is_active, last_login_at, created_at, updated_at \
-             FROM staff_members WHERE id = ?",
+             FROM staff_members WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("Staff member not found: {e}"))?;
@@ -1274,7 +1274,7 @@ impl CommerceGapsService {
         let now = chrono::Utc::now().to_rfc3339();
         sqlx::query(
             "INSERT INTO pos_sessions (id, brand_id, staff_id, session_token, status, started_at) \
-             VALUES (?, ?, ?, ?, 'active', ?)",
+             VALUES ($1, $2, $3, $4, 'active', $5)",
         )
         .bind(&id).bind(brand_id).bind(staff_id).bind(&token).bind(&now)
         .execute(&self.pool).await
@@ -1285,7 +1285,7 @@ impl CommerceGapsService {
     pub async fn end_pos_session(&self, id: &str) -> Result<(), String> {
         let now = chrono::Utc::now().to_rfc3339();
         sqlx::query(
-            "UPDATE pos_sessions SET status = 'ended', ended_at = ? WHERE id = ?",
+            "UPDATE pos_sessions SET status = 'ended', ended_at = $1 WHERE id = $2",
         )
         .bind(&now).bind(id).execute(&self.pool).await
             .map_err(|e| format!("Failed to end POS session: {e}"))?;
@@ -1295,7 +1295,7 @@ impl CommerceGapsService {
     pub async fn list_pos_sessions(&self, brand_id: &str) -> Result<Vec<PosSession>, String> {
         let rows = sqlx::query(
             "SELECT id, brand_id, staff_id, session_token, status, started_at, ended_at \
-             FROM pos_sessions WHERE brand_id = ? ORDER BY started_at DESC",
+             FROM pos_sessions WHERE brand_id = $1 ORDER BY started_at DESC",
         )
         .bind(brand_id).fetch_all(&self.pool).await
             .map_err(|e| format!("Failed to list POS sessions: {e}"))?;
@@ -1309,7 +1309,7 @@ impl CommerceGapsService {
     async fn get_pos_session(&self, id: &str) -> Result<PosSession, String> {
         let r = sqlx::query(
             "SELECT id, brand_id, staff_id, session_token, status, started_at, ended_at \
-             FROM pos_sessions WHERE id = ?",
+             FROM pos_sessions WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("POS session not found: {e}"))?;
@@ -1325,7 +1325,7 @@ impl CommerceGapsService {
     // -----------------------------------------------------------------------
 
     pub async fn generate_receipt(&self, order_id: &str) -> Result<Receipt, String> {
-        let existing = sqlx::query("SELECT id FROM receipts WHERE order_id = ?")
+        let existing = sqlx::query("SELECT id FROM receipts WHERE order_id = $1")
             .bind(order_id).fetch_optional(&self.pool).await
             .map_err(|e| format!("Failed to check receipt: {e}"))?;
         if let Some(row) = existing {
@@ -1335,14 +1335,14 @@ impl CommerceGapsService {
 
         let id = Uuid::new_v4().to_string();
         let now = chrono::Utc::now().to_rfc3339();
-        let order_row = sqlx::query("SELECT order_number FROM commerce_orders WHERE id = ?")
+        let order_row = sqlx::query("SELECT order_number FROM commerce_orders WHERE id = $1")
             .bind(order_id).fetch_one(&self.pool).await
             .map_err(|e| format!("Order not found: {e}"))?;
         let order_number: String = order_row.get("order_number");
         let receipt_number = format!("RCP-{}", order_number);
 
         sqlx::query(
-            "INSERT INTO receipts (id, order_id, receipt_number, created_at) VALUES (?, ?, ?, ?)",
+            "INSERT INTO receipts (id, order_id, receipt_number, created_at) VALUES ($1, $2, $3, $4)",
         )
         .bind(&id).bind(order_id).bind(&receipt_number).bind(&now)
         .execute(&self.pool).await
@@ -1353,7 +1353,7 @@ impl CommerceGapsService {
     async fn get_receipt(&self, id: &str) -> Result<Receipt, String> {
         let r = sqlx::query(
             "SELECT id, order_id, receipt_number, pdf_url, sent_via, sent_at, created_at \
-             FROM receipts WHERE id = ?",
+             FROM receipts WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("Receipt not found: {e}"))?;
@@ -1371,7 +1371,7 @@ impl CommerceGapsService {
     pub async fn list_inbox_threads(&self, brand_id: &str) -> Result<Vec<CommerceInboxThread>, String> {
         let rows = sqlx::query(
             "SELECT id, brand_id, customer_id, channel_type, last_message_at, unread_count, is_active, created_at, updated_at \
-             FROM commerce_inbox_threads WHERE brand_id = ? AND is_active = 1 ORDER BY last_message_at DESC",
+             FROM commerce_inbox_threads WHERE brand_id = $1 AND is_active = 1 ORDER BY last_message_at DESC",
         )
         .bind(brand_id).fetch_all(&self.pool).await
             .map_err(|e| format!("Failed to list inbox threads: {e}"))?;
@@ -1390,7 +1390,7 @@ impl CommerceGapsService {
     pub async fn list_wholesale_pricing(&self, product_id: &str) -> Result<Vec<WholesalePricing>, String> {
         let rows = sqlx::query(
             "SELECT id, product_id, customer_group, price, min_quantity, is_active, created_at, updated_at \
-             FROM wholesale_pricing WHERE product_id = ? AND is_active = 1",
+             FROM wholesale_pricing WHERE product_id = $1 AND is_active = 1",
         )
         .bind(product_id).fetch_all(&self.pool).await
             .map_err(|e| format!("Failed to list wholesale pricing: {e}"))?;
@@ -1408,7 +1408,7 @@ impl CommerceGapsService {
         let min_quantity = req.min_quantity.unwrap_or(1);
         sqlx::query(
             "INSERT INTO wholesale_pricing (id, product_id, customer_group, price, min_quantity, is_active, created_at, updated_at) \
-             VALUES (?, ?, ?, ?, ?, 1, ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, 1, $6, $7)",
         )
         .bind(&id).bind(&req.product_id).bind(&req.customer_group)
         .bind(req.price).bind(min_quantity as i32).bind(&now).bind(&now)
@@ -1418,7 +1418,7 @@ impl CommerceGapsService {
     }
 
     pub async fn delete_wholesale_pricing(&self, id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM wholesale_pricing WHERE id = ?")
+        sqlx::query("DELETE FROM wholesale_pricing WHERE id = $1")
             .bind(id).execute(&self.pool).await
             .map_err(|e| format!("Failed to delete wholesale pricing: {e}"))?;
         Ok(())
@@ -1427,7 +1427,7 @@ impl CommerceGapsService {
     async fn get_wholesale_pricing(&self, id: &str) -> Result<WholesalePricing, String> {
         let r = sqlx::query(
             "SELECT id, product_id, customer_group, price, min_quantity, is_active, created_at, updated_at \
-             FROM wholesale_pricing WHERE id = ?",
+             FROM wholesale_pricing WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("Wholesale pricing not found: {e}"))?;
@@ -1450,7 +1450,7 @@ impl CommerceGapsService {
         let now = chrono::Utc::now().to_rfc3339();
         sqlx::query(
             "INSERT INTO payment_fees (id, order_id, gateway_id, fee_amount, fee_percentage, passed_to_customer, created_at) \
-             VALUES (?, ?, ?, ?, ?, ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, $6, $7)",
         )
         .bind(&id).bind(order_id).bind(gateway_id).bind(fee_amount)
         .bind(fee_percentage).bind(passed_to_customer as bool).bind(&now)
@@ -1462,7 +1462,7 @@ impl CommerceGapsService {
     async fn get_payment_fee(&self, id: &str) -> Result<PaymentFee, String> {
         let r = sqlx::query(
             "SELECT id, order_id, gateway_id, fee_amount, fee_percentage, passed_to_customer, created_at \
-             FROM payment_fees WHERE id = ?",
+             FROM payment_fees WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("Payment fee not found: {e}"))?;
@@ -1484,7 +1484,7 @@ impl CommerceGapsService {
         let now = chrono::Utc::now().to_rfc3339();
         sqlx::query(
             "INSERT INTO payment_recovery (id, order_id, customer_id, channel_type, status, created_at) \
-             VALUES (?, ?, ?, ?, 'pending', ?)",
+             VALUES ($1, $2, $3, $4, 'pending', $5)",
         )
         .bind(&id).bind(order_id).bind(customer_id).bind(channel_type).bind(&now)
         .execute(&self.pool).await
@@ -1495,7 +1495,7 @@ impl CommerceGapsService {
     pub async fn attempt_recovery(&self, id: &str) -> Result<PaymentRecovery, String> {
         let now = chrono::Utc::now().to_rfc3339();
         sqlx::query(
-            "UPDATE payment_recovery SET attempt_count = attempt_count + 1, last_attempt_at = ? WHERE id = ?",
+            "UPDATE payment_recovery SET attempt_count = attempt_count + 1, last_attempt_at = $1 WHERE id = $2",
         )
         .bind(&now).bind(id).execute(&self.pool).await
             .map_err(|e| format!("Failed to attempt recovery: {e}"))?;
@@ -1505,7 +1505,7 @@ impl CommerceGapsService {
     async fn get_payment_recovery(&self, id: &str) -> Result<PaymentRecovery, String> {
         let r = sqlx::query(
             "SELECT id, order_id, customer_id, channel_type, attempt_count, last_attempt_at, status, created_at \
-             FROM payment_recovery WHERE id = ?",
+             FROM payment_recovery WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("Payment recovery not found: {e}"))?;
@@ -1524,7 +1524,7 @@ impl CommerceGapsService {
     pub async fn list_followups(&self, brand_id: &str) -> Result<Vec<AutomatedFollowup>, String> {
         let rows = sqlx::query(
             "SELECT id, brand_id, name, trigger_type, trigger_days, channel_type, template_body, is_active, created_at, updated_at \
-             FROM automated_followups WHERE brand_id = ? ORDER BY name",
+             FROM automated_followups WHERE brand_id = $1 ORDER BY name",
         )
         .bind(brand_id).fetch_all(&self.pool).await
             .map_err(|e| format!("Failed to list follow-ups: {e}"))?;
@@ -1543,7 +1543,7 @@ impl CommerceGapsService {
         let trigger_days = req.trigger_days.unwrap_or(0);
         sqlx::query(
             "INSERT INTO automated_followups (id, brand_id, name, trigger_type, trigger_days, channel_type, template_body, is_active, created_at, updated_at) \
-             VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 1, $8, $9)",
         )
         .bind(&id).bind(&req.brand_id).bind(&req.name).bind(&req.trigger_type)
         .bind(trigger_days as i32).bind(&req.channel_type).bind(&req.template_body)
@@ -1554,7 +1554,7 @@ impl CommerceGapsService {
     }
 
     pub async fn delete_followup(&self, id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM automated_followups WHERE id = ?")
+        sqlx::query("DELETE FROM automated_followups WHERE id = $1")
             .bind(id).execute(&self.pool).await
             .map_err(|e| format!("Failed to delete follow-up: {e}"))?;
         Ok(())
@@ -1563,7 +1563,7 @@ impl CommerceGapsService {
     async fn get_followup(&self, id: &str) -> Result<AutomatedFollowup, String> {
         let r = sqlx::query(
             "SELECT id, brand_id, name, trigger_type, trigger_days, channel_type, template_body, is_active, created_at, updated_at \
-             FROM automated_followups WHERE id = ?",
+             FROM automated_followups WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("Follow-up not found: {e}"))?;
@@ -1583,7 +1583,7 @@ impl CommerceGapsService {
     pub async fn list_custom_domains(&self, brand_id: &str) -> Result<Vec<CustomDomain>, String> {
         let rows = sqlx::query(
             "SELECT id, brand_id, domain, storefront_id, ssl_enabled, verified, dns_records, is_active, created_at, updated_at \
-             FROM custom_domains WHERE brand_id = ? ORDER BY domain",
+             FROM custom_domains WHERE brand_id = $1 ORDER BY domain",
         )
         .bind(brand_id).fetch_all(&self.pool).await
             .map_err(|e| format!("Failed to list custom domains: {e}"))?;
@@ -1601,7 +1601,7 @@ impl CommerceGapsService {
         let now = chrono::Utc::now().to_rfc3339();
         sqlx::query(
             "INSERT INTO custom_domains (id, brand_id, domain, storefront_id, ssl_enabled, verified, is_active, created_at, updated_at) \
-             VALUES (?, ?, ?, ?, 0, 0, 1, ?, ?)",
+             VALUES ($1, $2, $3, $4, 0, 0, 1, $5, $6)",
         )
         .bind(&id).bind(&req.brand_id).bind(&req.domain).bind(&req.storefront_id)
         .bind(&now).bind(&now)
@@ -1613,7 +1613,7 @@ impl CommerceGapsService {
     pub async fn verify_custom_domain(&self, id: &str) -> Result<CustomDomain, String> {
         let now = chrono::Utc::now().to_rfc3339();
         sqlx::query(
-            "UPDATE custom_domains SET verified = 1, ssl_enabled = 1, updated_at = ? WHERE id = ?",
+            "UPDATE custom_domains SET verified = 1, ssl_enabled = 1, updated_at = $1 WHERE id = $2",
         )
         .bind(&now).bind(id).execute(&self.pool).await
             .map_err(|e| format!("Failed to verify custom domain: {e}"))?;
@@ -1621,7 +1621,7 @@ impl CommerceGapsService {
     }
 
     pub async fn delete_custom_domain(&self, id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM custom_domains WHERE id = ?")
+        sqlx::query("DELETE FROM custom_domains WHERE id = $1")
             .bind(id).execute(&self.pool).await
             .map_err(|e| format!("Failed to delete custom domain: {e}"))?;
         Ok(())
@@ -1630,7 +1630,7 @@ impl CommerceGapsService {
     async fn get_custom_domain(&self, id: &str) -> Result<CustomDomain, String> {
         let r = sqlx::query(
             "SELECT id, brand_id, domain, storefront_id, ssl_enabled, verified, dns_records, is_active, created_at, updated_at \
-             FROM custom_domains WHERE id = ?",
+             FROM custom_domains WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("Custom domain not found: {e}"))?;
@@ -1650,7 +1650,7 @@ impl CommerceGapsService {
     pub async fn list_storefront_pages(&self, storefront_id: &str) -> Result<Vec<StorefrontPage>, String> {
         let rows = sqlx::query(
             "SELECT id, storefront_id, slug, title, content, sort_order, is_active, created_at, updated_at \
-             FROM storefront_pages WHERE storefront_id = ? ORDER BY sort_order, title",
+             FROM storefront_pages WHERE storefront_id = $1 ORDER BY sort_order, title",
         )
         .bind(storefront_id).fetch_all(&self.pool).await
             .map_err(|e| format!("Failed to list storefront pages: {e}"))?;
@@ -1668,7 +1668,7 @@ impl CommerceGapsService {
         let sort_order = req.sort_order.unwrap_or(0);
         sqlx::query(
             "INSERT INTO storefront_pages (id, storefront_id, slug, title, content, sort_order, is_active, created_at, updated_at) \
-             VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, $6, 1, $7, $8)",
         )
         .bind(&id).bind(&req.storefront_id).bind(&req.slug).bind(&req.title)
         .bind(&req.content).bind(sort_order as i32).bind(&now).bind(&now)
@@ -1678,7 +1678,7 @@ impl CommerceGapsService {
     }
 
     pub async fn delete_storefront_page(&self, id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM storefront_pages WHERE id = ?")
+        sqlx::query("DELETE FROM storefront_pages WHERE id = $1")
             .bind(id).execute(&self.pool).await
             .map_err(|e| format!("Failed to delete storefront page: {e}"))?;
         Ok(())
@@ -1687,7 +1687,7 @@ impl CommerceGapsService {
     async fn get_storefront_page(&self, id: &str) -> Result<StorefrontPage, String> {
         let r = sqlx::query(
             "SELECT id, storefront_id, slug, title, content, sort_order, is_active, created_at, updated_at \
-             FROM storefront_pages WHERE id = ?",
+             FROM storefront_pages WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("Storefront page not found: {e}"))?;
@@ -1706,7 +1706,7 @@ impl CommerceGapsService {
     pub async fn list_meta_pixels(&self, brand_id: &str) -> Result<Vec<MetaPixel>, String> {
         let rows = sqlx::query(
             "SELECT id, brand_id, pixel_id, access_token, events, is_active, created_at, updated_at \
-             FROM meta_pixels WHERE brand_id = ?",
+             FROM meta_pixels WHERE brand_id = $1",
         )
         .bind(brand_id).fetch_all(&self.pool).await
             .map_err(|e| format!("Failed to list meta pixels: {e}"))?;
@@ -1724,7 +1724,7 @@ impl CommerceGapsService {
         let events = req.events.as_ref().map(|v| serde_json::to_string(v).unwrap_or_default());
         sqlx::query(
             "INSERT INTO meta_pixels (id, brand_id, pixel_id, access_token, events, is_active, created_at, updated_at) \
-             VALUES (?, ?, ?, ?, ?, 1, ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, 1, $6, $7)",
         )
         .bind(&id).bind(&req.brand_id).bind(&req.pixel_id).bind(&req.access_token)
         .bind(&events).bind(&now).bind(&now)
@@ -1734,7 +1734,7 @@ impl CommerceGapsService {
     }
 
     pub async fn delete_meta_pixel(&self, id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM meta_pixels WHERE id = ?")
+        sqlx::query("DELETE FROM meta_pixels WHERE id = $1")
             .bind(id).execute(&self.pool).await
             .map_err(|e| format!("Failed to delete meta pixel: {e}"))?;
         Ok(())
@@ -1743,7 +1743,7 @@ impl CommerceGapsService {
     async fn get_meta_pixel(&self, id: &str) -> Result<MetaPixel, String> {
         let r = sqlx::query(
             "SELECT id, brand_id, pixel_id, access_token, events, is_active, created_at, updated_at \
-             FROM meta_pixels WHERE id = ?",
+             FROM meta_pixels WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("Meta pixel not found: {e}"))?;
@@ -1762,7 +1762,7 @@ impl CommerceGapsService {
     pub async fn list_checkout_questions(&self, brand_id: &str) -> Result<Vec<CheckoutQuestion>, String> {
         let rows = sqlx::query(
             "SELECT id, brand_id, question, question_type, options, is_required, sort_order, is_active, created_at, updated_at \
-             FROM checkout_questions WHERE brand_id = ? AND is_active = 1 ORDER BY sort_order",
+             FROM checkout_questions WHERE brand_id = $1 AND is_active = 1 ORDER BY sort_order",
         )
         .bind(brand_id).fetch_all(&self.pool).await
             .map_err(|e| format!("Failed to list checkout questions: {e}"))?;
@@ -1784,7 +1784,7 @@ impl CommerceGapsService {
         let options = req.options.as_ref().map(|v| serde_json::to_string(v).unwrap_or_default());
         sqlx::query(
             "INSERT INTO checkout_questions (id, brand_id, question, question_type, options, is_required, sort_order, is_active, created_at, updated_at) \
-             VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 1, $8, $9)",
         )
         .bind(&id).bind(&req.brand_id).bind(&req.question).bind(&question_type)
         .bind(&options).bind(is_required as bool).bind(sort_order as i32)
@@ -1801,7 +1801,7 @@ impl CommerceGapsService {
             let id = Uuid::new_v4().to_string();
             sqlx::query(
                 "INSERT INTO checkout_question_answers (id, order_id, question_id, answer, created_at) \
-                 VALUES (?, ?, ?, ?, ?)",
+                 VALUES ($1, $2, $3, $4, $5)",
             )
             .bind(&id).bind(&req.order_id).bind(&answer.question_id)
             .bind(&answer.answer).bind(&now)
@@ -1817,7 +1817,7 @@ impl CommerceGapsService {
     }
 
     pub async fn delete_checkout_question(&self, id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM checkout_questions WHERE id = ?")
+        sqlx::query("DELETE FROM checkout_questions WHERE id = $1")
             .bind(id).execute(&self.pool).await
             .map_err(|e| format!("Failed to delete checkout question: {e}"))?;
         Ok(())
@@ -1826,7 +1826,7 @@ impl CommerceGapsService {
     async fn get_checkout_question(&self, id: &str) -> Result<CheckoutQuestion, String> {
         let r = sqlx::query(
             "SELECT id, brand_id, question, question_type, options, is_required, sort_order, is_active, created_at, updated_at \
-             FROM checkout_questions WHERE id = ?",
+             FROM checkout_questions WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("Checkout question not found: {e}"))?;
@@ -1848,7 +1848,7 @@ impl CommerceGapsService {
         let now = chrono::Utc::now().to_rfc3339();
         sqlx::query(
             "INSERT INTO delivery_proofs (id, shipment_id, order_id, file_url, file_name, uploaded_by, uploaded_at) \
-             VALUES (?, ?, ?, ?, ?, ?, ?)",
+             VALUES ($1, $2, $3, $4, $5, $6, $7)",
         )
         .bind(&id).bind(&req.shipment_id).bind(&req.order_id)
         .bind(&req.file_url).bind(&req.file_name).bind(&req.uploaded_by).bind(&now)
@@ -1860,7 +1860,7 @@ impl CommerceGapsService {
     pub async fn list_delivery_proofs(&self, order_id: &str) -> Result<Vec<DeliveryProof>, String> {
         let rows = sqlx::query(
             "SELECT id, shipment_id, order_id, file_url, file_name, uploaded_by, uploaded_at \
-             FROM delivery_proofs WHERE order_id = ? ORDER BY uploaded_at DESC",
+             FROM delivery_proofs WHERE order_id = $1 ORDER BY uploaded_at DESC",
         )
         .bind(order_id).fetch_all(&self.pool).await
             .map_err(|e| format!("Failed to list delivery proofs: {e}"))?;
@@ -1874,7 +1874,7 @@ impl CommerceGapsService {
     async fn get_delivery_proof(&self, id: &str) -> Result<DeliveryProof, String> {
         let r = sqlx::query(
             "SELECT id, shipment_id, order_id, file_url, file_name, uploaded_by, uploaded_at \
-             FROM delivery_proofs WHERE id = ?",
+             FROM delivery_proofs WHERE id = $1",
         )
         .bind(id).fetch_one(&self.pool).await
             .map_err(|e| format!("Delivery proof not found: {e}"))?;

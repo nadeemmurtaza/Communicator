@@ -82,7 +82,7 @@ impl CommerceCartService {
         // Find active cart for this customer and brand
         let cart = sqlx::query(
             "SELECT id, customer_id, brand_id, channel_type, status, metadata, created_at, updated_at \
-             FROM carts WHERE customer_id = ? AND brand_id = ? AND status = 'active' \
+             FROM carts WHERE customer_id = $1 AND brand_id = $2 AND status = 'active' \
              ORDER BY updated_at DESC LIMIT 1",
         )
         .bind(customer_id)
@@ -113,7 +113,7 @@ impl CommerceCartService {
 
                 sqlx::query(
                     "INSERT INTO carts (id, customer_id, brand_id, channel_type, status, created_at, updated_at) \
-                     VALUES (?, ?, ?, ?, 'active', ?, ?)",
+                     VALUES ($1, $2, $3, $4, 'active', $5, $6)",
                 )
                 .bind(&id)
                 .bind(customer_id)
@@ -149,10 +149,10 @@ impl CommerceCartService {
     ) -> Result<Vec<Cart>, String> {
         let query = if status.is_some() {
             "SELECT id, customer_id, brand_id, channel_type, status, metadata, created_at, updated_at \
-             FROM carts WHERE customer_id = ? AND brand_id = ? AND status = ? ORDER BY updated_at DESC"
+             FROM carts WHERE customer_id = $1 AND brand_id = $2 AND status = $3 ORDER BY updated_at DESC"
         } else {
             "SELECT id, customer_id, brand_id, channel_type, status, metadata, created_at, updated_at \
-             FROM carts WHERE customer_id = ? AND brand_id = ? ORDER BY updated_at DESC"
+             FROM carts WHERE customer_id = $1 AND brand_id = $2 ORDER BY updated_at DESC"
         };
 
         let rows = if let Some(s) = status {
@@ -181,7 +181,7 @@ impl CommerceCartService {
     pub async fn get_cart(&self, cart_id: &str) -> Result<Cart, String> {
         let row = sqlx::query(
             "SELECT id, customer_id, brand_id, channel_type, status, metadata, created_at, updated_at \
-             FROM carts WHERE id = ?",
+             FROM carts WHERE id = $1",
         )
         .bind(cart_id)
         .fetch_one(&self.pool)
@@ -208,7 +208,7 @@ impl CommerceCartService {
              p.images AS product_images \
              FROM cart_items ci \
              LEFT JOIN products p ON ci.product_id = p.id \
-             WHERE ci.cart_id = ?",
+             WHERE ci.cart_id = $1",
         )
         .bind(cart_id)
         .fetch_all(&self.pool)
@@ -245,7 +245,7 @@ impl CommerceCartService {
 
     pub async fn update_cart_status(&self, cart_id: &str, status: &str) -> Result<Cart, String> {
         let now = chrono::Utc::now().to_rfc3339();
-        sqlx::query("UPDATE carts SET status = ?, updated_at = ? WHERE id = ?")
+        sqlx::query("UPDATE carts SET status = $1, updated_at = $2 WHERE id = $3")
             .bind(status)
             .bind(&now)
             .bind(cart_id)
@@ -273,7 +273,7 @@ impl CommerceCartService {
         // Get product price
         let product_row = sqlx::query(
             "SELECT price, inventory_count, track_inventory, name, sku, images \
-             FROM products WHERE id = ?",
+             FROM products WHERE id = $1",
         )
         .bind(&req.product_id)
         .fetch_one(&self.pool)
@@ -296,7 +296,7 @@ impl CommerceCartService {
         if track_inventory {
             // Check existing quantity in cart
             let existing = sqlx::query_scalar::<_, i32>(
-                "SELECT COALESCE(SUM(quantity), 0) FROM cart_items WHERE cart_id = ? AND product_id = ? AND variant_id = ?",
+                "SELECT COALESCE(SUM(quantity), 0) FROM cart_items WHERE cart_id = $1 AND product_id = $2 AND variant_id = $3",
             )
             .bind(cart_id)
             .bind(&req.product_id)
@@ -318,7 +318,7 @@ impl CommerceCartService {
 
         // Check if item already exists in cart
         let existing = sqlx::query(
-            "SELECT id, quantity FROM cart_items WHERE cart_id = ? AND product_id = ? AND variant_id = ?",
+            "SELECT id, quantity FROM cart_items WHERE cart_id = $1 AND product_id = $2 AND variant_id = $3",
         )
         .bind(cart_id)
         .bind(&req.product_id)
@@ -333,7 +333,7 @@ impl CommerceCartService {
             let new_qty = old_qty + quantity;
 
             sqlx::query(
-                "UPDATE cart_items SET quantity = ?, unit_price = ? WHERE id = ?",
+                "UPDATE cart_items SET quantity = $1, unit_price = $2 WHERE id = $3",
             )
             .bind(new_qty)
             .bind(unit_price)
@@ -347,7 +347,7 @@ impl CommerceCartService {
             let item_id = Uuid::new_v4().to_string();
             sqlx::query(
                 "INSERT INTO cart_items (id, cart_id, product_id, variant_id, quantity, unit_price, created_at) \
-                 VALUES (?, ?, ?, ?, ?, ?, ?)",
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)",
             )
             .bind(&item_id)
             .bind(cart_id)
@@ -364,7 +364,7 @@ impl CommerceCartService {
         };
 
         // Update cart timestamp
-        sqlx::query("UPDATE carts SET updated_at = ? WHERE id = ?")
+        sqlx::query("UPDATE carts SET updated_at = $1 WHERE id = $2")
             .bind(&now)
             .bind(cart_id)
             .execute(&self.pool)
@@ -401,7 +401,7 @@ impl CommerceCartService {
             "SELECT ci.product_id, ci.variant_id, ci.unit_price, p.inventory_count, p.track_inventory \
              FROM cart_items ci \
              JOIN products p ON ci.product_id = p.id \
-             WHERE ci.id = ? AND ci.cart_id = ?",
+             WHERE ci.id = $1 AND ci.cart_id = $2",
         )
         .bind(item_id)
         .bind(cart_id)
@@ -419,7 +419,7 @@ impl CommerceCartService {
             ));
         }
 
-        sqlx::query("UPDATE cart_items SET quantity = ?, unit_price = ? WHERE id = ?")
+        sqlx::query("UPDATE cart_items SET quantity = $1, unit_price = $2 WHERE id = $3")
             .bind(req.quantity)
             .bind(row.get::<f64, _>("unit_price"))
             .bind(item_id)
@@ -428,7 +428,7 @@ impl CommerceCartService {
             .map_err(|e| format!("Failed to update quantity: {e}"))?;
 
         // Update cart timestamp
-        sqlx::query("UPDATE carts SET updated_at = ? WHERE id = ?")
+        sqlx::query("UPDATE carts SET updated_at = $1 WHERE id = $2")
             .bind(&now)
             .bind(cart_id)
             .execute(&self.pool)
@@ -442,7 +442,7 @@ impl CommerceCartService {
              p.images AS product_images \
              FROM cart_items ci \
              LEFT JOIN products p ON ci.product_id = p.id \
-             WHERE ci.id = ?",
+             WHERE ci.id = $1",
         )
         .bind(item_id)
         .fetch_one(&self.pool)
@@ -466,7 +466,7 @@ impl CommerceCartService {
 
     pub async fn remove_item(&self, cart_id: &str, item_id: &str) -> Result<(), String> {
         let now = chrono::Utc::now().to_rfc3339();
-        sqlx::query("DELETE FROM cart_items WHERE id = ? AND cart_id = ?")
+        sqlx::query("DELETE FROM cart_items WHERE id = $1 AND cart_id = $2")
             .bind(item_id)
             .bind(cart_id)
             .execute(&self.pool)
@@ -474,7 +474,7 @@ impl CommerceCartService {
             .map_err(|e| format!("Failed to remove cart item: {e}"))?;
 
         // Update cart timestamp
-        sqlx::query("UPDATE carts SET updated_at = ? WHERE id = ?")
+        sqlx::query("UPDATE carts SET updated_at = $1 WHERE id = $2")
             .bind(&now)
             .bind(cart_id)
             .execute(&self.pool)
@@ -486,13 +486,13 @@ impl CommerceCartService {
 
     pub async fn clear_cart(&self, cart_id: &str) -> Result<(), String> {
         let now = chrono::Utc::now().to_rfc3339();
-        sqlx::query("DELETE FROM cart_items WHERE cart_id = ?")
+        sqlx::query("DELETE FROM cart_items WHERE cart_id = $1")
             .bind(cart_id)
             .execute(&self.pool)
             .await
             .map_err(|e| format!("Failed to clear cart: {e}"))?;
 
-        sqlx::query("UPDATE carts SET updated_at = ? WHERE id = ?")
+        sqlx::query("UPDATE carts SET updated_at = $1 WHERE id = $2")
             .bind(&now)
             .bind(cart_id)
             .execute(&self.pool)
@@ -503,7 +503,7 @@ impl CommerceCartService {
     }
 
     pub async fn delete_cart(&self, cart_id: &str) -> Result<(), String> {
-        sqlx::query("DELETE FROM carts WHERE id = ?")
+        sqlx::query("DELETE FROM carts WHERE id = $1")
             .bind(cart_id)
             .execute(&self.pool)
             .await
