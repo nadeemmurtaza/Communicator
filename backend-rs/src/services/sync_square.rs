@@ -90,6 +90,84 @@ impl SquareSyncAdapter {
         resp.json().await.map_err(|e| format!("Failed to parse Square response: {e}"))
     }
 
+    /// Page through `/catalog/list?types=ITEM`, following the `cursor` field
+    /// Square returns while more results remain.
+    async fn fetch_all_catalog_items(&self, token: &str) -> Result<Vec<Value>, String> {
+        let mut all = Vec::new();
+        let mut cursor: Option<String> = None;
+        loop {
+            let path = match &cursor {
+                Some(c) => format!("/catalog/list?types=ITEM&cursor={c}"),
+                None => "/catalog/list?types=ITEM".to_string(),
+            };
+            let body = self.square_get(token, &path).await?;
+            let page = body.get("objects").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+            all.extend(page);
+            cursor = body.get("cursor").and_then(|v| v.as_str()).map(|s| s.to_string());
+            if cursor.is_none() {
+                break;
+            }
+        }
+        Ok(all)
+    }
+
+    /// Page through `/orders/search`, feeding the `cursor` field Square
+    /// returns back into the next request's body while more results remain.
+    async fn fetch_all_orders(&self, token: &str, location_id: &str) -> Result<Vec<Value>, String> {
+        let mut all = Vec::new();
+        let mut cursor: Option<String> = None;
+        loop {
+            let mut payload = serde_json::json!({
+                "location_ids": [location_id],
+                "query": {
+                    "sort": { "sort_field": "CREATED_AT", "sort_order": "DESC" }
+                },
+                "limit": 100,
+            });
+            if let Some(c) = &cursor {
+                payload["cursor"] = Value::String(c.clone());
+            }
+            let body = self.square_post(token, "/orders/search", &payload).await?;
+            let page = body.get("orders").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+            all.extend(page);
+            cursor = body.get("cursor").and_then(|v| v.as_str()).map(|s| s.to_string());
+            if cursor.is_none() {
+                break;
+            }
+        }
+        Ok(all)
+    }
+
+    /// Page through `/inventory/counts/batch-retrieve` the same way; it can
+    /// also return a `cursor` when the requested id list's counts span more
+    /// than one page.
+    async fn fetch_all_inventory_counts(
+        &self,
+        token: &str,
+        location_id: &str,
+        catalog_object_ids: &[String],
+    ) -> Result<Vec<Value>, String> {
+        let mut all = Vec::new();
+        let mut cursor: Option<String> = None;
+        loop {
+            let mut payload = serde_json::json!({
+                "catalog_object_ids": catalog_object_ids,
+                "location_ids": [location_id],
+            });
+            if let Some(c) = &cursor {
+                payload["cursor"] = Value::String(c.clone());
+            }
+            let body = self.square_post(token, "/inventory/counts/batch-retrieve", &payload).await?;
+            let page = body.get("counts").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+            all.extend(page);
+            cursor = body.get("cursor").and_then(|v| v.as_str()).map(|s| s.to_string());
+            if cursor.is_none() {
+                break;
+            }
+        }
+        Ok(all)
+    }
+
     /// Upsert a Square catalog ITEM (with its first ITEM_VARIATION) into our
     /// `products` table. The variation id is used as the external_id since
     /// that's what the Inventory API keys counts on.
@@ -355,9 +433,10 @@ impl SyncAdapter for SquareSyncAdapter {
         };
 
         // Square Catalog API: list all ITEM objects (each embeds its
-        // variations, which carry sku + price).
-        let body = match self.square_get(&token, "/catalog/list?types=ITEM").await {
-            Ok(b) => b,
+        // variations, which carry sku + price), following `cursor` across
+        // every page.
+        let items = match self.fetch_all_catalog_items(&token).await {
+            Ok(i) => i,
             Err(e) => {
                 return SyncResult {
                     success: false,
@@ -370,7 +449,6 @@ impl SyncAdapter for SquareSyncAdapter {
             }
         };
 
-        let items = body.get("objects").and_then(|v| v.as_array()).cloned().unwrap_or_default();
         let mut errors = Vec::new();
         for item in &items {
             if item.get("type").and_then(|v| v.as_str()) != Some("ITEM") {
@@ -407,17 +485,9 @@ impl SyncAdapter for SquareSyncAdapter {
         };
 
         // Square Orders API requires a POST to /orders/search (no plain
-        // list-all GET endpoint exists).
-        let payload = serde_json::json!({
-            "location_ids": [location_id],
-            "query": {
-                "sort": { "sort_field": "CREATED_AT", "sort_order": "DESC" }
-            },
-            "limit": 100,
-        });
-
-        let body = match self.square_post(&token, "/orders/search", &payload).await {
-            Ok(b) => b,
+        // list-all GET endpoint exists); follow `cursor` across every page.
+        let orders = match self.fetch_all_orders(&token, &location_id).await {
+            Ok(o) => o,
             Err(e) => {
                 return SyncResult {
                     success: false,
@@ -430,7 +500,6 @@ impl SyncAdapter for SquareSyncAdapter {
             }
         };
 
-        let orders = body.get("orders").and_then(|v| v.as_array()).cloned().unwrap_or_default();
         let mut errors = Vec::new();
         for o in &orders {
             if let Err(e) = self.upsert_order(pool, brand_id, o).await {
@@ -499,13 +568,11 @@ impl SyncAdapter for SquareSyncAdapter {
         }
 
         let catalog_object_ids: Vec<String> = mappings.iter().map(|(_, ext)| ext.clone()).collect();
-        let payload = serde_json::json!({
-            "catalog_object_ids": catalog_object_ids,
-            "location_ids": [location_id],
-        });
-
-        let body = match self.square_post(&token, "/inventory/counts/batch-retrieve", &payload).await {
-            Ok(b) => b,
+        let counts = match self
+            .fetch_all_inventory_counts(&token, &location_id, &catalog_object_ids)
+            .await
+        {
+            Ok(c) => c,
             Err(e) => {
                 return SyncResult {
                     success: false,
@@ -518,7 +585,6 @@ impl SyncAdapter for SquareSyncAdapter {
             }
         };
 
-        let counts = body.get("counts").and_then(|v| v.as_array()).cloned().unwrap_or_default();
         let mut by_object: std::collections::HashMap<String, i32> = std::collections::HashMap::new();
         for c in &counts {
             let obj_id = c.get("catalog_object_id").and_then(|v| v.as_str()).unwrap_or("");
