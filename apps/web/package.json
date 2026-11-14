@@ -12,7 +12,7 @@
     "check-contrast": "node scripts/check-contrast.mjs"
   },
   "dependencies": {
-    "@newax/design-tokens": "*",
+    "@newax/design-tokens": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",
     "daisyui": "^5.7.50",
     "lucide-animated": "^1.0.5",

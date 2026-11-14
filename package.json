@@ -2,8 +2,12 @@
   "name": "communicator",
   "version": "0.0.0",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ]
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm -r --filter=./packages/* --filter=./apps/* build",
+    "typecheck": "pnpm -r --filter=./packages/* --filter=./apps/* typecheck",
+    "lint": "pnpm -r --filter=./packages/* --filter=./apps/* lint"
+  }
 }
