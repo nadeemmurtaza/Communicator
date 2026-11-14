@@ -137,7 +137,7 @@ pub async fn list_templates(
     query.push_str(" ORDER BY created_at DESC");
 
     if let Some(limit) = params.limit {
-        query.push_str(" LIMIT ?");
+        query.push_str(" LIMIT $1");
         binds.push(limit.to_string());
     }
 
@@ -184,7 +184,7 @@ pub async fn get_template(
         "SELECT id, name, description, question, scale_type, min_score, max_score,
          include_comment, comment_prompt, trigger_type, trigger_delay_minutes,
          channel_filter, enabled, created_at, updated_at
-         FROM csat_survey_templates WHERE id = ?"
+         FROM csat_survey_templates WHERE id = $1"
     )
     .bind(&id)
     .fetch_optional(db)
@@ -235,7 +235,7 @@ pub async fn create_template(
     sqlx::query(
         "INSERT INTO csat_survey_templates (id, name, description, question, scale_type, min_score, max_score,
          include_comment, comment_prompt, trigger_type, trigger_delay_minutes, channel_filter, enabled)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
     )
     .bind(&id)
     .bind(&name)
@@ -272,7 +272,7 @@ pub async fn update_template(
     let db = &state.db;
 
     // Check exists
-    let exists = sqlx::query("SELECT COUNT(*) FROM csat_survey_templates WHERE id = ?")
+    let exists = sqlx::query("SELECT COUNT(*) FROM csat_survey_templates WHERE id = $1")
         .bind(&id)
         .fetch_one(db)
         .await
@@ -282,67 +282,81 @@ pub async fn update_template(
         return Err((StatusCode::NOT_FOUND, Json(json!({"error": "Template not found"}))));
     }
 
-    let mut sets = Vec::new();
+    let mut sets: Vec<String> = Vec::new();
     let mut binds: Vec<Value> = Vec::new();
+    let mut idx = 1;
 
     if let Some(name) = body["name"].as_str() {
-        sets.push("name = ?");
+        sets.push(format!("name = ${idx}"));
         binds.push(json!(name));
+        idx += 1;
     }
     if let Some(description) = body["description"].as_str() {
-        sets.push("description = ?");
+        sets.push(format!("description = ${idx}"));
         binds.push(json!(description));
+        idx += 1;
     }
     if let Some(question) = body["question"].as_str() {
-        sets.push("question = ?");
+        sets.push(format!("question = ${idx}"));
         binds.push(json!(question));
+        idx += 1;
     }
     if let Some(scale_type) = body["scale_type"].as_str() {
-        sets.push("scale_type = ?");
+        sets.push(format!("scale_type = ${idx}"));
         binds.push(json!(scale_type));
+        idx += 1;
     }
     if let Some(min_score) = body["min_score"].as_i64() {
-        sets.push("min_score = ?");
+        sets.push(format!("min_score = ${idx}"));
         binds.push(json!(min_score));
+        idx += 1;
     }
     if let Some(max_score) = body["max_score"].as_i64() {
-        sets.push("max_score = ?");
+        sets.push(format!("max_score = ${idx}"));
         binds.push(json!(max_score));
+        idx += 1;
     }
     if let Some(include_comment) = body["include_comment"].as_bool() {
-        sets.push("include_comment = ?");
+        sets.push(format!("include_comment = ${idx}"));
         binds.push(json!(include_comment));
+        idx += 1;
     }
     if let Some(comment_prompt) = body["comment_prompt"].as_str() {
-        sets.push("comment_prompt = ?");
+        sets.push(format!("comment_prompt = ${idx}"));
         binds.push(json!(comment_prompt));
+        idx += 1;
     }
     if let Some(trigger_type) = body["trigger_type"].as_str() {
-        sets.push("trigger_type = ?");
+        sets.push(format!("trigger_type = ${idx}"));
         binds.push(json!(trigger_type));
+        idx += 1;
     }
     if let Some(trigger_delay) = body["trigger_delay_minutes"].as_i64() {
-        sets.push("trigger_delay_minutes = ?");
+        sets.push(format!("trigger_delay_minutes = ${idx}"));
         binds.push(json!(trigger_delay));
+        idx += 1;
     }
     if let Some(channel_filter) = body["channel_filter"].as_str() {
-        sets.push("channel_filter = ?");
+        sets.push(format!("channel_filter = ${idx}"));
         binds.push(json!(channel_filter));
+        idx += 1;
     }
     if let Some(enabled) = body["enabled"].as_bool() {
-        sets.push("enabled = ?");
+        sets.push(format!("enabled = ${idx}"));
         binds.push(json!(enabled));
+        idx += 1;
     }
 
     if sets.is_empty() {
         return Ok(Json(json!({"message": "No fields to update"})));
     }
 
-    sets.push("updated_at = ?");
+    sets.push(format!("updated_at = ${idx}"));
+    idx += 1;
     binds.push(json!(Utc::now().format("%Y-%m-%dT%H:%M:%fZ").to_string()));
     binds.push(json!(id));
 
-    let sql = format!("UPDATE csat_survey_templates SET {} WHERE id = ?", sets.join(", "));
+    let sql = format!("UPDATE csat_survey_templates SET {} WHERE id = ${idx}", sets.join(", "));
 
     let mut query_builder = sqlx::query(&sql);
     for b in &binds {
@@ -375,7 +389,7 @@ pub async fn delete_template(
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     let db = &state.db;
 
-    sqlx::query("DELETE FROM csat_survey_templates WHERE id = ?")
+    sqlx::query("DELETE FROM csat_survey_templates WHERE id = $1")
         .bind(&id)
         .execute(db)
         .await
@@ -400,32 +414,38 @@ pub async fn list_surveys(
     "#.to_string();
     let mut binds: Vec<String> = Vec::new();
 
+    let mut idx = 1;
     if let Some(ref status) = params.status {
-        query.push_str(" AND s.status = ?");
+        query.push_str(&format!(" AND s.status = ${idx}"));
         binds.push(status.clone());
+        idx += 1;
     }
     if let Some(ref channel) = params.channel {
-        query.push_str(" AND s.channel = ?");
+        query.push_str(&format!(" AND s.channel = ${idx}"));
         binds.push(channel.clone());
+        idx += 1;
     }
     if let Some(ref template_id) = params.template_id {
-        query.push_str(" AND s.template_id = ?");
+        query.push_str(&format!(" AND s.template_id = ${idx}"));
         binds.push(template_id.clone());
+        idx += 1;
     }
     if let Some(ref conversation_id) = params.conversation_id {
-        query.push_str(" AND s.conversation_id = ?");
+        query.push_str(&format!(" AND s.conversation_id = ${idx}"));
         binds.push(conversation_id.clone());
+        idx += 1;
     }
     if let Some(ref contact_id) = params.contact_id {
-        query.push_str(" AND s.contact_id = ?");
+        query.push_str(&format!(" AND s.contact_id = ${idx}"));
         binds.push(contact_id.clone());
+        idx += 1;
     }
 
     query.push_str(" ORDER BY s.created_at DESC");
 
     let limit = params.limit.unwrap_or(50);
     let offset = params.offset.unwrap_or(0);
-    query.push_str(" LIMIT ? OFFSET ?");
+    query.push_str(&format!(" LIMIT ${idx} OFFSET ${}", idx + 1));
     binds.push(limit.to_string());
     binds.push(offset.to_string());
 
@@ -485,7 +505,7 @@ pub async fn create_survey(
 
     // Get template to determine expiry
     let template = sqlx::query(
-        "SELECT trigger_delay_minutes FROM csat_survey_templates WHERE id = ?"
+        "SELECT trigger_delay_minutes FROM csat_survey_templates WHERE id = $1"
     )
     .bind(&template_id)
     .fetch_optional(db)
@@ -505,7 +525,7 @@ pub async fn create_survey(
     sqlx::query(
         "INSERT INTO csat_surveys (id, template_id, conversation_id, contact_id, channel,
          contact_identifier, status, expires_at)
-         VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)"
+         VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7)"
     )
     .bind(&id)
     .bind(&template_id)
@@ -538,7 +558,7 @@ pub async fn respond_to_survey(
 
     // Check survey exists and is pending/sent
     let survey = sqlx::query(
-        "SELECT id, status, template_id FROM csat_surveys WHERE id = ?"
+        "SELECT id, status, template_id FROM csat_surveys WHERE id = $1"
     )
     .bind(&id)
     .fetch_optional(db)
@@ -561,7 +581,7 @@ pub async fn respond_to_survey(
     // Validate score range
     let template_id: String = survey.try_get("template_id").unwrap_or("default".to_string());
     let template = sqlx::query(
-        "SELECT min_score, max_score FROM csat_survey_templates WHERE id = ?"
+        "SELECT min_score, max_score FROM csat_survey_templates WHERE id = $1"
     )
     .bind(&template_id)
     .fetch_optional(db)
@@ -581,8 +601,8 @@ pub async fn respond_to_survey(
     let now = Utc::now().format("%Y-%m-%dT%H:%M:%fZ").to_string();
 
     sqlx::query(
-        "UPDATE csat_surveys SET status = 'responded', score = ?, comment = ?, responded_at = ?
-         WHERE id = ?"
+        "UPDATE csat_surveys SET status = 'responded', score = $1, comment = $2, responded_at = $3
+         WHERE id = $4"
     )
     .bind(body.score)
     .bind(&body.comment)
@@ -610,8 +630,8 @@ pub async fn send_survey(
     let now = Utc::now().format("%Y-%m-%dT%H:%M:%fZ").to_string();
 
     let result = sqlx::query(
-        "UPDATE csat_surveys SET status = 'sent', sent_at = ?
-         WHERE id = ? AND status = 'pending'"
+        "UPDATE csat_surveys SET status = 'sent', sent_at = $1
+         WHERE id = $2 AND status = 'pending'"
     )
     .bind(&now)
     .bind(&id)
@@ -645,7 +665,7 @@ pub async fn get_csat_summary(
 
     // Total sent
     let total_sent: i64 = sqlx::query(
-        "SELECT COUNT(*) FROM csat_surveys WHERE created_at >= ? AND status != 'cancelled'"
+        "SELECT COUNT(*) FROM csat_surveys WHERE created_at >= $1 AND status != 'cancelled'"
     )
     .bind(&window_start)
     .fetch_one(db)
@@ -655,7 +675,7 @@ pub async fn get_csat_summary(
 
     // Total responses
     let total_responses: i64 = sqlx::query(
-        "SELECT COUNT(*) FROM csat_surveys WHERE created_at >= ? AND status = 'responded'"
+        "SELECT COUNT(*) FROM csat_surveys WHERE created_at >= $1 AND status = 'responded'"
     )
     .bind(&window_start)
     .fetch_one(db)
@@ -665,7 +685,7 @@ pub async fn get_csat_summary(
 
     // Average score
     let avg_row = sqlx::query(
-        "SELECT AVG(score) as avg_score FROM csat_surveys WHERE created_at >= ? AND status = 'responded' AND score IS NOT NULL"
+        "SELECT AVG(score) as avg_score FROM csat_surveys WHERE created_at >= $1 AND status = 'responded' AND score IS NOT NULL"
     )
     .bind(&window_start)
     .fetch_optional(db)
@@ -676,7 +696,7 @@ pub async fn get_csat_summary(
 
     // CSAT percentage (% of 4-5 scores for 1-5 scale)
     let csat_row = sqlx::query(
-        "SELECT COUNT(*) FROM csat_surveys WHERE created_at >= ? AND status = 'responded' AND score >= 4"
+        "SELECT COUNT(*) FROM csat_surveys WHERE created_at >= $1 AND status = 'responded' AND score >= 4"
     )
     .bind(&window_start)
     .fetch_one(db)
@@ -693,7 +713,7 @@ pub async fn get_csat_summary(
     // Score distribution
     let dist_rows = sqlx::query(
         "SELECT score, COUNT(*) as count FROM csat_surveys
-         WHERE created_at >= ? AND status = 'responded' AND score IS NOT NULL
+         WHERE created_at >= $1 AND status = 'responded' AND score IS NOT NULL
          GROUP BY score ORDER BY score"
     )
     .bind(&window_start)
@@ -711,7 +731,7 @@ pub async fn get_csat_summary(
     // By channel
     let channel_rows = sqlx::query(
         "SELECT channel, AVG(score) as avg_score, COUNT(*) as count
-         FROM csat_surveys WHERE created_at >= ? AND status = 'responded' AND score IS NOT NULL
+         FROM csat_surveys WHERE created_at >= $1 AND status = 'responded' AND score IS NOT NULL
          GROUP BY channel"
     )
     .bind(&window_start)
@@ -731,7 +751,7 @@ pub async fn get_csat_summary(
     let comment_rows = sqlx::query(
         "SELECT s.id, s.score, s.comment, s.contact_identifier, s.channel, s.responded_at
          FROM csat_surveys s
-         WHERE created_at >= ? AND status = 'responded' AND s.comment IS NOT NULL AND s.comment != ''
+         WHERE created_at >= $1 AND status = 'responded' AND s.comment IS NOT NULL AND s.comment != ''
          ORDER BY s.responded_at DESC LIMIT 10"
     )
     .bind(&window_start)
@@ -788,7 +808,7 @@ async fn compute_trend(db: &sqlx::PgPool) -> Result<f64, sqlx::Error> {
 
     // Current week avg
     let current = sqlx::query(
-        "SELECT AVG(score) FROM csat_surveys WHERE created_at >= ? AND created_at < ? AND status = 'responded' AND score IS NOT NULL"
+        "SELECT AVG(score) FROM csat_surveys WHERE created_at >= $1 AND created_at < $2 AND status = 'responded' AND score IS NOT NULL"
     )
     .bind(&week_ago)
     .bind(&now.format("%Y-%m-%dT%H:%M:%fZ").to_string())
@@ -797,7 +817,7 @@ async fn compute_trend(db: &sqlx::PgPool) -> Result<f64, sqlx::Error> {
 
     // Previous week avg
     let previous = sqlx::query(
-        "SELECT AVG(score) FROM csat_surveys WHERE created_at >= ? AND created_at < ? AND status = 'responded' AND score IS NOT NULL"
+        "SELECT AVG(score) FROM csat_surveys WHERE created_at >= $1 AND created_at < $2 AND status = 'responded' AND score IS NOT NULL"
     )
     .bind(&two_weeks_ago)
     .bind(&week_ago)
@@ -825,7 +845,7 @@ pub async fn generate_snapshot(
 
     // Reuse summary logic for the window
     let total_sent: i64 = sqlx::query(
-        "SELECT COUNT(*) FROM csat_surveys WHERE created_at >= ? AND created_at < ? AND status != 'cancelled'"
+        "SELECT COUNT(*) FROM csat_surveys WHERE created_at >= $1 AND created_at < $2 AND status != 'cancelled'"
     )
     .bind(&window_start)
     .bind(&window_end)
@@ -835,7 +855,7 @@ pub async fn generate_snapshot(
     .try_get(0).unwrap_or(0);
 
     let total_responses: i64 = sqlx::query(
-        "SELECT COUNT(*) FROM csat_surveys WHERE created_at >= ? AND created_at < ? AND status = 'responded'"
+        "SELECT COUNT(*) FROM csat_surveys WHERE created_at >= $1 AND created_at < $2 AND status = 'responded'"
     )
     .bind(&window_start)
     .bind(&window_end)
@@ -845,7 +865,7 @@ pub async fn generate_snapshot(
     .try_get(0).unwrap_or(0);
 
     let avg_row = sqlx::query(
-        "SELECT AVG(score) as avg_score FROM csat_surveys WHERE created_at >= ? AND created_at < ? AND status = 'responded' AND score IS NOT NULL"
+        "SELECT AVG(score) as avg_score FROM csat_surveys WHERE created_at >= $1 AND created_at < $2 AND status = 'responded' AND score IS NOT NULL"
     )
     .bind(&window_start)
     .bind(&window_end)
@@ -856,7 +876,7 @@ pub async fn generate_snapshot(
     let average_score = avg_row.and_then(|r| r.try_get::<f64, _>("avg_score").ok());
 
     let csat_count: i64 = sqlx::query(
-        "SELECT COUNT(*) FROM csat_surveys WHERE created_at >= ? AND created_at < ? AND status = 'responded' AND score >= 4"
+        "SELECT COUNT(*) FROM csat_surveys WHERE created_at >= $1 AND created_at < $2 AND status = 'responded' AND score >= 4"
     )
     .bind(&window_start)
     .bind(&window_end)
@@ -880,7 +900,7 @@ pub async fn generate_snapshot(
     // Score distribution
     let dist_rows = sqlx::query(
         "SELECT score, COUNT(*) as count FROM csat_surveys
-         WHERE created_at >= ? AND created_at < ? AND status = 'responded' AND score IS NOT NULL
+         WHERE created_at >= $1 AND created_at < $2 AND status = 'responded' AND score IS NOT NULL
          GROUP BY score ORDER BY score"
     )
     .bind(&window_start)
@@ -899,7 +919,7 @@ pub async fn generate_snapshot(
     // By channel
     let channel_rows = sqlx::query(
         "SELECT channel, AVG(score) as avg_score, COUNT(*) as count
-         FROM csat_surveys WHERE created_at >= ? AND created_at < ? AND status = 'responded' AND score IS NOT NULL
+         FROM csat_surveys WHERE created_at >= $1 AND created_at < $2 AND status = 'responded' AND score IS NOT NULL
          GROUP BY channel"
     )
     .bind(&window_start)
@@ -919,7 +939,7 @@ pub async fn generate_snapshot(
     // Top comments
     let comment_rows = sqlx::query(
         "SELECT id, score, comment, contact_identifier, channel, responded_at
-         FROM csat_surveys WHERE created_at >= ? AND created_at < ? AND status = 'responded'
+         FROM csat_surveys WHERE created_at >= $1 AND created_at < $2 AND status = 'responded'
          AND comment IS NOT NULL AND comment != ''
          ORDER BY responded_at DESC LIMIT 10"
     )
@@ -946,7 +966,7 @@ pub async fn generate_snapshot(
     sqlx::query(
         "INSERT INTO csat_snapshots (id, window_start, window_end, total_surveys_sent, total_responses,
          response_rate, average_score, csat_percentage, score_distribution, by_channel, top_comments)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"
     )
     .bind(&id)
     .bind(&window_start)
