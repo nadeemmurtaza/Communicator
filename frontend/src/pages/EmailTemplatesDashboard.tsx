@@ -479,7 +479,7 @@ export function EmailTemplatesDashboard() {
               </div>
               <div>
                 <div className="font-medium text-[var(--color-ink)] mb-1">2. Create Templates</div>
-                <p>Design email templates with variable placeholders like <code className="bg-[var(--color-page-secondary)] px-1 rounded">{{{name}}}</code> for personalization.</p>
+                <p>Design email templates with variable placeholders like <code className="bg-[var(--color-page-secondary)] px-1 rounded">{'{{name}}'}</code> for personalization.</p>
               </div>
               <div>
                 <div className="font-medium text-[var(--color-ink)] mb-1">3. Send & Monitor</div>
@@ -717,7 +717,7 @@ export function EmailTemplatesDashboard() {
                       {tpl.variables && tpl.variables.length > 0 && (
                         <div className="flex gap-1 mt-1 flex-wrap">
                           {tpl.variables.map((v: string, i: number) => (
-                            <span key={i} className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-mono">{{{v}}}</span>
+                            <span key={i} className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-mono">{`{{${v}}}`}</span>
                           ))}
                         </div>
                       )}

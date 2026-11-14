@@ -7,7 +7,7 @@ import {
   updateCRMConnection,
   deleteCRMConnection,
   triggerCRMSync,
-  listSyncLogs,
+  listCRMSyncLogs,
   listFieldMappings,
 } from '../lib/api'
 import type { CRMConnection, CRMSyncLog, CRMFieldMapping, CRMProviderInfo, CRMSyncSummary } from '../lib/api'
@@ -56,7 +56,7 @@ export default function CRMSyncDashboard() {
       const [sum, conns, logsData, maps, provs] = await Promise.all([
         getCRMSyncSummary(),
         listCRMConnections(),
-        listSyncLogs(undefined, 20),
+        listCRMSyncLogs(undefined, 20),
         listFieldMappings(),
         getCRMProviders(),
       ])

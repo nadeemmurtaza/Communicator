@@ -3,7 +3,7 @@ import {
   getKBImportSummary, uploadDocument, listDocuments, deleteDocument,
   addURLSource, crawlURL, listURLSources, deleteURLSource,
   getKBImportSettings, updateKBImportSettings,
-  KBDocument, KBURLSource, KBImportSettings, KBImportSummary
+  type KBDocument, type KBURLSource, type KBImportSettings, type KBImportSummary
 } from '../lib/api'
 import { FileText, Globe, Settings, Upload, Trash2, Play, Plus, Search, AlertCircle, CheckCircle, Clock } from '../components/icons'
 

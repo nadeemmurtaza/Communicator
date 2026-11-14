@@ -5,9 +5,9 @@ import {
   updateReplyIntegrationSettings,
   buildReplyContext,
   getKnowledgeSources,
-  ReplyIntegrationSummary,
-  ReplyIntegrationSettings,
-  ReplyContextPackage,
+  type ReplyIntegrationSummary,
+  type ReplyIntegrationSettings,
+  type ReplyContextPackage,
 } from '../lib/api'
 import {
   Database,

@@ -4,9 +4,9 @@ import {
   listShippingZones,
   createShippingZone,
   deleteShippingZone,
-  listShippingMethods,
-  createShippingMethod,
-  deleteShippingMethod,
+  listErpShippingMethods,
+  createErpShippingMethod,
+  deleteErpShippingMethod,
   listShippingRates,
   deleteShippingRate,
   listReturnReasons,
@@ -89,7 +89,7 @@ export default function FulfillmentDashboard() {
     try {
       const [z, m, r] = await Promise.all([
         listShippingZones(false),
-        listShippingMethods(false),
+        listErpShippingMethods(false),
         listShippingRates(),
       ])
       setZones(z)
@@ -145,7 +145,7 @@ export default function FulfillmentDashboard() {
   async function handleCreateMethod() {
     if (!newMethodKey.trim()) return
     try {
-      await createShippingMethod({ key: newMethodKey.trim() })
+      await createErpShippingMethod({ key: newMethodKey.trim() })
       setNewMethodKey('')
       loadShipping()
     } catch (e) {
@@ -155,7 +155,7 @@ export default function FulfillmentDashboard() {
 
   async function handleDeleteMethod(id: string) {
     try {
-      await deleteShippingMethod(id)
+      await deleteErpShippingMethod(id)
       loadShipping()
     } catch (e) {
       console.error('Failed to delete method:', e)

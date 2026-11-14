@@ -1,3 +1,4 @@
+import { Suspense, lazy } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { ProtectedRoute } from './components/ProtectedRoute'
@@ -75,7 +76,9 @@ import { HelpCenterDashboard } from './pages/HelpCenterDashboard'
 import CRMSyncDashboard from './pages/CRMSyncDashboard'
 import FinVisionDashboard from './pages/FinVisionDashboard'
 import AudienceKBDashboard from './pages/AudienceKBDashboard'
-import { BrandOverridesDashboard } from './pages/BrandOverridesDashboard'
+const BrandOverridesDashboard = lazy(() =>
+  import('./pages/BrandOverridesDashboard').then((m) => ({ default: m.BrandOverridesDashboard }))
+)
 import MCPDashboard from './pages/MCPDashboard'
 import AutonomousResolutionDashboard from './pages/AutonomousResolutionDashboard'
 import KBImportDashboard from './pages/KBImportDashboard'
@@ -87,7 +90,9 @@ import TranslationDashboard from './pages/TranslationDashboard'
 import EmbedWidgetDashboard from './pages/EmbedWidgetDashboard'
 import { UnifiedAnalyticsDashboard } from './pages/UnifiedAnalyticsDashboard'
 import ReplyIntegrationDashboard from './pages/ReplyIntegrationDashboard'
-import { ABTestingDashboard } from './pages/ABTestingDashboard'
+const ABTestingDashboard = lazy(() =>
+  import('./pages/ABTestingDashboard').then((m) => ({ default: m.ABTestingDashboard }))
+)
 import FulfillmentDashboard from './pages/FulfillmentDashboard'
 import ScheduledTasksDashboard from './pages/ScheduledTasksDashboard'
 import ComplianceDashboard from './pages/ComplianceDashboard'
@@ -103,6 +108,7 @@ import { OrganizationDashboard } from './pages/OrganizationDashboard'
 
 function App() {
   return (
+    <Suspense fallback={null}>
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/auth/nid/callback" element={<NidCallback />} />
@@ -254,6 +260,7 @@ function App() {
         <Route path="/business-profile" element={<Navigate to="/workspace/brand/profile" replace />} />
       </Route>
     </Routes>
+    </Suspense>
   )
 }
 

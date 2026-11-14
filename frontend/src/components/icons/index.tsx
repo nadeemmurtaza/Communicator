@@ -37,8 +37,8 @@ import { createElement, type ReactElement, type SVGProps } from 'react'
 import { BRAND_GLYPHS } from './brand-marks'
 import { CHANNEL_GLYPHS, DUOTONE_ICONS, type DuotoneGlyph, type DuotoneNode } from './duotone-icons'
 // Icons not in the duotone set — re-exported directly from lucide-react
-import { ArrowRightLeft, Ban, BarChart, Bell, CheckCircle, Cpu, Database, Eye, EyeOff, Gauge, ListTodo, Minus, TrendingDown, Video, Warehouse } from 'lucide-react'
-export { ArrowRightLeft, Ban, BarChart, Bell, CheckCircle, Cpu, Database, Eye, EyeOff, Gauge, ListTodo, Minus, TrendingDown, Video, Warehouse }
+import { ArrowLeftRight, ArrowRightLeft, Ban, BarChart, Bell, CheckCircle, Cpu, Database, Eye, EyeOff, Filter, Gauge, Layout, ListTodo, Minus, PauseCircle, Plug, Scale, Store, ThumbsDown, ToggleRight, TrendingDown, UserCheck, Video, Volume2, Warehouse } from 'lucide-react'
+export { ArrowLeftRight, ArrowRightLeft, Ban, BarChart, Bell, CheckCircle, Cpu, Database, Eye, EyeOff, Filter, Gauge, Layout, ListTodo, Minus, PauseCircle, Plug, Scale, Store, ThumbsDown, ToggleRight, TrendingDown, UserCheck, Video, Volume2, Warehouse }
 
 /**
  * Not exported on purpose: a module whose only extra export is a type still
@@ -152,6 +152,8 @@ export const Loader2 = (props: IconProps) => <Glyph glyph={DUOTONE_ICONS.Loader2
 export const Lock = (props: IconProps) => <Glyph glyph={DUOTONE_ICONS.Lock} {...props} />
 export const Mail = (props: IconProps) => <Glyph glyph={DUOTONE_ICONS.Mail} {...props} />
 export const MapPin = (props: IconProps) => <Glyph glyph={DUOTONE_ICONS.MapPin} {...props} />
+// No dedicated "pin a saved item" glyph was ever generated; reuse MapPin as a stand-in.
+export const Pin = MapPin
 export const Megaphone = (props: IconProps) => <Glyph glyph={DUOTONE_ICONS.Megaphone} {...props} />
 export const MessageCircle = (props: IconProps) => <Glyph glyph={DUOTONE_ICONS.MessageCircle} {...props} />
 export const MessageSquare = (props: IconProps) => <Glyph glyph={DUOTONE_ICONS.MessageSquare} {...props} />

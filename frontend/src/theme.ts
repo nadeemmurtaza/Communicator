@@ -6,9 +6,7 @@
  * rendered values; this file is the typed source of truth for programmatic
  * consumers (charts, dynamic theming).
  */
-import type { BrandTheme } from '@nadeemmurtaza/design-system';
-
-export const THEME: BrandTheme = {
+export const THEME = {
   colors: {
     neutral: {
       50: '#faf9f6',

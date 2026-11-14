@@ -47,7 +47,7 @@ interface ConnectionHealth {
   last_error: string
 }
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8080'
+const API_BASE = ''
 
 export function TenantDashboard() {
   const navigate = useNavigate()

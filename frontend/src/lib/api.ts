@@ -6777,7 +6777,7 @@ export async function triggerCRMSync(id: string, direction: string, objectType: 
   })
 }
 
-export async function listSyncLogs(connectionId?: string, limit = 50) {
+export async function listCRMSyncLogs(connectionId?: string, limit = 50) {
   const params = new URLSearchParams()
   if (connectionId) params.set('connection_id', connectionId)
   params.set('limit', String(limit))
@@ -10096,11 +10096,11 @@ export async function deleteShippingZone(id: string): Promise<void> {
   return request<void>(`/erp/fulfilment/shipping-zones/${id}`, { method: 'DELETE' })
 }
 
-export async function listShippingMethods(activeOnly = true): Promise<ErpShippingMethod[]> {
+export async function listErpShippingMethods(activeOnly = true): Promise<ErpShippingMethod[]> {
   return request<ErpShippingMethod[]>(`/erp/fulfilment/shipping-methods?activeOnly=${activeOnly}`)
 }
 
-export async function createShippingMethod(body: { key: string; courier_key?: string; eta_min_days?: number; eta_max_days?: number }): Promise<ErpShippingMethod> {
+export async function createErpShippingMethod(body: { key: string; courier_key?: string; eta_min_days?: number; eta_max_days?: number }): Promise<ErpShippingMethod> {
   return request<ErpShippingMethod>('/erp/fulfilment/shipping-methods', { method: 'POST', body: JSON.stringify(body) })
 }
 
@@ -10112,7 +10112,7 @@ export async function updateShippingMethod(id: string, body: Record<string, unkn
   return request<ErpShippingMethod>(`/erp/fulfilment/shipping-methods/${id}`, { method: 'PUT', body: JSON.stringify(body) })
 }
 
-export async function deleteShippingMethod(id: string): Promise<void> {
+export async function deleteErpShippingMethod(id: string): Promise<void> {
   return request<void>(`/erp/fulfilment/shipping-methods/${id}`, { method: 'DELETE' })
 }
 
@@ -11344,4 +11344,34 @@ export async function previewHtmlForChannels(
     body: JSON.stringify({ html, bodyText, channels }),
   })
   return res.formats
+}
+
+// --- Translation ---
+
+export async function getTranslationLanguages() {
+  return request<any>('/translation/languages')
+}
+
+export async function getTranslationSettings() {
+  return request<any>('/translation/settings')
+}
+
+export async function updateTranslationSettings(body: Record<string, unknown>) {
+  return request<any>('/translation/settings', { method: 'PUT', body: JSON.stringify(body) })
+}
+
+export async function detectLanguage(text: string) {
+  return request<any>('/translation/detect', { method: 'POST', body: JSON.stringify({ text }) })
+}
+
+export async function translateMessage(messageId: string, targetLanguage?: string) {
+  const qs = targetLanguage ? `?target_language=${encodeURIComponent(targetLanguage)}` : ''
+  return request<any>(`/translation/messages/${messageId}/translate${qs}`, { method: 'POST' })
+}
+
+export async function prepareOutboundTranslation(conversationId: string, text: string, targetLanguage?: string) {
+  return request<any>(`/translation/conversations/${conversationId}/prepare-outbound`, {
+    method: 'POST',
+    body: JSON.stringify({ text, target_language: targetLanguage }),
+  })
 }
