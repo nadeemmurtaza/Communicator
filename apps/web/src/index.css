@@ -1,12 +1,13 @@
 /* NEWAX ecosystem design tokens -- the one place colour, typography,
  * spacing, layout, radius, elevation and motion live across every
- * NEWAX repo. See src/styles/newax-tokens.css for the canonical file
- * and the compatibility notes. Every component reads these custom
- * properties (or the Tailwind utilities layered on top below) instead
- * of a literal value, so a rebrand or a theme change is an edit there,
- * not a hunt through every page.
+ * NEWAX repo. See packages/design-tokens/tokens.css (package
+ * @newax/design-tokens) for the canonical file and the compatibility
+ * notes -- the identical package nID consumes the same way. Every
+ * component reads these custom properties (or the Tailwind utilities
+ * layered on top below) instead of a literal value, so a rebrand or a
+ * theme change is an edit there, not a hunt through every page.
  */
-@import "./styles/newax-tokens.css";
+@import "@newax/design-tokens/tokens.css";
 @import "tailwindcss";
 @plugin "daisyui" {
   themes: light --default;

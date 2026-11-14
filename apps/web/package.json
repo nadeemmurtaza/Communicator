@@ -1,5 +1,5 @@
 {
-  "name": "frontend",
+  "name": "@communicator/web",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -12,6 +12,7 @@
     "check-contrast": "node scripts/check-contrast.mjs"
   },
   "dependencies": {
+    "@newax/design-tokens": "*",
     "@tailwindcss/vite": "^4.3.3",
     "daisyui": "^5.7.50",
     "lucide-animated": "^1.0.5",

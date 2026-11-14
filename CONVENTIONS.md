@@ -204,10 +204,13 @@ code, and so a deliberate migration (if ever done) has a checklist:
   is schema-*modeling* only (not the Prisma client/ORM we ruled out in
   the tech-stack plan) — rename the directory so that's unambiguous,
   or migrate the models into the Rust/SQLx migration flow. `src/
-  communicator-archive/` and `frontend/shopify-otp-widget/`,
-  `frontend/store-otp-widget/` read as legacy/experimental — if they're
+  communicator-archive/` and `apps/web/shopify-otp-widget/`,
+  `apps/web/store-otp-widget/` read as legacy/experimental — if they're
   not live, they belong under a top-level `archive/`, not mixed into
-  `src/`/`frontend/`.
+  `src/`/`apps/web/`. (The web app itself was renamed from `frontend/`
+  to `apps/web/` and its design tokens moved from a loose file into
+  `packages/design-tokens/` to match §1/§4 and nID's layout exactly —
+  this item is resolved, not open.)
 - **nID**: `apps/api` (TypeScript) and `apps/rust-api` (Rust) both
   exist — under §2's one-name rule, two backends for the same module
   boundary need either a merge or a clearly different module name for
