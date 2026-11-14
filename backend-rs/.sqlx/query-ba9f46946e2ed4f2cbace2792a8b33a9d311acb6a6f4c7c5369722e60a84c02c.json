@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(COUNT(*), 0) AS \"count!\"\n               FROM role_assignments ra\n               JOIN tenant_role_definitions rd ON ra.role_definition_id = rd.id\n               WHERE ra.team_member_id = $1 AND ra.tenant_id = $2\n                 AND (ra.org_id IS NULL OR ra.org_id = $3)\n                 AND (ra.brand_id IS NULL OR ra.brand_id = $4)\n                 AND jsonb_exists(rd.permissions, $5)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Uuid",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ba9f46946e2ed4f2cbace2792a8b33a9d311acb6a6f4c7c5369722e60a84c02c"
+}
