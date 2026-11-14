@@ -260,7 +260,7 @@ pub async fn create_copilot_approval(
             id, conversation_id, contact_id, request_type, status, title,
             proposed_reply, action_data, internal_note, question_to_teammate,
             created_at, updated_at
-        ) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)"#,
+        ) VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, $10, $11)"#,
     )
     .bind(&id)
     .bind(&cid)
@@ -294,7 +294,7 @@ pub async fn create_copilot_approval(
     }
 
     let row = match sqlx::query_as::<_, CopilotApprovalRow>(
-        "SELECT id, conversation_id, contact_id, request_type, status, title, proposed_reply, amended_reply, action_data, internal_note, question_to_teammate, teammate_answer, assigned_to_id, reviewer_name, reviewer_feedback, dispatched_message_id, created_at, updated_at, resolved_at FROM copilot_approvals WHERE id = ?",
+        "SELECT id, conversation_id, contact_id, request_type, status, title, proposed_reply, amended_reply, action_data, internal_note, question_to_teammate, teammate_answer, assigned_to_id, reviewer_name, reviewer_feedback, dispatched_message_id, created_at, updated_at, resolved_at FROM copilot_approvals WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -321,7 +321,7 @@ pub async fn get_copilot_approval(
     Path(id): Path<String>,
 ) -> Response {
     let row = match sqlx::query_as::<_, CopilotApprovalRow>(
-        "SELECT id, conversation_id, contact_id, request_type, status, title, proposed_reply, amended_reply, action_data, internal_note, question_to_teammate, teammate_answer, assigned_to_id, reviewer_name, reviewer_feedback, dispatched_message_id, created_at, updated_at, resolved_at FROM copilot_approvals WHERE id = ?",
+        "SELECT id, conversation_id, contact_id, request_type, status, title, proposed_reply, amended_reply, action_data, internal_note, question_to_teammate, teammate_answer, assigned_to_id, reviewer_name, reviewer_feedback, dispatched_message_id, created_at, updated_at, resolved_at FROM copilot_approvals WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -353,7 +353,7 @@ pub async fn approve_copilot_request(
 
     // Fetch existing approval to get conversation_id & reply
     let existing = match sqlx::query_as::<_, CopilotApprovalRow>(
-        "SELECT id, conversation_id, contact_id, request_type, status, title, proposed_reply, amended_reply, action_data, internal_note, question_to_teammate, teammate_answer, assigned_to_id, reviewer_name, reviewer_feedback, dispatched_message_id, created_at, updated_at, resolved_at FROM copilot_approvals WHERE id = ?",
+        "SELECT id, conversation_id, contact_id, request_type, status, title, proposed_reply, amended_reply, action_data, internal_note, question_to_teammate, teammate_answer, assigned_to_id, reviewer_name, reviewer_feedback, dispatched_message_id, created_at, updated_at, resolved_at FROM copilot_approvals WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -375,7 +375,7 @@ pub async fn approve_copilot_request(
                 // as a sent reply.
                 let inserted = match sqlx::query(
                     r#"INSERT INTO messages (id, conversation_id, sender, body, channel, delivery_status, created_at)
-                       VALUES (?, ?, 'agent', ?, 'chat', 'delivered', ?)"#,
+                       VALUES ($1, $2, 'agent', $3, 'chat', 'delivered', $4)"#,
                 )
                 .bind(&msg_id)
                 .bind(cid)
@@ -407,10 +407,10 @@ pub async fn approve_copilot_request(
 
     let updated_rows = match sqlx::query(
         r#"UPDATE copilot_approvals
-           SET status = 'approved', reviewer_name = ?, amended_reply = COALESCE(?, amended_reply, proposed_reply),
-               dispatched_message_id = COALESCE(?, dispatched_message_id),
-               resolved_at = ?, updated_at = ?
-           WHERE id = ?"#,
+           SET status = 'approved', reviewer_name = $1, amended_reply = COALESCE($2, amended_reply, proposed_reply),
+               dispatched_message_id = COALESCE($3, dispatched_message_id),
+               resolved_at = $4, updated_at = $5
+           WHERE id = $6"#,
     )
     .bind(reviewer)
     .bind(amended)
@@ -434,7 +434,7 @@ pub async fn approve_copilot_request(
     }
 
     let updated = match sqlx::query_as::<_, CopilotApprovalRow>(
-        "SELECT id, conversation_id, contact_id, request_type, status, title, proposed_reply, amended_reply, action_data, internal_note, question_to_teammate, teammate_answer, assigned_to_id, reviewer_name, reviewer_feedback, dispatched_message_id, created_at, updated_at, resolved_at FROM copilot_approvals WHERE id = ?",
+        "SELECT id, conversation_id, contact_id, request_type, status, title, proposed_reply, amended_reply, action_data, internal_note, question_to_teammate, teammate_answer, assigned_to_id, reviewer_name, reviewer_feedback, dispatched_message_id, created_at, updated_at, resolved_at FROM copilot_approvals WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -467,9 +467,9 @@ pub async fn reject_copilot_request(
 
     let updated_rows = match sqlx::query(
         r#"UPDATE copilot_approvals
-           SET status = 'rejected', reviewer_name = ?, reviewer_feedback = ?,
-               resolved_at = ?, updated_at = ?
-           WHERE id = ?"#,
+           SET status = 'rejected', reviewer_name = $1, reviewer_feedback = $2,
+               resolved_at = $3, updated_at = $4
+           WHERE id = $5"#,
     )
     .bind(reviewer)
     .bind(feedback)
@@ -492,7 +492,7 @@ pub async fn reject_copilot_request(
     }
 
     let updated = match sqlx::query_as::<_, CopilotApprovalRow>(
-        "SELECT id, conversation_id, contact_id, request_type, status, title, proposed_reply, amended_reply, action_data, internal_note, question_to_teammate, teammate_answer, assigned_to_id, reviewer_name, reviewer_feedback, dispatched_message_id, created_at, updated_at, resolved_at FROM copilot_approvals WHERE id = ?",
+        "SELECT id, conversation_id, contact_id, request_type, status, title, proposed_reply, amended_reply, action_data, internal_note, question_to_teammate, teammate_answer, assigned_to_id, reviewer_name, reviewer_feedback, dispatched_message_id, created_at, updated_at, resolved_at FROM copilot_approvals WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -524,7 +524,7 @@ pub async fn provide_copilot_info(
     let now = Utc::now().to_rfc3339();
 
     let updated_rows = match sqlx::query(
-        "UPDATE copilot_approvals SET teammate_answer = ?, reviewer_name = ?, updated_at = ? WHERE id = ?",
+        "UPDATE copilot_approvals SET teammate_answer = $1, reviewer_name = $2, updated_at = $3 WHERE id = $4",
     )
     .bind(answer)
     .bind(reviewer)
@@ -546,7 +546,7 @@ pub async fn provide_copilot_info(
     }
 
     let updated = match sqlx::query_as::<_, CopilotApprovalRow>(
-        "SELECT id, conversation_id, contact_id, request_type, status, title, proposed_reply, amended_reply, action_data, internal_note, question_to_teammate, teammate_answer, assigned_to_id, reviewer_name, reviewer_feedback, dispatched_message_id, created_at, updated_at, resolved_at FROM copilot_approvals WHERE id = ?",
+        "SELECT id, conversation_id, contact_id, request_type, status, title, proposed_reply, amended_reply, action_data, internal_note, question_to_teammate, teammate_answer, assigned_to_id, reviewer_name, reviewer_feedback, dispatched_message_id, created_at, updated_at, resolved_at FROM copilot_approvals WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -600,7 +600,7 @@ pub async fn evaluate_copilot_trigger(
             r#"INSERT INTO copilot_approvals (
                 id, conversation_id, request_type, status, title,
                 proposed_reply, internal_note, created_at, updated_at
-            ) VALUES (?, ?, 'escalation', 'pending', ?, ?, ?, ?, ?)"#,
+            ) VALUES ($1, $2, 'escalation', 'pending', $3, $4, $5, $6, $7)"#,
         )
         .bind(&approval_id)
         .bind(&cid)
@@ -630,7 +630,7 @@ pub async fn evaluate_copilot_trigger(
         }
 
         let row = match sqlx::query_as::<_, CopilotApprovalRow>(
-            "SELECT id, conversation_id, contact_id, request_type, status, title, proposed_reply, amended_reply, action_data, internal_note, question_to_teammate, teammate_answer, assigned_to_id, reviewer_name, reviewer_feedback, dispatched_message_id, created_at, updated_at, resolved_at FROM copilot_approvals WHERE id = ?",
+            "SELECT id, conversation_id, contact_id, request_type, status, title, proposed_reply, amended_reply, action_data, internal_note, question_to_teammate, teammate_answer, assigned_to_id, reviewer_name, reviewer_feedback, dispatched_message_id, created_at, updated_at, resolved_at FROM copilot_approvals WHERE id = $1",
         )
         .bind(&approval_id)
         .fetch_optional(&state.db)
@@ -776,7 +776,7 @@ pub async fn create_agent_policy(
         r#"INSERT INTO agent_policies (
             id, name, category, description, version, status,
             process_steps, rules, guardrails, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"#,
     )
     .bind(&id)
     .bind(&name)
@@ -809,7 +809,7 @@ pub async fn create_agent_policy(
     }
 
     let row = match sqlx::query_as::<_, AgentPolicyRow>(
-        "SELECT id, name, category, description, version, status, process_steps, rules, guardrails, created_at, updated_at FROM agent_policies WHERE id = ?",
+        "SELECT id, name, category, description, version, status, process_steps, rules, guardrails, created_at, updated_at FROM agent_policies WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -947,7 +947,7 @@ async fn evaluate_scenario_internal(
     }
 
     let scen = sqlx::query_as::<_, FullScenarioRow>(
-        "SELECT id, name, description, category, policy_id, customer_persona, expected_outcome, customer_messages FROM simulation_scenarios WHERE id = ?",
+        "SELECT id, name, description, category, policy_id, customer_persona, expected_outcome, customer_messages FROM simulation_scenarios WHERE id = $1",
     )
     .bind(scenario_id)
     .fetch_optional(db)
@@ -960,7 +960,7 @@ async fn evaluate_scenario_internal(
 
     let policy_row = if let Some(pid) = target_policy_id {
         sqlx::query_as::<_, AgentPolicyRow>(
-            "SELECT id, name, category, description, version, status, process_steps, rules, guardrails, created_at, updated_at FROM agent_policies WHERE id = ?",
+            "SELECT id, name, category, description, version, status, process_steps, rules, guardrails, created_at, updated_at FROM agent_policies WHERE id = $1",
         )
         .bind(pid)
         .fetch_optional(db)
@@ -968,7 +968,7 @@ async fn evaluate_scenario_internal(
         .map_err(|e| format!("the matched agent policy could not be read: {e}"))?
     } else {
         sqlx::query_as::<_, AgentPolicyRow>(
-            "SELECT id, name, category, description, version, status, process_steps, rules, guardrails, created_at, updated_at FROM agent_policies WHERE category = ? LIMIT 1",
+            "SELECT id, name, category, description, version, status, process_steps, rules, guardrails, created_at, updated_at FROM agent_policies WHERE category = $1 LIMIT 1",
         )
         .bind(&cat)
         .fetch_optional(db)
@@ -1163,7 +1163,7 @@ async fn evaluate_scenario_internal(
             id, scenario_id, policy_id, status, verdict,
             policy_adherence_score, empathy_score, accuracy_score, overall_score,
             turn_count, transcript, evaluation_summary, recommendations, created_at
-        ) VALUES (?, ?, ?, 'completed', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
+        ) VALUES ($1, $2, $3, 'completed', $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"#,
     )
     .bind(&run_id)
     .bind(scenario_id)
@@ -1375,14 +1375,14 @@ pub async fn sandbox_chat(
 
     let policy_row = if let Some(pid) = policy_id {
         sqlx::query_as::<_, AgentPolicyRow>(
-            "SELECT id, name, category, description, version, status, process_steps, rules, guardrails, created_at, updated_at FROM agent_policies WHERE id = ?",
+            "SELECT id, name, category, description, version, status, process_steps, rules, guardrails, created_at, updated_at FROM agent_policies WHERE id = $1",
         )
         .bind(pid)
         .fetch_optional(&state.db)
         .await
     } else {
         sqlx::query_as::<_, AgentPolicyRow>(
-            "SELECT id, name, category, description, version, status, process_steps, rules, guardrails, created_at, updated_at FROM agent_policies WHERE category = ? LIMIT 1",
+            "SELECT id, name, category, description, version, status, process_steps, rules, guardrails, created_at, updated_at FROM agent_policies WHERE category = $1 LIMIT 1",
         )
         .bind(detected_category)
         .fetch_optional(&state.db)
@@ -1682,7 +1682,7 @@ pub async fn apply_insight_retraining(
 
     // Fetch the insight
     let insight = match sqlx::query_as::<_, InsightRow>(
-        "SELECT id, title, category, description, human_rep_id, human_rep_name, exemplar_content, impact_score, estimated_resolution_lift, suggested_action, action_payload, status, applied_at, created_at FROM agent_insights WHERE id = ?",
+        "SELECT id, title, category, description, human_rep_id, human_rep_name, exemplar_content, impact_score, estimated_resolution_lift, suggested_action, action_payload, status, applied_at, created_at FROM agent_insights WHERE id = $1",
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -1709,7 +1709,7 @@ pub async fn apply_insight_retraining(
         .and_then(|s| s.parse::<f64>().ok());
     let title = format!("Retraining Cycle: {}", insight.title);
 
-    let marked = match sqlx::query("UPDATE agent_insights SET status = 'applied', applied_at = ?, updated_at = ? WHERE id = ?")
+    let marked = match sqlx::query("UPDATE agent_insights SET status = 'applied', applied_at = $1, updated_at = $2 WHERE id = $3")
         .bind(&now)
         .bind(&now)
         .bind(&id)
@@ -1758,7 +1758,7 @@ pub async fn apply_insight_retraining(
             id, title, trigger_type, version_from, version_to, insight_id,
             changes_applied, status, baseline_resolution_rate, post_training_resolution_rate,
             resolution_lift, created_at
-        ) VALUES (?, ?, 'insight_retrain', ?, ?, ?, ?, 'applied', ?, ?, ?, ?)"#,
+        ) VALUES ($1, $2, 'insight_retrain', $3, $4, $5, $6, 'applied', $7, $8, $9, $10)"#,
     )
     .bind(&event_id)
     .bind(&title)
@@ -1810,7 +1810,7 @@ pub async fn dismiss_insight(
     Path(id): Path<String>,
 ) -> Response {
     let now = Utc::now().to_rfc3339();
-    let dismissed = match sqlx::query("UPDATE agent_insights SET status = 'dismissed', updated_at = ? WHERE id = ?")
+    let dismissed = match sqlx::query("UPDATE agent_insights SET status = 'dismissed', updated_at = $1 WHERE id = $2")
         .bind(&now)
         .bind(&id)
         .execute(&state.db)
@@ -2494,7 +2494,7 @@ pub async fn create_ai_connection(
             id, name, provider, model_id, api_key, base_url, temperature,
             max_tokens, is_active, assigned_jobs, test_status, latency_ms,
             last_tested_at, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'untested', NULL, NULL, ?, ?)"#,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'untested', NULL, NULL, $11, $12)"#,
     )
     .bind(&id)
     .bind(&name)
@@ -2535,7 +2535,7 @@ pub async fn create_ai_connection(
     }
 
     let row = match sqlx::query_as::<_, AIConnectionRow>(&format!(
-        "SELECT {AI_CONN_COLS} FROM ai_connections WHERE id = ?",
+        "SELECT {AI_CONN_COLS} FROM ai_connections WHERE id = $1",
     ))
     .bind(&id)
     .fetch_optional(&state.db)
@@ -2590,7 +2590,7 @@ pub async fn test_ai_connection(
     // A read failure is not a missing row: reporting 404 here would tell the
     // operator to create a connection that already exists.
     let row = match sqlx::query_as::<_, AIConnectionRow>(&format!(
-        "SELECT {AI_CONN_COLS} FROM ai_connections WHERE id = ?",
+        "SELECT {AI_CONN_COLS} FROM ai_connections WHERE id = $1",
     ))
     .bind(&id)
     .fetch_optional(&state.db)
@@ -2658,7 +2658,7 @@ pub async fn test_ai_connection(
         // failure is logged and reported as a flag rather than replacing the 503.
         let status_stored = crate::db::report_write(
             sqlx::query(
-                "UPDATE ai_connections SET test_status = 'failed', latency_ms = NULL, last_tested_at = ?, updated_at = ? WHERE id = ?",
+                "UPDATE ai_connections SET test_status = 'failed', latency_ms = NULL, last_tested_at = $1, updated_at = $2 WHERE id = $3",
             )
             .bind(&now)
             .bind(&now)
@@ -2709,7 +2709,7 @@ pub async fn test_ai_connection(
             // failed status write is logged and flagged, not returned as an error.
             let status_stored = crate::db::report_write(
                 sqlx::query(
-                    "UPDATE ai_connections SET test_status = 'connected', latency_ms = ?, last_tested_at = ?, updated_at = ? WHERE id = ?",
+                    "UPDATE ai_connections SET test_status = 'connected', latency_ms = $1, last_tested_at = $2, updated_at = $3 WHERE id = $4",
                 )
                 .bind(latency_i)
                 .bind(&now)
@@ -2753,7 +2753,7 @@ pub async fn test_ai_connection(
             let (status, body) = e.to_json();
             let status_stored = crate::db::report_write(
                 sqlx::query(
-                    "UPDATE ai_connections SET test_status = 'failed', latency_ms = NULL, last_tested_at = ?, updated_at = ? WHERE id = ?",
+                    "UPDATE ai_connections SET test_status = 'failed', latency_ms = NULL, last_tested_at = $1, updated_at = $2 WHERE id = $3",
                 )
                 .bind(&now)
                 .bind(&now)
@@ -2790,7 +2790,7 @@ pub async fn delete_ai_connection(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Response {
-    let res = sqlx::query("DELETE FROM ai_connections WHERE id = ?")
+    let res = sqlx::query("DELETE FROM ai_connections WHERE id = $1")
         .bind(&id)
         .execute(&state.db)
         .await;
@@ -2896,7 +2896,7 @@ pub async fn assign_model_to_job(
     }
 
     let target = match sqlx::query_as::<_, AIConnectionRow>(&format!(
-        "SELECT {AI_CONN_COLS} FROM ai_connections WHERE id = ?",
+        "SELECT {AI_CONN_COLS} FROM ai_connections WHERE id = $1",
     ))
     .bind(conn_id.as_str())
     .fetch_optional(&state.db)
@@ -2922,7 +2922,7 @@ pub async fn assign_model_to_job(
         jobs.push(job.clone());
     }
     let jobs_str = serde_json::to_string(&jobs).unwrap_or_else(|_| "[]".to_string());
-    let upd = sqlx::query("UPDATE ai_connections SET assigned_jobs = ?, updated_at = ? WHERE id = ?")
+    let upd = sqlx::query("UPDATE ai_connections SET assigned_jobs = $1, updated_at = $2 WHERE id = $3")
         .bind(&jobs_str)
         .bind(&now)
         .bind(c.id.as_str())
@@ -3034,7 +3034,7 @@ pub async fn get_custom_policy(
     Path(job_type): Path<String>,
 ) -> Response {
     let row = match sqlx::query_as::<_, CustomPolicyRow>(
-        "SELECT id, job_type, tone, guidelines, rules, guardrails, auto_approval_mode, min_csat_learning_threshold, max_autonomous_refund, created_at, updated_at FROM ai_custom_policies WHERE job_type = ?",
+        "SELECT id, job_type, tone, guidelines, rules, guardrails, auto_approval_mode, min_csat_learning_threshold, max_autonomous_refund, created_at, updated_at FROM ai_custom_policies WHERE job_type = $1",
     )
     .bind(&job_type)
     .fetch_optional(&state.db)
@@ -3067,7 +3067,7 @@ pub async fn get_custom_policy(
                     id, job_type, tone, guidelines, rules, guardrails,
                     auto_approval_mode, min_csat_learning_threshold, max_autonomous_refund,
                     created_at, updated_at
-                ) VALUES (?, ?, 'empathetic_and_direct', ?, ?, ?, 'review_required', '4.5', '50.0', ?, ?)"#,
+                ) VALUES ($1, $2, 'empathetic_and_direct', $3, $4, $5, 'review_required', '4.5', '50.0', $6, $7)"#,
             )
             .bind(&id)
             .bind(&job_type)
@@ -3140,7 +3140,7 @@ pub async fn update_custom_policy(
             id, job_type, tone, guidelines, rules, guardrails,
             auto_approval_mode, min_csat_learning_threshold, max_autonomous_refund,
             created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         ON CONFLICT(job_type) DO UPDATE SET
             tone = excluded.tone,
             guidelines = excluded.guidelines,
@@ -3183,7 +3183,7 @@ pub async fn update_custom_policy(
     }
 
     let row = match sqlx::query_as::<_, CustomPolicyRow>(
-        "SELECT id, job_type, tone, guidelines, rules, guardrails, auto_approval_mode, min_csat_learning_threshold, max_autonomous_refund, created_at, updated_at FROM ai_custom_policies WHERE job_type = ?",
+        "SELECT id, job_type, tone, guidelines, rules, guardrails, auto_approval_mode, min_csat_learning_threshold, max_autonomous_refund, created_at, updated_at FROM ai_custom_policies WHERE job_type = $1",
     )
     .bind(&job_type)
     .fetch_optional(&state.db)
@@ -3212,7 +3212,7 @@ pub async fn get_effective_prompt(
     // A read failure must not be reported as "this job type has no stored
     // policy", because the fallback prompt below is a real answer either way.
     let row = match sqlx::query_as::<_, CustomPolicyRow>(
-        "SELECT id, job_type, tone, guidelines, rules, guardrails, auto_approval_mode, min_csat_learning_threshold, max_autonomous_refund, created_at, updated_at FROM ai_custom_policies WHERE job_type = ?",
+        "SELECT id, job_type, tone, guidelines, rules, guardrails, auto_approval_mode, min_csat_learning_threshold, max_autonomous_refund, created_at, updated_at FROM ai_custom_policies WHERE job_type = $1",
     )
     .bind(&job_type)
     .fetch_optional(&state.db)
@@ -3301,7 +3301,7 @@ struct ConvHead {
 
 async fn load_conversation(state: &AppState, id: &str) -> Option<ConvHead> {
     sqlx::query_as::<_, ConvHead>(
-        "SELECT id, state, channel, assigned_to_id, assigned_to_name, human_takeover, team_id, language FROM conversations WHERE id = ? LIMIT 1",
+        "SELECT id, state, channel, assigned_to_id, assigned_to_name, human_takeover, team_id, language FROM conversations WHERE id = $1 LIMIT 1",
     )
     .bind(id)
     .fetch_optional(&state.db)
@@ -3312,7 +3312,7 @@ async fn load_conversation(state: &AppState, id: &str) -> Option<ConvHead> {
 
 async fn thread_messages(state: &AppState, conversation_id: &str, limit: i64) -> Vec<ThreadMessage> {
     let mut rows = sqlx::query_as::<_, ThreadMessage>(
-        "SELECT id, body, sender, sender_type, direction FROM messages WHERE conversation_id = ? ORDER BY created_at DESC LIMIT ?",
+        "SELECT id, body, sender, sender_type, direction FROM messages WHERE conversation_id = $1 ORDER BY created_at DESC LIMIT $2",
     )
     .bind(conversation_id)
     .bind(limit)
@@ -3897,7 +3897,7 @@ pub async fn triage_conversation(
     if let Some(obj) = triage.get("suggestedTeam").and_then(|v| v.as_str()) {
         let probe = obj.to_string();
         let row: Option<(String, String)> = sqlx::query_as(
-            "SELECT id, name FROM teams WHERE LOWER(name) = LOWER(?) LIMIT 1",
+            "SELECT id, name FROM teams WHERE LOWER(name) = LOWER($1) LIMIT 1",
         )
         .bind(&probe)
         .fetch_optional(&state.db)
@@ -3935,7 +3935,7 @@ pub async fn triage_conversation(
                 let res = match suggested_team.as_ref() {
                     Some((tid, _)) => {
                         sqlx::query(
-                            "UPDATE conversations SET priority = ?, team_id = ?, updated_at = ? WHERE id = ?",
+                            "UPDATE conversations SET priority = $1, team_id = $2, updated_at = $3 WHERE id = $4",
                         )
                         .bind(priority_value)
                         .bind(tid.clone())
@@ -3945,7 +3945,7 @@ pub async fn triage_conversation(
                         .await
                     }
                     None => {
-                        sqlx::query("UPDATE conversations SET priority = ?, updated_at = ? WHERE id = ?")
+                        sqlx::query("UPDATE conversations SET priority = $1, updated_at = $2 WHERE id = $3")
                             .bind(priority_value)
                             .bind(&now)
                             .bind(&id)
@@ -4024,9 +4024,11 @@ async fn monitor_counts(state: &AppState, keywords: &[String], window_hours: i64
     let since_naive = since.naive_utc().format("%Y-%m-%d %H:%M:%S").to_string();
 
     let mut sql = String::from(
-        "SELECT COUNT(*) AS hits, COUNT(DISTINCT conversation_id) AS convs FROM messages WHERE (created_at >= ? OR created_at >= ?) AND (",
+        "SELECT COUNT(*) AS hits, COUNT(DISTINCT conversation_id) AS convs FROM messages WHERE (created_at >= $1 OR created_at >= $2) AND (",
     );
-    let conds: Vec<String> = keywords.iter().map(|_| "LOWER(body) LIKE ?".to_string()).collect();
+    let conds: Vec<String> = (0..keywords.len())
+        .map(|i| format!("LOWER(body) LIKE ${}", i + 3))
+        .collect();
     sql.push_str(&conds.join(" OR "));
     sql.push(')');
 
@@ -4045,9 +4047,11 @@ async fn sample_quote(state: &AppState, keywords: &[String], window_hours: i64) 
     let since_naive = since.naive_utc().format("%Y-%m-%d %H:%M:%S").to_string();
 
     let mut sql = String::from(
-        "SELECT body FROM messages WHERE (created_at >= ? OR created_at >= ?) AND (",
+        "SELECT body FROM messages WHERE (created_at >= $1 OR created_at >= $2) AND (",
     );
-    let conds: Vec<String> = keywords.iter().map(|_| "LOWER(body) LIKE ?".to_string()).collect();
+    let conds: Vec<String> = (0..keywords.len())
+        .map(|i| format!("LOWER(body) LIKE ${}", i + 3))
+        .collect();
     sql.push_str(&conds.join(" OR "));
     sql.push_str(") AND is_private = 0 ORDER BY created_at DESC LIMIT 1");
 
@@ -4090,7 +4094,7 @@ async fn sentiment_snapshot(state: &AppState, window_hours: i64) -> Value {
     let now = Utc::now();
     let since = now - chrono::Duration::hours(window_hours);
     let rows: Vec<String> = sqlx::query_scalar::<_, String>(
-        "SELECT body FROM messages WHERE (created_at >= ? OR created_at >= ?) AND sender IN ('customer','user','inbound')",
+        "SELECT body FROM messages WHERE (created_at >= $1 OR created_at >= $2) AND sender IN ('customer','user','inbound')",
     )
     .bind(since.to_rfc3339())
     .bind(since.naive_utc().format("%Y-%m-%d %H:%M:%S").to_string())
@@ -4216,7 +4220,7 @@ pub async fn get_captain_monitors(State(state): State<AppState>) -> Response {
     }
 
     let total_convs: i64 = sqlx::query_scalar(
-        "SELECT COUNT(DISTINCT conversation_id) FROM messages WHERE created_at >= ? OR created_at >= ?",
+        "SELECT COUNT(DISTINCT conversation_id) FROM messages WHERE created_at >= $1 OR created_at >= $2",
     )
     .bind((Utc::now() - chrono::Duration::hours(24)).to_rfc3339())
     .bind((Utc::now() - chrono::Duration::hours(24)).naive_utc().format("%Y-%m-%d %H:%M:%S").to_string())
