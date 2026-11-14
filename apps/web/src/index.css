@@ -1,79 +1,43 @@
+/* NEWAX ecosystem design tokens -- the one place colour, typography,
+ * spacing, layout, radius, elevation and motion live across every
+ * NEWAX repo. See packages/design-tokens/tokens.css (package
+ * @newax/design-tokens) for the canonical file and the compatibility
+ * notes -- the identical package nID consumes the same way. Every
+ * component reads these custom properties (or the Tailwind utilities
+ * layered on top below) instead of a literal value, so a rebrand or a
+ * theme change is an edit there, not a hunt through every page.
+ */
+@import "@newax/design-tokens/tokens.css";
 @import "tailwindcss";
 @plugin "daisyui" {
   themes: light --default;
 }
 
-/*
- * NEWAX global design tokens -- the one place colour, radius, elevation,
- * spacing and motion live. Every component reads these custom properties
- * (or the Tailwind utilities layered on top of them below) instead of a
- * literal value, so a rebrand or a theme change is an edit here, not a
- * hunt through every page.
+/* Communicator ships light-only for now (daisyui is only registering
+ * the "light" theme above) -- re-assert the light palette so an OS
+ * dark-mode preference doesn't flip these shared tokens here. nID's
+ * apps consume the same shared file and do want that automatic switch.
  */
-:root {
-  /*
-   * Intercom-inspired design tokens -- warm cream canvas, off-black ink,
-   * Fin Orange accent, sharp 4px geometry. Every product surface reads
-   * these custom properties instead of literal values, so a rebrand is
-   * an edit here, not a hunt through every page.
-   *
-   * Core palette mirrors Intercom's product UI:
-   *   Canvas cream (#faf9f6) -- warm off-white page background
-   *   Off-black (#111111) -- primary text and button backgrounds
-   *   Fin Orange (#ff5600) -- singular brand accent (AI / interactive)
-   *   Hairline (#dedbd6) -- warm oat borders and dividers
-   *   Linen (#f1eee9) -- secondary elevated surfaces
-   *
-   * Report palette for charts and data visualization:
-   *   Report Blue (#65b5ff), Report Green (#0bdf50), Report Red (#c41c1c),
-   *   Report Pink (#ff2067), Report Lime (#b3e01c), Report Orange (#fe4c02)
-   */
-  --color-page: #faf9f6;
-  --color-surface: #ffffff;
-  --color-surface-elevated: #f1eee9;
-  --color-surface-glass: rgb(255 255 255 / 0.72);
-  --color-surface-glass-strong: rgb(255 255 255 / 0.88);
-  --color-border-glass: rgb(255 255 255 / 0.6);
-  --color-border: #dedbd6;
-  --color-ink: #111111;
-  --color-ink-muted: #57534e;
-  --color-ink-faint: #928f88;
-
-  --color-accent: #ff5600;
-  --color-accent-hover: #e64e00;
-  --color-accent-soft: #fff0e6;
-  --color-on-accent: #ffffff;
-  --color-accent-muted: rgba(255, 86, 0, 0.08);
-
-  --color-positive: #0bdf50;
-  --color-negative: #c41c1c;
-
-  /* ---- Shape: Intercom uses sharp 4px radius universally ---- */
-  --radius-sm: 4px;
-  --radius-md: 4px;
-  --radius-lg: 8px;
-  --radius-xl: 12px;
-  --radius-pill: 9999px;
-
-  /* ---- Elevation: minimal shadows, depth through warm borders ---- */
-  --elevation-raised: 0 1px 2px 0 rgb(0 0 0 / 0.04);
-  --elevation-overlay: 0 2px 8px -2px rgb(0 0 0 / 0.06), 0 8px 16px -4px rgb(0 0 0 / 0.08);
-  --elevation-modal: 0 8px 16px -4px rgb(0 0 0 / 0.1), 0 24px 48px -12px rgb(0 0 0 / 0.18);
-
-  /* ---- Stacking layers (named, never a literal z-index in a component) ---- */
-  --layer-sticky: 10;
-  --layer-dropdown: 20;
-  --layer-overlay: 30;
-  --layer-modal: 40;
-  --layer-toast: 50;
-
-  /* ---- Motion: durations (ms) and easings, transform/opacity only ---- */
-  --motion-fast: 140ms;
-  --motion-normal: 220ms;
-  --motion-slow: 320ms;
-  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --ease-decelerate: cubic-bezier(0.22, 0.61, 0.36, 1);
-  --ease-settle: cubic-bezier(0.16, 1, 0.3, 1);
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: light;
+    --color-page: #faf9f6;
+    --color-surface: #ffffff;
+    --color-surface-elevated: #f1eee9;
+    --color-border: #dedbd6;
+    --color-ink: #111111;
+    --color-ink-muted: #57534e;
+    --color-ink-faint: #928f88;
+    --color-accent: #ff5600;
+    --color-accent-hover: #e64e00;
+    --color-accent-soft: #fff0e6;
+    --color-on-accent: #ffffff;
+    --color-positive: #0bdf50;
+    --color-negative: #c41c1c;
+    --elevation-raised: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+    --elevation-overlay: 0 2px 8px -2px rgb(0 0 0 / 0.06), 0 8px 16px -4px rgb(0 0 0 / 0.08);
+    --elevation-modal: 0 8px 16px -4px rgb(0 0 0 / 0.1), 0 24px 48px -12px rgb(0 0 0 / 0.18);
+  }
 }
 
 html {

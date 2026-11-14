@@ -32,6 +32,15 @@ already-merged or already-reviewed work (e.g. the Phase 0-2 foundation
 and the CI/CodeQL/Semgrep/Dependabot/SECURITY.md setup already in
 place) -- those stay as they are.
 
+## Repo Structure & Naming Conventions
+
+See `CONVENTIONS.md` for the ecosystem-wide rules on folder layout,
+module/service naming, file naming, renaming, branches, worktrees,
+commits, and merge strategy — identical across every NEWAX repo. It
+also lists this repo's current gaps against that layout (root-level
+debug logs, `erp-schema/*.prisma`, archive folders mixed into `src/`)
+so they aren't mistaken for the target shape.
+
 ## NEWAX Ecosystem — Technology Stack & Architecture Plan
 
 > Applies to every repo in the ecosystem (nID, Communicator, core-newax,
@@ -103,6 +112,24 @@ via WebAssembly so there is still exactly one logic implementation, not
   platform via `UniFFI` (native) or `wasm-bindgen` (web). This is the
   piece that keeps behavior identical across platforms and keeps the
   footprint small everywhere.
+
+#### Design system (shared global CSS tokens)
+
+Canonical token file: `packages/design-tokens/tokens.css` (package
+`@newax/design-tokens`), imported as `@import
+"@newax/design-tokens/tokens.css";` at the top of
+`apps/web/src/index.css`. This is the exact same package name, file
+name, and folder (`packages/design-tokens/`) as nID — not a local
+file this repo invented independently. Same palette, typography,
+spacing, layout, radius, elevation and motion tokens as every other
+NEWAX repo. Until `core-newax` hosts this as a real shared package
+(the correct long-term home, per this ecosystem's "build once, reuse
+everywhere" rule), the package is duplicated byte-for-byte across
+repos: edit one, copy to the others, never fork the values or let one
+repo's copy drift into a loose file while another's stays a package.
+Components read `--color-*`, `--text-*`, `--space-*`, `--radius-*`,
+`--elevation-*`, `--layer-*`, `--motion-*` — never a literal value.
+
 - **iOS:** Swift/SwiftUI shell, calling the Rust core via UniFFI. ARC,
   no GC pauses, no bridge overhead.
 - **Android:** Kotlin/Jetpack Compose shell, same UniFFI bridge into the
@@ -119,6 +146,29 @@ via WebAssembly so there is still exactly one logic implementation, not
   A single cross-platform Dart/Flutter codebase is the faster-to-ship
   choice and was considered and rejected here specifically because
   runtime efficiency outranks speed-to-market for this project.
+
+#### Package manager: pnpm, everywhere, no exception
+
+Both repos' JS/TS tooling runs on **pnpm workspaces** (`pnpm-workspace.yaml`
+at the repo root, `apps/*` + `packages/*`), not npm. This was a real
+divergence — Communicator used npm, nID used pnpm — and it's resolved
+in pnpm's favor:
+
+- **Lowest RAM/disk, by construction:** pnpm keeps one global
+  content-addressable store and hard-links packages into each
+  `node_modules`, instead of npm's copy-per-project. Less disk churn,
+  less duplicate install garbage across `apps/*`/`packages/*`.
+- **No phantom dependencies:** pnpm's non-flat `node_modules` means
+  code can only import what its own `package.json` actually declares
+  — a correctness property npm's flat hoisting doesn't give you.
+- **Real monorepo primitives:** `workspace:*` protocol, `pnpm -r
+  --filter`, and content-addressable linking are built for exactly
+  the `apps/*` + `packages/*` shape both repos use — npm workspaces
+  support the shape but not the efficiency.
+- Communicator's root `package.json` and `pnpm-workspace.yaml` mirror
+  nID's exactly; `apps/web/package.json` depends on
+  `"@newax/design-tokens": "workspace:*"`, same as nID's apps. Run
+  `pnpm install` at the repo root, not `npm install`.
 
 ### Why this combination and not the obvious alternatives
 
