@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package newax.system_health.v1;
+
+service SystemHealthService {
+  rpc GetSummary(OrgRequest) returns (JsonResponse);
+  rpc GetSteps(Empty) returns (JsonResponse);
+  rpc GetProgress(OrgRequest) returns (JsonResponse);
+  rpc CompleteStep(CompleteStepRequest) returns (JsonResponse);
+  rpc RunHealthCheck(OrgRequest) returns (JsonResponse);
+  rpc GetHealthSummary(OrgRequest) returns (JsonResponse);
+  rpc GetSettings(OrgRequest) returns (JsonResponse);
+  rpc UpdateSettings(UpdateSettingsRequest) returns (JsonResponse);
+}
+
+message Empty {}
+
+message OrgRequest {
+  string organization_id = 1;
+}
+
+message CompleteStepRequest {
+  string organization_id = 1;
+  string step_id = 2;
+  optional string completed_by = 3;
+}
+
+message UpdateSettingsRequest {
+  string organization_id = 1;
+  optional bool show_onboarding = 2;
+  optional bool auto_check = 3;
+  optional int32 health_check_interval_minutes = 4;
+}
+
+// Same pragmatic envelope as kb_documents.proto -- see its comment.
+message JsonResponse {
+  string json = 1;
+}

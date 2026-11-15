@@ -74,7 +74,6 @@ pub mod scheduled_tasks;
 pub mod compliance_dashboard;
 pub mod conversation_search;
 pub use conversation_search::ConversationSearchService;
-pub mod system_health;
 pub mod smtp_email;
 pub mod otp_engine;
 pub mod external_otp_integration;
