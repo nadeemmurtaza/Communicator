@@ -69,3 +69,9 @@ pub mod compliance_dashboard {
         tonic::include_proto!("newax.compliance_dashboard.v1");
     }
 }
+
+pub mod unified_analytics {
+    pub mod v1 {
+        tonic::include_proto!("newax.unified_analytics.v1");
+    }
+}

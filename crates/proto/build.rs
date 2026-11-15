@@ -16,6 +16,7 @@ const PROTOS: &[&str] = &[
     "../../proto/communicator/tone_of_voice/v1/tone_of_voice.proto",
     "../../proto/communicator/ab_testing/v1/ab_testing.proto",
     "../../proto/communicator/compliance_dashboard/v1/compliance_dashboard.proto",
+    "../../proto/communicator/unified_analytics/v1/unified_analytics.proto",
 ];
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
