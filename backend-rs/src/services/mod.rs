@@ -47,7 +47,6 @@ pub mod unified_inbox;
 pub mod workflow_builder;
 pub mod help_center;
 pub mod crm_sync;
-pub mod kb_documents;
 pub mod commerce_options;
 pub use commerce_options::ProductOptionsService;
 pub mod commerce_gaps;

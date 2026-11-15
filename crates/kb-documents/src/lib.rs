@@ -1,24 +1,29 @@
-//! Knowledge Base Document Upload & URL Crawling Service (Phase 23).
+//! Knowledge Base Document Upload & URL Crawling — business logic.
 //!
-//! Handles document uploads (chunked + mirrored into kb_document_chunks),
-//! URL source registration/crawling (mirrored into kb_url_chunks), and
-//! the per-organization import settings that control chunk sizing and
-//! crawl behavior.
+//! Extracted from `backend-rs/src/services/kb_documents.rs` as the pilot
+//! module for CONVENTIONS.md's crates/services split. Only needs a
+//! Postgres pool and an HTTP client (for `crawl_url`'s fetch) — not the
+//! monolith's full `AppState` — which is exactly why it was picked first.
 
-use crate::db::AppState;
 use regex::Regex;
 use serde_json::{json, Value};
-use sqlx::Row;
+use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 const DEFAULT_CHUNK_SIZE: usize = 2000;
 const DEFAULT_CHUNK_OVERLAP: usize = 200;
 
+#[derive(Clone)]
+pub struct KbDocumentsState {
+    pub db: PgPool,
+    pub http_client: reqwest::Client,
+}
+
 // ---------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------
 
-pub async fn get_kb_import_summary(state: &AppState) -> Result<Value, String> {
+pub async fn get_kb_import_summary(state: &KbDocumentsState) -> Result<Value, String> {
     let doc_rows = sqlx::query("SELECT status, COUNT(*) as count FROM kb_documents GROUP BY status")
         .fetch_all(&state.db)
         .await
@@ -81,7 +86,7 @@ pub async fn get_kb_import_summary(state: &AppState) -> Result<Value, String> {
 // ---------------------------------------------------------------------------
 
 pub async fn list_documents(
-    state: &AppState,
+    state: &KbDocumentsState,
     organization_id: Option<&str>,
     status: Option<&str>,
 ) -> Result<Value, String> {
@@ -111,7 +116,7 @@ pub async fn list_documents(
     Ok(json!(rows.iter().map(document_row_to_json).collect::<Vec<_>>()))
 }
 
-pub async fn get_document_chunks(state: &AppState, doc_id: &str) -> Result<Value, String> {
+pub async fn get_document_chunks(state: &KbDocumentsState, doc_id: &str) -> Result<Value, String> {
     let rows = sqlx::query(
         "SELECT id, document_id, chunk_index, title, content, page_number, kb_entry_id, created_at \
          FROM kb_document_chunks WHERE document_id = $1 ORDER BY chunk_index ASC",
@@ -137,7 +142,7 @@ pub async fn get_document_chunks(state: &AppState, doc_id: &str) -> Result<Value
         .collect::<Vec<_>>()))
 }
 
-pub async fn delete_document(state: &AppState, doc_id: &str) -> Result<(), String> {
+pub async fn delete_document(state: &KbDocumentsState, doc_id: &str) -> Result<(), String> {
     sqlx::query("DELETE FROM kb_document_chunks WHERE document_id = $1")
         .bind(doc_id)
         .execute(&state.db)
@@ -159,7 +164,7 @@ pub async fn delete_document(state: &AppState, doc_id: &str) -> Result<(), Strin
 /// Upload a document's raw bytes, store it, chunk the text content, and
 /// mirror the chunks into kb_document_chunks.
 pub async fn upload_document(
-    state: &AppState,
+    state: &KbDocumentsState,
     organization_id: &str,
     file_name: &str,
     file_type: &str,
@@ -245,7 +250,7 @@ fn document_row_to_json(r: &sqlx::postgres::PgRow) -> Value {
 // ---------------------------------------------------------------------------
 
 pub async fn add_url_source(
-    state: &AppState,
+    state: &KbDocumentsState,
     organization_id: &str,
     url: &str,
     crawl_interval_hours: Option<i32>,
@@ -273,7 +278,7 @@ pub async fn add_url_source(
 }
 
 pub async fn list_url_sources(
-    state: &AppState,
+    state: &KbDocumentsState,
     organization_id: Option<&str>,
     status: Option<&str>,
 ) -> Result<Value, String> {
@@ -304,7 +309,7 @@ pub async fn list_url_sources(
     Ok(json!(rows.iter().map(url_source_row_to_json).collect::<Vec<_>>()))
 }
 
-pub async fn delete_url_source(state: &AppState, source_id: &str) -> Result<(), String> {
+pub async fn delete_url_source(state: &KbDocumentsState, source_id: &str) -> Result<(), String> {
     sqlx::query("DELETE FROM kb_url_chunks WHERE url_source_id = $1")
         .bind(source_id)
         .execute(&state.db)
@@ -330,7 +335,7 @@ pub async fn delete_url_source(state: &AppState, source_id: &str) -> Result<(), 
 
 /// Fetch a URL source's page, strip it down to text, chunk it, and mirror
 /// the chunks into kb_url_chunks. Logs the attempt to kb_url_crawl_logs.
-pub async fn crawl_url(state: &AppState, source_id: &str) -> Result<Value, String> {
+pub async fn crawl_url(state: &KbDocumentsState, source_id: &str) -> Result<Value, String> {
     let organization_id: String = sqlx::query_scalar(
         "SELECT organization_id FROM kb_url_sources WHERE id = $1",
     )
@@ -446,7 +451,7 @@ pub async fn crawl_url(state: &AppState, source_id: &str) -> Result<Value, Strin
     get_url_source_json(state, source_id).await
 }
 
-async fn get_url_source_json(state: &AppState, source_id: &str) -> Result<Value, String> {
+async fn get_url_source_json(state: &KbDocumentsState, source_id: &str) -> Result<Value, String> {
     let row = sqlx::query(
         "SELECT id, organization_id, url, title, status, error_message, content_length, \
          chunks_count, last_crawled_at, next_crawl_at, crawl_interval_hours, created_at, updated_at \
@@ -486,7 +491,7 @@ struct ImportSettings {
     user_agent: String,
 }
 
-async fn get_or_create_settings(state: &AppState, organization_id: &str) -> Result<ImportSettings, String> {
+async fn get_or_create_settings(state: &KbDocumentsState, organization_id: &str) -> Result<ImportSettings, String> {
     let row = sqlx::query(
         "SELECT chunk_size, chunk_overlap, user_agent FROM kb_import_settings WHERE organization_id = $1",
     )
@@ -520,7 +525,7 @@ async fn get_or_create_settings(state: &AppState, organization_id: &str) -> Resu
     })
 }
 
-pub async fn get_settings(state: &AppState, organization_id: &str) -> Result<Value, String> {
+pub async fn get_settings(state: &KbDocumentsState, organization_id: &str) -> Result<Value, String> {
     // Ensure a row exists, then read it back in full.
     get_or_create_settings(state, organization_id).await?;
 
@@ -538,7 +543,7 @@ pub async fn get_settings(state: &AppState, organization_id: &str) -> Result<Val
 }
 
 pub async fn update_settings(
-    state: &AppState,
+    state: &KbDocumentsState,
     organization_id: &str,
     payload: &Value,
 ) -> Result<Value, String> {

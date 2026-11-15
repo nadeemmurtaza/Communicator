@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+// Module name matches the crate/service/folder name exactly, per
+// CONVENTIONS.md's "one name, five places" rule.
+package newax.kb_documents.v1;
+
+service KbDocumentsService {
+  rpc GetSummary(GetSummaryRequest) returns (JsonResponse);
+  rpc ListDocuments(ListDocumentsRequest) returns (JsonResponse);
+  rpc UploadDocument(UploadDocumentRequest) returns (JsonResponse);
+  rpc GetDocumentChunks(DocumentIdRequest) returns (JsonResponse);
+  rpc DeleteDocument(DocumentIdRequest) returns (DeleteResponse);
+  rpc AddUrlSource(AddUrlSourceRequest) returns (JsonResponse);
+  rpc CrawlUrl(SourceIdRequest) returns (JsonResponse);
+  rpc ListUrlSources(ListUrlSourcesRequest) returns (JsonResponse);
+  rpc DeleteUrlSource(SourceIdRequest) returns (DeleteResponse);
+  rpc GetSettings(OrgRequest) returns (JsonResponse);
+  rpc UpdateSettings(UpdateSettingsRequest) returns (JsonResponse);
+}
+
+message GetSummaryRequest {}
+
+message ListDocumentsRequest {
+  optional string organization_id = 1;
+  optional string status = 2;
+}
+
+message UploadDocumentRequest {
+  string organization_id = 1;
+  string file_name = 2;
+  string file_type = 3;
+  bytes file_data = 4;
+}
+
+message DocumentIdRequest {
+  string doc_id = 1;
+}
+
+message AddUrlSourceRequest {
+  string organization_id = 1;
+  string url = 2;
+  optional int32 crawl_interval_hours = 3;
+}
+
+message SourceIdRequest {
+  string source_id = 1;
+}
+
+message ListUrlSourcesRequest {
+  optional string organization_id = 1;
+  optional string status = 2;
+}
+
+message OrgRequest {
+  string organization_id = 1;
+}
+
+message UpdateSettingsRequest {
+  string organization_id = 1;
+  // JSON-encoded partial settings object -- the underlying settings shape
+  // is read/written as serde_json::Value today; typing it fully into proto
+  // fields is the natural next step once this service owns its own schema,
+  // not something to invent speculatively on the way out of the monolith.
+  string settings_json = 2;
+}
+
+// Pragmatic response envelope for payloads that are dynamically shaped in
+// the source implementation (serde_json::Value) -- this is an honest proxy
+// of what's actually being returned today, not a claim that it's fully
+// typed. Narrow this to real message types as each endpoint's shape
+// stabilizes.
+message JsonResponse {
+  string json = 1;
+}
+
+message DeleteResponse {
+  bool deleted = 1;
+}
