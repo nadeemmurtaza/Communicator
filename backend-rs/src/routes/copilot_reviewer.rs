@@ -1,91 +1,69 @@
-﻿#![allow(dead_code)]
+﻿//! Thin gRPC client forwarding copilot reviewer requests to `svc-copilot-reviewer` (port 50094).
 
-//! Copilot for Human Reviewers — API endpoints (Phase 10).
-//!
-//! Endpoints:
-//! - GET  /copilot-reviewer/drafts/{draft_id}/context  — Get copilot context for a draft
-//! - GET  /copilot-reviewer/pending-contexts           — Get context for all pending drafts
-//! - POST /copilot-reviewer/drafts/{draft_id}/refresh  — Force-refresh copilot context
-
-use crate::db::AppState;
-use crate::services::copilot_reviewer;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 use axum::Json;
-use serde_json::json;
+use serde_json::Value;
 
-/// Get copilot context for a specific draft.
-/// Returns conversation summary, customer profile, and suggested edits.
+use crate::db::AppState;
+
+use newax_proto::copilot_reviewer::v1::{
+    copilot_reviewer_service_client::CopilotReviewerServiceClient,
+    Empty,
+};
+
+fn svc_addr() -> &'static str {
+    option_env!("COPILOT_REVIEWER_GRPC").unwrap_or("http://127.0.0.1:50094")
+}
+
+async fn client() -> CopilotReviewerServiceClient<tonic::transport::Channel> {
+    CopilotReviewerServiceClient::connect(svc_addr().to_string())
+        .await
+        .expect("copilot-reviewer gRPC service unavailable")
+}
+
+fn grpc_json(s: String) -> Value {
+    serde_json::from_str(&s).unwrap_or_else(|_| serde_json::json!({ "error": "invalid gRPC response" }))
+}
+
+fn ok_response(v: Value) -> Response {
+    (StatusCode::OK, Json(v)).into_response()
+}
+
+fn err_response(message: &str) -> Response {
+    (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": message }))).into_response()
+}
+
 pub async fn get_draft_context(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(draft_id): Path<String>,
-) -> (StatusCode, Json<serde_json::Value>) {
-    match copilot_reviewer::get_copilot_context_for_draft(&state, &draft_id).await {
-        Ok(ctx) => {
-            let serialized = serde_json::to_value(&ctx).unwrap_or_else(|_| json!({}));
-            (StatusCode::OK, Json(serialized))
-        }
-        Err(e) => {
-            tracing::error!("Failed to get copilot context for draft {}: {}", draft_id, e);
-            (
-                StatusCode::NOT_FOUND,
-                Json(json!({ "error": format!("Draft not found: {}", e) })),
-            )
-        }
+) -> Response {
+    let mut req = newax_proto::copilot_reviewer::v1::GetDraftContextRequest::default();
+    req.draft_id = draft_id;
+    match client().await.get_draft_context(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
-/// Get copilot context for all pending review drafts.
-/// Returns an array of context objects for each pending draft.
 pub async fn get_pending_contexts(
-    State(state): State<AppState>,
-) -> (StatusCode, Json<serde_json::Value>) {
-    match copilot_reviewer::get_pending_drafts_context(&state).await {
-        Ok(contexts) => {
-            let serialized = serde_json::to_value(&contexts).unwrap_or_else(|_| json!([]));
-            (StatusCode::OK, Json(serialized))
-        }
-        Err(e) => {
-            tracing::error!("Failed to get pending draft contexts: {}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": format!("Failed to fetch contexts: {}", e) })),
-            )
-        }
+    State(_state): State<AppState>,
+) -> Response {
+    match client().await.get_pending_contexts(Empty {}).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
-/// Force-refresh copilot context for a draft by deleting cached data and regenerating.
 pub async fn refresh_draft_context(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(draft_id): Path<String>,
-) -> (StatusCode, Json<serde_json::Value>) {
-    // Delete cached context
-    let result = sqlx::query("DELETE FROM copilot_context WHERE draft_id = ?")
-        .bind(&draft_id)
-        .execute(&state.db)
-        .await;
-
-    if let Err(e) = result {
-        tracing::error!("Failed to delete cached context: {}", e);
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": format!("Failed to clear cache: {}", e) })),
-        );
-    }
-
-    // Regenerate context
-    match copilot_reviewer::get_copilot_context_for_draft(&state, &draft_id).await {
-        Ok(ctx) => {
-            let serialized = serde_json::to_value(&ctx).unwrap_or_else(|_| json!({}));
-            (StatusCode::OK, Json(serialized))
-        }
-        Err(e) => {
-            tracing::error!("Failed to refresh copilot context for draft {}: {}", draft_id, e);
-            (
-                StatusCode::NOT_FOUND,
-                Json(json!({ "error": format!("Draft not found: {}", e) })),
-            )
-        }
+) -> Response {
+    let mut req = newax_proto::copilot_reviewer::v1::RefreshDraftContextRequest::default();
+    req.draft_id = draft_id;
+    match client().await.refresh_draft_context(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }

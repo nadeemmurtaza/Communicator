@@ -16,6 +16,8 @@ tokio-native-tls = "0.3"
 tonic = "0.12"
 newax-proto = { path = "../crates/proto" }
 newax-reply-integration = { path = "../crates/reply_integration" }
+newax-smtp-email = { path = "../crates/smtp_email" }
+newax-alerts = { path = "../crates/alerts" }
 
 # Database (PostgreSQL only — shared with nID)
 sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "chrono", "uuid", "json", "migrate"] }

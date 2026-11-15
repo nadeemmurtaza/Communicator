@@ -10,7 +10,7 @@
 //! reported, never filled in with a plausible number.
 
 use crate::db::AppState;
-use crate::services::alerts::{send_hot_lead_alert, HotLeadAlert};
+use newax_alerts::{send_hot_lead_alert, HotLeadAlert};
 use crate::services::claude_client::ask_json;
 use crate::services::draft_actions::record_draft_audit;
 use crate::services::integration_settings;
@@ -1132,7 +1132,8 @@ pub async fn generate_reply(
             .is_some_and(|s| ALERT_SENTIMENTS.iter().any(|s2| s2.eq_ignore_ascii_case(s)));
     if needs_alert {
         let outcome = send_hot_lead_alert(
-            state,
+            &state.http_client,
+            &state.config.sales_alert_webhook_url,
             &HotLeadAlert {
                 lead_name: lead_facts.name.as_deref(),
                 institution_type: lead_facts.institution_type.as_deref(),

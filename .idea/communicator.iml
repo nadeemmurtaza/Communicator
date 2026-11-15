@@ -2,7 +2,69 @@
 <module type="JAVA_MODULE" version="4">
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
-    <content url="file://$MODULE_DIR$" />
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/backend-rs/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/ab_testing/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/canned_macros_sla/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/compliance_dashboard/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/conversation_search/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/crm_sync/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/crypto_mesh/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/cx_qa_scoring/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/embed-widget/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/help-center/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/kb-documents/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/monitoring/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/notifications/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/procedures/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/proto/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/reply_integration/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/scheduled-tasks/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/suggestions/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/system-health/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/tone_of_voice/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/unified_analytics/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/unified_inbox/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/ab_testing/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/canned_macros_sla/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/compliance_dashboard/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/conversation_search/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/crm_sync/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/crypto_mesh/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/cx_qa_scoring/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/embed-widget/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/help-center/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/kb-documents/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/monitoring/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/notifications/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/procedures/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/reply_integration/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/scheduled-tasks/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/suggestions/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/system-health/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/tone_of_voice/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/unified_analytics/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/unified_inbox/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/access_control/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/agent_performance/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/alerts/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/autonomous_resolution/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/brand_overrides/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/copilot_reviewer/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/smtp_email/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/topic_categorization/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/workflow_builder/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/access_control/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/agent_performance/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/autonomous_resolution/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/brand_overrides/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/copilot_reviewer/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/smtp_email/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/topic_categorization/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/services/workflow_builder/src" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/backend-rs/target" />
+      <excludeFolder url="file://$MODULE_DIR$/target" />
+    </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>

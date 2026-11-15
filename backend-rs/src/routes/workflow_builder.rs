@@ -1,12 +1,40 @@
-﻿//! Workflow Builder API routes (Phase 20).
+﻿//! Thin gRPC client forwarding workflow builder requests to `svc-workflow-builder` (port 50089).
 
-use crate::db::AppState;
-use crate::services::workflow_builder;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::Value;
+
+use crate::db::AppState;
+
+use newax_proto::workflow_builder::v1::{
+    workflow_builder_service_client::WorkflowBuilderServiceClient,
+    Empty,
+};
+
+fn svc_addr() -> &'static str {
+    option_env!("WORKFLOW_BUILDER_GRPC").unwrap_or("http://127.0.0.1:50089")
+}
+
+async fn client() -> WorkflowBuilderServiceClient<tonic::transport::Channel> {
+    WorkflowBuilderServiceClient::connect(svc_addr().to_string())
+        .await
+        .expect("workflow-builder gRPC service unavailable")
+}
+
+fn grpc_json(s: String) -> Value {
+    serde_json::from_str(&s).unwrap_or_else(|_| serde_json::json!({ "error": "invalid gRPC response" }))
+}
+
+fn ok_response(v: Value) -> Response {
+    (StatusCode::OK, Json(v)).into_response()
+}
+
+fn err_response(status: StatusCode, message: &str) -> Response {
+    (status, Json(serde_json::json!({ "error": message }))).into_response()
+}
 
 #[derive(Deserialize, Debug)]
 pub struct WorkflowQueryParams {
@@ -71,224 +99,190 @@ pub struct TriggerExecutionBody {
     pub target_conversation_id: Option<String>,
 }
 
-// ——— Endpoints ———
-
-/// GET /workflows/summary
-pub async fn workflow_summary(State(state): State<AppState>) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    match workflow_builder::get_workflow_summary(&state).await {
-        Ok(summary) => Ok(Json(serde_json::to_value(summary).unwrap_or_default())),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))),
+pub async fn workflow_summary(State(_state): State<AppState>) -> Response {
+    match client().await.get_summary(Empty {}).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
     }
 }
 
-/// GET /workflows
 pub async fn list_workflows(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Query(params): Query<WorkflowQueryParams>,
-) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let workflows = workflow_builder::list_workflows(
-        &state,
-        params.organization_id.as_deref(),
-        params.workflow_type.as_deref(),
-        params.status.as_deref(),
-        params.limit.unwrap_or(50),
-        params.offset.unwrap_or(0),
-    )
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
-
-    Ok(Json(json!({
-        "workflows": workflows,
-        "total": workflows.len(),
-    })))
-}
-
-/// GET /workflows/available-triggers
-pub async fn available_triggers() -> Json<Value> {
-    Json(json!({
-        "triggers": workflow_builder::get_available_trigger_events(),
-        "step_types": workflow_builder::get_available_step_types(),
-    }))
-}
-
-/// GET /workflows/:id
-pub async fn get_workflow(
-    State(state): State<AppState>,
-    Path(workflow_id): Path<String>,
-) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    match workflow_builder::get_workflow(&state, &workflow_id).await {
-        Ok(Some(data)) => Ok(Json(data)),
-        Ok(None) => Err((StatusCode::NOT_FOUND, Json(json!({"error": "Workflow not found"})))),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))),
+) -> Response {
+    let mut req = newax_proto::workflow_builder::v1::ListWorkflowsRequest::default();
+    req.organization_id = params.organization_id.clone().unwrap_or_default();
+    req.workflow_type = params.workflow_type.clone().unwrap_or_default();
+    req.status = params.status.clone().unwrap_or_default();
+    req.limit = params.limit.unwrap_or(50);
+    req.offset = params.offset.unwrap_or(0);
+    match client().await.list_workflows(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
     }
 }
 
-/// POST /workflows
-pub async fn create_workflow(
-    State(state): State<AppState>,
-    Json(body): Json<CreateWorkflowBody>,
-) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let wf = workflow_builder::create_workflow(
-        &state,
-        &body.organization_id,
-        &body.name,
-        &body.workflow_type,
-        &body.trigger_type,
-        body.description.as_deref(),
-        body.trigger_config.as_deref(),
-        body.created_by.as_deref(),
-    )
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
-
-    Ok(Json(serde_json::to_value(wf).unwrap_or_default()))
+pub async fn available_triggers() -> Response {
+    match client().await.available_triggers(Empty {}).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
 }
 
-/// PUT /workflows/:id
+pub async fn get_workflow(
+    State(_state): State<AppState>,
+    Path(workflow_id): Path<String>,
+) -> Response {
+    let mut req = newax_proto::workflow_builder::v1::GetWorkflowRequest::default();
+    req.workflow_id = workflow_id;
+    match client().await.get_workflow(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::NOT_FOUND, &e.to_string()),
+    }
+}
+
+pub async fn create_workflow(
+    State(_state): State<AppState>,
+    Json(body): Json<CreateWorkflowBody>,
+) -> Response {
+    let mut req = newax_proto::workflow_builder::v1::CreateWorkflowRequest::default();
+    req.organization_id = body.organization_id;
+    req.name = body.name;
+    req.workflow_type = body.workflow_type;
+    req.trigger_type = body.trigger_type;
+    req.description = body.description.unwrap_or_default();
+    req.trigger_config = body.trigger_config.unwrap_or_default();
+    req.created_by = body.created_by.unwrap_or_default();
+    match client().await.create_workflow(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
+}
+
 pub async fn update_workflow(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(workflow_id): Path<String>,
     Json(updates): Json<Value>,
-) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let wf = workflow_builder::update_workflow(&state, &workflow_id, &updates)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
-
-    Ok(Json(serde_json::to_value(wf).unwrap_or_default()))
-}
-
-/// DELETE /workflows/:id
-pub async fn delete_workflow(
-    State(state): State<AppState>,
-    Path(workflow_id): Path<String>,
-) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let deleted = workflow_builder::delete_workflow(&state, &workflow_id)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
-
-    if deleted {
-        Ok(Json(json!({"deleted": true})))
-    } else {
-        Err((StatusCode::NOT_FOUND, Json(json!({"error": "Workflow not found"}))))
+) -> Response {
+    let mut req = newax_proto::workflow_builder::v1::UpdateWorkflowRequest::default();
+    req.workflow_id = workflow_id;
+    req.updates = serde_json::to_string(&updates).unwrap_or_default();
+    match client().await.update_workflow(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
     }
 }
 
-/// POST /workflows/:id/steps
+pub async fn delete_workflow(
+    State(_state): State<AppState>,
+    Path(workflow_id): Path<String>,
+) -> Response {
+    let mut req = newax_proto::workflow_builder::v1::DeleteWorkflowRequest::default();
+    req.workflow_id = workflow_id;
+    match client().await.delete_workflow(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
+}
+
 pub async fn add_step(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(workflow_id): Path<String>,
     Json(body): Json<AddStepBody>,
-) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let step = workflow_builder::add_workflow_step(
-        &state,
-        &workflow_id,
-        &body.step_type,
-        &body.name,
-        body.step_order,
-        body.config.as_deref(),
-        body.parent_step_id.as_deref(),
-        body.condition_branch.as_deref(),
-    )
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
-
-    Ok(Json(serde_json::to_value(step).unwrap_or_default()))
+) -> Response {
+    let mut req = newax_proto::workflow_builder::v1::AddStepRequest::default();
+    req.workflow_id = workflow_id;
+    req.step_type = body.step_type;
+    req.name = body.name;
+    req.step_order = body.step_order;
+    req.config = body.config.unwrap_or_default();
+    req.parent_step_id = body.parent_step_id.unwrap_or_default();
+    req.condition_branch = body.condition_branch.unwrap_or_default();
+    match client().await.add_step(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
 }
 
-/// POST /workflows/:id/conditions
 pub async fn add_condition(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(workflow_id): Path<String>,
     Json(body): Json<AddConditionBody>,
-) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let cond = workflow_builder::add_workflow_condition(
-        &state,
-        &workflow_id,
-        &body.step_id,
-        &body.condition_type,
-        &body.field,
-        &body.operator,
-        body.value.as_deref(),
-        &body.logic_operator,
-    )
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
-
-    Ok(Json(serde_json::to_value(cond).unwrap_or_default()))
+) -> Response {
+    let mut req = newax_proto::workflow_builder::v1::AddConditionRequest::default();
+    req.workflow_id = workflow_id;
+    req.step_id = body.step_id;
+    req.condition_type = body.condition_type;
+    req.field = body.field;
+    req.operator = body.operator;
+    req.value = body.value.unwrap_or_default();
+    req.logic_operator = body.logic_operator;
+    match client().await.add_condition(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
 }
 
-/// POST /workflows/:id/triggers
 pub async fn add_trigger(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(workflow_id): Path<String>,
     Json(body): Json<AddTriggerBody>,
-) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let trigger = workflow_builder::add_workflow_trigger(
-        &state,
-        &workflow_id,
-        &body.trigger_name,
-        &body.trigger_event,
-        body.filter_conditions.as_deref(),
-    )
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
-
-    Ok(Json(serde_json::to_value(trigger).unwrap_or_default()))
+) -> Response {
+    let mut req = newax_proto::workflow_builder::v1::AddTriggerRequest::default();
+    req.workflow_id = workflow_id;
+    req.trigger_name = body.trigger_name;
+    req.trigger_event = body.trigger_event;
+    req.filter_conditions = body.filter_conditions.unwrap_or_default();
+    match client().await.add_trigger(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
 }
 
-/// POST /workflows/:id/execute
 pub async fn trigger_execution(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(workflow_id): Path<String>,
     Json(body): Json<TriggerExecutionBody>,
-) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let result = workflow_builder::trigger_workflow_execution(
-        &state,
-        &workflow_id,
-        &body.trigger_source,
-        body.trigger_data.as_deref(),
-        body.target_contact_id.as_deref(),
-        body.target_conversation_id.as_deref(),
-    )
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
-
-    Ok(Json(serde_json::to_value(result).unwrap_or_default()))
+) -> Response {
+    let mut req = newax_proto::workflow_builder::v1::TriggerExecutionRequest::default();
+    req.workflow_id = workflow_id;
+    req.trigger_source = body.trigger_source;
+    req.trigger_data = body.trigger_data.unwrap_or_default();
+    req.target_contact_id = body.target_contact_id.unwrap_or_default();
+    req.target_conversation_id = body.target_conversation_id.unwrap_or_default();
+    match client().await.trigger_execution(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
 }
 
-/// POST /workflows/:id/evaluate-conditions
 pub async fn evaluate_conditions(
-    State(state): State<AppState>,
-    Path(workflow_id): Path<String>,
+    State(_state): State<AppState>,
+    Path(_workflow_id): Path<String>,
     Json(body): Json<Value>,
-) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+) -> Response {
     let step_id = body.get("step_id").and_then(|v| v.as_str()).unwrap_or("");
-    let context = body.get("context").cloned().unwrap_or(json!({}));
-
-    let result = workflow_builder::evaluate_conditions(&state, step_id, &context)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
-
-    Ok(Json(serde_json::to_value(result).unwrap_or_default()))
+    let context = body.get("context").cloned().unwrap_or(serde_json::json!({}));
+    let mut req = newax_proto::workflow_builder::v1::EvaluateConditionsRequest::default();
+    req.step_id = step_id.to_string();
+    req.context = serde_json::to_string(&context).unwrap_or_default();
+    match client().await.evaluate_conditions(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
 }
 
-/// GET /workflows/executions
 pub async fn list_executions(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Query(params): Query<ExecutionQueryParams>,
-) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let executions = workflow_builder::list_workflow_executions(
-        &state,
-        params.workflow_id.as_deref(),
-        params.status.as_deref(),
-        params.limit.unwrap_or(50),
-        params.offset.unwrap_or(0),
-    )
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
-
-    Ok(Json(json!({
-        "executions": executions,
-        "total": executions.len(),
-    })))
+) -> Response {
+    let mut req = newax_proto::workflow_builder::v1::ListExecutionsRequest::default();
+    req.workflow_id = params.workflow_id.clone().unwrap_or_default();
+    req.status = params.status.clone().unwrap_or_default();
+    req.limit = params.limit.unwrap_or(50);
+    req.offset = params.offset.unwrap_or(0);
+    match client().await.list_executions(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
 }

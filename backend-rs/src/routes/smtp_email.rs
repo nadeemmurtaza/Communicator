@@ -1,145 +1,53 @@
-//! SMTP and email template management routes.
+//! Thin gRPC client forwarding SMTP/email requests to `svc-smtp-email` (port 50092).
 
-use axum::{Json, http::StatusCode, response::IntoResponse};
 use axum::extract::{Path, Query, State};
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
+use axum::Json;
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::Value;
 
 use crate::db::AppState;
-use crate::services::smtp_email::*;
 
-// ---------------------------------------------------------------------------
-// Query params
-// ---------------------------------------------------------------------------
+use newax_proto::smtp_email::v1::{
+    smtp_email_service_client::SmtpEmailServiceClient,
+    Empty,
+};
 
-#[derive(Debug, Deserialize)]
+fn svc_addr() -> &'static str {
+    option_env!("SMTP_EMAIL_GRPC").unwrap_or("http://127.0.0.1:50092")
+}
+
+async fn client() -> SmtpEmailServiceClient<tonic::transport::Channel> {
+    SmtpEmailServiceClient::connect(svc_addr().to_string())
+        .await
+        .expect("smtp-email gRPC service unavailable")
+}
+
+fn grpc_json(s: String) -> Value {
+    serde_json::from_str(&s).unwrap_or_else(|_| serde_json::json!({ "error": "invalid gRPC response" }))
+}
+
+fn ok_response(v: Value) -> Response {
+    (StatusCode::OK, Json(v)).into_response()
+}
+
+fn err_response(status: StatusCode, message: &str) -> Response {
+    (status, Json(serde_json::json!({ "error": message }))).into_response()
+}
+
+#[derive(Deserialize, Debug)]
 pub struct TemplatesQuery {
     pub category: Option<String>,
     pub brand_id: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct SendLogsQuery {
     pub limit: Option<i64>,
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-fn err(status: StatusCode, msg: String) -> axum::response::Response {
-    (status, Json(json!({ "error": msg }))).into_response()
-}
-
-fn db_err(e: String) -> axum::response::Response {
-    err(StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {e}"))
-}
-
-// ---------------------------------------------------------------------------
-// Summary
-// ---------------------------------------------------------------------------
-
-pub async fn get_summary(State(state): State<AppState>) -> impl IntoResponse {
-    match get_smtp_summary(&state.db).await {
-        Ok(summary) => Json(json!({
-            "total_smtp_configs": summary.total_smtp_configs,
-            "enabled_smtp_configs": summary.enabled_smtp_configs,
-            "total_templates": summary.total_templates,
-            "enabled_templates": summary.enabled_templates,
-            "default_templates": summary.default_templates,
-            "total_send_logs": summary.total_send_logs,
-            "sent_count": summary.sent_count,
-            "failed_count": summary.failed_count,
-            "bounced_count": summary.bounced_count,
-            "categories": summary.categories,
-            "recent_logs": summary.recent_logs,
-        })).into_response(),
-        Err(e) => {
-            tracing::error!("Failed to get SMTP summary: {}", e);
-            Json(json!({
-                "total_smtp_configs": 0i64,
-                "enabled_smtp_configs": 0i64,
-                "total_templates": 0i64,
-                "enabled_templates": 0i64,
-                "default_templates": 0i64,
-                "total_send_logs": 0i64,
-                "sent_count": 0i64,
-                "failed_count": 0i64,
-                "bounced_count": 0i64,
-                "categories": [],
-                "recent_logs": [],
-            })).into_response()
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// SMTP Settings
-// ---------------------------------------------------------------------------
-
-pub async fn list_smtp_settings(State(state): State<AppState>) -> impl IntoResponse {
-    match SmtpSettings::list_all(&state.db).await {
-        Ok(settings) => {
-            let list: Vec<Value> = settings.iter().map(|s| {
-                json!({
-                    "id": s.id,
-                    "brand_id": s.brand_id,
-                    "host": s.host,
-                    "port": s.port,
-                    "security": s.security,
-                    "auth_method": s.auth_method,
-                    "username": s.username,
-                    "from_address": s.from_address,
-                    "from_name": s.from_name,
-                    "reply_to_address": s.reply_to_address,
-                    "connection_timeout_seconds": s.connection_timeout_seconds,
-                    "enabled": s.enabled,
-                    "test_sent_at": s.test_sent_at,
-                    "test_status": s.test_status,
-                    "test_error": s.test_error,
-                    "created_at": s.created_at,
-                    "updated_at": s.updated_at,
-                })
-            }).collect();
-            Json(json!({ "smtp_settings": list })).into_response()
-        }
-        Err(e) => db_err(e),
-    }
-}
-
-pub async fn get_smtp_settings(State(state): State<AppState>, Path(id): Path<String>) -> impl IntoResponse {
-    match SmtpSettings::list_all(&state.db).await {
-        Ok(settings) => {
-            match settings.into_iter().find(|s| s.id == id) {
-                Some(s) => {
-                    Json(json!({
-                        "id": s.id,
-                        "brand_id": s.brand_id,
-                        "host": s.host,
-                        "port": s.port,
-                        "security": s.security,
-                        "auth_method": s.auth_method,
-                        "username": s.username,
-                        "from_address": s.from_address,
-                        "from_name": s.from_name,
-                        "reply_to_address": s.reply_to_address,
-                        "connection_timeout_seconds": s.connection_timeout_seconds,
-                        "enabled": s.enabled,
-                        "test_sent_at": s.test_sent_at,
-                        "test_status": s.test_status,
-                        "test_error": s.test_error,
-                        "created_at": s.created_at,
-                        "updated_at": s.updated_at,
-                    })).into_response()
-                }
-                None => err(StatusCode::NOT_FOUND, "SMTP settings not found".to_string()),
-            }
-        }
-        Err(e) => db_err(e),
-    }
-}
-
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct CreateSmtpPayload {
     pub brand_id: Option<String>,
     pub host: String,
@@ -154,39 +62,7 @@ pub struct CreateSmtpPayload {
     pub connection_timeout_seconds: Option<i64>,
 }
 
-pub async fn create_smtp_settings(
-    State(state): State<AppState>,
-    Json(payload): Json<CreateSmtpPayload>,
-) -> impl IntoResponse {
-    let id = uuid::Uuid::new_v4().to_string();
-    let now = chrono::Utc::now().to_rfc3339();
-    let settings = SmtpSettings {
-        id,
-        brand_id: payload.brand_id,
-        host: payload.host,
-        port: payload.port,
-        security: payload.security,
-        auth_method: payload.auth_method,
-        username: payload.username,
-        password: payload.password,
-        from_address: payload.from_address,
-        from_name: payload.from_name,
-        reply_to_address: payload.reply_to_address,
-        connection_timeout_seconds: payload.connection_timeout_seconds.unwrap_or(30),
-        enabled: true,
-        test_sent_at: None,
-        test_status: None,
-        test_error: None,
-        created_at: now.clone(),
-        updated_at: now,
-    };
-    match SmtpSettings::create(&state.db, &settings).await {
-        Ok(s) => (StatusCode::CREATED, Json(json!({ "id": s.id }))).into_response(),
-        Err(e) => err(StatusCode::BAD_REQUEST, e),
-    }
-}
-
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct UpdateSmtpPayload {
     pub host: Option<String>,
     pub port: Option<i64>,
@@ -201,102 +77,12 @@ pub struct UpdateSmtpPayload {
     pub enabled: Option<bool>,
 }
 
-pub async fn update_smtp_settings(
-    State(state): State<AppState>,
-    Path(id): Path<String>,
-    Json(payload): Json<UpdateSmtpPayload>,
-) -> impl IntoResponse {
-    let existing = match SmtpSettings::list_all(&state.db).await {
-        Ok(settings) => settings.into_iter().find(|s| s.id == id),
-        Err(e) => return db_err(e),
-    };
-    let mut settings = match existing {
-        Some(s) => s,
-        None => return err(StatusCode::NOT_FOUND, "SMTP settings not found".to_string()),
-    };
-    if let Some(v) = payload.host { settings.host = v; }
-    if let Some(v) = payload.port { settings.port = v; }
-    if let Some(v) = payload.security { settings.security = v; }
-    if let Some(v) = payload.auth_method { settings.auth_method = v; }
-    if let Some(v) = payload.username { settings.username = v; }
-    if let Some(v) = payload.password { settings.password = v; }
-    if let Some(v) = payload.from_address { settings.from_address = v; }
-    if let Some(v) = payload.from_name { settings.from_name = v; }
-    if let Some(v) = payload.reply_to_address { settings.reply_to_address = Some(v); }
-    if let Some(v) = payload.connection_timeout_seconds { settings.connection_timeout_seconds = v; }
-    if let Some(v) = payload.enabled { settings.enabled = v; }
-    settings.updated_at = chrono::Utc::now().to_rfc3339();
-    match SmtpSettings::update(&state.db, &id, &settings).await {
-        Ok(_) => Json(json!({ "updated": true })).into_response(),
-        Err(e) => err(StatusCode::BAD_REQUEST, e),
-    }
-}
-
-pub async fn delete_smtp_settings(
-    State(state): State<AppState>,
-    Path(id): Path<String>,
-) -> impl IntoResponse {
-    match SmtpSettings::delete(&state.db, &id).await {
-        Ok(()) => Json(json!({ "deleted": true })).into_response(),
-        Err(e) => err(StatusCode::BAD_REQUEST, e),
-    }
-}
-
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct TestSmtpPayload {
     pub to_address: String,
 }
 
-pub async fn test_smtp_connection(
-    State(state): State<AppState>,
-    Path(id): Path<String>,
-    Json(payload): Json<TestSmtpPayload>,
-) -> impl IntoResponse {
-    match SmtpSettings::test_connection(&state.db, &id, &payload.to_address).await {
-        Ok(response) => Json(json!({
-            "success": response.success,
-            "message": response.message,
-            "error": response.error,
-        })).into_response(),
-        Err(e) => err(StatusCode::BAD_REQUEST, e),
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Email Templates
-// ---------------------------------------------------------------------------
-
-pub async fn list_email_templates(
-    State(state): State<AppState>,
-    Query(params): Query<TemplatesQuery>,
-) -> impl IntoResponse {
-    match EmailTemplate::list(&state.db, params.category.as_deref(), None, params.brand_id.as_deref()).await {
-        Ok(templates) => {
-            let list: Vec<Value> = templates.iter().map(|t| {
-                json!({
-                    "id": t.id,
-                    "brand_id": t.brand_id,
-                    "name": t.name,
-                    "subject": t.subject,
-                    "body_html": t.body_html,
-                    "body_text": t.body_text,
-                    "template_type": t.template_type,
-                    "category": t.category,
-                    "language": t.language,
-                    "enabled": t.enabled,
-                    "is_default": t.is_default,
-                    "variables": t.variables,
-                    "created_at": t.created_at,
-                    "updated_at": t.updated_at,
-                })
-            }).collect();
-            Json(json!({ "templates": list })).into_response()
-        }
-        Err(e) => db_err(e),
-    }
-}
-
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct CreateTemplatePayload {
     pub brand_id: Option<String>,
     pub name: String,
@@ -309,65 +95,7 @@ pub struct CreateTemplatePayload {
     pub variables: Option<Value>,
 }
 
-pub async fn create_email_template(
-    State(state): State<AppState>,
-    Json(payload): Json<CreateTemplatePayload>,
-) -> impl IntoResponse {
-    let id = uuid::Uuid::new_v4().to_string();
-    let now = chrono::Utc::now().to_rfc3339();
-    let template = EmailTemplate {
-        id,
-        brand_id: payload.brand_id,
-        name: payload.name,
-        subject: payload.subject,
-        body_html: payload.body_html,
-        body_text: payload.body_text,
-        template_type: payload.template_type,
-        category: payload.category,
-        language: payload.language.unwrap_or_else(|| "en".to_string()),
-        enabled: true,
-        is_default: false,
-        variables: payload.variables.unwrap_or_else(|| json!({})),
-        created_at: now.clone(),
-        updated_at: now,
-    };
-    match EmailTemplate::create(&state.db, &template).await {
-        Ok(t) => (StatusCode::CREATED, Json(json!({ "id": t.id }))).into_response(),
-        Err(e) => err(StatusCode::BAD_REQUEST, e),
-    }
-}
-
-pub async fn get_email_template(
-    State(state): State<AppState>,
-    Path(id): Path<String>,
-) -> impl IntoResponse {
-    match EmailTemplate::list(&state.db, None, None, None).await {
-        Ok(templates) => {
-            match templates.into_iter().find(|t| t.id == id) {
-                Some(t) => Json(json!({
-                    "id": t.id,
-                    "brand_id": t.brand_id,
-                    "name": t.name,
-                    "subject": t.subject,
-                    "body_html": t.body_html,
-                    "body_text": t.body_text,
-                    "template_type": t.template_type,
-                    "category": t.category,
-                    "language": t.language,
-                    "enabled": t.enabled,
-                    "is_default": t.is_default,
-                    "variables": t.variables,
-                    "created_at": t.created_at,
-                    "updated_at": t.updated_at,
-                })).into_response(),
-                None => err(StatusCode::NOT_FOUND, "Template not found".to_string()),
-            }
-        }
-        Err(e) => db_err(e),
-    }
-}
-
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct UpdateTemplatePayload {
     pub subject: Option<String>,
     pub body_html: Option<String>,
@@ -379,49 +107,7 @@ pub struct UpdateTemplatePayload {
     pub variables: Option<Value>,
 }
 
-pub async fn update_email_template(
-    State(state): State<AppState>,
-    Path(id): Path<String>,
-    Json(payload): Json<UpdateTemplatePayload>,
-) -> impl IntoResponse {
-    let existing = match EmailTemplate::list(&state.db, None, None, None).await {
-        Ok(templates) => templates.into_iter().find(|t| t.id == id),
-        Err(e) => return db_err(e),
-    };
-    let mut template = match existing {
-        Some(t) => t,
-        None => return err(StatusCode::NOT_FOUND, "Template not found".to_string()),
-    };
-    if let Some(v) = payload.subject { template.subject = v; }
-    if let Some(v) = payload.body_html { template.body_html = v; }
-    if let Some(v) = payload.body_text { template.body_text = v; }
-    if let Some(v) = payload.template_type { template.template_type = v; }
-    if let Some(v) = payload.category { template.category = v; }
-    if let Some(v) = payload.language { template.language = v; }
-    if let Some(v) = payload.enabled { template.enabled = v; }
-    if let Some(v) = payload.variables { template.variables = v; }
-    template.updated_at = chrono::Utc::now().to_rfc3339();
-    match EmailTemplate::update(&state.db, &id, &template).await {
-        Ok(_) => Json(json!({ "updated": true })).into_response(),
-        Err(e) => err(StatusCode::BAD_REQUEST, e),
-    }
-}
-
-pub async fn delete_email_template(
-    State(state): State<AppState>,
-    Path(id): Path<String>,
-) -> impl IntoResponse {
-    match EmailTemplate::delete(&state.db, &id).await {
-        Ok(()) => Json(json!({ "deleted": true })).into_response(),
-        Err(e) => err(StatusCode::BAD_REQUEST, e),
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Send Email
-// ---------------------------------------------------------------------------
-
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct SendEmailPayload {
     pub to_address: String,
     pub template_name: String,
@@ -429,57 +115,214 @@ pub struct SendEmailPayload {
     pub brand_id: Option<String>,
 }
 
-pub async fn send_email(
-    State(state): State<AppState>,
-    Json(payload): Json<SendEmailPayload>,
-) -> impl IntoResponse {
-    let request = SendEmailRequest {
-        to_address: payload.to_address,
-        template_name: payload.template_name,
-        variables: payload.variables.unwrap_or_default(),
-        brand_id: payload.brand_id,
-    };
-    match send_templated_email(&state.db, &request).await {
-        Ok(response) => Json(json!({
-            "success": response.success,
-            "log_id": response.log_id,
-            "message_id": response.message_id,
-            "error": response.error,
-        })).into_response(),
-        Err(e) => err(StatusCode::BAD_REQUEST, e),
+pub async fn get_summary(State(_state): State<AppState>) -> Response {
+    match client().await.get_summary(Empty {}).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
     }
 }
 
-// ---------------------------------------------------------------------------
-// Send Logs
-// ---------------------------------------------------------------------------
+pub async fn list_smtp_settings(State(_state): State<AppState>) -> Response {
+    match client().await.list_smtp_settings(Empty {}).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
+}
+
+pub async fn get_smtp_settings(
+    State(_state): State<AppState>,
+    Path(id): Path<String>,
+) -> Response {
+    let mut req = newax_proto::smtp_email::v1::GetSmtpSettingsRequest::default();
+    req.id = id;
+    match client().await.get_smtp_settings(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::NOT_FOUND, &e.to_string()),
+    }
+}
+
+pub async fn create_smtp_settings(
+    State(_state): State<AppState>,
+    Json(body): Json<CreateSmtpPayload>,
+) -> Response {
+    let mut req = newax_proto::smtp_email::v1::CreateSmtpSettingsRequest::default();
+    req.brand_id = body.brand_id.unwrap_or_default();
+    req.host = body.host;
+    req.port = body.port;
+    req.security = body.security;
+    req.auth_method = body.auth_method;
+    req.username = body.username;
+    req.password = body.password;
+    req.from_address = body.from_address;
+    req.from_name = body.from_name;
+    req.reply_to_address = body.reply_to_address.unwrap_or_default();
+    req.connection_timeout_seconds = body.connection_timeout_seconds.unwrap_or(30);
+    match client().await.create_smtp_settings(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::BAD_REQUEST, &e.to_string()),
+    }
+}
+
+pub async fn update_smtp_settings(
+    State(_state): State<AppState>,
+    Path(id): Path<String>,
+    Json(body): Json<UpdateSmtpPayload>,
+) -> Response {
+    let mut updates = serde_json::Map::new();
+    if let Some(v) = body.host { updates.insert("host".into(), serde_json::Value::String(v)); }
+    if let Some(v) = body.port { updates.insert("port".into(), serde_json::Value::Number(v.into())); }
+    if let Some(v) = body.security { updates.insert("security".into(), serde_json::Value::String(v)); }
+    if let Some(v) = body.auth_method { updates.insert("auth_method".into(), serde_json::Value::String(v)); }
+    if let Some(v) = body.username { updates.insert("username".into(), serde_json::Value::String(v)); }
+    if let Some(v) = body.password { updates.insert("password".into(), serde_json::Value::String(v)); }
+    if let Some(v) = body.from_address { updates.insert("from_address".into(), serde_json::Value::String(v)); }
+    if let Some(v) = body.from_name { updates.insert("from_name".into(), serde_json::Value::String(v)); }
+    if let Some(v) = body.reply_to_address { updates.insert("reply_to_address".into(), serde_json::Value::String(v)); }
+    if let Some(v) = body.connection_timeout_seconds { updates.insert("connection_timeout_seconds".into(), serde_json::Value::Number(v.into())); }
+    if let Some(v) = body.enabled { updates.insert("enabled".into(), serde_json::Value::Bool(v)); }
+    let mut req = newax_proto::smtp_email::v1::UpdateSmtpSettingsRequest::default();
+    req.id = id;
+    req.updates_json = serde_json::to_string(&serde_json::Value::Object(updates)).unwrap_or_default();
+    match client().await.update_smtp_settings(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::BAD_REQUEST, &e.to_string()),
+    }
+}
+
+pub async fn delete_smtp_settings(
+    State(_state): State<AppState>,
+    Path(id): Path<String>,
+) -> Response {
+    let mut req = newax_proto::smtp_email::v1::DeleteSmtpSettingsRequest::default();
+    req.id = id;
+    match client().await.delete_smtp_settings(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::BAD_REQUEST, &e.to_string()),
+    }
+}
+
+pub async fn test_smtp_connection(
+    State(_state): State<AppState>,
+    Path(id): Path<String>,
+    Json(body): Json<TestSmtpPayload>,
+) -> Response {
+    let mut req = newax_proto::smtp_email::v1::TestSmtpConnectionRequest::default();
+    req.id = id;
+    req.to_address = body.to_address;
+    match client().await.test_smtp_connection(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::BAD_REQUEST, &e.to_string()),
+    }
+}
+
+pub async fn list_email_templates(
+    State(_state): State<AppState>,
+    Query(params): Query<TemplatesQuery>,
+) -> Response {
+    let mut req = newax_proto::smtp_email::v1::ListEmailTemplatesRequest::default();
+    req.category = params.category.clone().unwrap_or_default();
+    req.brand_id = params.brand_id.clone().unwrap_or_default();
+    match client().await.list_email_templates(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
+}
+
+pub async fn create_email_template(
+    State(_state): State<AppState>,
+    Json(body): Json<CreateTemplatePayload>,
+) -> Response {
+    let mut req = newax_proto::smtp_email::v1::CreateEmailTemplateRequest::default();
+    req.brand_id = body.brand_id.unwrap_or_default();
+    req.name = body.name;
+    req.subject = body.subject;
+    req.body_html = body.body_html;
+    req.body_text = body.body_text;
+    req.template_type = body.template_type;
+    req.category = body.category;
+    req.language = body.language.unwrap_or_else(|| "en".to_string());
+    req.variables_json = serde_json::to_string(&body.variables.unwrap_or_else(|| serde_json::json!({}))).unwrap_or_default();
+    match client().await.create_email_template(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::BAD_REQUEST, &e.to_string()),
+    }
+}
+
+pub async fn get_email_template(
+    State(_state): State<AppState>,
+    Path(id): Path<String>,
+) -> Response {
+    let mut req = newax_proto::smtp_email::v1::GetEmailTemplateRequest::default();
+    req.id = id;
+    match client().await.get_email_template(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::NOT_FOUND, &e.to_string()),
+    }
+}
+
+pub async fn update_email_template(
+    State(_state): State<AppState>,
+    Path(id): Path<String>,
+    Json(body): Json<UpdateTemplatePayload>,
+) -> Response {
+    let mut updates = serde_json::Map::new();
+    if let Some(v) = body.subject { updates.insert("subject".into(), serde_json::Value::String(v)); }
+    if let Some(v) = body.body_html { updates.insert("body_html".into(), serde_json::Value::String(v)); }
+    if let Some(v) = body.body_text { updates.insert("body_text".into(), serde_json::Value::String(v)); }
+    if let Some(v) = body.template_type { updates.insert("template_type".into(), serde_json::Value::String(v)); }
+    if let Some(v) = body.category { updates.insert("category".into(), serde_json::Value::String(v)); }
+    if let Some(v) = body.language { updates.insert("language".into(), serde_json::Value::String(v)); }
+    if let Some(v) = body.enabled { updates.insert("enabled".into(), serde_json::Value::Bool(v)); }
+    if let Some(v) = body.variables { updates.insert("variables".into(), v); }
+    let mut req = newax_proto::smtp_email::v1::UpdateEmailTemplateRequest::default();
+    req.id = id;
+    req.updates_json = serde_json::to_string(&serde_json::Value::Object(updates)).unwrap_or_default();
+    match client().await.update_email_template(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::BAD_REQUEST, &e.to_string()),
+    }
+}
+
+pub async fn delete_email_template(
+    State(_state): State<AppState>,
+    Path(id): Path<String>,
+) -> Response {
+    let mut req = newax_proto::smtp_email::v1::DeleteEmailTemplateRequest::default();
+    req.id = id;
+    match client().await.delete_email_template(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::BAD_REQUEST, &e.to_string()),
+    }
+}
+
+pub async fn send_email(
+    State(_state): State<AppState>,
+    Json(body): Json<SendEmailPayload>,
+) -> Response {
+    let mut req = newax_proto::smtp_email::v1::SendEmailRequest::default();
+    req.to_address = body.to_address;
+    req.template_name = body.template_name;
+    req.brand_id = body.brand_id.unwrap_or_default();
+    if let Some(vars) = body.variables {
+        let map: serde_json::Map<String, serde_json::Value> = vars.into_iter()
+            .map(|(k, v)| (k, serde_json::Value::String(v)))
+            .collect();
+        req.variables_json = serde_json::to_string(&serde_json::Value::Object(map)).unwrap_or_default();
+    }
+    match client().await.send_email(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::BAD_REQUEST, &e.to_string()),
+    }
+}
 
 pub async fn get_send_logs(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Query(params): Query<SendLogsQuery>,
-) -> impl IntoResponse {
-    let limit = params.limit.unwrap_or(50);
-    match EmailSendLog::recent(&state.db, limit).await {
-        Ok(logs) => {
-            let list: Vec<Value> = logs.iter().map(|l| {
-                json!({
-                    "id": l.id,
-                    "brand_id": l.brand_id,
-                    "template_id": l.template_id,
-                    "template_name": l.template_name,
-                    "to_address": l.to_address,
-                    "from_address": l.from_address,
-                    "subject": l.subject,
-                    "status": l.status,
-                    "error_message": l.error_message,
-                    "smtp_response": l.smtp_response,
-                    "message_id": l.message_id,
-                    "sent_at": l.sent_at,
-                    "created_at": l.created_at,
-                })
-            }).collect();
-            Json(json!({ "logs": list })).into_response()
-        }
-        Err(e) => db_err(e),
+) -> Response {
+    let mut req = newax_proto::smtp_email::v1::GetSendLogsRequest::default();
+    req.limit = params.limit.unwrap_or(50);
+    match client().await.get_send_logs(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
     }
 }

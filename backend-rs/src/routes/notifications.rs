@@ -1,14 +1,30 @@
 //! Real-time Notifications & WebSockets Routes — Phase 31
 //!
-//! API endpoints for notification management, preferences, settings, and broadcasts.
+//! Thin gRPC client forwarding to svc-notifications; REST shape unchanged.
 
-use axum::extract::{Path, Query, State, WebSocketUpgrade};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::db::AppState;
-use crate::services::notifications;
+
+use newax_proto::notifications::v1::{
+    notifications_service_client::NotificationsServiceClient, Empty, IdRequest,
+    ListNotificationsRequest, QueueNotificationRequest, BroadcastNotificationRequest,
+    UpdatePreferencesRequest, UpdateSettingsRequest,
+};
+
+async fn client() -> Result<NotificationsServiceClient<tonic::transport::Channel>, (StatusCode, String)> {
+    let url = std::env::var("NOTIFICATIONS_SERVICE_URL").unwrap_or_else(|_| "http://127.0.0.1:50082".to_string());
+    NotificationsServiceClient::connect(url)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("notifications service unavailable: {e}")))
+}
+
+fn grpc_err(e: tonic::Status) -> (StatusCode, String) {
+    (StatusCode::INTERNAL_SERVER_ERROR, e.message().to_string())
+}
 
 // ——— Query Params ———
 
@@ -42,161 +58,157 @@ pub struct BroadcastNotificationQuery {
 // ——— Handlers ———
 
 /// GET /notifications/summary
-pub async fn get_summary(State(state): State<AppState>) -> Result<Json<notifications::NotificationSummary>, (StatusCode, String)> {
-    match notifications::get_notification_summary(&state).await {
-        Ok(summary) => Ok(Json(summary)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
-    }
+pub async fn get_summary(
+    State(_state): State<AppState>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut cli = client().await.map_err(|e| (e.0, e.1))?;
+    let resp = cli.get_summary(Empty {}).await.map_err(grpc_err)?;
+    let val: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(val))
 }
 
 /// GET /notifications
 pub async fn list(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Query(params): Query<ListNotificationsQuery>,
-) -> Result<Json<Vec<notifications::NotificationItem>>, (StatusCode, String)> {
-    match notifications::list_notifications(
-        &state,
-        params.user_id.as_deref(),
-        params.notification_type.as_deref(),
-        params.status.as_deref(),
-        params.limit.unwrap_or(50),
-    )
-    .await
-    {
-        Ok(notifications) => Ok(Json(notifications)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
-    }
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut cli = client().await.map_err(|e| (e.0, e.1))?;
+    let resp = cli.list_notifications(ListNotificationsRequest {
+        user_id: params.user_id,
+        notification_type: params.notification_type,
+        status: params.status,
+        limit: params.limit.unwrap_or(50),
+    }).await.map_err(grpc_err)?;
+    let val: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(val))
 }
 
 /// POST /notifications/queue
 pub async fn queue(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Json(params): Json<QueueNotificationQuery>,
-) -> Result<Json<notifications::NotificationResult>, (StatusCode, String)> {
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
     let data = params.data.unwrap_or_default();
     let channel = params.channel.unwrap_or_else(|| "push".to_string());
-
-    match notifications::queue_notification(
-        &state,
-        &params.organization_id,
-        params.user_id.as_deref(),
-        &params.notification_type,
-        &params.title,
-        &params.body,
-        &data,
-        &channel,
-    )
-    .await
-    {
-        Ok(result) => Ok(Json(result)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
-    }
+    let mut cli = client().await.map_err(|e| (e.0, e.1))?;
+    let resp = cli.queue_notification(QueueNotificationRequest {
+        organization_id: params.organization_id,
+        user_id: params.user_id,
+        notification_type: params.notification_type,
+        title: params.title,
+        body: params.body,
+        data,
+        channel,
+    }).await.map_err(grpc_err)?;
+    let val: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(val))
 }
 
 /// POST /notifications/broadcast
 pub async fn broadcast(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Json(params): Json<BroadcastNotificationQuery>,
-) -> Result<Json<notifications::BroadcastResult>, (StatusCode, String)> {
-    match notifications::broadcast_notification(
-        &state,
-        &params.organization_id,
-        &params.notification_type,
-        &params.title,
-        &params.body,
-    )
-    .await
-    {
-        Ok(result) => Ok(Json(result)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
-    }
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut cli = client().await.map_err(|e| (e.0, e.1))?;
+    let resp = cli.broadcast_notification(BroadcastNotificationRequest {
+        organization_id: params.organization_id,
+        notification_type: params.notification_type,
+        title: params.title,
+        body: params.body,
+    }).await.map_err(grpc_err)?;
+    let val: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(val))
 }
 
 /// PUT /notifications/{id}/read
 pub async fn mark_read(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<notifications::NotificationResult>, (StatusCode, String)> {
-    match notifications::mark_notification_read(&state, &id).await {
-        Ok(result) => Ok(Json(result)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
-    }
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut cli = client().await.map_err(|e| (e.0, e.1))?;
+    let resp = cli.mark_read(IdRequest { id }).await.map_err(grpc_err)?;
+    let val: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(val))
 }
 
 /// PUT /notifications/{id}/dismiss
 pub async fn dismiss(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<notifications::NotificationResult>, (StatusCode, String)> {
-    match notifications::dismiss_notification(&state, &id).await {
-        Ok(result) => Ok(Json(result)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
-    }
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut cli = client().await.map_err(|e| (e.0, e.1))?;
+    let resp = cli.dismiss(IdRequest { id }).await.map_err(grpc_err)?;
+    let val: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(val))
 }
 
 /// GET /notifications/preferences/{user_id}
 pub async fn get_preferences(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(user_id): Path<String>,
-) -> Result<Json<notifications::NotificationPreferences>, (StatusCode, String)> {
-    match notifications::get_preferences(&state, &user_id).await {
-        Ok(prefs) => Ok(Json(prefs)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
-    }
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut cli = client().await.map_err(|e| (e.0, e.1))?;
+    let resp = cli.get_preferences(IdRequest { id: user_id }).await.map_err(grpc_err)?;
+    let val: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(val))
 }
 
 /// PUT /notifications/preferences/{user_id}
 pub async fn update_preferences(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(user_id): Path<String>,
-    Json(prefs): Json<notifications::NotificationPreferences>,
-) -> Result<Json<notifications::PreferencesResult>, (StatusCode, String)> {
-    match notifications::update_preferences(&state, &user_id, &prefs).await {
-        Ok(result) => Ok(Json(result)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
-    }
+    Json(prefs): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let prefs_json = serde_json::to_string(&prefs).map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let mut cli = client().await.map_err(|e| (e.0, e.1))?;
+    let resp = cli.update_preferences(UpdatePreferencesRequest {
+        user_id,
+        prefs_json,
+    }).await.map_err(grpc_err)?;
+    let val: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(val))
 }
 
 /// GET /notifications/settings
 pub async fn get_settings(
-    State(state): State<AppState>,
-) -> Result<Json<notifications::NotificationSettings>, (StatusCode, String)> {
-    match notifications::get_settings(&state).await {
-        Ok(settings) => Ok(Json(settings)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
-    }
+    State(_state): State<AppState>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut cli = client().await.map_err(|e| (e.0, e.1))?;
+    let resp = cli.get_settings(Empty {}).await.map_err(grpc_err)?;
+    let val: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(val))
 }
 
 /// PUT /notifications/settings
 pub async fn update_settings(
-    State(state): State<AppState>,
-    Json(settings): Json<notifications::NotificationSettings>,
-) -> Result<Json<notifications::SettingsResult>, (StatusCode, String)> {
-    match notifications::update_settings(&state, &settings).await {
-        Ok(result) => Ok(Json(result)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
-    }
+    State(_state): State<AppState>,
+    Json(settings): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let settings_json = serde_json::to_string(&settings).map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let mut cli = client().await.map_err(|e| (e.0, e.1))?;
+    let resp = cli.update_settings(UpdateSettingsRequest {
+        settings_json,
+    }).await.map_err(grpc_err)?;
+    let val: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(val))
 }
 
 /// GET /notifications/connections
 pub async fn list_connections(
-    State(state): State<AppState>,
-) -> Result<Json<Vec<notifications::WebSocketConnection>>, (StatusCode, String)> {
-    match notifications::list_websocket_connections(&state).await {
-        Ok(connections) => Ok(Json(connections)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
-    }
+    State(_state): State<AppState>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut cli = client().await.map_err(|e| (e.0, e.1))?;
+    let resp = cli.list_connections(Empty {}).await.map_err(grpc_err)?;
+    let val: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(val))
 }
 
 /// POST /notifications/cleanup
 pub async fn cleanup(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    match notifications::cleanup_old_notifications(&state).await {
-        Ok(count) => Ok(Json(serde_json::json!({
-            "deleted_count": count,
-            "message": format!("Cleaned up {} old notifications", count)
-        }))),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
-    }
+    let mut cli = client().await.map_err(|e| (e.0, e.1))?;
+    let resp = cli.cleanup(Empty {}).await.map_err(grpc_err)?;
+    let val: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(val))
 }

@@ -1,262 +1,407 @@
 ﻿//! AI Procedures & Actions routes (Phase 18).
+//!
+//! Thin gRPC client forwarding to svc-procedures; REST shape unchanged.
 
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 use axum::Json;
-use serde_json::{json, Value};
-use sqlx::Row;
+use newax_proto::procedures::v1::{
+    procedures_service_client::ProceduresServiceClient,
+    Empty, IdRequest, JsonResponse, ListActionsRequest, ListProceduresRequest,
+    MatchRequest, StartExecutionRequest, ExecuteStepRequest, CompleteRequest,
+    FailRequest, UpdateRequest, TestActionRequest,
+};
+use serde::Deserialize;
+use serde_json::json;
+use tonic::transport::Channel;
 
 use crate::db::AppState;
-use crate::services::procedures;
+
+fn err(status: StatusCode, detail: impl Into<String>) -> Response {
+    (status, Json(json!({ "detail": detail.into() }))).into_response()
+}
+
+fn grpc_err(status: tonic::Status) -> Response {
+    let code = match status.code() {
+        tonic::Code::InvalidArgument => StatusCode::BAD_REQUEST,
+        tonic::Code::NotFound => StatusCode::NOT_FOUND,
+        _ => StatusCode::INTERNAL_SERVER_ERROR,
+    };
+    err(code, status.message().to_string())
+}
+
+async fn client() -> Result<ProceduresServiceClient<Channel>, Response> {
+    let url = std::env::var("PROCEDURES_SERVICE_URL")
+        .unwrap_or_else(|_| "http://127.0.0.1:50080".to_string());
+    ProceduresServiceClient::connect(url)
+        .await
+        .map_err(|e| err(StatusCode::SERVICE_UNAVAILABLE, format!("procedures service unreachable: {e}")))
+}
+
+fn json_value(json_str: String) -> serde_json::Value {
+    serde_json::from_str(&json_str).unwrap_or(serde_json::Value::Null)
+}
+
+#[derive(Deserialize)]
+pub struct ListProceduresQuery {
+    status: Option<String>,
+    category: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct ListActionsQuery {
+    action_type: Option<String>,
+}
+
+// ——— Handlers ———
 
 /// GET /procedures/summary — Get procedure and actions summary
-pub async fn get_summary(
-    State(state): State<AppState>,
-) -> Result<Json<Value>, (StatusCode, String)> {
-    let summary = procedures::get_procedure_summary(&state)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    Ok(Json(serde_json::to_value(summary).unwrap_or_default()))
+pub async fn get_summary(State(_state): State<AppState>) -> Response {
+    let mut c = match client().await {
+        Ok(c) => c,
+        Err(r) => return r,
+    };
+    match c.get_summary(Empty {}).await {
+        Ok(r) => (StatusCode::OK, Json(json_value(r.into_inner().json))).into_response(),
+        Err(e) => grpc_err(e),
+    }
 }
 
 /// GET /procedures — List procedures with optional filters
 pub async fn list_procedures(
-    State(state): State<AppState>,
-    Query(params): Query<std::collections::HashMap<String, String>>,
-) -> Result<Json<Value>, (StatusCode, String)> {
-    let status = params.get("status").map(|s| s.as_str());
-    let category = params.get("category").map(|s| s.as_str());
-    let procs = procedures::list_procedures(&state, status, category)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    Ok(Json(serde_json::to_value(procs).unwrap_or_default()))
+    State(_state): State<AppState>,
+    Query(params): Query<ListProceduresQuery>,
+) -> Response {
+    let mut c = match client().await {
+        Ok(c) => c,
+        Err(r) => return r,
+    };
+    let req = ListProceduresRequest {
+        status: params.status,
+        category: params.category,
+    };
+    match c.list_procedures(req).await {
+        Ok(r) => (StatusCode::OK, Json(json_value(r.into_inner().json))).into_response(),
+        Err(e) => grpc_err(e),
+    }
 }
 
 /// POST /procedures — Create a new procedure
 pub async fn create_procedure(
-    State(state): State<AppState>,
-    Json(body): Json<Value>,
-) -> Result<Json<Value>, (StatusCode, String)> {
-    let name = body.get("name").and_then(|v| v.as_str()).ok_or((StatusCode::BAD_REQUEST, "name is required".to_string()))?;
-    let description = body.get("description").and_then(|v| v.as_str());
-    let category = body.get("category").and_then(|v| v.as_str()).unwrap_or("general");
-    let trigger_keywords = body.get("trigger_keywords").cloned().unwrap_or_else(|| json!([]));
-    let steps = body.get("steps").cloned().unwrap_or_else(|| json!([]));
-    let max_iterations = body.get("max_iterations").and_then(|v| v.as_i64()).unwrap_or(10) as i32;
-    let timeout_seconds = body.get("timeout_seconds").and_then(|v| v.as_i64()).unwrap_or(300) as i32;
-    let brand_id = body.get("brand_id").and_then(|v| v.as_str());
-    let created_by = body.get("created_by").and_then(|v| v.as_str());
-
-    let proc = procedures::create_procedure(&state, name, description, category, &trigger_keywords, &steps, max_iterations, timeout_seconds, brand_id, created_by)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    Ok(Json(serde_json::to_value(proc).unwrap_or_default()))
+    State(_state): State<AppState>,
+    Json(body): Json<serde_json::Value>,
+) -> Response {
+    let mut c = match client().await {
+        Ok(c) => c,
+        Err(r) => return r,
+    };
+    let req = JsonResponse { json: body.to_string() };
+    match c.create_procedure(req).await {
+        Ok(r) => (StatusCode::OK, Json(json_value(r.into_inner().json))).into_response(),
+        Err(e) => grpc_err(e),
+    }
 }
 
 /// GET /procedures/{id} — Get a procedure
 pub async fn get_procedure(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<Value>, (StatusCode, String)> {
-    let proc = procedures::get_procedure(&state, &id)
-        .await
-        .map_err(|e| (StatusCode::NOT_FOUND, e.to_string()))?;
-    Ok(Json(serde_json::to_value(proc).unwrap_or_default()))
+) -> Response {
+    let mut c = match client().await {
+        Ok(c) => c,
+        Err(r) => return r,
+    };
+    let req = IdRequest { id };
+    match c.get_procedure(req).await {
+        Ok(r) => (StatusCode::OK, Json(json_value(r.into_inner().json))).into_response(),
+        Err(e) => grpc_err(e),
+    }
 }
 
 /// PUT /procedures/{id} — Update a procedure
 pub async fn update_procedure(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(id): Path<String>,
-    Json(body): Json<Value>,
-) -> Result<Json<Value>, (StatusCode, String)> {
-    let proc = procedures::update_procedure(&state, &id, &body)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    Ok(Json(serde_json::to_value(proc).unwrap_or_default()))
+    Json(body): Json<serde_json::Value>,
+) -> Response {
+    let mut c = match client().await {
+        Ok(c) => c,
+        Err(r) => return r,
+    };
+    let req = UpdateRequest {
+        id,
+        updates_json: body.to_string(),
+    };
+    match c.update_procedure(req).await {
+        Ok(r) => (StatusCode::OK, Json(json_value(r.into_inner().json))).into_response(),
+        Err(e) => grpc_err(e),
+    }
 }
 
 /// DELETE /procedures/{id} — Delete a procedure
 pub async fn delete_procedure(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<StatusCode, (StatusCode, String)> {
-    procedures::delete_procedure(&state, &id)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    Ok(StatusCode::NO_CONTENT)
+) -> Response {
+    let mut c = match client().await {
+        Ok(c) => c,
+        Err(r) => return r,
+    };
+    let req = IdRequest { id };
+    match c.delete_procedure(req).await {
+        Ok(_) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => grpc_err(e),
+    }
 }
 
 /// POST /procedures/match — Match a message against procedures
 pub async fn match_procedures(
-    State(state): State<AppState>,
-    Json(body): Json<Value>,
-) -> Result<Json<Value>, (StatusCode, String)> {
-    let message = body.get("message").and_then(|v| v.as_str()).ok_or((StatusCode::BAD_REQUEST, "message is required".to_string()))?;
-    let conversation_id = body.get("conversation_id").and_then(|v| v.as_str()).ok_or((StatusCode::BAD_REQUEST, "conversation_id is required".to_string()))?;
-    let matches = procedures::match_procedures(&state, message, conversation_id)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    Ok(Json(serde_json::to_value(matches).unwrap_or_default()))
+    State(_state): State<AppState>,
+    Json(body): Json<serde_json::Value>,
+) -> Response {
+    let message = match body.get("message").and_then(|v| v.as_str()) {
+        Some(m) => m.to_string(),
+        None => return err(StatusCode::BAD_REQUEST, "message is required"),
+    };
+    let conversation_id = match body.get("conversation_id").and_then(|v| v.as_str()) {
+        Some(c) => c.to_string(),
+        None => return err(StatusCode::BAD_REQUEST, "conversation_id is required"),
+    };
+    let mut c = match client().await {
+        Ok(c) => c,
+        Err(r) => return r,
+    };
+    let req = MatchRequest { message, conversation_id };
+    match c.match_procedures(req).await {
+        Ok(r) => (StatusCode::OK, Json(json_value(r.into_inner().json))).into_response(),
+        Err(e) => grpc_err(e),
+    }
 }
 
 /// POST /procedures/{id}/execute — Start a procedure execution
 pub async fn start_execution(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(id): Path<String>,
-    Json(body): Json<Value>,
-) -> Result<Json<Value>, (StatusCode, String)> {
-    let conversation_id = body.get("conversation_id").and_then(|v| v.as_str()).ok_or((StatusCode::BAD_REQUEST, "conversation_id is required".to_string()))?;
-    let execution = procedures::start_procedure_execution(&state, &id, conversation_id)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    Ok(Json(serde_json::to_value(execution).unwrap_or_default()))
+    Json(body): Json<serde_json::Value>,
+) -> Response {
+    let conversation_id = match body.get("conversation_id").and_then(|v| v.as_str()) {
+        Some(c) => c.to_string(),
+        None => return err(StatusCode::BAD_REQUEST, "conversation_id is required"),
+    };
+    let mut c = match client().await {
+        Ok(c) => c,
+        Err(r) => return r,
+    };
+    let req = StartExecutionRequest {
+        procedure_id: id,
+        conversation_id,
+    };
+    match c.start_execution(req).await {
+        Ok(r) => (StatusCode::OK, Json(json_value(r.into_inner().json))).into_response(),
+        Err(e) => grpc_err(e),
+    }
 }
 
 /// GET /procedures/executions/{id} — Get execution details
 pub async fn get_execution(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<Value>, (StatusCode, String)> {
-    let execution = procedures::get_procedure_execution(&state, &id)
-        .await
-        .map_err(|e| (StatusCode::NOT_FOUND, e.to_string()))?;
-    Ok(Json(serde_json::to_value(execution).unwrap_or_default()))
+) -> Response {
+    let mut c = match client().await {
+        Ok(c) => c,
+        Err(r) => return r,
+    };
+    let req = IdRequest { id };
+    match c.get_execution(req).await {
+        Ok(r) => (StatusCode::OK, Json(json_value(r.into_inner().json))).into_response(),
+        Err(e) => grpc_err(e),
+    }
 }
 
 /// GET /procedures/executions/conversation/{id} — Get running execution for conversation
 pub async fn get_running_execution(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(conversation_id): Path<String>,
-) -> Result<Json<Value>, (StatusCode, String)> {
-    let execution = procedures::get_running_execution(&state, &conversation_id)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    Ok(Json(serde_json::to_value(execution).unwrap_or_default()))
+) -> Response {
+    let mut c = match client().await {
+        Ok(c) => c,
+        Err(r) => return r,
+    };
+    let req = IdRequest { id: conversation_id };
+    match c.get_running_execution(req).await {
+        Ok(r) => (StatusCode::OK, Json(json_value(r.into_inner().json))).into_response(),
+        Err(e) => grpc_err(e),
+    }
 }
 
 /// POST /procedures/executions/{id}/step — Execute current step
 pub async fn execute_step(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(id): Path<String>,
-    Json(body): Json<Value>,
-) -> Result<Json<Value>, (StatusCode, String)> {
-    let customer_input = body.get("customer_input").and_then(|v| v.as_str());
-    let result = procedures::execute_current_step(&state, &id, customer_input)
-        .await
-        .map_err(|(code, msg)| (StatusCode::INTERNAL_SERVER_ERROR, format!("{}: {}", code, msg)))?;
-    Ok(Json(serde_json::to_value(result).unwrap_or_default()))
+    Json(body): Json<serde_json::Value>,
+) -> Response {
+    let customer_input = body.get("customer_input").and_then(|v| v.as_str()).map(|s| s.to_string());
+    let mut c = match client().await {
+        Ok(c) => c,
+        Err(r) => return r,
+    };
+    let req = ExecuteStepRequest {
+        execution_id: id,
+        customer_input,
+    };
+    match c.execute_step(req).await {
+        Ok(r) => (StatusCode::OK, Json(json_value(r.into_inner().json))).into_response(),
+        Err(e) => grpc_err(e),
+    }
 }
 
 /// POST /procedures/executions/{id}/complete — Complete an execution
 pub async fn complete_execution(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(id): Path<String>,
-    Json(body): Json<Value>,
-) -> Result<StatusCode, (StatusCode, String)> {
-    let result = body.get("result").and_then(|v| v.as_str()).unwrap_or("completed");
-    procedures::complete_procedure_execution(&state, &id, result)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    Ok(StatusCode::OK)
+    Json(body): Json<serde_json::Value>,
+) -> Response {
+    let result = body.get("result").and_then(|v| v.as_str()).unwrap_or("completed").to_string();
+    let mut c = match client().await {
+        Ok(c) => c,
+        Err(r) => return r,
+    };
+    let req = CompleteRequest {
+        execution_id: id,
+        result,
+    };
+    match c.complete_execution(req).await {
+        Ok(_) => StatusCode::OK.into_response(),
+        Err(e) => grpc_err(e),
+    }
 }
 
 /// POST /procedures/executions/{id}/fail — Fail an execution
 pub async fn fail_execution(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(id): Path<String>,
-    Json(body): Json<Value>,
-) -> Result<StatusCode, (StatusCode, String)> {
-    let error = body.get("error").and_then(|v| v.as_str()).unwrap_or("failed");
-    procedures::fail_procedure_execution(&state, &id, error)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    Ok(StatusCode::OK)
+    Json(body): Json<serde_json::Value>,
+) -> Response {
+    let error = body.get("error").and_then(|v| v.as_str()).unwrap_or("failed").to_string();
+    let mut c = match client().await {
+        Ok(c) => c,
+        Err(r) => return r,
+    };
+    let req = FailRequest {
+        execution_id: id,
+        error,
+    };
+    match c.fail_execution(req).await {
+        Ok(_) => StatusCode::OK.into_response(),
+        Err(e) => grpc_err(e),
+    }
 }
 
 // ——— Actions ———
 
 /// GET /actions — List actions
 pub async fn list_actions(
-    State(state): State<AppState>,
-    Query(params): Query<std::collections::HashMap<String, String>>,
-) -> Result<Json<Value>, (StatusCode, String)> {
-    let action_type = params.get("action_type").map(|s| s.as_str());
-    let actions = procedures::list_actions(&state, action_type)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    Ok(Json(serde_json::to_value(actions).unwrap_or_default()))
+    State(_state): State<AppState>,
+    Query(params): Query<ListActionsQuery>,
+) -> Response {
+    let mut c = match client().await {
+        Ok(c) => c,
+        Err(r) => return r,
+    };
+    let req = ListActionsRequest {
+        action_type: params.action_type,
+    };
+    match c.list_actions(req).await {
+        Ok(r) => (StatusCode::OK, Json(json_value(r.into_inner().json))).into_response(),
+        Err(e) => grpc_err(e),
+    }
 }
 
 /// POST /actions — Create an action
 pub async fn create_action(
-    State(state): State<AppState>,
-    Json(body): Json<Value>,
-) -> Result<Json<Value>, (StatusCode, String)> {
-    let name = body.get("name").and_then(|v| v.as_str()).ok_or((StatusCode::BAD_REQUEST, "name is required".to_string()))?;
-    let description = body.get("description").and_then(|v| v.as_str());
-    let action_type = body.get("action_type").and_then(|v| v.as_str()).ok_or((StatusCode::BAD_REQUEST, "action_type is required".to_string()))?;
-    let endpoint = body.get("endpoint").and_then(|v| v.as_str());
-    let method = body.get("method").and_then(|v| v.as_str()).unwrap_or("POST");
-    let headers = body.get("headers").cloned().unwrap_or_else(|| json!({}));
-    let body_template = body.get("body_template").and_then(|v| v.as_str());
-    let auth_config = body.get("auth_config").cloned();
-    let timeout_seconds = body.get("timeout_seconds").and_then(|v| v.as_i64()).unwrap_or(30) as i32;
-    let retry_count = body.get("retry_count").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
-    let brand_id = body.get("brand_id").and_then(|v| v.as_str());
-    let created_by = body.get("created_by").and_then(|v| v.as_str());
-
-    let action = procedures::create_action(&state, name, description, action_type, endpoint, method, &headers, body_template, auth_config.as_ref(), timeout_seconds, retry_count, brand_id, created_by)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    Ok(Json(serde_json::to_value(action).unwrap_or_default()))
+    State(_state): State<AppState>,
+    Json(body): Json<serde_json::Value>,
+) -> Response {
+    let mut c = match client().await {
+        Ok(c) => c,
+        Err(r) => return r,
+    };
+    let req = JsonResponse { json: body.to_string() };
+    match c.create_action(req).await {
+        Ok(r) => (StatusCode::OK, Json(json_value(r.into_inner().json))).into_response(),
+        Err(e) => grpc_err(e),
+    }
 }
 
 /// GET /actions/{id} — Get an action
 pub async fn get_action(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<Value>, (StatusCode, String)> {
-    let action = procedures::get_action(&state, &id)
-        .await
-        .map_err(|e| (StatusCode::NOT_FOUND, e.to_string()))?;
-    Ok(Json(serde_json::to_value(action).unwrap_or_default()))
+) -> Response {
+    let mut c = match client().await {
+        Ok(c) => c,
+        Err(r) => return r,
+    };
+    let req = IdRequest { id };
+    match c.get_action(req).await {
+        Ok(r) => (StatusCode::OK, Json(json_value(r.into_inner().json))).into_response(),
+        Err(e) => grpc_err(e),
+    }
 }
 
 /// PUT /actions/{id} — Update an action
 pub async fn update_action(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(id): Path<String>,
-    Json(body): Json<Value>,
-) -> Result<Json<Value>, (StatusCode, String)> {
-    let action = procedures::update_action(&state, &id, &body)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    Ok(Json(serde_json::to_value(action).unwrap_or_default()))
+    Json(body): Json<serde_json::Value>,
+) -> Response {
+    let mut c = match client().await {
+        Ok(c) => c,
+        Err(r) => return r,
+    };
+    let req = UpdateRequest {
+        id,
+        updates_json: body.to_string(),
+    };
+    match c.update_action(req).await {
+        Ok(r) => (StatusCode::OK, Json(json_value(r.into_inner().json))).into_response(),
+        Err(e) => grpc_err(e),
+    }
 }
 
 /// DELETE /actions/{id} — Delete an action
 pub async fn delete_action(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<StatusCode, (StatusCode, String)> {
-    procedures::delete_action(&state, &id)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    Ok(StatusCode::NO_CONTENT)
+) -> Response {
+    let mut c = match client().await {
+        Ok(c) => c,
+        Err(r) => return r,
+    };
+    let req = IdRequest { id };
+    match c.delete_action(req).await {
+        Ok(_) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => grpc_err(e),
+    }
 }
 
 /// POST /actions/{id}/test — Test an action
 pub async fn test_action(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(id): Path<String>,
-    Json(body): Json<Value>,
-) -> Result<Json<Value>, (StatusCode, String)> {
-    let params = body.get("params").cloned().unwrap_or_else(|| json!({}));
-    // We need to expose execute_action or create a test endpoint
-    // For now, return the action details
-    let action = procedures::get_action(&state, &id)
-        .await
-        .map_err(|e| (StatusCode::NOT_FOUND, e.to_string()))?;
-    Ok(Json(serde_json::to_value(action).unwrap_or_default()))
+    Json(body): Json<serde_json::Value>,
+) -> Response {
+    let mut c = match client().await {
+        Ok(c) => c,
+        Err(r) => return r,
+    };
+    let req = TestActionRequest {
+        action_id: id,
+        params_json: body.to_string(),
+    };
+    match c.test_action(req).await {
+        Ok(r) => (StatusCode::OK, Json(json_value(r.into_inner().json))).into_response(),
+        Err(e) => grpc_err(e),
+    }
 }
