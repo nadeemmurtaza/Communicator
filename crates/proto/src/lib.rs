@@ -39,3 +39,9 @@ pub mod conversation_search {
         tonic::include_proto!("newax.conversation_search.v1");
     }
 }
+
+pub mod reply_integration {
+    pub mod v1 {
+        tonic::include_proto!("newax.reply_integration.v1");
+    }
+}

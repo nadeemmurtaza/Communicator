@@ -556,6 +556,62 @@ impl ReplyIntegrationService {
             settings,
         })
     }
+
+    /// Get tracked knowledge sources, optionally filtered by draft/conversation/source type.
+    pub async fn get_knowledge_sources(
+        &self,
+        draft_id: Option<&str>,
+        conversation_id: Option<&str>,
+        source_type: Option<&str>,
+    ) -> Result<Vec<serde_json::Value>, anyhow::Error> {
+        let mut query = String::from(
+            "SELECT id, draft_id, conversation_id, source_type, source_id, source_title, relevance_score, used_in_reply, created_at \
+             FROM reply_knowledge_sources WHERE 1=1"
+        );
+        let mut idx = 1;
+        if draft_id.is_some() {
+            query.push_str(&format!(" AND draft_id = ${}", idx));
+            idx += 1;
+        }
+        if conversation_id.is_some() {
+            query.push_str(&format!(" AND conversation_id = ${}", idx));
+            idx += 1;
+        }
+        if source_type.is_some() {
+            query.push_str(&format!(" AND source_type = ${}", idx));
+        }
+        query.push_str(" ORDER BY created_at DESC LIMIT 100");
+
+        let mut q = sqlx::query(&query);
+        if let Some(v) = draft_id {
+            q = q.bind(v);
+        }
+        if let Some(v) = conversation_id {
+            q = q.bind(v);
+        }
+        if let Some(v) = source_type {
+            q = q.bind(v);
+        }
+
+        let rows = q.fetch_all(&self.pool).await?;
+
+        let mut sources = Vec::new();
+        for row in rows {
+            sources.push(serde_json::json!({
+                "id": row.try_get::<String, _>("id").unwrap_or_default(),
+                "draft_id": row.try_get::<String, _>("draft_id").unwrap_or_default(),
+                "conversation_id": row.try_get::<String, _>("conversation_id").unwrap_or_default(),
+                "source_type": row.try_get::<String, _>("source_type").unwrap_or_default(),
+                "source_id": row.try_get::<Option<String>, _>("source_id").ok(),
+                "source_title": row.try_get::<String, _>("source_title").unwrap_or_default(),
+                "relevance_score": row.try_get::<f64, _>("relevance_score").unwrap_or(0.5),
+                "used_in_reply": row.try_get::<bool, _>("used_in_reply").unwrap_or(true),
+                "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").ok(),
+            }));
+        }
+
+        Ok(sources)
+    }
 }
 
 #[derive(Debug, Clone)]

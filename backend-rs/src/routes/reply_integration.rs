@@ -1,126 +1,101 @@
+//! Thin gRPC client forwarding to svc-reply-integration; REST shape unchanged.
+
 use axum::extract::{Path, Query, State};
 use axum::Json;
-use sqlx::Row;
 use crate::db::AppState;
-use crate::services::reply_integration::{ReplyIntegrationService, ReplyIntegrationSettings};
+
+use newax_proto::reply_integration::v1::{
+    reply_integration_service_client::ReplyIntegrationServiceClient, BuildContextRequest as GrpcBuildContextRequest,
+    Empty, GetSourcesRequest as GrpcGetSourcesRequest, UpdateSettingsRequest as GrpcUpdateSettingsRequest,
+};
+
+async fn client() -> Result<
+    ReplyIntegrationServiceClient<tonic::transport::Channel>,
+    (axum::http::StatusCode, Json<serde_json::Value>),
+> {
+    let url = std::env::var("REPLY_INTEGRATION_SERVICE_URL").unwrap_or_else(|_| "http://127.0.0.1:50068".to_string());
+    ReplyIntegrationServiceClient::connect(url).await.map_err(|e| {
+        (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": format!("reply-integration service unavailable: {e}") })),
+        )
+    })
+}
+
+fn grpc_err(e: tonic::Status) -> (axum::http::StatusCode, Json<serde_json::Value>) {
+    (
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+        Json(serde_json::json!({ "error": e.message().to_string() })),
+    )
+}
+
+fn parse_json(s: &str) -> serde_json::Value {
+    serde_json::from_str(s).unwrap_or_default()
+}
 
 /// GET /reply-integration/summary
 pub async fn get_summary(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, (axum::http::StatusCode, Json<serde_json::Value>)> {
-    let service = ReplyIntegrationService::new(&state.db);
-    match service.get_summary().await {
-        Ok(summary) => Ok(Json(serde_json::to_value(summary).unwrap_or_default())),
-        Err(e) => Err((
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )),
-    }
+    let mut c = client().await?;
+    let resp = c.get_summary(Empty {}).await.map_err(grpc_err)?;
+    Ok(Json(parse_json(&resp.into_inner().json)))
 }
 
 /// GET /reply-integration/settings
 pub async fn get_settings(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, (axum::http::StatusCode, Json<serde_json::Value>)> {
-    let service = ReplyIntegrationService::new(&state.db);
-    match service.get_settings().await {
-        Ok(settings) => Ok(Json(serde_json::to_value(settings).unwrap_or_default())),
-        Err(e) => Err((
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )),
-    }
+    let mut c = client().await?;
+    let resp = c.get_settings(Empty {}).await.map_err(grpc_err)?;
+    Ok(Json(parse_json(&resp.into_inner().json)))
 }
 
 /// PUT /reply-integration/settings
 pub async fn update_settings(
-    State(state): State<AppState>,
-    Json(settings): Json<ReplyIntegrationSettings>,
+    State(_state): State<AppState>,
+    Json(settings): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, (axum::http::StatusCode, Json<serde_json::Value>)> {
-    let service = ReplyIntegrationService::new(&state.db);
-    match service.update_settings(&settings).await {
-        Ok(updated) => Ok(Json(serde_json::to_value(updated).unwrap_or_default())),
-        Err(e) => Err((
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )),
-    }
+    let mut c = client().await?;
+    let resp = c
+        .update_settings(GrpcUpdateSettingsRequest { json: settings.to_string() })
+        .await
+        .map_err(grpc_err)?;
+    Ok(Json(parse_json(&resp.into_inner().json)))
 }
 
 /// POST /reply-integration/build-context
 pub async fn build_context(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Json(body): Json<BuildContextRequest>,
 ) -> Result<Json<serde_json::Value>, (axum::http::StatusCode, Json<serde_json::Value>)> {
-    let service = ReplyIntegrationService::new(&state.db);
-    match service.build_context_package(body.contact_id.as_deref(), &body.last_inbound, &body.tenant_key).await {
-        Ok(pkg) => Ok(Json(serde_json::to_value(pkg).unwrap_or_default())),
-        Err(e) => Err((
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )),
-    }
+    let mut c = client().await?;
+    let resp = c
+        .build_context(GrpcBuildContextRequest {
+            contact_id: body.contact_id,
+            last_inbound: body.last_inbound,
+            tenant_key: body.tenant_key,
+        })
+        .await
+        .map_err(grpc_err)?;
+    Ok(Json(parse_json(&resp.into_inner().json)))
 }
 
 /// GET /reply-integration/sources
 pub async fn get_knowledge_sources(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Query(params): Query<GetSourcesQuery>,
 ) -> Result<Json<serde_json::Value>, (axum::http::StatusCode, Json<serde_json::Value>)> {
-    let _service = ReplyIntegrationService::new(&state.db);
-
-    let mut query = String::from(
-        "SELECT id, draft_id, conversation_id, source_type, source_id, source_title, relevance_score, used_in_reply, created_at \
-         FROM reply_knowledge_sources WHERE 1=1"
-    );
-    let mut idx = 1;
-    if params.draft_id.is_some() {
-        query.push_str(&format!(" AND draft_id = ${}", idx));
-        idx += 1;
-    }
-    if params.conversation_id.is_some() {
-        query.push_str(&format!(" AND conversation_id = ${}", idx));
-        idx += 1;
-    }
-    if params.source_type.is_some() {
-        query.push_str(&format!(" AND source_type = ${}", idx));
-        idx += 1;
-    }
-    query.push_str(" ORDER BY created_at DESC LIMIT 100");
-
-    let mut q = sqlx::query(&query);
-    if let Some(ref draft_id) = params.draft_id {
-        q = q.bind(draft_id);
-    }
-    if let Some(ref conversation_id) = params.conversation_id {
-        q = q.bind(conversation_id);
-    }
-    if let Some(ref source_type) = params.source_type {
-        q = q.bind(source_type);
-    }
-
-    let rows = q.fetch_all(&state.db).await.map_err(|e| (
-        axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-        Json(serde_json::json!({ "error": e.to_string() })),
-    ))?;
-    
-    let mut sources = Vec::new();
-    for row in rows {
-        let source: serde_json::Value = serde_json::json!({
-            "id": row.try_get::<String, _>("id").unwrap_or_default(),
-            "draft_id": row.try_get::<String, _>("draft_id").unwrap_or_default(),
-            "conversation_id": row.try_get::<String, _>("conversation_id").unwrap_or_default(),
-            "source_type": row.try_get::<String, _>("source_type").unwrap_or_default(),
-            "source_id": row.try_get::<Option<String>, _>("source_id").ok(),
-            "source_title": row.try_get::<String, _>("source_title").unwrap_or_default(),
-            "relevance_score": row.try_get::<f64, _>("relevance_score").unwrap_or(0.5),
-            "used_in_reply": row.try_get::<bool, _>("used_in_reply").unwrap_or(true),
-            "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").ok(),
-        });
-        sources.push(source);
-    }
-    
-    Ok(Json(serde_json::json!({ "sources": sources, "total": sources.len() })))
+    let mut c = client().await?;
+    let resp = c
+        .get_knowledge_sources(GrpcGetSourcesRequest {
+            draft_id: params.draft_id,
+            conversation_id: params.conversation_id,
+            source_type: params.source_type,
+        })
+        .await
+        .map_err(grpc_err)?;
+    Ok(Json(parse_json(&resp.into_inner().json)))
 }
 
 #[derive(serde::Deserialize)]

@@ -65,7 +65,6 @@ pub mod erp_fulfilment;
 pub mod in_app_messaging;
 pub mod tone_of_voice;
 pub mod unified_analytics;
-pub mod reply_integration;
 pub mod ab_testing;
 pub mod compliance_dashboard;
 pub mod smtp_email;

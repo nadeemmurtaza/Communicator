@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package newax.reply_integration.v1;
+
+service ReplyIntegrationService {
+  rpc GetSummary(Empty) returns (JsonResponse);
+  rpc GetSettings(Empty) returns (JsonResponse);
+  rpc UpdateSettings(UpdateSettingsRequest) returns (JsonResponse);
+  rpc BuildContext(BuildContextRequest) returns (JsonResponse);
+  rpc GetKnowledgeSources(GetSourcesRequest) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message UpdateSettingsRequest {
+  string json = 1;
+}
+
+message BuildContextRequest {
+  optional string contact_id = 1;
+  string last_inbound = 2;
+  string tenant_key = 3;
+}
+
+message GetSourcesRequest {
+  optional string draft_id = 1;
+  optional string conversation_id = 2;
+  optional string source_type = 3;
+}
