@@ -6,9 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::Row;
-
-use crate::db::AppState;
+use sqlx::{PgPool, Row};
 
 // ——— Types ———
 
@@ -128,13 +126,13 @@ pub struct AnalyticsResult {
 // ——— Core Functions ———
 
 /// Get tone of voice summary dashboard data
-pub async fn get_summary(state: &AppState) -> Result<ToneSummary, sqlx::Error> {
+pub async fn get_summary(pool: &PgPool) -> Result<ToneSummary, sqlx::Error> {
     // Config
     let config_row = sqlx::query(
         "SELECT enabled, tone_style, personality, answer_length \
          FROM tone_config WHERE organization_id = 'org-default' LIMIT 1"
     )
-    .fetch_optional(&state.db)
+    .fetch_optional(pool)
     .await?;
 
     let enabled = config_row.as_ref().map(|r| r.try_get::<bool, _>(0).unwrap_or(true)).unwrap_or(true);
@@ -146,21 +144,21 @@ pub async fn get_summary(state: &AppState) -> Result<ToneSummary, sqlx::Error> {
     let total_guidance_rules: i32 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM guidance_rules"
     )
-    .fetch_one(&state.db)
+    .fetch_one(pool)
     .await?;
 
     // Enabled guidance rules
     let enabled_guidance_rules: i32 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM guidance_rules WHERE enabled = true"
     )
-    .fetch_one(&state.db)
+    .fetch_one(pool)
     .await?;
 
     // Total presets
     let total_presets: i32 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM tone_presets"
     )
-    .fetch_one(&state.db)
+    .fetch_one(pool)
     .await?;
 
     // Recent analytics
@@ -170,7 +168,7 @@ pub async fn get_summary(state: &AppState) -> Result<ToneSummary, sqlx::Error> {
          window_start, window_end, created_at \
          FROM tone_analytics ORDER BY created_at DESC LIMIT 10"
     )
-    .fetch_all(&state.db)
+    .fetch_all(pool)
     .await?;
 
     let recent_analytics: Vec<ToneAnalytics> = analytics_rows
@@ -197,7 +195,7 @@ pub async fn get_summary(state: &AppState) -> Result<ToneSummary, sqlx::Error> {
          priority, applies_to, enabled, created_at, updated_at \
          FROM guidance_rules ORDER BY priority DESC"
     )
-    .fetch_all(&state.db)
+    .fetch_all(pool)
     .await?;
 
     let guidance_rules: Vec<GuidanceRule> = guidance_rows
@@ -224,7 +222,7 @@ pub async fn get_summary(state: &AppState) -> Result<ToneSummary, sqlx::Error> {
          greeting_template, closing_template, escalation_template, custom_instructions \
          FROM tone_presets ORDER BY name"
     )
-    .fetch_all(&state.db)
+    .fetch_all(pool)
     .await?;
 
     let presets: Vec<TonePreset> = preset_rows
@@ -262,7 +260,7 @@ pub async fn get_summary(state: &AppState) -> Result<ToneSummary, sqlx::Error> {
 }
 
 /// Get current tone config
-pub async fn get_config(state: &AppState) -> Result<ToneConfig, sqlx::Error> {
+pub async fn get_config(pool: &PgPool) -> Result<ToneConfig, sqlx::Error> {
     let row = sqlx::query(
         "SELECT id, organization_id, tone_style, personality, answer_length, language, \
          formality_level, humor_enabled, empathy_level, conciseness_level, \
@@ -271,7 +269,7 @@ pub async fn get_config(state: &AppState) -> Result<ToneConfig, sqlx::Error> {
          created_at, updated_at \
          FROM tone_config WHERE organization_id = 'org-default' LIMIT 1"
     )
-    .fetch_optional(&state.db)
+    .fetch_optional(pool)
     .await?;
 
     match row {
@@ -301,7 +299,7 @@ pub async fn get_config(state: &AppState) -> Result<ToneConfig, sqlx::Error> {
 }
 
 /// Update tone config
-pub async fn update_config(state: &AppState, config: &ToneConfig) -> Result<ConfigResult, sqlx::Error> {
+pub async fn update_config(pool: &PgPool, config: &ToneConfig) -> Result<ConfigResult, sqlx::Error> {
     sqlx::query(
         "UPDATE tone_config SET tone_style = $1, personality = $2, answer_length = $3, \
          language = $4, formality_level = $5, humor_enabled = $6, empathy_level = $7, \
@@ -326,7 +324,7 @@ pub async fn update_config(state: &AppState, config: &ToneConfig) -> Result<Conf
     .bind(&config.escalation_template)
     .bind(&config.enabled)
     .bind(&config.id)
-    .execute(&state.db)
+    .execute(pool)
     .await?;
 
     Ok(ConfigResult {
@@ -336,7 +334,7 @@ pub async fn update_config(state: &AppState, config: &ToneConfig) -> Result<Conf
 }
 
 /// Apply preset to current config
-pub async fn apply_preset(state: &AppState, preset_id: &str) -> Result<ConfigResult, sqlx::Error> {
+pub async fn apply_preset(pool: &PgPool, preset_id: &str) -> Result<ConfigResult, sqlx::Error> {
     // Get preset
     let preset_row = sqlx::query(
         "SELECT tone_style, personality, answer_length, formality_level, humor_enabled, \
@@ -345,7 +343,7 @@ pub async fn apply_preset(state: &AppState, preset_id: &str) -> Result<ConfigRes
          FROM tone_presets WHERE id = $1"
     )
     .bind(preset_id)
-    .fetch_optional(&state.db)
+    .fetch_optional(pool)
     .await?;
 
     match preset_row {
@@ -380,7 +378,7 @@ pub async fn apply_preset(state: &AppState, preset_id: &str) -> Result<ConfigRes
             .bind(&closing_template)
             .bind(&escalation_template)
             .bind(&custom_instructions)
-            .execute(&state.db)
+            .execute(pool)
             .await?;
 
             Ok(ConfigResult {
@@ -393,13 +391,13 @@ pub async fn apply_preset(state: &AppState, preset_id: &str) -> Result<ConfigRes
 }
 
 /// List all guidance rules
-pub async fn list_guidance_rules(state: &AppState) -> Result<Vec<GuidanceRule>, sqlx::Error> {
+pub async fn list_guidance_rules(pool: &PgPool) -> Result<Vec<GuidanceRule>, sqlx::Error> {
     let rows = sqlx::query(
         "SELECT id, organization_id, name, description, rule_type, instruction, \
          priority, applies_to, enabled, created_at, updated_at \
          FROM guidance_rules ORDER BY priority DESC"
     )
-    .fetch_all(&state.db)
+    .fetch_all(pool)
     .await?;
 
     let rules: Vec<GuidanceRule> = rows
@@ -424,7 +422,7 @@ pub async fn list_guidance_rules(state: &AppState) -> Result<Vec<GuidanceRule>, 
 
 /// Create a new guidance rule
 pub async fn create_guidance_rule(
-    state: &AppState,
+    pool: &PgPool,
     name: &str,
     instruction: &str,
     rule_type: &str,
@@ -439,7 +437,7 @@ pub async fn create_guidance_rule(
     .bind(rule_type)
     .bind(instruction)
     .bind(priority)
-    .fetch_one(&state.db)
+    .fetch_one(pool)
     .await?;
 
     let id: String = row.try_get(0).unwrap_or_default();
@@ -452,7 +450,7 @@ pub async fn create_guidance_rule(
 
 /// Update a guidance rule
 pub async fn update_guidance_rule(
-    state: &AppState,
+    pool: &PgPool,
     rule_id: &str,
     rule: &GuidanceRule,
 ) -> Result<GuidanceResult, sqlx::Error> {
@@ -469,7 +467,7 @@ pub async fn update_guidance_rule(
     .bind(&rule.applies_to)
     .bind(&rule.enabled)
     .bind(rule_id)
-    .execute(&state.db)
+    .execute(pool)
     .await?;
 
     Ok(GuidanceResult {
@@ -479,10 +477,10 @@ pub async fn update_guidance_rule(
 }
 
 /// Delete a guidance rule
-pub async fn delete_guidance_rule(state: &AppState, rule_id: &str) -> Result<GuidanceResult, sqlx::Error> {
+pub async fn delete_guidance_rule(pool: &PgPool, rule_id: &str) -> Result<GuidanceResult, sqlx::Error> {
     sqlx::query("DELETE FROM guidance_rules WHERE id = $1")
         .bind(rule_id)
-        .execute(&state.db)
+        .execute(pool)
         .await?;
 
     Ok(GuidanceResult {
@@ -493,7 +491,7 @@ pub async fn delete_guidance_rule(state: &AppState, rule_id: &str) -> Result<Gui
 
 /// Get prompt additions for the AI reply engine
 /// This is the key function that injects tone and guidance into the AI system prompt
-pub async fn get_prompt_additions(state: &AppState) -> Result<PromptAdditions, sqlx::Error> {
+pub async fn get_prompt_additions(pool: &PgPool) -> Result<PromptAdditions, sqlx::Error> {
     // Get config
     let config_row = sqlx::query(
         "SELECT tone_style, personality, answer_length, formality_level, humor_enabled, \
@@ -501,7 +499,7 @@ pub async fn get_prompt_additions(state: &AppState) -> Result<PromptAdditions, s
          closing_template, escalation_template, enabled \
          FROM tone_config WHERE organization_id = 'org-default' LIMIT 1"
     )
-    .fetch_optional(&state.db)
+    .fetch_optional(pool)
     .await?;
 
     let greeting_template = config_row.as_ref().map(|r| r.try_get::<String, _>(8).unwrap_or_default()).unwrap_or_else(|| "Hello! How can I help you today?".to_string());
@@ -580,7 +578,7 @@ pub async fn get_prompt_additions(state: &AppState) -> Result<PromptAdditions, s
     let guidance_rows = sqlx::query(
         "SELECT instruction FROM guidance_rules WHERE enabled = true ORDER BY priority DESC"
     )
-    .fetch_all(&state.db)
+    .fetch_all(pool)
     .await?;
 
     let mut guidance_parts = Vec::new();
@@ -608,7 +606,7 @@ pub async fn get_prompt_additions(state: &AppState) -> Result<PromptAdditions, s
 
 /// Create analytics snapshot
 pub async fn create_analytics_snapshot(
-    state: &AppState,
+    pool: &PgPool,
     tone_style: &str,
     conversation_count: i32,
     avg_satisfaction: f64,
@@ -631,7 +629,7 @@ pub async fn create_analytics_snapshot(
     .bind(avg_response_length)
     .bind(thumbs_up)
     .bind(thumbs_down)
-    .fetch_one(&state.db)
+    .fetch_one(pool)
     .await?;
 
     let id: String = row.try_get(0).unwrap_or_default();

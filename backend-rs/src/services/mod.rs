@@ -62,7 +62,6 @@ pub mod erp_payments;
 pub mod erp_inventory;
 pub mod erp_fulfilment;
 pub mod in_app_messaging;
-pub mod tone_of_voice;
 pub mod unified_analytics;
 pub mod ab_testing;
 pub mod compliance_dashboard;

@@ -1,0 +1,151 @@
+syntax = "proto3";
+
+package newax.tone_of_voice.v1;
+
+service ToneOfVoiceService {
+  rpc GetSummary(Empty) returns (ToneSummary);
+  rpc GetConfig(Empty) returns (ToneConfig);
+  rpc UpdateConfig(ToneConfig) returns (ConfigResult);
+  rpc ApplyPreset(ApplyPresetRequest) returns (ConfigResult);
+  rpc ListGuidance(Empty) returns (GuidanceRulesResponse);
+  rpc CreateGuidance(CreateGuidanceRequest) returns (GuidanceResult);
+  rpc UpdateGuidance(GuidanceRule) returns (GuidanceResult);
+  rpc DeleteGuidance(RuleIdRequest) returns (GuidanceResult);
+  rpc GetPromptAdditions(Empty) returns (PromptAdditions);
+  rpc CreateAnalyticsSnapshot(CreateAnalyticsRequest) returns (AnalyticsResult);
+}
+
+message Empty {}
+
+message RuleIdRequest {
+  string rule_id = 1;
+}
+
+message ToneConfig {
+  string id = 1;
+  string organization_id = 2;
+  string tone_style = 3;
+  string personality = 4;
+  string answer_length = 5;
+  string language = 6;
+  int32 formality_level = 7;
+  bool humor_enabled = 8;
+  int32 empathy_level = 9;
+  int32 conciseness_level = 10;
+  optional string custom_instructions = 11;
+  optional string forbidden_phrases_json = 12;
+  optional string required_phrases_json = 13;
+  string greeting_template = 14;
+  string closing_template = 15;
+  string escalation_template = 16;
+  bool enabled = 17;
+  string created_at = 18;
+  string updated_at = 19;
+}
+
+message GuidanceRule {
+  string id = 1;
+  string organization_id = 2;
+  string name = 3;
+  optional string description = 4;
+  string rule_type = 5;
+  string instruction = 6;
+  int32 priority = 7;
+  string applies_to = 8;
+  bool enabled = 9;
+  string created_at = 10;
+  string updated_at = 11;
+}
+
+message GuidanceRulesResponse {
+  repeated GuidanceRule rules = 1;
+}
+
+message ToneAnalytics {
+  string id = 1;
+  string organization_id = 2;
+  string tone_style = 3;
+  int32 conversation_count = 4;
+  double avg_satisfaction = 5;
+  double avg_resolution_rate = 6;
+  int32 avg_response_length = 7;
+  int32 thumbs_up_count = 8;
+  int32 thumbs_down_count = 9;
+  string window_start = 10;
+  string window_end = 11;
+  string created_at = 12;
+}
+
+message TonePreset {
+  string id = 1;
+  string name = 2;
+  optional string description = 3;
+  string tone_style = 4;
+  string personality = 5;
+  string answer_length = 6;
+  int32 formality_level = 7;
+  bool humor_enabled = 8;
+  int32 empathy_level = 9;
+  int32 conciseness_level = 10;
+  string greeting_template = 11;
+  string closing_template = 12;
+  string escalation_template = 13;
+  optional string custom_instructions = 14;
+}
+
+message ToneSummary {
+  bool enabled = 1;
+  string current_tone_style = 2;
+  string current_personality = 3;
+  string current_answer_length = 4;
+  int32 total_guidance_rules = 5;
+  int32 enabled_guidance_rules = 6;
+  int32 total_presets = 7;
+  repeated ToneAnalytics recent_analytics = 8;
+  repeated GuidanceRule guidance_rules = 9;
+  repeated TonePreset presets = 10;
+}
+
+message ConfigResult {
+  string config_id = 1;
+  string message = 2;
+}
+
+message GuidanceResult {
+  string rule_id = 1;
+  string message = 2;
+}
+
+message PromptAdditions {
+  string tone_instructions = 1;
+  string guidance_instructions = 2;
+  string greeting_template = 3;
+  string closing_template = 4;
+  string escalation_template = 5;
+}
+
+message AnalyticsResult {
+  string analytics_id = 1;
+  string message = 2;
+}
+
+message ApplyPresetRequest {
+  string preset_id = 1;
+}
+
+message CreateGuidanceRequest {
+  string name = 1;
+  string instruction = 2;
+  string rule_type = 3;
+  int32 priority = 4;
+}
+
+message CreateAnalyticsRequest {
+  string tone_style = 1;
+  int32 conversation_count = 2;
+  double avg_satisfaction = 3;
+  double avg_resolution_rate = 4;
+  int32 avg_response_length = 5;
+  int32 thumbs_up = 6;
+  int32 thumbs_down = 7;
+}
