@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package newax.notifications.v1;
+
+service NotificationsService {
+  rpc GetSummary(Empty) returns (JsonResponse);
+  rpc ListNotifications(ListNotificationsRequest) returns (JsonResponse);
+  rpc QueueNotification(QueueNotificationRequest) returns (JsonResponse);
+  rpc BroadcastNotification(BroadcastNotificationRequest) returns (JsonResponse);
+  rpc MarkRead(IdRequest) returns (JsonResponse);
+  rpc Dismiss(IdRequest) returns (JsonResponse);
+  rpc GetPreferences(IdRequest) returns (JsonResponse);
+  rpc UpdatePreferences(UpdatePreferencesRequest) returns (JsonResponse);
+  rpc GetSettings(Empty) returns (JsonResponse);
+  rpc UpdateSettings(UpdateSettingsRequest) returns (JsonResponse);
+  rpc ListConnections(Empty) returns (JsonResponse);
+  rpc Cleanup(Empty) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message IdRequest {
+  string id = 1;
+}
+
+message ListNotificationsRequest {
+  optional string user_id = 1;
+  optional string notification_type = 2;
+  optional string status = 3;
+  int32 limit = 4;
+}
+
+message QueueNotificationRequest {
+  string organization_id = 1;
+  optional string user_id = 2;
+  string notification_type = 3;
+  string title = 4;
+  string body = 5;
+  string data = 6;
+  string channel = 7;
+}
+
+message BroadcastNotificationRequest {
+  string organization_id = 1;
+  string notification_type = 2;
+  string title = 3;
+  string body = 4;
+}
+
+message UpdatePreferencesRequest {
+  string user_id = 1;
+  string prefs_json = 2;
+}
+
+message UpdateSettingsRequest {
+  string settings_json = 1;
+}

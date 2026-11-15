@@ -1,4 +1,4 @@
-﻿pub mod business_hours;
+pub mod business_hours;
 pub mod channels;
 pub mod claude_client;
 pub mod commerce_catalog;
@@ -34,7 +34,6 @@ pub mod commerce_delivery;
 pub mod commerce_storefront;
 pub mod commerce_inventory;
 pub mod validation;
-pub mod copilot_reviewer;
 pub mod fin_operator;
 pub mod commerce_options;
 pub use commerce_options::ProductOptionsService;

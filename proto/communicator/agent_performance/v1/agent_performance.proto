@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package newax.agent_performance.v1;
+
+service AgentPerformanceService {
+  rpc GetSummary(Empty) returns (JsonResponse);
+  rpc ListSnapshots(ListSnapshotsRequest) returns (JsonResponse);
+  rpc CreateSnapshot(CreateSnapshotRequest) returns (JsonResponse);
+  rpc ListInsights(ListInsightsRequest) returns (JsonResponse);
+  rpc CreateInsight(CreateInsightRequest) returns (JsonResponse);
+  rpc AddressInsight(AddressInsightRequest) returns (JsonResponse);
+  rpc GetComparison(GetComparisonRequest) returns (JsonResponse);
+  rpc GenerateComparison(Empty) returns (JsonResponse);
+  rpc GetSettings(Empty) returns (JsonResponse);
+  rpc UpdateSettings(UpdateSettingsRequest) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message ListSnapshotsRequest {
+  string agent_id = 1;
+  int32 days = 2;
+}
+
+message CreateSnapshotRequest {
+  string agent_id = 1;
+  string agent_name = 2;
+  string data = 3;
+}
+
+message ListInsightsRequest {
+  string agent_id = 1;
+  bool addressed = 2;
+  bool has_addressed = 3;
+}
+
+message CreateInsightRequest {
+  string agent_id = 1;
+  string agent_name = 2;
+  string data = 3;
+}
+
+message AddressInsightRequest {
+  string insight_id = 1;
+  string addressed_by = 2;
+}
+
+message GetComparisonRequest {
+  int32 days = 1;
+}
+
+message UpdateSettingsRequest {
+  string data = 1;
+}

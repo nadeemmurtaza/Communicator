@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package newax.suggestions.v1;
+
+service SuggestionsService {
+  rpc ListSuggestions(ListSuggestionsRequest) returns (JsonResponse);
+  rpc GetSummary(Empty) returns (JsonResponse);
+  rpc ApproveSuggestion(ApproveSuggestionRequest) returns (JsonResponse);
+  rpc DismissSuggestion(IdRequest) returns (JsonResponse);
+  rpc BatchAnalyze(BatchAnalyzeRequest) returns (JsonResponse);
+  rpc AnalyzeFeedback(IdRequest) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message IdRequest {
+  string id = 1;
+}
+
+message ListSuggestionsRequest {
+  optional string status = 1;
+  optional string suggestion_type = 2;
+  int64 limit = 3;
+}
+
+message ApproveSuggestionRequest {
+  string id = 1;
+  string approved_by = 2;
+}
+
+message BatchAnalyzeRequest {
+  int64 hours_back = 1;
+}

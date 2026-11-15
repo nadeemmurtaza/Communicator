@@ -1,0 +1,149 @@
+syntax = "proto3";
+
+package newax.canned_macros_sla.v1;
+
+service CannedMacrosSlaService {
+  rpc ListCannedResponses(ListCannedResponsesRequest) returns (JsonResponse);
+  rpc CreateCannedResponse(CreateCannedResponseRequest) returns (JsonResponse);
+  rpc UpdateCannedResponse(UpdateCannedResponseRequest) returns (JsonResponse);
+  rpc DeleteCannedResponse(DeleteCannedResponseRequest) returns (JsonResponse);
+  rpc ExpandCannedResponse(ExpandCannedResponseRequest) returns (JsonResponse);
+  rpc ListMacros(Empty) returns (JsonResponse);
+  rpc CreateMacro(CreateMacroRequest) returns (JsonResponse);
+  rpc GetMacro(GetMacroRequest) returns (JsonResponse);
+  rpc UpdateMacro(UpdateMacroRequest) returns (JsonResponse);
+  rpc DeleteMacro(DeleteMacroRequest) returns (JsonResponse);
+  rpc RunMacro(RunMacroRequest) returns (JsonResponse);
+  rpc ExecuteMacro(ExecuteMacroRequest) returns (JsonResponse);
+  rpc ExecuteMacroDirect(ExecuteMacroDirectRequest) returns (JsonResponse);
+  rpc DispatchWhatsAppText(DispatchWhatsAppTextRequest) returns (JsonResponse);
+  rpc ListSlaPolicies(Empty) returns (JsonResponse);
+  rpc GetSlaPolicy(GetSlaPolicyRequest) returns (JsonResponse);
+  rpc CreateSlaPolicy(CreateSlaPolicyRequest) returns (JsonResponse);
+  rpc UpdateSlaPolicy(UpdateSlaPolicyRequest) returns (JsonResponse);
+  rpc DeleteSlaPolicy(DeleteSlaPolicyRequest) returns (JsonResponse);
+  rpc EvaluateConversationSla(EvaluateConversationSlaRequest) returns (JsonResponse);
+  rpc GetSlaMetrics(Empty) returns (JsonResponse);
+  rpc GetSlaBreaches(Empty) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message ListCannedResponsesRequest {
+  string q = 1;
+  string category = 2;
+}
+
+message CreateCannedResponseRequest {
+  string short_code = 1;
+  string content = 2;
+  string category = 3;
+}
+
+message UpdateCannedResponseRequest {
+  string id = 1;
+  string short_code = 2;
+  string content = 3;
+  string category = 4;
+}
+
+message DeleteCannedResponseRequest {
+  string id = 1;
+}
+
+message ExpandCannedResponseRequest {
+  string short_code = 1;
+  string template = 2;
+}
+
+message CreateMacroRequest {
+  string name = 1;
+  string description = 2;
+  string actions = 3;
+}
+
+message GetMacroRequest {
+  string id = 1;
+}
+
+message UpdateMacroRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string actions = 4;
+}
+
+message DeleteMacroRequest {
+  string id = 1;
+}
+
+message RunMacroRequest {
+  string conversation_id = 1;
+  string macro_id = 2;
+  string agent_name = 3;
+}
+
+message ExecuteMacroRequest {
+  string conversation_id = 1;
+  string macro_id = 2;
+  string agent_name = 3;
+}
+
+message ExecuteMacroDirectRequest {
+  string macro_id = 1;
+  string conversation_id = 2;
+  string agent_name = 3;
+}
+
+message DispatchWhatsAppTextRequest {
+  string phone = 1;
+  string body = 2;
+  string local_msg_id = 3;
+}
+
+message GetSlaPolicyRequest {
+  string id = 1;
+}
+
+message CreateSlaPolicyRequest {
+  string name = 1;
+  string description = 2;
+  int32 first_response_time_threshold = 3;
+  int32 resolution_time_threshold = 4;
+  bool only_during_business_hours = 5;
+  repeated string priorities = 6;
+  repeated string inbox_ids = 7;
+}
+
+message UpdateSlaPolicyRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  int32 first_response_time_threshold = 4;
+  int32 resolution_time_threshold = 5;
+  bool only_during_business_hours = 6;
+  repeated string priorities = 7;
+  repeated string inbox_ids = 8;
+  bool is_active = 9;
+  bool has_name = 10;
+  bool has_description = 11;
+  bool has_first_response_time_threshold = 12;
+  bool has_resolution_time_threshold = 13;
+  bool has_only_during_business_hours = 14;
+  bool has_priorities = 15;
+  bool has_inbox_ids = 16;
+  bool has_is_active = 17;
+}
+
+message DeleteSlaPolicyRequest {
+  string id = 1;
+}
+
+message EvaluateConversationSlaRequest {
+  string id = 1;
+  string policy_id = 2;
+}

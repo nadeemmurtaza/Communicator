@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package newax.copilot_reviewer.v1;
+
+service CopilotReviewerService {
+  rpc GetDraftContext(GetDraftContextRequest) returns (JsonResponse);
+  rpc GetPendingContexts(Empty) returns (JsonResponse);
+  rpc RefreshDraftContext(RefreshDraftContextRequest) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message GetDraftContextRequest {
+  string draft_id = 1;
+}
+
+message RefreshDraftContextRequest {
+  string draft_id = 1;
+}

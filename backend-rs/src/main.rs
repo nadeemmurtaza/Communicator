@@ -2,6 +2,7 @@
 
 mod config;
 mod db;
+mod middleware;
 mod models;
 mod routes;
 mod services;
@@ -1354,6 +1355,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             get(routes::live_proof::capture_page),
         )
         .layer(cors)
+        .layer(
+            axum::middleware::from_fn_with_state(state.clone(), middleware::rls::rls_middleware),
+        )
         .with_state(state);
 
     if assets_dir.exists() {

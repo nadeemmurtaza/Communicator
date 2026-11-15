@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package newax.procedures.v1;
+
+service ProceduresService {
+  rpc GetSummary(Empty) returns (JsonResponse);
+  rpc ListProcedures(ListProceduresRequest) returns (JsonResponse);
+  rpc CreateProcedure(JsonResponse) returns (JsonResponse);
+  rpc GetProcedure(IdRequest) returns (JsonResponse);
+  rpc UpdateProcedure(UpdateRequest) returns (JsonResponse);
+  rpc DeleteProcedure(IdRequest) returns (Empty);
+  rpc MatchProcedures(MatchRequest) returns (JsonResponse);
+  rpc StartExecution(StartExecutionRequest) returns (JsonResponse);
+  rpc GetExecution(IdRequest) returns (JsonResponse);
+  rpc GetRunningExecution(IdRequest) returns (JsonResponse);
+  rpc ExecuteStep(ExecuteStepRequest) returns (JsonResponse);
+  rpc CompleteExecution(CompleteRequest) returns (Empty);
+  rpc FailExecution(FailRequest) returns (Empty);
+  rpc ListActions(ListActionsRequest) returns (JsonResponse);
+  rpc CreateAction(JsonResponse) returns (JsonResponse);
+  rpc GetAction(IdRequest) returns (JsonResponse);
+  rpc UpdateAction(UpdateRequest) returns (JsonResponse);
+  rpc DeleteAction(IdRequest) returns (Empty);
+  rpc TestAction(TestActionRequest) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message IdRequest {
+  string id = 1;
+}
+
+message ListProceduresRequest {
+  optional string status = 1;
+  optional string category = 2;
+}
+
+message UpdateRequest {
+  string id = 1;
+  string updates_json = 2;
+}
+
+message MatchRequest {
+  string message = 1;
+  string conversation_id = 2;
+}
+
+message StartExecutionRequest {
+  string procedure_id = 1;
+  string conversation_id = 2;
+}
+
+message ExecuteStepRequest {
+  string execution_id = 1;
+  optional string customer_input = 2;
+}
+
+message CompleteRequest {
+  string execution_id = 1;
+  string result = 2;
+}
+
+message FailRequest {
+  string execution_id = 1;
+  string error = 2;
+}
+
+message ListActionsRequest {
+  optional string action_type = 1;
+}
+
+message TestActionRequest {
+  string action_id = 1;
+  string params_json = 2;
+}

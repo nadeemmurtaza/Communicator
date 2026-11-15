@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package newax.crypto_mesh.v1;
+
+service CryptoMeshService {
+  rpc Ingress(IngressRequest) returns (JsonResponse);
+  rpc Egress(EgressRequest) returns (JsonResponse);
+  rpc ListOutbox(Empty) returns (JsonResponse);
+  rpc FlushOutbox(Empty) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message IngressRequest {
+  string version = 1;
+  string tenant_id = 2;
+  string sender_id = 3;
+  string recipient_id = 4;
+  string iv = 5;
+  string ciphertext = 6;
+  string auth_tag = 7;
+  string key_id = 8;
+  string timestamp = 9;
+  string signature = 10;
+}
+
+message EgressRequest {
+  string name = 1;
+  string tenant_id = 2;
+  string recipient_id = 3;
+  string organization_id = 4;
+  string correlation_id = 5;
+  string payload = 6;
+}

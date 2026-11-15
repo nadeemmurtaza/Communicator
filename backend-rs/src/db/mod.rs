@@ -49,6 +49,28 @@ pub fn report_write(result: Result<u64, sqlx::Error>, context: &str) -> bool {
     }
 }
 
+/// Set RLS context on a database connection for the current transaction.
+/// Call this at the start of each transaction to enable tenant isolation.
+pub async fn set_rls_context(
+    conn: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    tenant_key: &str,
+    account_id: &str,
+) -> Result<(), sqlx::Error> {
+    if !tenant_key.is_empty() {
+        let escaped = tenant_key.replace('\'', "''");
+        sqlx::query(&format!("SET LOCAL app.current_tenant_key TO '{}'", escaped))
+            .execute(&mut **conn)
+            .await?;
+    }
+    if !account_id.is_empty() {
+        let escaped = account_id.replace('\'', "''");
+        sqlx::query(&format!("SET LOCAL app.current_account_id TO '{}'", escaped))
+            .execute(&mut **conn)
+            .await?;
+    }
+    Ok(())
+}
+
 /// Check whether a table exists in the database. Used by purge_demo_rows.
 async fn table_exists(pool: &DbPool, table: &str) -> bool {
     match sqlx::query_scalar::<_, i64>(
@@ -83,6 +105,12 @@ pub async fn init_db(database_url: &str) -> Result<DbPool, sqlx::Error> {
             warn!("sqlx migration error: {err}");
         }
     }
+
+    // Initialize RLS GUC variables so they are available for current_setting()
+    // These are session-level defaults; the middleware overrides them per-request.
+    sqlx::query("SET app.current_tenant_key TO ''").execute(&pool).await.ok();
+    sqlx::query("SET app.current_account_id TO ''").execute(&pool).await.ok();
+    sqlx::query("SET app.current_user_id TO ''").execute(&pool).await.ok();
 
     purge_demo_rows(&pool).await;
 
