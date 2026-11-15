@@ -3,7 +3,12 @@
 //! Backed by `help_center_categories`, `help_center_articles`,
 //! `help_center_searches` and `help_center_settings` (migration 0029).
 
-use crate::db::AppState;
+use sqlx::PgPool;
+
+#[derive(Clone)]
+pub struct HelpCenterState {
+    pub db: PgPool,
+}
 use serde::Serialize;
 use sqlx::Row;
 
@@ -142,7 +147,7 @@ fn row_to_settings(row: &sqlx::postgres::PgRow) -> HelpCenterSettings {
     }
 }
 
-async fn get_article_by_id(state: &AppState, id: &str) -> Result<Option<HelpArticle>, String> {
+async fn get_article_by_id(state: &HelpCenterState, id: &str) -> Result<Option<HelpArticle>, String> {
     let row = sqlx::query(&format!("SELECT {} FROM help_center_articles WHERE id = $1", ARTICLE_COLUMNS))
         .bind(id)
         .fetch_optional(&state.db)
@@ -152,7 +157,7 @@ async fn get_article_by_id(state: &AppState, id: &str) -> Result<Option<HelpArti
 }
 
 /// Dashboard summary: counts and aggregate feedback across the help center.
-pub async fn get_help_center_summary(state: &AppState) -> Result<serde_json::Value, String> {
+pub async fn get_help_center_summary(state: &HelpCenterState) -> Result<serde_json::Value, String> {
     let category_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM help_center_categories")
         .fetch_one(&state.db)
         .await
@@ -198,7 +203,7 @@ pub async fn get_help_center_summary(state: &AppState) -> Result<serde_json::Val
 
 /// Public overview used to embed the help center widget: settings, visible
 /// categories and the currently pinned published articles.
-pub async fn get_public_help_center(state: &AppState) -> Result<serde_json::Value, String> {
+pub async fn get_public_help_center(state: &HelpCenterState) -> Result<serde_json::Value, String> {
     let settings = get_settings(state).await?;
     let categories = list_categories(state, None, true).await?;
 
@@ -220,7 +225,7 @@ pub async fn get_public_help_center(state: &AppState) -> Result<serde_json::Valu
 
 /// List categories for an organization, optionally restricted to visible ones.
 pub async fn list_categories(
-    state: &AppState,
+    state: &HelpCenterState,
     org_id: Option<&str>,
     visible_only: bool,
 ) -> Result<Vec<HelpCategory>, String> {
@@ -246,7 +251,7 @@ pub async fn list_categories(
 
 /// Create a new help center category.
 pub async fn create_category(
-    state: &AppState,
+    state: &HelpCenterState,
     org_id: &str,
     name: &str,
     slug: &str,
@@ -284,7 +289,7 @@ pub async fn create_category(
 
 /// List articles, optionally filtered by category and/or status.
 pub async fn list_articles(
-    state: &AppState,
+    state: &HelpCenterState,
     category_id: Option<&str>,
     status: Option<&str>,
     limit: i32,
@@ -322,7 +327,7 @@ pub async fn list_articles(
 
 /// Create a new help article (starts as a draft).
 pub async fn create_article(
-    state: &AppState,
+    state: &HelpCenterState,
     org_id: &str,
     category_id: &str,
     title: &str,
@@ -353,7 +358,7 @@ pub async fn create_article(
 
 /// Full-text-ish search (title/content ILIKE) over published articles, with
 /// the query logged to `help_center_searches` for analytics.
-pub async fn search_articles(state: &AppState, query: &str, limit: i32) -> Result<ArticleSearchResult, String> {
+pub async fn search_articles(state: &HelpCenterState, query: &str, limit: i32) -> Result<ArticleSearchResult, String> {
     let pattern = format!("%{}%", query);
     let rows = sqlx::query(&format!(
         "SELECT {} FROM help_center_articles \
@@ -390,7 +395,7 @@ pub async fn search_articles(state: &AppState, query: &str, limit: i32) -> Resul
 }
 
 /// Fetch a published-or-not article by its public slug, incrementing its view count.
-pub async fn get_article_by_slug(state: &AppState, slug: &str) -> Result<Option<HelpArticle>, String> {
+pub async fn get_article_by_slug(state: &HelpCenterState, slug: &str) -> Result<Option<HelpArticle>, String> {
     let row = sqlx::query(&format!("SELECT {} FROM help_center_articles WHERE slug = $1", ARTICLE_COLUMNS))
         .bind(slug)
         .fetch_optional(&state.db)
@@ -414,7 +419,7 @@ pub async fn get_article_by_slug(state: &AppState, slug: &str) -> Result<Option<
 /// overwrites the column when supplied. Transitioning `status` to
 /// `'published'` for the first time stamps `published_at`.
 pub async fn update_article(
-    state: &AppState,
+    state: &HelpCenterState,
     article_id: &str,
     title: Option<&str>,
     content: Option<&str>,
@@ -452,7 +457,7 @@ pub async fn update_article(
 }
 
 /// Delete an article. Returns whether a row was actually removed.
-pub async fn delete_article(state: &AppState, article_id: &str) -> Result<bool, String> {
+pub async fn delete_article(state: &HelpCenterState, article_id: &str) -> Result<bool, String> {
     let result = sqlx::query("DELETE FROM help_center_articles WHERE id = $1")
         .bind(article_id)
         .execute(&state.db)
@@ -463,7 +468,7 @@ pub async fn delete_article(state: &AppState, article_id: &str) -> Result<bool, 
 
 /// Record a helpful/not-helpful vote on an article and return the new tallies.
 pub async fn record_article_feedback(
-    state: &AppState,
+    state: &HelpCenterState,
     article_id: &str,
     helpful: bool,
 ) -> Result<FeedbackResult, String> {
@@ -490,7 +495,7 @@ pub async fn record_article_feedback(
 
 /// Get this organization's help center settings, seeding a default row the
 /// first time it's requested.
-pub async fn get_settings(state: &AppState) -> Result<HelpCenterSettings, String> {
+pub async fn get_settings(state: &HelpCenterState) -> Result<HelpCenterSettings, String> {
     let row = sqlx::query(
         "SELECT id, organization_id, name, tagline, primary_color, enable_search, enable_article_feedback, \
          footer_text, created_at, updated_at FROM help_center_settings WHERE organization_id = $1",
@@ -524,7 +529,7 @@ pub async fn get_settings(state: &AppState) -> Result<HelpCenterSettings, String
 /// Update help center settings. Every field is optional and only overwrites
 /// the column when supplied.
 pub async fn update_settings(
-    state: &AppState,
+    state: &HelpCenterState,
     name: Option<&str>,
     tagline: Option<&str>,
     primary_color: Option<&str>,
