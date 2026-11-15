@@ -63,7 +63,6 @@ pub mod erp_inventory;
 pub mod erp_fulfilment;
 pub mod in_app_messaging;
 pub mod unified_analytics;
-pub mod ab_testing;
 pub mod compliance_dashboard;
 pub mod smtp_email;
 pub mod otp_engine;

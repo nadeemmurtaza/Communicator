@@ -57,3 +57,9 @@ pub mod tone_of_voice {
         tonic::include_proto!("newax.tone_of_voice.v1");
     }
 }
+
+pub mod ab_testing {
+    pub mod v1 {
+        tonic::include_proto!("newax.ab_testing.v1");
+    }
+}
