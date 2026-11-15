@@ -6,10 +6,9 @@
 //! `get_cx_summary` and `batch_score_conversations` aggregate over that
 //! real data instead of returning placeholders.
 
-use crate::db::AppState;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::Row;
+use sqlx::{PgPool, Row};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CXSummary {
@@ -73,12 +72,12 @@ const POLICY_RED_FLAGS: &[&str] = &[
     "free forever", "unlimited refund",
 ];
 
-async fn fetch_enabled_rules(state: &AppState) -> Result<Vec<ScoringRule>, String> {
+async fn fetch_enabled_rules(pool: &PgPool) -> Result<Vec<ScoringRule>, String> {
     let rows = sqlx::query(
         "SELECT name, description, dimension, condition, score_impact \
          FROM qa_scoring_rules WHERE is_enabled = true",
     )
-    .fetch_all(&state.db)
+    .fetch_all(pool)
     .await
     .map_err(|e| e.to_string())?;
 
@@ -98,27 +97,27 @@ async fn fetch_enabled_rules(state: &AppState) -> Result<Vec<ScoringRule>, Strin
         .collect())
 }
 
-pub async fn get_cx_summary(state: &AppState) -> Result<CXSummary, String> {
+pub async fn get_cx_summary(pool: &PgPool) -> Result<CXSummary, String> {
     let avg_score: Option<f64> = sqlx::query_scalar("SELECT AVG(overall_score) FROM qa_scores")
-        .fetch_one(&state.db)
+        .fetch_one(pool)
         .await
         .map_err(|e| e.to_string())?;
 
     let total_conversations: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM conversations")
-        .fetch_one(&state.db)
+        .fetch_one(pool)
         .await
         .map_err(|e| e.to_string())?;
 
     let scored_conversations: i64 =
         sqlx::query_scalar("SELECT COUNT(DISTINCT conversation_id) FROM qa_scores")
-            .fetch_one(&state.db)
+            .fetch_one(pool)
             .await
             .map_err(|e| e.to_string())?;
 
     let recent_avg: Option<f64> = sqlx::query_scalar(
         "SELECT AVG(overall_score) FROM qa_scores WHERE created_at >= NOW() - INTERVAL '7 days'",
     )
-    .fetch_one(&state.db)
+    .fetch_one(pool)
     .await
     .map_err(|e| e.to_string())?;
 
@@ -126,7 +125,7 @@ pub async fn get_cx_summary(state: &AppState) -> Result<CXSummary, String> {
         "SELECT AVG(overall_score) FROM qa_scores \
          WHERE created_at >= NOW() - INTERVAL '14 days' AND created_at < NOW() - INTERVAL '7 days'",
     )
-    .fetch_one(&state.db)
+    .fetch_one(pool)
     .await
     .map_err(|e| e.to_string())?;
 
@@ -145,10 +144,10 @@ pub async fn get_cx_summary(state: &AppState) -> Result<CXSummary, String> {
     })
 }
 
-pub async fn score_conversation(state: &AppState, conversation_id: &str) -> Result<QAScore, String> {
+pub async fn score_conversation(pool: &PgPool, conversation_id: &str) -> Result<QAScore, String> {
     let conv_row = sqlx::query("SELECT state, resolution_type FROM conversations WHERE id = $1")
         .bind(conversation_id)
-        .fetch_optional(&state.db)
+        .fetch_optional(pool)
         .await
         .map_err(|e| e.to_string())?
         .ok_or_else(|| format!("No messages found: conversation '{}' does not exist", conversation_id))?;
@@ -162,7 +161,7 @@ pub async fn score_conversation(state: &AppState, conversation_id: &str) -> Resu
          ORDER BY sent_at ASC",
     )
     .bind(conversation_id)
-    .fetch_all(&state.db)
+    .fetch_all(pool)
     .await
     .map_err(|e| e.to_string())?;
 
@@ -249,13 +248,13 @@ pub async fn score_conversation(state: &AppState, conversation_id: &str) -> Resu
         "SELECT AVG(confidence) FROM drafts WHERE conversation_id = $1",
     )
     .bind(conversation_id)
-    .fetch_one(&state.db)
+    .fetch_one(pool)
     .await
     .map_err(|e| e.to_string())?;
 
     let is_resolved = conv_state == "resolved" || conv_state == "closed";
 
-    let rules = fetch_enabled_rules(state).await?;
+    let rules = fetch_enabled_rules(pool).await?;
 
     let mut accuracy = 100.0f64;
     let mut empathy = 100.0f64;
@@ -339,7 +338,7 @@ pub async fn score_conversation(state: &AppState, conversation_id: &str) -> Resu
     .bind(serde_json::to_string(&issues).unwrap_or_else(|_| "[]".to_string()))
     .bind(serde_json::to_string(&recommendations).unwrap_or_else(|_| "[]".to_string()))
     .bind(&now)
-    .execute(&state.db)
+    .execute(pool)
     .await
     .map_err(|e| e.to_string())?;
 
@@ -353,7 +352,7 @@ pub async fn score_conversation(state: &AppState, conversation_id: &str) -> Resu
 
 /// Scores every unresolved conversation that has at least one message and
 /// hasn't been auto-scored in the last 24 hours.
-pub async fn batch_score_conversations(state: &AppState) -> Result<BatchScoringResult, String> {
+pub async fn batch_score_conversations(pool: &PgPool) -> Result<BatchScoringResult, String> {
     let candidates: Vec<String> = sqlx::query_scalar(
         "SELECT c.id FROM conversations c \
          WHERE c.state NOT IN ('resolved', 'closed') \
@@ -364,7 +363,7 @@ pub async fn batch_score_conversations(state: &AppState) -> Result<BatchScoringR
            ) \
          ORDER BY c.updated_at DESC LIMIT 200",
     )
-    .fetch_all(&state.db)
+    .fetch_all(pool)
     .await
     .map_err(|e| e.to_string())?;
 
@@ -373,7 +372,7 @@ pub async fn batch_score_conversations(state: &AppState) -> Result<BatchScoringR
     let mut score_sum = 0.0f64;
 
     for conversation_id in &candidates {
-        match score_conversation(state, conversation_id).await {
+        match score_conversation(pool, conversation_id).await {
             Ok(qa) => {
                 scored += 1;
                 score_sum += qa.score;
@@ -392,11 +391,11 @@ pub async fn batch_score_conversations(state: &AppState) -> Result<BatchScoringR
     })
 }
 
-pub async fn list_qa_rules(state: &AppState) -> Result<Vec<QAScoringRule>, String> {
+pub async fn list_qa_rules(pool: &PgPool) -> Result<Vec<QAScoringRule>, String> {
     let rows = sqlx::query(
         "SELECT id, name, is_enabled, score_impact FROM qa_scoring_rules ORDER BY created_at ASC",
     )
-    .fetch_all(&state.db)
+    .fetch_all(pool)
     .await
     .map_err(|e| e.to_string())?;
 
@@ -412,7 +411,7 @@ pub async fn list_qa_rules(state: &AppState) -> Result<Vec<QAScoringRule>, Strin
 }
 
 pub async fn update_qa_rule(
-    state: &AppState,
+    pool: &PgPool,
     rule_id: &str,
     is_enabled: Option<bool>,
     score_impact: Option<f64>,
@@ -421,7 +420,7 @@ pub async fn update_qa_rule(
         "SELECT name, is_enabled, score_impact FROM qa_scoring_rules WHERE id = $1",
     )
     .bind(rule_id)
-    .fetch_optional(&state.db)
+    .fetch_optional(pool)
     .await
     .map_err(|e| e.to_string())?
     .ok_or_else(|| format!("QA scoring rule '{}' not found", rule_id))?;
@@ -439,7 +438,7 @@ pub async fn update_qa_rule(
     .bind(new_enabled)
     .bind(new_impact as f32)
     .bind(rule_id)
-    .execute(&state.db)
+    .execute(pool)
     .await
     .map_err(|e| e.to_string())?;
 

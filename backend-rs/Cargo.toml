@@ -15,6 +15,7 @@ tokio-native-tls = "0.3"
 # gRPC clients for modules split out into services/ -- see crates/proto
 tonic = "0.12"
 newax-proto = { path = "../crates/proto" }
+newax-reply-integration = { path = "../crates/reply_integration" }
 
 # Database (PostgreSQL only — shared with nID)
 sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "chrono", "uuid", "json", "migrate"] }

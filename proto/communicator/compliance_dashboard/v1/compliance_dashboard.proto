@@ -1,0 +1,229 @@
+syntax = "proto3";
+
+package newax.compliance_dashboard.v1;
+
+service ComplianceDashboardService {
+  rpc GetSummary(Empty) returns (ComplianceSummary);
+
+  rpc ListSuppressions(ListSuppressionsRequest) returns (SuppressionsResponse);
+  rpc AddSuppression(CreateSuppressionRequest) returns (SuppressionEntry);
+  rpc GetSuppression(IdRequest) returns (SuppressionEntry);
+  rpc RemoveSuppression(IdRequest) returns (Empty);
+  rpc CheckSuppressed(CheckSuppressedRequest) returns (SuppressionCheckResult);
+
+  rpc ListGdprRequests(ListGdprRequestsRequest) returns (GdprRequestsResponse);
+  rpc CreateGdprRequest(CreateGdprRequestMsg) returns (GdprRequest);
+  rpc GetGdprRequest(IdRequest) returns (GdprRequest);
+  rpc UpdateGdprRequest(UpdateGdprRequestMsg) returns (GdprRequest);
+
+  rpc ListPolicies(ListPoliciesRequest) returns (PoliciesResponse);
+  rpc CreatePolicy(CreatePolicyRequest) returns (CompliancePolicy);
+  rpc GetPolicy(IdRequest) returns (CompliancePolicy);
+  rpc UpdatePolicy(UpdatePolicyRequest) returns (CompliancePolicy);
+  rpc DeletePolicy(IdRequest) returns (Empty);
+
+  rpc ListAuditLogs(ListAuditLogsRequest) returns (AuditLogsResponse);
+
+  rpc CheckCompliance(CheckComplianceRequest) returns (ComplianceCheckResult);
+
+  rpc GetSettings(Empty) returns (ComplianceSettings);
+  rpc UpdateSettings(ComplianceSettings) returns (ComplianceSettings);
+}
+
+message Empty {}
+
+message IdRequest {
+  string id = 1;
+}
+
+message SuppressionEntry {
+  string id = 1;
+  string contact_id = 2;
+  string channel = 3;
+  string reason = 4;
+  string added_at = 5;
+  string added_by = 6;
+  optional string note = 7;
+  bool is_active = 8;
+}
+
+message SuppressionsResponse {
+  repeated SuppressionEntry suppressions = 1;
+}
+
+message GdprRequest {
+  string id = 1;
+  optional string contact_id = 2;
+  optional string email = 3;
+  string request_type = 4;
+  string status = 5;
+  string requested_at = 6;
+  optional string completed_at = 7;
+  optional string handled_by = 8;
+  optional string notes = 9;
+  optional string data_export_url = 10;
+  optional string expires_at = 11;
+}
+
+message GdprRequestsResponse {
+  repeated GdprRequest requests = 1;
+}
+
+message CompliancePolicy {
+  string id = 1;
+  string org_id = 2;
+  string policy_name = 3;
+  string regulation = 4;
+  string channel = 5;
+  optional string description = 6;
+  string rules_json = 7;
+  bool is_active = 8;
+  string created_at = 9;
+  string updated_at = 10;
+}
+
+message PoliciesResponse {
+  repeated CompliancePolicy policies = 1;
+}
+
+message AuditLogEntry {
+  string id = 1;
+  string action = 2;
+  string entity_type = 3;
+  string entity_id = 4;
+  string details = 5;
+  string performed_by = 6;
+  string performed_at = 7;
+  string severity = 8;
+}
+
+message AuditLogsResponse {
+  repeated AuditLogEntry entries = 1;
+}
+
+message ReasonCount {
+  string reason = 1;
+  int64 count = 2;
+}
+
+message GdprTypeCount {
+  string request_type = 1;
+  int64 count = 2;
+}
+
+message ComplianceSummary {
+  int64 total_suppressed = 1;
+  int64 active_suppressed = 2;
+  int64 pending_gdpr_requests = 3;
+  int64 total_gdpr_requests = 4;
+  int64 active_policies = 5;
+  int64 total_audit_entries = 6;
+  int64 critical_violations = 7;
+  repeated ReasonCount suppression_by_reason = 8;
+  repeated GdprTypeCount gdpr_by_type = 9;
+  repeated AuditLogEntry recent_audit_logs = 10;
+  int64 upcoming_gdpr_expiries = 11;
+}
+
+message SuppressionCheckResult {
+  bool is_suppressed = 1;
+  optional SuppressionEntry entry = 2;
+  string message = 3;
+}
+
+message ComplianceCheck {
+  string check_name = 1;
+  string regulation = 2;
+  bool passed = 3;
+  string message = 4;
+}
+
+message ComplianceCheckResult {
+  bool is_compliant = 1;
+  repeated ComplianceCheck checks = 2;
+  string message = 3;
+}
+
+message ComplianceSettings {
+  string id = 1;
+  string org_id = 2;
+  int32 gdpr_response_days = 3;
+  bool auto_expire_gdpr_requests = 4;
+  bool require_consent_before_send = 5;
+  bool check_suppression_before_send = 6;
+  bool log_all_compliance_actions = 7;
+  bool can_spam_unsubscribe_link = 8;
+  optional string can_spam_physical_address = 9;
+  bool tcpa_consent_required = 10;
+  bool whatsapp_opt_in_required = 11;
+  int32 data_retention_days = 12;
+  string created_at = 13;
+  string updated_at = 14;
+}
+
+message CreateSuppressionRequest {
+  string contact_id = 1;
+  string channel = 2;
+  string reason = 3;
+  optional string note = 4;
+}
+
+message ListSuppressionsRequest {
+  bool active_only = 1;
+  optional string channel = 2;
+  optional string reason = 3;
+}
+
+message CheckSuppressedRequest {
+  string contact_id = 1;
+  string channel = 2;
+}
+
+message CreateGdprRequestMsg {
+  optional string contact_id = 1;
+  optional string email = 2;
+  string request_type = 3;
+  optional string notes = 4;
+}
+
+message ListGdprRequestsRequest {
+  optional string status = 1;
+  optional string request_type = 2;
+}
+
+message UpdateGdprRequestMsg {
+  string id = 1;
+  optional string status = 2;
+  optional string handled_by = 3;
+  optional string notes = 4;
+}
+
+message ListPoliciesRequest {
+  bool active_only = 1;
+  optional string regulation = 2;
+}
+
+message CreatePolicyRequest {
+  string policy_name = 1;
+  string regulation = 2;
+  string channel = 3;
+  optional string description = 4;
+  optional string rules_json = 5;
+}
+
+message UpdatePolicyRequest {
+  string id = 1;
+  optional bool is_active = 2;
+}
+
+message ListAuditLogsRequest {
+  optional string action = 1;
+  optional string severity = 2;
+  int64 limit = 3;
+}
+
+message CheckComplianceRequest {
+  string contact_id = 1;
+  string channel = 2;
+  string body = 3;
+}

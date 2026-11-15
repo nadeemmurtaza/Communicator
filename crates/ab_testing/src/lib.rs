@@ -756,7 +756,7 @@ mod tests {
             },
         };
         let json = serde_json::to_string(&summary).unwrap();
-        assert!(json.contains("ABTestingSummary"));
+        assert!(json.contains("confidence_threshold"));
     }
 
     #[test]
@@ -781,10 +781,5 @@ mod tests {
         };
         let json = serde_json::to_string(&result).unwrap();
         assert!(json.contains("Control"));
-    }
-
-    #[test]
-    fn test_significance_calculation() {
-        // Can't test without DB, but structure is correct
     }
 }

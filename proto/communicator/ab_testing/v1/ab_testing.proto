@@ -1,0 +1,181 @@
+syntax = "proto3";
+
+package newax.ab_testing.v1;
+
+service AbTestingService {
+  rpc GetSummary(Empty) returns (AbTestingSummary);
+  rpc ListExperiments(ListExperimentsRequest) returns (ExperimentsResponse);
+  rpc CreateExperiment(CreateExperimentRequest) returns (CreateExperimentResult);
+  rpc GetExperiment(ExperimentIdRequest) returns (AbExperiment);
+  rpc UpdateExperimentStatus(UpdateStatusRequest) returns (AbExperiment);
+  rpc DeleteExperiment(ExperimentIdRequest) returns (Empty);
+  rpc GetVariants(ExperimentIdRequest) returns (VariantsResponse);
+  rpc AssignConversation(AssignRequest) returns (AssignmentResult);
+  rpc RecordResult(RecordResultRequest) returns (AbResult);
+  rpc GetResults(ExperimentIdRequest) returns (ResultsResponse);
+  rpc GenerateSummary(ExperimentIdRequest) returns (SummarySnapshotResult);
+  rpc GetSettings(Empty) returns (AbSettings);
+  rpc UpdateSettings(AbSettings) returns (AbSettings);
+}
+
+message Empty {}
+
+message ExperimentIdRequest {
+  string experiment_id = 1;
+}
+
+message ListExperimentsRequest {
+  optional string status = 1;
+  optional string experiment_type = 2;
+}
+
+message AbExperiment {
+  string id = 1;
+  string name = 2;
+  optional string description = 3;
+  string experiment_type = 4;
+  string status = 5;
+  double traffic_split = 6;
+  optional string start_at = 7;
+  optional string end_at = 8;
+  optional string winner_variant_id = 9;
+  optional string created_by = 10;
+  string org_id = 11;
+  string created_at = 12;
+  string updated_at = 13;
+}
+
+message ExperimentsResponse {
+  repeated AbExperiment experiments = 1;
+}
+
+message AbVariant {
+  string id = 1;
+  string experiment_id = 2;
+  string variant_name = 3;
+  string config_json = 4;
+  bool is_control = 5;
+  string created_at = 6;
+}
+
+message VariantsResponse {
+  repeated AbVariant variants = 1;
+}
+
+message AbAssignment {
+  string id = 1;
+  string experiment_id = 2;
+  string variant_id = 3;
+  string conversation_id = 4;
+  optional string contact_id = 5;
+  string assigned_at = 6;
+}
+
+message AbResult {
+  string id = 1;
+  string experiment_id = 2;
+  string variant_id = 3;
+  optional string assignment_id = 4;
+  string metric_name = 5;
+  double metric_value = 6;
+  string metadata_json = 7;
+  string created_at = 8;
+}
+
+message ResultsResponse {
+  repeated AbResult results = 1;
+}
+
+message VariantStats {
+  string variant_id = 1;
+  string variant_name = 2;
+  bool is_control = 3;
+  int64 assignments = 4;
+  int64 results = 5;
+  map<string, double> avg_metric_values = 6;
+  map<string, double> min_metric_values = 7;
+  map<string, double> max_metric_values = 8;
+}
+
+message AbExperimentSummary {
+  string id = 1;
+  string experiment_id = 2;
+  int64 total_assignments = 3;
+  int64 total_results = 4;
+  repeated VariantStats variant_stats = 5;
+  double statistical_significance = 6;
+  optional string recommended_winner = 7;
+  string snapshot_at = 8;
+}
+
+message AbSettings {
+  string id = 1;
+  string org_id = 2;
+  bool enabled = 3;
+  bool auto_detect_winner = 4;
+  int32 min_sample_size = 5;
+  double significance_threshold = 6;
+  int32 max_concurrent_experiments = 7;
+}
+
+message ExperimentTypeCount {
+  string experiment_type = 1;
+  int64 count = 2;
+}
+
+message AbTestingSummary {
+  int64 total_experiments = 1;
+  int64 running_experiments = 2;
+  int64 completed_experiments = 3;
+  int64 total_assignments = 4;
+  int64 total_results = 5;
+  repeated ExperimentTypeCount experiments_by_type = 6;
+  repeated AbExperiment recent_experiments = 7;
+  AbSettings settings = 8;
+}
+
+message AssignmentResult {
+  AbAssignment assignment = 1;
+  AbVariant variant = 2;
+}
+
+message CreateExperimentVariantInput {
+  string variant_name = 1;
+  string config_json = 2;
+}
+
+message CreateExperimentRequest {
+  string name = 1;
+  optional string description = 2;
+  string experiment_type = 3;
+  double traffic_split = 4;
+  repeated CreateExperimentVariantInput variants = 5;
+}
+
+message CreateExperimentResult {
+  AbExperiment experiment = 1;
+  repeated AbVariant variants = 2;
+}
+
+message SummarySnapshotResult {
+  AbExperimentSummary summary = 1;
+}
+
+message UpdateStatusRequest {
+  string experiment_id = 1;
+  string status = 2;
+}
+
+message AssignRequest {
+  string experiment_id = 1;
+  string conversation_id = 2;
+  optional string contact_id = 3;
+}
+
+message RecordResultRequest {
+  string experiment_id = 1;
+  string variant_id = 2;
+  string assignment_id = 3;
+  string metric_name = 4;
+  double metric_value = 5;
+}

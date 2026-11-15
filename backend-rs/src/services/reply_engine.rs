@@ -14,7 +14,7 @@ use crate::services::alerts::{send_hot_lead_alert, HotLeadAlert};
 use crate::services::claude_client::ask_json;
 use crate::services::draft_actions::record_draft_audit;
 use crate::services::integration_settings;
-use crate::services::reply_integration::ReplyIntegrationService;
+use newax_reply_integration::ReplyIntegrationService;
 use crate::services::validation::{self, ValidationResult};
 use serde_json::{json, Value};
 use sqlx::Row;
@@ -581,7 +581,7 @@ async fn build_user_prompt(
     contact: &sqlx::postgres::PgRow,
     tenant_key: &str,
     warnings: &mut Vec<String>,
-) -> Result<(String, Thread, LeadFacts, String, Vec<crate::services::reply_integration::KnowledgeSourceUsed>), ReplyError> {
+) -> Result<(String, Thread, LeadFacts, String, Vec<newax_reply_integration::KnowledgeSourceUsed>), ReplyError> {
     let thread = load_history(state, conversation_id).await?;
     if thread.message_count == 0 {
         warnings.push(

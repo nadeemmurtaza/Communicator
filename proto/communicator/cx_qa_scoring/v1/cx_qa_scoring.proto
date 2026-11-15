@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package newax.cx_qa_scoring.v1;
+
+service CxQaScoringService {
+  rpc GetCxSummary(Empty) returns (CxSummary);
+  rpc GetQaScore(ConversationIdRequest) returns (QaScore);
+  rpc BatchScore(Empty) returns (BatchScoringResult);
+  rpc ListQaRules(Empty) returns (QaRulesResponse);
+  rpc UpdateQaRule(UpdateQaRuleRequest) returns (QaScoringRule);
+}
+
+message Empty {}
+
+message ConversationIdRequest {
+  string conversation_id = 1;
+}
+
+message CxSummary {
+  double avg_score = 1;
+  int64 total_conversations = 2;
+  int64 scored_conversations = 3;
+  string trend = 4;
+}
+
+message QaScore {
+  string conversation_id = 1;
+  double score = 2;
+  string feedback = 3;
+  repeated string rules_triggered = 4;
+}
+
+message BatchScoringResult {
+  int64 total = 1;
+  int64 scored = 2;
+  int64 failed = 3;
+  double avg_score = 4;
+}
+
+message QaScoringRule {
+  string id = 1;
+  string name = 2;
+  bool is_enabled = 3;
+  double score_impact = 4;
+}
+
+message QaRulesResponse {
+  repeated QaScoringRule rules = 1;
+}
+
+message UpdateQaRuleRequest {
+  string rule_id = 1;
+  optional bool is_enabled = 2;
+  optional double score_impact = 3;
+}

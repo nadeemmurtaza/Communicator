@@ -1,0 +1,194 @@
+syntax = "proto3";
+
+package newax.monitoring.v1;
+
+service MonitoringService {
+  rpc HealthCheckExtended(Empty) returns (HealthCheckResult);
+  rpc GetMetrics(MetricsRequest) returns (MetricsResponse);
+  rpc GetMetricsSummary(MetricsRequest) returns (SummariesResponse);
+  rpc CollectMetrics(Empty) returns (CollectResponse);
+  rpc GetAlertEvents(AlertsRequest) returns (AlertEventsResponse);
+  rpc AcknowledgeAlert(AcknowledgeRequest) returns (AcknowledgeResponse);
+  rpc ResolveAlert(AlertIdRequest) returns (ResolveResponse);
+  rpc GetAlertRules(Empty) returns (AlertRulesResponse);
+  rpc GetAlertRule(RuleIdRequest) returns (AlertRule);
+  rpc CreateAlertRule(CreateAlertRuleRequest) returns (CreateAlertRuleResponse);
+  rpc UpdateAlertRule(UpdateAlertRuleRequest) returns (UpdateAlertRuleResponse);
+  rpc DeleteAlertRule(RuleIdRequest) returns (DeleteResponse);
+  rpc GetDashboardSummary(Empty) returns (JsonResponse);
+  rpc EvaluateAlerts(Empty) returns (EvaluateResponse);
+}
+
+message Empty {}
+message AlertIdRequest { string alert_id = 1; }
+message RuleIdRequest { string rule_id = 1; }
+message JsonResponse { string json = 1; }
+message DeleteResponse { bool deleted = 1; string rule_id = 2; }
+
+message MetricsRequest {
+  optional string name = 1;
+  int64 window_hours = 2;
+  int64 limit = 3;
+}
+
+message SystemMetric {
+  string id = 1;
+  string metric_name = 2;
+  double metric_value = 3;
+  string metric_type = 4;
+  string labels = 5;
+  string collected_at = 6;
+  string created_at = 7;
+}
+
+message MetricsResponse {
+  repeated SystemMetric metrics = 1;
+  int64 window_hours = 2;
+  int64 count = 3;
+}
+
+message MetricSummary {
+  string metric_name = 1;
+  double avg_value = 2;
+  double min_value = 3;
+  double max_value = 4;
+  double latest_value = 5;
+  int64 sample_count = 6;
+}
+
+message SummariesResponse {
+  repeated MetricSummary summaries = 1;
+  int64 window_hours = 2;
+  int64 count = 3;
+}
+
+message CollectResponse {
+  int64 collected = 1;
+  int64 alerts_fired = 2;
+  string collected_at = 3;
+}
+
+message AlertsRequest {
+  optional string severity = 1;
+  optional bool acknowledged = 2;
+  optional bool resolved = 3;
+  int64 limit = 4;
+}
+
+message AlertEvent {
+  string id = 1;
+  string rule_id = 2;
+  string alert_name = 3;
+  string severity = 4;
+  string metric_name = 5;
+  double metric_value = 6;
+  double threshold = 7;
+  string condition = 8;
+  string message = 9;
+  bool acknowledged = 10;
+  optional string acknowledged_by = 11;
+  optional string acknowledged_at = 12;
+  bool resolved = 13;
+  optional string resolved_at = 14;
+  string created_at = 15;
+}
+
+message AlertEventsResponse {
+  repeated AlertEvent alerts = 1;
+  int64 count = 2;
+}
+
+message AcknowledgeRequest {
+  string alert_id = 1;
+  optional string acknowledged_by = 2;
+}
+
+message AcknowledgeResponse {
+  bool acknowledged = 1;
+  string alert_id = 2;
+  string acknowledged_by = 3;
+  string acknowledged_at = 4;
+}
+
+message ResolveResponse {
+  bool resolved = 1;
+  string alert_id = 2;
+  string resolved_at = 3;
+}
+
+message AlertRule {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string metric_name = 4;
+  string condition = 5;
+  double threshold = 6;
+  int32 window_minutes = 7;
+  string severity = 8;
+  bool enabled = 9;
+  optional string notification_webhook = 10;
+  int32 cooldown_minutes = 11;
+  string created_at = 12;
+  string updated_at = 13;
+}
+
+message AlertRulesResponse {
+  repeated AlertRule rules = 1;
+  int64 count = 2;
+}
+
+message CreateAlertRuleRequest {
+  string name = 1;
+  optional string description = 2;
+  string metric_name = 3;
+  string condition = 4;
+  double threshold = 5;
+  optional int64 window_minutes = 6;
+  optional string severity = 7;
+  optional string notification_webhook = 8;
+  optional int64 cooldown_minutes = 9;
+}
+
+message CreateAlertRuleResponse {
+  string id = 1;
+  string name = 2;
+  string created_at = 3;
+}
+
+message UpdateAlertRuleRequest {
+  string rule_id = 1;
+  optional string name = 2;
+  optional string description = 3;
+  optional string metric_name = 4;
+  optional string condition = 5;
+  optional double threshold = 6;
+  optional int64 window_minutes = 7;
+  optional string severity = 8;
+  optional int32 enabled = 9;
+  optional string notification_webhook = 10;
+  optional int64 cooldown_minutes = 11;
+}
+
+message UpdateAlertRuleResponse {
+  bool updated = 1;
+  string rule_id = 2;
+  string updated_at = 3;
+}
+
+message ComponentHealth {
+  string name = 1;
+  string status = 2;
+  optional string detail = 3;
+}
+
+message HealthCheckResult {
+  string overall_status = 1;
+  repeated ComponentHealth components = 2;
+  string checked_at = 3;
+}
+
+message EvaluateResponse {
+  bool evaluated = 1;
+  int64 alerts_fired = 2;
+  string evaluated_at = 3;
+}

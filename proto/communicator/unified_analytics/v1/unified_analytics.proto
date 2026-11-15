@@ -1,0 +1,132 @@
+syntax = "proto3";
+
+package newax.unified_analytics.v1;
+
+service UnifiedAnalyticsService {
+  rpc GetSummary(Empty) returns (JsonResponse);
+
+  rpc ListSavedReports(ListReportsRequest) returns (JsonResponse);
+  rpc CreateSavedReport(CreateReportRequest) returns (JsonResponse);
+  rpc UpdateSavedReport(UpdateByIdRequest) returns (JsonResponse);
+  rpc DeleteSavedReport(IdRequest) returns (Empty);
+  rpc RunReport(IdRequest) returns (JsonResponse);
+
+  rpc ListScheduledReports(OptionalIdRequest) returns (JsonResponse);
+  rpc CreateScheduledReport(CreateScheduledRequest) returns (JsonResponse);
+  rpc UpdateScheduledReport(UpdateStatusRequest) returns (JsonResponse);
+  rpc DeleteScheduledReport(IdRequest) returns (Empty);
+
+  rpc ListTemplates(OrgIdRequest) returns (JsonResponse);
+  rpc CreateTemplate(CreateTemplateRequest) returns (JsonResponse);
+
+  rpc ListWidgets(WidgetQueryRequest) returns (JsonResponse);
+  rpc CreateWidget(CreateWidgetRequest) returns (JsonResponse);
+  rpc UpdateWidget(UpdateByIdRequest) returns (JsonResponse);
+  rpc DeleteWidget(IdRequest) returns (Empty);
+
+  rpc CreateSnapshot(CreateSnapshotRequest) returns (JsonResponse);
+  rpc ListSnapshots(ListSnapshotsRequest) returns (JsonResponse);
+
+  rpc GetSettings(OrgIdRequest) returns (JsonResponse);
+  rpc UpdateSettings(UpdateByOrgRequest) returns (JsonResponse);
+
+  rpc ExportReport(ExportRequest) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message IdRequest {
+  string id = 1;
+}
+
+message OptionalIdRequest {
+  optional string id = 1;
+}
+
+message OrgIdRequest {
+  string org_id = 1;
+}
+
+message UpdateByIdRequest {
+  string id = 1;
+  string updates_json = 2;
+}
+
+message UpdateByOrgRequest {
+  string org_id = 1;
+  string updates_json = 2;
+}
+
+message ListReportsRequest {
+  string org_id = 1;
+  optional string report_type = 2;
+}
+
+message CreateReportRequest {
+  string org_id = 1;
+  string name = 2;
+  string report_type = 3;
+  string config_json = 4;
+  string time_range = 5;
+  string filters_json = 6;
+  string created_by = 7;
+}
+
+message CreateScheduledRequest {
+  string report_id = 1;
+  string schedule = 2;
+  repeated string recipients = 3;
+  string format = 4;
+}
+
+message UpdateStatusRequest {
+  string id = 1;
+  string status = 2;
+}
+
+message CreateTemplateRequest {
+  string org_id = 1;
+  string name = 2;
+  string report_type = 3;
+  string description = 4;
+  string config_json = 5;
+}
+
+message WidgetQueryRequest {
+  string org_id = 1;
+  string dashboard_id = 2;
+}
+
+message CreateWidgetRequest {
+  string org_id = 1;
+  string dashboard_id = 2;
+  string widget_type = 3;
+  string title = 4;
+  string config_json = 5;
+  int32 position_x = 6;
+  int32 position_y = 7;
+  int32 width = 8;
+  int32 height = 9;
+}
+
+message CreateSnapshotRequest {
+  string org_id = 1;
+  string snapshot_type = 2;
+  string period_start = 3;
+  string period_end = 4;
+}
+
+message ListSnapshotsRequest {
+  string org_id = 1;
+  optional string snapshot_type = 2;
+  int64 limit = 3;
+}
+
+message ExportRequest {
+  string report_id = 1;
+  string format = 2;
+}

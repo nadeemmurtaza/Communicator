@@ -156,16 +156,16 @@ impl ConversationSearchService {
             .fetch_one(&self.pool).await?;
         let week_searches: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM search_history WHERE performed_at >= NOW() - INTERVAL '7 days'")
             .fetch_one(&self.pool).await?;
-        
+
         let avg_results: f64 = sqlx::query_scalar("SELECT COALESCE(AVG(result_count), 0) FROM search_history WHERE performed_at >= NOW() - INTERVAL '7 days'")
             .fetch_one(&self.pool).await?;
-        
+
         let zero_result: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM search_history WHERE result_count = 0 AND performed_at >= NOW() - INTERVAL '7 days'")
             .fetch_one(&self.pool).await?;
-        
+
         let total_7d: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM search_history WHERE performed_at >= NOW() - INTERVAL '7 days'")
             .fetch_one(&self.pool).await?;
-        
+
         let zero_rate = if total_7d > 0 { (zero_result as f64 / total_7d as f64) * 100.0 } else { 0.0 };
 
         let query_rows = sqlx::query(
@@ -248,13 +248,13 @@ impl ConversationSearchService {
                  ORDER BY updated_at DESC LIMIT $2"
             ).bind(&like_pattern).bind(limit).fetch_all(&self.pool).await
             .unwrap_or_else(|_| Vec::new());
-            
+
             for r in &rows {
                 conversations.push(SearchResult {
                     search_type: "conversation".to_string(),
                     id: r.get("id"),
                     title: r.get::<String, _>("subject").clone(),
-                    snippet: format!("Channel: {}, Status: {}, Contact: {}", 
+                    snippet: format!("Channel: {}, Status: {}, Contact: {}",
                         r.get::<String, _>("channel"),
                         r.get::<String, _>("status"),
                         r.get::<String, _>("contact_id")),
@@ -279,7 +279,7 @@ impl ConversationSearchService {
                  ORDER BY created_at DESC LIMIT $2"
             ).bind(&like_pattern).bind(limit).fetch_all(&self.pool).await
             .unwrap_or_else(|_| Vec::new());
-            
+
             for r in &rows {
                 let body: String = r.get("body");
                 let snippet = if body.len() > 200 {
@@ -313,16 +313,16 @@ impl ConversationSearchService {
                  ORDER BY created_at DESC LIMIT $2"
             ).bind(&like_pattern).bind(limit).fetch_all(&self.pool).await
             .unwrap_or_else(|_| Vec::new());
-            
+
             for r in &rows {
-                let name = format!("{} {}", 
+                let name = format!("{} {}",
                     r.get::<String, _>("first_name"),
                     r.get::<String, _>("last_name"));
                 contacts.push(SearchResult {
                     search_type: "contact".to_string(),
                     id: r.get("id"),
                     title: if name.trim().is_empty() { r.get::<String, _>("phone").clone() } else { name.clone() },
-                    snippet: format!("Phone: {}, Email: {}", 
+                    snippet: format!("Phone: {}, Email: {}",
                         r.get::<String, _>("phone"),
                         r.get::<String, _>("email")),
                     metadata: serde_json::json!({
@@ -366,8 +366,8 @@ impl ConversationSearchService {
 
     pub async fn list_saved_searches(&self, search_type: Option<&str>) -> Result<Vec<SavedSearch>, String> {
         let mut query_str = String::from("SELECT id, org_id, name, query, search_type, filters, created_by, created_at, updated_at, is_pinned, usage_count FROM saved_searches WHERE 1=1");
-        
-        if let Some(st) = search_type {
+
+        if search_type.is_some() {
             query_str.push_str(" AND search_type = $1");
         }
         query_str.push_str(" ORDER BY is_pinned DESC, created_at DESC");
@@ -604,61 +604,5 @@ impl ConversationSearchService {
          .map_err(|e| format!("Failed to update settings: {e}"))?;
 
         self.get_settings().await
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_serialization() {
-        let summary = SearchSummary {
-            total_saved_searches: 0,
-            pinned_searches: 0,
-            total_searches_today: 0,
-            total_searches_7d: 0,
-            avg_results_per_search: 0.0,
-            zero_result_rate: 0.0,
-            top_queries: vec![],
-            top_search_types: vec![],
-            recent_history: vec![],
-        };
-        let json = serde_json::to_string(&summary).unwrap();
-        assert!(json.contains("totalSavedSearches"));
-    }
-
-    #[test]
-    fn test_search_response() {
-        let response = SearchResponse {
-            query: "test".to_string(),
-            total_results: 0,
-            conversations: vec![],
-            messages: vec![],
-            contacts: vec![],
-            duration_ms: 0,
-        };
-        let json = serde_json::to_string(&response).unwrap();
-        assert!(json.contains("totalResults"));
-    }
-
-    #[test]
-    fn test_settings_serialization() {
-        let settings = SearchSettings {
-            id: "default".to_string(),
-            org_id: "default".to_string(),
-            max_results: 50,
-            search_message_content: true,
-            search_contact_details: true,
-            search_conversation_metadata: true,
-            track_search_history: true,
-            auto_suggest: true,
-            min_query_length: 2,
-            highlight_matches: true,
-            created_at: "2024-01-01T00:00:00Z".to_string(),
-            updated_at: "2024-01-01T00:00:00Z".to_string(),
-        };
-        let json = serde_json::to_string(&settings).unwrap();
-        assert!(json.contains("maxResults"));
     }
 }

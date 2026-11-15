@@ -1,50 +1,54 @@
 ﻿#![allow(dead_code)]
 
-//! Monitoring & Alerting API routes — Phase 8.
-//!
-//! Provides endpoints for:
-//! - Extended health checks with all component status
-//! - Time-series metrics with filtering
-//! - Aggregated metric summaries
-//! - Alert events with acknowledgment
-//! - Alert rules management (CRUD)
-//! - Manual metric collection trigger
+//! Monitoring & Alerting API routes -- thin gRPC client for
+//! svc-monitoring. See crates/monitoring and services/monitoring.
+//! REST paths and payload shapes are unchanged.
 
-use crate::db::AppState;
-use crate::services::monitoring;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::Json;
-use chrono::Utc;
+use newax_proto::monitoring::v1::{
+    monitoring_service_client::MonitoringServiceClient, AcknowledgeRequest, AlertIdRequest, AlertsRequest, Empty,
+    MetricsRequest, RuleIdRequest,
+};
+use proto::{CreateAlertRuleRequest as ProtoCreateReq, UpdateAlertRuleRequest as ProtoUpdateReq};
+use newax_proto::monitoring::v1 as proto;
 use serde::Deserialize;
 use serde_json::json;
-use sqlx::Row;
-use tracing::info;
+use tonic::transport::Channel;
 
-// ---------------------------------------------------------------------------
-// Request/Response types
-// ---------------------------------------------------------------------------
+use crate::db::AppState;
+
+async fn client() -> Result<MonitoringServiceClient<Channel>, (StatusCode, String)> {
+    let url = std::env::var("MONITORING_SERVICE_URL").unwrap_or_else(|_| "http://127.0.0.1:50066".to_string());
+    MonitoringServiceClient::connect(url)
+        .await
+        .map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, format!("monitoring service unreachable: {e}")))
+}
+
+fn grpc_err(status: tonic::Status) -> Response {
+    let code = match status.code() {
+        tonic::Code::NotFound => StatusCode::NOT_FOUND,
+        _ => StatusCode::INTERNAL_SERVER_ERROR,
+    };
+    (code, Json(json!({ "error": status.message() }))).into_response()
+}
+
+use axum::response::Response;
 
 #[derive(Debug, Deserialize)]
 pub struct MetricsQuery {
-    /// Metric name filter (optional)
     pub name: Option<String>,
-    /// Time window in hours (default: 24)
     pub window_hours: Option<i64>,
-    /// Limit number of results (default: 100)
     pub limit: Option<i64>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct AlertsQuery {
-    /// Filter by severity (optional)
     pub severity: Option<String>,
-    /// Filter by acknowledged status (optional)
     pub acknowledged: Option<bool>,
-    /// Filter by resolved status (optional)
     pub resolved: Option<bool>,
-    /// Limit number of results (default: 50)
     pub limit: Option<i64>,
 }
 
@@ -80,519 +84,219 @@ pub struct UpdateAlertRuleRequest {
     pub cooldown_minutes: Option<i64>,
 }
 
-// ---------------------------------------------------------------------------
-// Health Check
-// ---------------------------------------------------------------------------
-
-/// Extended health check with all component status.
-pub async fn health_check_extended(State(state): State<AppState>) -> impl IntoResponse {
-    let health = monitoring::run_health_checks(&state).await;
-
-    let status_code = match health.overall_status.as_str() {
-        "healthy" => StatusCode::OK,
-        "degraded" => StatusCode::SERVICE_UNAVAILABLE,
-        "unhealthy" => StatusCode::SERVICE_UNAVAILABLE,
-        _ => StatusCode::INTERNAL_SERVER_ERROR,
+pub async fn health_check_extended(State(_s): State<AppState>) -> Response {
+    let mut c = match client().await {
+        Ok(c) => c,
+        Err((code, msg)) => return (code, Json(json!({"error": msg}))).into_response(),
     };
-
-    (status_code, Json(health)).into_response()
-}
-
-// ---------------------------------------------------------------------------
-// Metrics
-// ---------------------------------------------------------------------------
-
-/// Get time-series metrics with optional filtering.
-pub async fn get_metrics(
-    State(state): State<AppState>,
-    Query(params): Query<MetricsQuery>,
-) -> impl IntoResponse {
-    let window_hours = params.window_hours.unwrap_or(24);
-    let limit = params.limit.unwrap_or(100);
-    let cutoff = (Utc::now() - chrono::Duration::hours(window_hours)).to_rfc3339();
-
-    let metrics: Vec<monitoring::SystemMetric> = if let Some(ref name) = params.name {
-        sqlx::query_as::<_, monitoring::SystemMetric>(
-            "SELECT * FROM system_metrics
-             WHERE metric_name = $1 AND collected_at >= $2
-             ORDER BY collected_at DESC
-             LIMIT $3",
-        )
-        .bind(name)
-        .bind(&cutoff)
-        .bind(limit)
-        .fetch_all(&state.db)
-        .await
-    } else {
-        sqlx::query_as::<_, monitoring::SystemMetric>(
-            "SELECT * FROM system_metrics
-             WHERE collected_at >= $1
-             ORDER BY collected_at DESC
-             LIMIT $2",
-        )
-        .bind(&cutoff)
-        .bind(limit)
-        .fetch_all(&state.db)
-        .await
+    match c.health_check_extended(Empty {}).await {
+        Ok(r) => {
+            let health = r.into_inner();
+            let status_code = match health.overall_status.as_str() {
+                "healthy" => StatusCode::OK,
+                "degraded" | "unhealthy" => StatusCode::SERVICE_UNAVAILABLE,
+                _ => StatusCode::INTERNAL_SERVER_ERROR,
+            };
+            (status_code, Json(json!({
+                "overall_status": health.overall_status,
+                "components": health.components.into_iter().map(|c| json!({"name": c.name, "status": c.status, "detail": c.detail})).collect::<Vec<_>>(),
+                "checked_at": health.checked_at,
+            }))).into_response()
+        }
+        Err(e) => grpc_err(e),
     }
-    .unwrap_or_default();
-
-    Json(json!({
-        "metrics": metrics,
-        "window_hours": window_hours,
-        "count": metrics.len(),
-    }))
-    .into_response()
 }
 
-/// Get aggregated metric summaries.
-pub async fn get_metrics_summary(
-    State(state): State<AppState>,
-    Query(params): Query<MetricsQuery>,
-) -> impl IntoResponse {
-    let window_hours = params.window_hours.unwrap_or(24);
-
-    match monitoring::get_metric_summaries(&state, window_hours).await {
-        Ok(summaries) => {
+pub async fn get_metrics(State(_s): State<AppState>, Query(params): Query<MetricsQuery>) -> Response {
+    let mut c = match client().await { Ok(c) => c, Err((code, msg)) => return (code, Json(json!({"error": msg}))).into_response() };
+    let req = MetricsRequest { name: params.name, window_hours: params.window_hours.unwrap_or(24), limit: params.limit.unwrap_or(100) };
+    match c.get_metrics(req).await {
+        Ok(r) => {
+            let r = r.into_inner();
             Json(json!({
-                "summaries": summaries,
-                "window_hours": window_hours,
-                "count": summaries.len(),
-            }))
-            .into_response()
+                "metrics": r.metrics.into_iter().map(|x| json!({
+                    "id": x.id, "metric_name": x.metric_name, "metric_value": x.metric_value,
+                    "metric_type": x.metric_type, "labels": x.labels, "collected_at": x.collected_at, "created_at": x.created_at,
+                })).collect::<Vec<_>>(),
+                "window_hours": r.window_hours,
+                "count": r.count,
+            })).into_response()
         }
-        Err(e) => {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": e })),
-            )
-                .into_response()
-        }
+        Err(e) => grpc_err(e),
     }
 }
 
-/// Trigger metric collection.
-pub async fn collect_metrics(State(state): State<AppState>) -> impl IntoResponse {
-    match monitoring::collect_all_metrics(&state).await {
-        Ok(count) => {
-            // Also evaluate alert rules after collecting metrics
-            let alerts_fired = monitoring::evaluate_alert_rules(&state).await.unwrap_or(0);
-
+pub async fn get_metrics_summary(State(_s): State<AppState>, Query(params): Query<MetricsQuery>) -> Response {
+    let mut c = match client().await { Ok(c) => c, Err((code, msg)) => return (code, Json(json!({"error": msg}))).into_response() };
+    let req = MetricsRequest { name: params.name, window_hours: params.window_hours.unwrap_or(24), limit: params.limit.unwrap_or(100) };
+    match c.get_metrics_summary(req).await {
+        Ok(r) => {
+            let r = r.into_inner();
             Json(json!({
-                "collected": count,
-                "alerts_fired": alerts_fired,
-                "collected_at": Utc::now().to_rfc3339(),
-            }))
-            .into_response()
+                "summaries": r.summaries.into_iter().map(|x| json!({
+                    "metric_name": x.metric_name, "avg_value": x.avg_value, "min_value": x.min_value,
+                    "max_value": x.max_value, "latest_value": x.latest_value, "sample_count": x.sample_count,
+                })).collect::<Vec<_>>(),
+                "window_hours": r.window_hours,
+                "count": r.count,
+            })).into_response()
         }
-        Err(e) => {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": e })),
-            )
-                .into_response()
-        }
+        Err(e) => grpc_err(e),
     }
 }
 
-// ---------------------------------------------------------------------------
-// Alert Events
-// ---------------------------------------------------------------------------
-
-/// List alert events with optional filtering.
-pub async fn get_alert_events(
-    State(state): State<AppState>,
-    Query(params): Query<AlertsQuery>,
-) -> impl IntoResponse {
-    let limit = params.limit.unwrap_or(50);
-
-    let mut conditions = Vec::new();
-    let mut idx = 1u32;
-
-    if params.severity.is_some() {
-        conditions.push(format!("severity = ${}", idx));
-        idx += 1;
+pub async fn collect_metrics(State(_s): State<AppState>) -> Response {
+    let mut c = match client().await { Ok(c) => c, Err((code, msg)) => return (code, Json(json!({"error": msg}))).into_response() };
+    match c.collect_metrics(Empty {}).await {
+        Ok(r) => {
+            let r = r.into_inner();
+            Json(json!({ "collected": r.collected, "alerts_fired": r.alerts_fired, "collected_at": r.collected_at })).into_response()
+        }
+        Err(e) => grpc_err(e),
     }
-    if let Some(acknowledged) = params.acknowledged {
-        conditions.push(format!("acknowledged = {}", acknowledged));
-    }
-    if let Some(resolved) = params.resolved {
-        conditions.push(format!("resolved = {}", resolved));
-    }
+}
 
-    let where_clause = if conditions.is_empty() {
-        String::new()
-    } else {
-        format!(" WHERE {}", conditions.join(" AND "))
+pub async fn get_alert_events(State(_s): State<AppState>, Query(params): Query<AlertsQuery>) -> Response {
+    let mut c = match client().await { Ok(c) => c, Err((code, msg)) => return (code, Json(json!({"error": msg}))).into_response() };
+    let req = AlertsRequest { severity: params.severity, acknowledged: params.acknowledged, resolved: params.resolved, limit: params.limit.unwrap_or(50) };
+    match c.get_alert_events(req).await {
+        Ok(r) => {
+            let r = r.into_inner();
+            Json(json!({
+                "alerts": r.alerts.into_iter().map(|x| json!({
+                    "id": x.id, "rule_id": x.rule_id, "alert_name": x.alert_name, "severity": x.severity,
+                    "metric_name": x.metric_name, "metric_value": x.metric_value, "threshold": x.threshold,
+                    "condition": x.condition, "message": x.message, "acknowledged": x.acknowledged,
+                    "acknowledged_by": x.acknowledged_by, "acknowledged_at": x.acknowledged_at,
+                    "resolved": x.resolved, "resolved_at": x.resolved_at, "created_at": x.created_at,
+                })).collect::<Vec<_>>(),
+                "count": r.count,
+            })).into_response()
+        }
+        Err(e) => grpc_err(e),
+    }
+}
+
+pub async fn acknowledge_alert(State(_s): State<AppState>, Path(alert_id): Path<String>, Json(req): Json<AcknowledgeAlertRequest>) -> Response {
+    let mut c = match client().await { Ok(c) => c, Err((code, msg)) => return (code, Json(json!({"error": msg}))).into_response() };
+    match c.acknowledge_alert(AcknowledgeRequest { alert_id, acknowledged_by: req.acknowledged_by }).await {
+        Ok(r) => {
+            let r = r.into_inner();
+            Json(json!({ "acknowledged": r.acknowledged, "alert_id": r.alert_id, "acknowledged_by": r.acknowledged_by, "acknowledged_at": r.acknowledged_at })).into_response()
+        }
+        Err(e) => grpc_err(e),
+    }
+}
+
+pub async fn resolve_alert(State(_s): State<AppState>, Path(alert_id): Path<String>) -> Response {
+    let mut c = match client().await { Ok(c) => c, Err((code, msg)) => return (code, Json(json!({"error": msg}))).into_response() };
+    match c.resolve_alert(AlertIdRequest { alert_id }).await {
+        Ok(r) => {
+            let r = r.into_inner();
+            Json(json!({ "resolved": r.resolved, "alert_id": r.alert_id, "resolved_at": r.resolved_at })).into_response()
+        }
+        Err(e) => grpc_err(e),
+    }
+}
+
+pub async fn get_alert_rules(State(_s): State<AppState>) -> Response {
+    let mut c = match client().await { Ok(c) => c, Err((code, msg)) => return (code, Json(json!({"error": msg}))).into_response() };
+    match c.get_alert_rules(Empty {}).await {
+        Ok(r) => {
+            let r = r.into_inner();
+            Json(json!({
+                "rules": r.rules.into_iter().map(rule_json).collect::<Vec<_>>(),
+                "count": r.count,
+            })).into_response()
+        }
+        Err(e) => grpc_err(e),
+    }
+}
+
+fn rule_json(x: proto::AlertRule) -> serde_json::Value {
+    json!({
+        "id": x.id, "name": x.name, "description": x.description, "metric_name": x.metric_name,
+        "condition": x.condition, "threshold": x.threshold, "window_minutes": x.window_minutes,
+        "severity": x.severity, "enabled": x.enabled, "notification_webhook": x.notification_webhook,
+        "cooldown_minutes": x.cooldown_minutes, "created_at": x.created_at, "updated_at": x.updated_at,
+    })
+}
+
+pub async fn get_alert_rule(State(_s): State<AppState>, Path(rule_id): Path<String>) -> Response {
+    let mut c = match client().await { Ok(c) => c, Err((code, msg)) => return (code, Json(json!({"error": msg}))).into_response() };
+    match c.get_alert_rule(RuleIdRequest { rule_id }).await {
+        Ok(r) => Json(rule_json(r.into_inner())).into_response(),
+        Err(e) => grpc_err(e),
+    }
+}
+
+pub async fn create_alert_rule(State(_s): State<AppState>, Json(req): Json<CreateAlertRuleRequest>) -> Response {
+    let mut c = match client().await { Ok(c) => c, Err((code, msg)) => return (code, Json(json!({"error": msg}))).into_response() };
+    let proto_req = ProtoCreateReq {
+        name: req.name, description: req.description, metric_name: req.metric_name, condition: req.condition,
+        threshold: req.threshold, window_minutes: req.window_minutes, severity: req.severity,
+        notification_webhook: req.notification_webhook, cooldown_minutes: req.cooldown_minutes,
     };
-
-    let query = format!(
-        "SELECT * FROM alert_events{} ORDER BY created_at DESC LIMIT ${}",
-        where_clause, idx
-    );
-
-    let mut q = sqlx::query_as::<_, monitoring::AlertEvent>(&query);
-    if let Some(ref severity) = params.severity {
-        q = q.bind(severity);
-    }
-    q = q.bind(limit);
-
-    let events: Vec<monitoring::AlertEvent> = q.fetch_all(&state.db).await.unwrap_or_default();
-
-    Json(json!({
-        "alerts": events,
-        "count": events.len(),
-    }))
-    .into_response()
-}
-
-/// Acknowledge an alert event.
-pub async fn acknowledge_alert(
-    State(state): State<AppState>,
-    Path(alert_id): Path<String>,
-    Json(req): Json<AcknowledgeAlertRequest>,
-) -> impl IntoResponse {
-    let now = Utc::now().to_rfc3339();
-    let acknowledged_by = req.acknowledged_by.unwrap_or_else(|| "api".to_string());
-
-    let result = sqlx::query(
-        "UPDATE alert_events SET acknowledged = true, acknowledged_by = $1, acknowledged_at = $2
-         WHERE id = $3 AND acknowledged = false"
-    )
-    .bind(&acknowledged_by)
-    .bind(&now)
-    .bind(&alert_id)
-    .execute(&state.db)
-    .await;
-
-    match result {
-        Ok(res) if res.rows_affected() > 0 => {
-            info!("Alert {} acknowledged by {}", alert_id, acknowledged_by);
-            Json(json!({
-                "acknowledged": true,
-                "alert_id": alert_id,
-                "acknowledged_by": acknowledged_by,
-                "acknowledged_at": now,
-            }))
-            .into_response()
+    match c.create_alert_rule(proto_req).await {
+        Ok(r) => {
+            let r = r.into_inner();
+            (StatusCode::CREATED, Json(json!({ "id": r.id, "name": r.name, "created_at": r.created_at }))).into_response()
         }
-        Ok(_) => {
-            (
-                StatusCode::NOT_FOUND,
-                Json(json!({ "error": format!("Alert {} not found or already acknowledged", alert_id) })),
-            )
-                .into_response()
-        }
-        Err(e) => {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": e.to_string() })),
-            )
-                .into_response()
-        }
+        Err(e) => grpc_err(e),
     }
 }
 
-/// Resolve an alert event.
-pub async fn resolve_alert(
-    State(state): State<AppState>,
-    Path(alert_id): Path<String>,
-) -> impl IntoResponse {
-    let result = sqlx::query(
-        "UPDATE alert_events SET resolved = true, resolved_at = NOW()
-         WHERE id = $1 AND resolved = false
-         RETURNING resolved_at"
-    )
-    .bind(&alert_id)
-    .fetch_optional(&state.db)
-    .await;
-
-    match result {
-        Ok(Some(row)) => {
-            let resolved_at: chrono::DateTime<Utc> = row
-                .try_get("resolved_at")
-                .unwrap_or_else(|_| Utc::now());
-            info!("Alert {} resolved", alert_id);
-            Json(json!({
-                "resolved": true,
-                "alert_id": alert_id,
-                "resolved_at": resolved_at.to_rfc3339(),
-            }))
-            .into_response()
-        }
-        Ok(None) => {
-            (
-                StatusCode::NOT_FOUND,
-                Json(json!({ "error": format!("Alert {} not found or already resolved", alert_id) })),
-            )
-                .into_response()
-        }
-        Err(e) => {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": e.to_string() })),
-            )
-                .into_response()
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Alert Rules
-// ---------------------------------------------------------------------------
-
-/// List all alert rules.
-pub async fn get_alert_rules(State(state): State<AppState>) -> impl IntoResponse {
-    let rules: Vec<monitoring::AlertRule> = sqlx::query_as::<_, monitoring::AlertRule>(
-        "SELECT * FROM alert_rules ORDER BY severity DESC, name"
-    )
-    .fetch_all(&state.db)
-    .await
-    .unwrap_or_default();
-
-    Json(json!({
-        "rules": rules,
-        "count": rules.len(),
-    }))
-    .into_response()
-}
-
-/// Get a single alert rule.
-pub async fn get_alert_rule(
-    State(state): State<AppState>,
-    Path(rule_id): Path<String>,
-) -> impl IntoResponse {
-    let rule: Option<monitoring::AlertRule> = sqlx::query_as::<_, monitoring::AlertRule>(
-        "SELECT * FROM alert_rules WHERE id = $1"
-    )
-    .bind(&rule_id)
-    .fetch_optional(&state.db)
-    .await
-    .unwrap_or_default();
-
-    match rule {
-        Some(rule) => Json(rule).into_response(),
-        None => {
-            (
-                StatusCode::NOT_FOUND,
-                Json(json!({ "error": format!("Alert rule {} not found", rule_id) })),
-            )
-                .into_response()
-        }
-    }
-}
-
-/// Create a new alert rule.
-pub async fn create_alert_rule(
-    State(state): State<AppState>,
-    Json(req): Json<CreateAlertRuleRequest>,
-) -> impl IntoResponse {
-    let id = format!("rule-{}", uuid::Uuid::new_v4().as_hyphenated());
-    let description = req.description.unwrap_or_default();
-    let window_minutes = req.window_minutes.unwrap_or(60);
-    let severity = req.severity.unwrap_or_else(|| "warning".to_string());
-    let cooldown_minutes = req.cooldown_minutes.unwrap_or(30);
-
-    let result = sqlx::query(
-        "INSERT INTO alert_rules (id, name, description, metric_name, condition, threshold,
-         window_minutes, severity, enabled, notification_webhook, cooldown_minutes)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9, $10)"
-    )
-    .bind(&id)
-    .bind(&req.name)
-    .bind(&description)
-    .bind(&req.metric_name)
-    .bind(&req.condition)
-    .bind(req.threshold)
-    .bind(window_minutes)
-    .bind(&severity)
-    .bind(&req.notification_webhook)
-    .bind(cooldown_minutes)
-    .execute(&state.db)
-    .await;
-
-    match result {
-        Ok(_) => {
-            let now = Utc::now().to_rfc3339();
-            info!("Alert rule created: {} ({})", id, req.name);
-            (
-                StatusCode::CREATED,
-                Json(json!({
-                    "id": id,
-                    "name": req.name,
-                    "created_at": now,
-                })),
-            )
-                .into_response()
-        }
-        Err(e) => {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": e.to_string() })),
-            )
-                .into_response()
-        }
-    }
-}
-
-/// Update an existing alert rule.
-pub async fn update_alert_rule(
-    State(state): State<AppState>,
-    Path(rule_id): Path<String>,
-    Json(req): Json<UpdateAlertRuleRequest>,
-) -> impl IntoResponse {
-    if req.name.is_none()
-        && req.description.is_none()
-        && req.metric_name.is_none()
-        && req.condition.is_none()
-        && req.threshold.is_none()
-        && req.window_minutes.is_none()
-        && req.severity.is_none()
-        && req.enabled.is_none()
-        && req.notification_webhook.is_none()
-        && req.cooldown_minutes.is_none()
+pub async fn update_alert_rule(State(_s): State<AppState>, Path(rule_id): Path<String>, Json(req): Json<UpdateAlertRuleRequest>) -> Response {
+    if req.name.is_none() && req.description.is_none() && req.metric_name.is_none() && req.condition.is_none()
+        && req.threshold.is_none() && req.window_minutes.is_none() && req.severity.is_none()
+        && req.enabled.is_none() && req.notification_webhook.is_none() && req.cooldown_minutes.is_none()
     {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(json!({ "error": "No fields to update" })),
-        )
-            .into_response();
+        return (StatusCode::BAD_REQUEST, Json(json!({ "error": "No fields to update" }))).into_response();
     }
-
-    // Every field is optional; COALESCE keeps the existing column value for
-    // whichever ones weren't supplied.
-    let enabled = req.enabled.map(|v| v != 0);
-
-    let result = sqlx::query(
-        "UPDATE alert_rules SET
-            name = COALESCE($1, name),
-            description = COALESCE($2, description),
-            metric_name = COALESCE($3, metric_name),
-            condition = COALESCE($4, condition),
-            threshold = COALESCE($5, threshold),
-            window_minutes = COALESCE($6, window_minutes),
-            severity = COALESCE($7, severity),
-            enabled = COALESCE($8, enabled),
-            notification_webhook = COALESCE($9, notification_webhook),
-            cooldown_minutes = COALESCE($10, cooldown_minutes),
-            updated_at = NOW()
-         WHERE id = $11
-         RETURNING updated_at"
-    )
-    .bind(&req.name)
-    .bind(&req.description)
-    .bind(&req.metric_name)
-    .bind(&req.condition)
-    .bind(req.threshold)
-    .bind(req.window_minutes)
-    .bind(&req.severity)
-    .bind(enabled)
-    .bind(&req.notification_webhook)
-    .bind(req.cooldown_minutes)
-    .bind(&rule_id)
-    .fetch_optional(&state.db)
-    .await;
-
-    match result {
-        Ok(Some(row)) => {
-            let updated_at: chrono::DateTime<Utc> = row
-                .try_get("updated_at")
-                .unwrap_or_else(|_| Utc::now());
-            Json(json!({
-                "updated": true,
-                "rule_id": rule_id,
-                "updated_at": updated_at.to_rfc3339(),
-            }))
-            .into_response()
+    let mut c = match client().await { Ok(c) => c, Err((code, msg)) => return (code, Json(json!({"error": msg}))).into_response() };
+    let proto_req = ProtoUpdateReq {
+        rule_id, name: req.name, description: req.description, metric_name: req.metric_name, condition: req.condition,
+        threshold: req.threshold, window_minutes: req.window_minutes, severity: req.severity, enabled: req.enabled,
+        notification_webhook: req.notification_webhook, cooldown_minutes: req.cooldown_minutes,
+    };
+    match c.update_alert_rule(proto_req).await {
+        Ok(r) => {
+            let r = r.into_inner();
+            Json(json!({ "updated": r.updated, "rule_id": r.rule_id, "updated_at": r.updated_at })).into_response()
         }
-        Ok(None) => {
-            (
-                StatusCode::NOT_FOUND,
-                Json(json!({ "error": format!("Alert rule {} not found", rule_id) })),
-            )
-                .into_response()
-        }
-        Err(e) => {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": e.to_string() })),
-            )
-                .into_response()
-        }
+        Err(e) => grpc_err(e),
     }
 }
 
-/// Delete an alert rule.
-pub async fn delete_alert_rule(
-    State(state): State<AppState>,
-    Path(rule_id): Path<String>,
-) -> impl IntoResponse {
-    let result = sqlx::query("DELETE FROM alert_rules WHERE id = $1")
-        .bind(&rule_id)
-        .execute(&state.db)
-        .await;
-
-    match result {
-        Ok(res) if res.rows_affected() > 0 => {
-            info!("Alert rule deleted: {}", rule_id);
-            Json(json!({ "deleted": true, "rule_id": rule_id })).into_response()
+pub async fn delete_alert_rule(State(_s): State<AppState>, Path(rule_id): Path<String>) -> Response {
+    let mut c = match client().await { Ok(c) => c, Err((code, msg)) => return (code, Json(json!({"error": msg}))).into_response() };
+    match c.delete_alert_rule(RuleIdRequest { rule_id }).await {
+        Ok(r) => {
+            let r = r.into_inner();
+            Json(json!({ "deleted": r.deleted, "rule_id": r.rule_id })).into_response()
         }
-        Ok(_) => {
-            (
-                StatusCode::NOT_FOUND,
-                Json(json!({ "error": format!("Alert rule {} not found", rule_id) })),
-            )
-                .into_response()
-        }
-        Err(e) => {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": e.to_string() })),
-            )
-                .into_response()
-        }
+        Err(e) => grpc_err(e),
     }
 }
 
-// ---------------------------------------------------------------------------
-// Dashboard
-// ---------------------------------------------------------------------------
-
-/// Get the full monitoring dashboard summary.
-pub async fn get_dashboard_summary(State(state): State<AppState>) -> impl IntoResponse {
-    match monitoring::get_dashboard_summary(&state).await {
-        Ok(summary) => Json(summary).into_response(),
-        Err(e) => {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": e })),
-            )
-                .into_response()
+pub async fn get_dashboard_summary(State(_s): State<AppState>) -> Response {
+    let mut c = match client().await { Ok(c) => c, Err((code, msg)) => return (code, Json(json!({"error": msg}))).into_response() };
+    match c.get_dashboard_summary(Empty {}).await {
+        Ok(r) => {
+            let v: serde_json::Value = serde_json::from_str(&r.into_inner().json).unwrap_or(serde_json::Value::Null);
+            Json(v).into_response()
         }
+        Err(e) => grpc_err(e),
     }
 }
 
-// ---------------------------------------------------------------------------
-// Evaluate Alerts
-// ---------------------------------------------------------------------------
-
-/// Manually trigger alert rule evaluation.
-pub async fn evaluate_alerts(State(state): State<AppState>) -> impl IntoResponse {
-    match monitoring::evaluate_alert_rules(&state).await {
-        Ok(count) => {
-            Json(json!({
-                "evaluated": true,
-                "alerts_fired": count,
-                "evaluated_at": Utc::now().to_rfc3339(),
-            }))
-            .into_response()
+pub async fn evaluate_alerts(State(_s): State<AppState>) -> Response {
+    let mut c = match client().await { Ok(c) => c, Err((code, msg)) => return (code, Json(json!({"error": msg}))).into_response() };
+    match c.evaluate_alerts(Empty {}).await {
+        Ok(r) => {
+            let r = r.into_inner();
+            Json(json!({ "evaluated": r.evaluated, "alerts_fired": r.alerts_fired, "evaluated_at": r.evaluated_at })).into_response()
         }
-        Err(e) => {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": e })),
-            )
-                .into_response()
-        }
+        Err(e) => grpc_err(e),
     }
 }
