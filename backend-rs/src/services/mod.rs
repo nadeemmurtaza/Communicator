@@ -39,7 +39,6 @@ pub mod validation;
 pub mod suggestions;
 pub mod copilot_reviewer;
 pub mod topic_categorization;
-pub mod cx_qa_scoring;
 pub mod fin_operator;
 pub mod procedures;
 pub mod unified_inbox;

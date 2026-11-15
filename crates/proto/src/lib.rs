@@ -45,3 +45,9 @@ pub mod reply_integration {
         tonic::include_proto!("newax.reply_integration.v1");
     }
 }
+
+pub mod cx_qa_scoring {
+    pub mod v1 {
+        tonic::include_proto!("newax.cx_qa_scoring.v1");
+    }
+}

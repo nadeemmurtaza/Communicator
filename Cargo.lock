@@ -1611,6 +1611,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "newax-cx-qa-scoring"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "uuid",
+]
+
+[[package]]
 name = "newax-embed-widget"
 version = "0.1.0"
 dependencies = [
@@ -2773,6 +2784,21 @@ dependencies = [
  "newax-conversation-search",
  "prost",
  "serde_json",
+ "sqlx",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "svc-cx-qa-scoring"
+version = "0.1.0"
+dependencies = [
+ "dotenvy",
+ "newax-cx-qa-scoring",
+ "prost",
  "sqlx",
  "tokio",
  "tonic",
