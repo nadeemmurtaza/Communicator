@@ -1,4 +1,4 @@
-﻿-- Phase 23: Document Upload & URL Crawling for Knowledge Base
+-- Phase 23: Document Upload & URL Crawling for Knowledge Base
 -- Enables uploading PDF/DOCX files and crawling webpages to automatically
 -- populate the knowledge base. Mirrors Intercom's document upload and URL
 -- crawling capabilities.

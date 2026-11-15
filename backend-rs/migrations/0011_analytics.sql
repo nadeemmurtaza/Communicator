@@ -1,4 +1,4 @@
-﻿-- Analytics: Daily Stats and Events Tracking
+-- Analytics: Daily Stats and Events Tracking
 
 -- ---------------------------------------------------------------------------
 -- Daily Analytics Stats

@@ -1,4 +1,4 @@
-﻿-- Migration 0036: Brand Overrides in Workflows (PostgreSQL)
+-- Migration 0036: Brand Overrides in Workflows (PostgreSQL)
 -- Enables dynamic brand switching mid-conversation or mid-workflow execution.
 -- Mirrors Intercom's "Brand overrides in workflows" capability where a
 -- conversation can switch brands mid-flow (e.g., from Coke to Pepsi sub-brand).

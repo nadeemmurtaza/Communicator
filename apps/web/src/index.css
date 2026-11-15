@@ -28,6 +28,7 @@
     --color-ink: #111111;
     --color-ink-muted: #57534e;
     --color-ink-faint: #928f88;
+    --color-ink-pressed: #000000;
     --color-accent: #ff5600;
     --color-accent-hover: #e64e00;
     --color-accent-soft: #fff0e6;
@@ -105,7 +106,7 @@ body {
 
 .btn-primary:hover {
   transform: scale(1.05);
-  background: #000000;
+  background: var(--color-ink-pressed);
 }
 
 .btn-primary:active {

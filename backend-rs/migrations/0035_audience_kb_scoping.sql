@@ -1,4 +1,4 @@
-﻿-- Migration 0035: Audience-Based Knowledge Scoping (PostgreSQL)
+-- Migration 0035: Audience-Based Knowledge Scoping (PostgreSQL)
 -- Links customer segments to specific knowledge base subsets so different
 -- customer groups see different AI knowledge. Mirrors Intercom's "Audiences
 -- control what Fin knows" capability.

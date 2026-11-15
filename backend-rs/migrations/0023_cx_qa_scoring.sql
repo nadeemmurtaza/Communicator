@@ -1,4 +1,4 @@
-﻿-- Phase 16: CX Scoring & Automated QA
+-- Phase 16: CX Scoring & Automated QA
 -- AI-powered conversation quality scoring that evaluates support quality
 -- across every conversation without requiring customer surveys.
 -- Provides 5x more coverage than traditional CSAT.

@@ -1,4 +1,4 @@
-﻿-- Migration 0002: Brands and Organizations hierarchy
+-- Migration 0002: Brands and Organizations hierarchy
 -- Introduces Tenant â†’ Organization â†’ Brand hierarchy with BYOK at brand level
 
 -- Organizations table

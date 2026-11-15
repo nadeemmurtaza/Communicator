@@ -1,4 +1,4 @@
-﻿-- Migration 0038: Autonomous Resolution (PostgreSQL)
+-- Migration 0038: Autonomous Resolution (PostgreSQL)
 -- Enables the AI agent to resolve conversations autonomously without human approval.
 -- Mirrors Intercom's "Fin AI Agent" that "resolves conversations autonomously across all channels."
 -- Includes confidence-based auto-send, escalation rules, and resolution analytics.

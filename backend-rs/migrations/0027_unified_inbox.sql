@@ -1,4 +1,4 @@
-﻿-- Phase 19: Unified Inbox â€” Cross-channel conversation merging
+-- Phase 19: Unified Inbox â€” Cross-channel conversation merging
 -- Enables viewing all conversations for the same customer across channels
 -- as a single unified timeline, mirroring Intercom's core differentiator.
 

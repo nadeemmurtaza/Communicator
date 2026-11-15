@@ -1,4 +1,4 @@
-﻿-- Phase 10: Copilot for Human Reviewers
+-- Phase 10: Copilot for Human Reviewers
 -- Stores AI-generated context that assists human reviewers when approving drafts.
 
 CREATE TABLE IF NOT EXISTS copilot_context (

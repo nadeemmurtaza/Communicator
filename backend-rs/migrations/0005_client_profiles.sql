@@ -1,4 +1,4 @@
-﻿-- Migration 0005: Comprehensive Client Profiles with Self-Learning Engine
+-- Migration 0005: Comprehensive Client Profiles with Self-Learning Engine
 -- Adds unified customer IDs, rich client profiles, self-learning engine,
 -- transaction history, preferences, and RAG integration
 

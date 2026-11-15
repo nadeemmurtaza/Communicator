@@ -1,4 +1,4 @@
-﻿-- Storefront / Link-in-Bio Builder
+-- Storefront / Link-in-Bio Builder
 
 -- ---------------------------------------------------------------------------
 -- Storefronts

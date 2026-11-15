@@ -1,0 +1,12 @@
+[package]
+name = "newax-proto"
+version = "0.1.0"
+edition = "2021"
+description = "Generated Rust types/clients for every .proto service under proto/. Add a new .proto to build.rs's list as each module splits out of the monolith."
+
+[dependencies]
+tonic = "0.12"
+prost = "0.13"
+
+[build-dependencies]
+tonic-build = "0.12"

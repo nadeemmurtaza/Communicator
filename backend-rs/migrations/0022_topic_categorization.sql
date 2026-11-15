@@ -1,4 +1,4 @@
-﻿-- Phase 11: Topic Categorization
+-- Phase 11: Topic Categorization
 -- Auto-categorizes every conversation into topics/subtopics for trend analysis
 -- and content gap identification.
 

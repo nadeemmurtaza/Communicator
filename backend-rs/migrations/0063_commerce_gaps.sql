@@ -1,4 +1,4 @@
-﻿-- Gap #1: Product Options/Add-ons (e.g., "Lemon butter +$2.00")
+-- Gap #1: Product Options/Add-ons (e.g., "Lemon butter +$2.00")
 CREATE TABLE IF NOT EXISTS product_options (
     id TEXT PRIMARY KEY,
     product_id TEXT NOT NULL,

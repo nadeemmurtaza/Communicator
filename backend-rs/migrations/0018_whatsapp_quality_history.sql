@@ -1,4 +1,4 @@
-﻿-- WhatsApp Quality Dashboard: Track quality rating history over 30 days
+-- WhatsApp Quality Dashboard: Track quality rating history over 30 days
 
 -- Quality history snapshots â€” one row per health check
 CREATE TABLE IF NOT EXISTS whatsapp_quality_history (

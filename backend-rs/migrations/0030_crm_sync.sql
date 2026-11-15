@@ -1,4 +1,4 @@
-﻿-- Phase 22: CRM Sync â€” Salesforce/HubSpot bidirectional sync
+-- Phase 22: CRM Sync â€” Salesforce/HubSpot bidirectional sync
 -- Provides integration with major CRM platforms to sync leads, contacts,
 -- and accounts/companies bidirectionally. Mirrors Intercom's CRM sync feature.
 

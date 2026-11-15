@@ -1,4 +1,4 @@
-﻿-- Advanced Inventory Management
+-- Advanced Inventory Management
 
 -- ---------------------------------------------------------------------------
 -- Warehouses

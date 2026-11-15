@@ -1,4 +1,4 @@
-﻿-- Migration 0037: MCP Protocol Support (PostgreSQL)
+-- Migration 0037: MCP Protocol Support (PostgreSQL)
 -- Enables connection to MCP-compatible servers for extensible AI tool connections.
 -- Mirrors Intercom's "MCP connections to Jira, Sentry, Glean, Guru, Slite, Pendo, Fullstory" capability.
 -- MCP (Model Context Protocol) is an open protocol for connecting AI models to external tools.

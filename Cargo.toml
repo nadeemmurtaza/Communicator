@@ -1,0 +1,13 @@
+[workspace]
+resolver = "2"
+members = [
+    "backend-rs",
+    "crates/*",
+    "services/*",
+]
+
+# backend-rs stays a standalone package for now (not yet a workspace
+# member internally split) -- modules move out of it into crates/*
+# and services/* one at a time, per CONVENTIONS.md's module-naming
+# rule. See COMMUNICATION.md for how split services talk to each
+# other and to backend-rs in the meantime.
