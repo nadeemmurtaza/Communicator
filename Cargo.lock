@@ -1612,6 +1612,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "newax-compliance-dashboard"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "uuid",
+]
+
+[[package]]
 name = "newax-conversation-search"
 version = "0.1.0"
 dependencies = [
@@ -2804,6 +2816,22 @@ version = "0.1.0"
 dependencies = [
  "dotenvy",
  "newax-ab-testing",
+ "prost",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "svc-compliance-dashboard"
+version = "0.1.0"
+dependencies = [
+ "dotenvy",
+ "newax-compliance-dashboard",
  "prost",
  "serde_json",
  "sqlx",

@@ -63,3 +63,9 @@ pub mod ab_testing {
         tonic::include_proto!("newax.ab_testing.v1");
     }
 }
+
+pub mod compliance_dashboard {
+    pub mod v1 {
+        tonic::include_proto!("newax.compliance_dashboard.v1");
+    }
+}

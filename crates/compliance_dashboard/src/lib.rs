@@ -240,14 +240,14 @@ impl ComplianceDashboardService {
 
     pub async fn list_suppressions(&self, active_only: bool, channel: Option<&str>, reason: Option<&str>) -> Result<Vec<SuppressionEntry>, String> {
         let mut query = String::from("SELECT id, contact_id, channel, reason, added_at, added_by, note, is_active FROM suppression_list WHERE 1=1");
-        
+
         if active_only {
             query.push_str(" AND is_active = true");
         }
-        if let Some(ch) = channel {
+        if channel.is_some() {
             query.push_str(" AND channel = $1");
         }
-        if let Some(r) = reason {
+        if reason.is_some() {
             if channel.is_some() {
                 query.push_str(" AND reason = $2");
             } else {
@@ -380,11 +380,11 @@ impl ComplianceDashboardService {
 
     pub async fn list_gdpr_requests(&self, status: Option<&str>, request_type: Option<&str>) -> Result<Vec<GDPRRequest>, String> {
         let mut query = String::from("SELECT id, contact_id, email, request_type, status, requested_at, completed_at, handled_by, notes, data_export_url, expires_at FROM gdpr_requests WHERE 1=1");
-        
-        if let Some(s) = status {
+
+        if status.is_some() {
             query.push_str(" AND status = $1");
         }
-        if let Some(rt) = request_type {
+        if request_type.is_some() {
             if status.is_some() {
                 query.push_str(" AND request_type = $2");
             } else {
@@ -421,13 +421,13 @@ impl ComplianceDashboardService {
 
     pub async fn create_gdpr_request(&self, req: &CreateGDPRRequest, created_by: &str) -> Result<GDPRRequest, String> {
         let id = Uuid::new_v4().to_string();
-        
+
         // Get settings for expiry
         let settings_row = sqlx::query(
             "SELECT gdpr_response_days, auto_expire_gdpr_requests FROM compliance_settings LIMIT 1"
         ).fetch_optional(&self.pool).await
             .map_err(|e| format!("Failed to get settings: {e}"))?;
-        
+
         let (response_days, auto_expire): (i32, bool) = settings_row
             .map(|r| (r.get("gdpr_response_days"), r.get("auto_expire_gdpr_requests")))
             .unwrap_or((30, true));
@@ -525,7 +525,7 @@ impl ComplianceDashboardService {
             .bind(&binds[0])
             .execute(&self.pool)
             .await;
-        
+
         if result.is_err() && binds.len() > 1 {
             // Try with more binds
             let _ = result;
@@ -546,11 +546,11 @@ impl ComplianceDashboardService {
 
     pub async fn list_policies(&self, active_only: bool, regulation: Option<&str>) -> Result<Vec<CompliancePolicy>, String> {
         let mut query = String::from("SELECT id, org_id, policy_name, regulation, channel, description, rules, is_active, created_at, updated_at FROM compliance_policies WHERE 1=1");
-        
+
         if active_only {
             query.push_str(" AND is_active = true");
         }
-        if let Some(reg) = regulation {
+        if regulation.is_some() {
             query.push_str(" AND regulation = $1");
         }
         query.push_str(" ORDER BY policy_name");
@@ -653,11 +653,11 @@ impl ComplianceDashboardService {
 
     pub async fn list_audit_logs(&self, action: Option<&str>, severity: Option<&str>, limit: i64) -> Result<Vec<AuditLogEntry>, String> {
         let mut query = String::from("SELECT id, action, entity_type, entity_id, details, performed_by, performed_at, severity FROM compliance_audit_log WHERE 1=1");
-        
-        if let Some(a) = action {
+
+        if action.is_some() {
             query.push_str(" AND action = $1");
         }
-        if let Some(s) = severity {
+        if severity.is_some() {
             if action.is_some() {
                 query.push_str(" AND severity = $2");
             } else {
