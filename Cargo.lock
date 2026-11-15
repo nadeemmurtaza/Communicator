@@ -1631,6 +1631,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "newax-monitoring"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "uuid",
+]
+
+[[package]]
 name = "newax-proto"
 version = "0.1.0"
 dependencies = [
@@ -2773,6 +2784,23 @@ dependencies = [
  "newax-kb-documents",
  "prost",
  "reqwest",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tonic",
+ "tonic-build",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "svc-monitoring"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "dotenvy",
+ "newax-monitoring",
+ "prost",
  "serde_json",
  "sqlx",
  "tokio",

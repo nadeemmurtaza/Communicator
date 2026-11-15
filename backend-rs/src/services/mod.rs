@@ -36,7 +36,6 @@ pub mod commerce_delivery;
 pub mod commerce_storefront;
 pub mod commerce_inventory;
 pub mod validation;
-pub mod monitoring;
 pub mod suggestions;
 pub mod copilot_reviewer;
 pub mod topic_categorization;
