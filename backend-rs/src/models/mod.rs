@@ -4938,41 +4938,6 @@ pub struct UpdateMarkdownSuggestionStatusRequest {
     pub discount_id: Option<String>,
 }
 
-// ---------------------------------------------------------------------------
-// Phase 35: Embed Widget
-// ---------------------------------------------------------------------------
-
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
-pub struct EmbedWidgetConfig {
-    pub id: String,
-    pub org_id: String,
-    pub name: String,
-    pub widget_type: String,
-    pub status: String,
-    pub settings: serde_json::Value,
-    pub styles: serde_json::Value,
-    pub trigger_config: serde_json::Value,
-    pub domain_whitelist: Option<serde_json::Value>,
-    pub install_count: i32,
-    pub last_installed_at: Option<chrono::DateTime<chrono::Utc>>,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    pub updated_at: chrono::DateTime<chrono::Utc>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CreateEmbedWidgetRequest {
-    pub name: String,
-    pub widget_type: String,
-    pub settings: Option<serde_json::Value>,
-    pub styles: Option<serde_json::Value>,
-    pub trigger_config: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RecordWidgetEventRequest {
-    pub instance_id: String,
-    pub event_type: String,
-    pub payload: Option<serde_json::Value>,
-}
+// Phase 35: Embed Widget -- moved to backend-rs/src/routes/embed_widget.rs
+// (request DTOs) and crates/embed-widget (EmbedWidgetConfig and the rest of
+// the response/domain types), now that this module is a split gRPC service.

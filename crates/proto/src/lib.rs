@@ -9,3 +9,21 @@ pub mod system_health {
         tonic::include_proto!("newax.system_health.v1");
     }
 }
+
+pub mod embed_widget {
+    pub mod v1 {
+        tonic::include_proto!("newax.embed_widget.v1");
+    }
+}
+
+pub mod help_center {
+    pub mod v1 {
+        tonic::include_proto!("newax.help_center.v1");
+    }
+}
+
+pub mod scheduled_tasks {
+    pub mod v1 {
+        tonic::include_proto!("newax.scheduled_tasks.v1");
+    }
+}

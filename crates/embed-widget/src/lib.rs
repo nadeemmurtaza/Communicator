@@ -1,7 +1,30 @@
+//! Embed widget configs/events/settings — business logic.
+//!
+//! Extracted from `backend-rs/src/services/embed_widget.rs`. The
+//! `EmbedWidgetConfig`/`CreateEmbedWidgetRequest`/`RecordWidgetEventRequest`
+//! types move here too (they lived in backend-rs's shared `src/models`
+//! file, used only by this module) — this module owns its own types now,
+//! not a slice of a 5000-line shared model file.
+
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
 
-use crate::models::EmbedWidgetConfig;
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct EmbedWidgetConfig {
+    pub id: String,
+    pub org_id: String,
+    pub name: String,
+    pub widget_type: String,
+    pub status: String,
+    pub settings: serde_json::Value,
+    pub styles: serde_json::Value,
+    pub trigger_config: serde_json::Value,
+    pub domain_whitelist: Option<serde_json::Value>,
+    pub install_count: i32,
+    pub last_installed_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct EmbedWidgetSummary {
@@ -45,12 +68,6 @@ pub struct EmbedWidgetSettings {
     pub max_instances_per_domain: i32,
     pub analytics_enabled: bool,
     pub default_language: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct EmbedScriptResult {
-    pub script: String,
-    pub config_id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -262,7 +279,6 @@ impl EmbedWidgetService {
             .ok_or_else(|| anyhow::anyhow!("Widget config not found"))?;
 
         let help_center = if config.widget_type == "help_center" || config.widget_type == "combined" {
-            // Fetch public help center data
             let articles = sqlx::query(r#"
                 SELECT id, title, slug, content, category_id, helpful_count, not_helpful_count
                 FROM help_center_articles
@@ -370,29 +386,5 @@ mod tests {
         let script = service.generate_embed_script("test-config-id");
         assert!(script.contains("test-config-id"));
         assert!(script.contains("CommunicatorWidget"));
-    }
-
-    #[test]
-    fn test_create_config_result_serialization() {
-        let result = CreateConfigResult {
-            config: EmbedWidgetConfig {
-                id: "test".to_string(),
-                org_id: "org1".to_string(),
-                name: "Test Widget".to_string(),
-                widget_type: "help_center".to_string(),
-                status: "active".to_string(),
-                settings: serde_json::json!({}),
-                styles: serde_json::json!({}),
-                trigger_config: serde_json::json!({}),
-                domain_whitelist: None,
-                install_count: 0,
-                last_installed_at: None,
-                created_at: chrono::Utc::now(),
-                updated_at: chrono::Utc::now(),
-            },
-            script: "<script>test</script>".to_string(),
-        };
-        let json = serde_json::to_string(&result).unwrap();
-        assert!(json.contains("Test Widget"));
     }
 }

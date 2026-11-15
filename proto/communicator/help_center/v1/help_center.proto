@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package newax.help_center.v1;
+
+service HelpCenterService {
+  rpc GetSummary(Empty) returns (JsonResponse);
+  rpc GetPublic(Empty) returns (JsonResponse);
+  rpc ListCategories(ListCategoriesRequest) returns (JsonResponse);
+  rpc CreateCategory(CreateCategoryRequest) returns (JsonResponse);
+  rpc ListArticles(ListArticlesRequest) returns (JsonResponse);
+  rpc CreateArticle(CreateArticleRequest) returns (JsonResponse);
+  rpc SearchArticles(SearchRequest) returns (JsonResponse);
+  rpc GetArticleBySlug(SlugRequest) returns (JsonResponse);
+  rpc UpdateArticle(UpdateArticleRequest) returns (JsonResponse);
+  rpc DeleteArticle(ArticleIdRequest) returns (DeleteResponse);
+  rpc RecordFeedback(FeedbackRequest) returns (JsonResponse);
+  rpc GetSettings(Empty) returns (JsonResponse);
+  rpc UpdateSettings(UpdateSettingsRequest) returns (JsonResponse);
+}
+
+message Empty {}
+
+message ListCategoriesRequest {
+  optional string organization_id = 1;
+  optional bool visible_only = 2;
+}
+
+message CreateCategoryRequest {
+  string organization_id = 1;
+  string name = 2;
+  string slug = 3;
+  optional string description = 4;
+  optional string icon = 5;
+  optional int32 display_order = 6;
+}
+
+message ListArticlesRequest {
+  optional string category_id = 1;
+  optional string status = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message CreateArticleRequest {
+  string organization_id = 1;
+  string category_id = 2;
+  string title = 3;
+  string slug = 4;
+  string content = 5;
+  optional string author_id = 6;
+}
+
+message SearchRequest {
+  string q = 1;
+  int32 limit = 2;
+}
+
+message SlugRequest {
+  string slug = 1;
+}
+
+message ArticleIdRequest {
+  string article_id = 1;
+}
+
+message UpdateArticleRequest {
+  string article_id = 1;
+  optional string title = 2;
+  optional string content = 3;
+  optional string status = 4;
+  optional bool is_pinned = 5;
+  optional string seo_title = 6;
+  optional string seo_description = 7;
+}
+
+message FeedbackRequest {
+  string article_id = 1;
+  bool helpful = 2;
+}
+
+message UpdateSettingsRequest {
+  optional string name = 1;
+  optional string tagline = 2;
+  optional string primary_color = 3;
+  optional bool enable_search = 4;
+  optional bool enable_article_feedback = 5;
+  optional string footer_text = 6;
+}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message DeleteResponse {
+  bool deleted = 1;
+}
