@@ -68,8 +68,6 @@ pub mod unified_analytics;
 pub mod reply_integration;
 pub mod ab_testing;
 pub mod compliance_dashboard;
-pub mod conversation_search;
-pub use conversation_search::ConversationSearchService;
 pub mod smtp_email;
 pub mod otp_engine;
 pub mod external_otp_integration;

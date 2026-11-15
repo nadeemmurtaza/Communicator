@@ -1,0 +1,162 @@
+syntax = "proto3";
+
+package newax.conversation_search.v1;
+
+service ConversationSearchService {
+  rpc GetSummary(Empty) returns (JsonResponse);
+  rpc Search(SearchRequest) returns (SearchResponse);
+  rpc ListSavedSearches(ListSavedSearchesRequest) returns (SavedSearchesResponse);
+  rpc CreateSavedSearch(CreateSavedSearchRequest) returns (SavedSearch);
+  rpc GetSavedSearch(SavedSearchIdRequest) returns (SavedSearch);
+  rpc DeleteSavedSearch(SavedSearchIdRequest) returns (Empty);
+  rpc PinSavedSearch(PinSavedSearchRequest) returns (Empty);
+  rpc UseSavedSearch(SavedSearchIdRequest) returns (SearchResponse);
+  rpc GetSearchHistory(HistoryRequest) returns (SearchHistoryResponse);
+  rpc ClearSearchHistory(Empty) returns (Empty);
+  rpc GetAnalytics(Empty) returns (SearchAnalyticsResponse);
+  rpc GenerateAnalyticsSnapshot(Empty) returns (SearchAnalyticsSnapshot);
+  rpc GetSettings(Empty) returns (SearchSettings);
+  rpc UpdateSettings(UpdateSettingsRequest) returns (SearchSettings);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message SearchRequest {
+  string q = 1;
+  string search_type = 2;
+  int32 limit = 3;
+}
+
+message SearchResult {
+  string search_type = 1;
+  string id = 2;
+  string title = 3;
+  string snippet = 4;
+  string metadata_json = 5;
+  repeated string matched_fields = 6;
+  double score = 7;
+}
+
+message SearchResponse {
+  string query = 1;
+  int64 total_results = 2;
+  repeated SearchResult conversations = 3;
+  repeated SearchResult messages = 4;
+  repeated SearchResult contacts = 5;
+  int64 duration_ms = 6;
+}
+
+message ListSavedSearchesRequest {
+  optional string search_type = 1;
+}
+
+message SavedSearch {
+  string id = 1;
+  string org_id = 2;
+  string name = 3;
+  string query = 4;
+  string search_type = 5;
+  string filters = 6;
+  string created_by = 7;
+  string created_at = 8;
+  string updated_at = 9;
+  bool is_pinned = 10;
+  int32 usage_count = 11;
+}
+
+message SavedSearchesResponse {
+  repeated SavedSearch searches = 1;
+}
+
+message CreateSavedSearchRequest {
+  string name = 1;
+  string query = 2;
+  optional string search_type = 3;
+  optional string filters_json = 4;
+}
+
+message SavedSearchIdRequest {
+  string id = 1;
+}
+
+message PinSavedSearchRequest {
+  string id = 1;
+  bool pinned = 2;
+}
+
+message HistoryRequest {
+  int32 limit = 1;
+}
+
+message SearchHistoryEntry {
+  string id = 1;
+  string org_id = 2;
+  string query = 3;
+  string search_type = 4;
+  int64 result_count = 5;
+  string filters = 6;
+  string performed_by = 7;
+  string performed_at = 8;
+  int32 duration_ms = 9;
+}
+
+message SearchHistoryResponse {
+  repeated SearchHistoryEntry history = 1;
+}
+
+message SearchAnalytics {
+  string id = 1;
+  string org_id = 2;
+  string window_start = 3;
+  string window_end = 4;
+  int64 total_searches = 5;
+  double avg_result_count = 6;
+  double avg_duration_ms = 7;
+  int64 zero_result_searches = 8;
+  string top_queries = 9;
+  string top_search_types = 10;
+  string created_at = 11;
+}
+
+message SearchAnalyticsResponse {
+  repeated SearchAnalytics analytics = 1;
+}
+
+message SearchAnalyticsSnapshot {
+  string window_start = 1;
+  string window_end = 2;
+  int64 total_searches = 3;
+  double avg_result_count = 4;
+  double avg_duration_ms = 5;
+  int64 zero_result_searches = 6;
+}
+
+message SearchSettings {
+  string id = 1;
+  string org_id = 2;
+  int32 max_results = 3;
+  bool search_message_content = 4;
+  bool search_contact_details = 5;
+  bool search_conversation_metadata = 6;
+  bool track_search_history = 7;
+  bool auto_suggest = 8;
+  int32 min_query_length = 9;
+  bool highlight_matches = 10;
+  string created_at = 11;
+  string updated_at = 12;
+}
+
+message UpdateSettingsRequest {
+  optional int32 max_results = 1;
+  optional bool search_message_content = 2;
+  optional bool search_contact_details = 3;
+  optional bool search_conversation_metadata = 4;
+  optional bool track_search_history = 5;
+  optional bool auto_suggest = 6;
+  optional int32 min_query_length = 7;
+  optional bool highlight_matches = 8;
+}
