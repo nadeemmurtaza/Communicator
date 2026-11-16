@@ -38,7 +38,7 @@ static RE_CUR: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[A-Za-z]{3}$").u
 static RE_OTP: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[0-9]{4,8}$").unwrap());
 static RE_SEGMENT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[A-Za-z0-9._~:@+-]{1,160}$").unwrap());
 static RE_KEY: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[A-Za-z0-9_.-]{1,80}$").unwrap());
-static RE_TAG: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)<\s*/?\s*[a-z!]").unwrap());
+static RE_TAG: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)</?[a-z!]").unwrap());
 
 #[derive(Default)]
 struct Problems(Vec<(String, String)>);
