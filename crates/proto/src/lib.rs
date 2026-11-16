@@ -75,3 +75,93 @@ pub mod unified_analytics {
         tonic::include_proto!("newax.unified_analytics.v1");
     }
 }
+
+pub mod procedures {
+    pub mod v1 {
+        tonic::include_proto!("newax.procedures.v1");
+    }
+}
+
+pub mod unified_inbox {
+    pub mod v1 {
+        tonic::include_proto!("newax.unified_inbox.v1");
+    }
+}
+
+pub mod notifications {
+    pub mod v1 {
+        tonic::include_proto!("newax.notifications.v1");
+    }
+}
+
+pub mod suggestions {
+    pub mod v1 {
+        tonic::include_proto!("newax.suggestions.v1");
+    }
+}
+
+pub mod crm_sync {
+    pub mod v1 {
+        tonic::include_proto!("newax.crm_sync.v1");
+    }
+}
+
+pub mod crypto_mesh {
+    pub mod v1 {
+        tonic::include_proto!("newax.crypto_mesh.v1");
+    }
+}
+
+pub mod canned_macros_sla {
+    pub mod v1 {
+        tonic::include_proto!("newax.canned_macros_sla.v1");
+    }
+}
+
+pub mod agent_performance {
+    pub mod v1 {
+        tonic::include_proto!("newax.agent_performance.v1");
+    }
+}
+
+pub mod topic_categorization {
+    pub mod v1 {
+        tonic::include_proto!("newax.topic_categorization.v1");
+    }
+}
+
+pub mod workflow_builder {
+    pub mod v1 {
+        tonic::include_proto!("newax.workflow_builder.v1");
+    }
+}
+
+pub mod brand_overrides {
+    pub mod v1 {
+        tonic::include_proto!("newax.brand_overrides.v1");
+    }
+}
+
+pub mod autonomous_resolution {
+    pub mod v1 {
+        tonic::include_proto!("newax.autonomous_resolution.v1");
+    }
+}
+
+pub mod smtp_email {
+    pub mod v1 {
+        tonic::include_proto!("newax.smtp_email.v1");
+    }
+}
+
+pub mod access_control {
+    pub mod v1 {
+        tonic::include_proto!("newax.access_control.v1");
+    }
+}
+
+pub mod copilot_reviewer {
+    pub mod v1 {
+        tonic::include_proto!("newax.copilot_reviewer.v1");
+    }
+}

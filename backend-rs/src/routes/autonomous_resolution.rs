@@ -1,246 +1,241 @@
-//! Autonomous Resolution Routes — Phase 29
-//!
-//! API endpoints for managing autonomous resolution configuration,
-//! escalation rules, agent policies, and viewing resolution analytics.
+//! Thin gRPC client forwarding autonomous resolution requests to `svc-autonomous-resolution` (port 50091).
 
-use axum::extract::Path;
-use axum::extract::Query;
-use axum::extract::State;
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde::Deserialize;
+use serde_json::Value;
 
 use crate::db::AppState;
-use crate::services::autonomous_resolution;
 
-// ——— Query Params ———
+use newax_proto::autonomous_resolution::v1::{
+    autonomous_resolution_service_client::AutonomousResolutionServiceClient,
+    Empty,
+};
 
-#[derive(Deserialize)]
+fn svc_addr() -> &'static str {
+    option_env!("AUTONOMOUS_RESOLUTION_GRPC").unwrap_or("http://127.0.0.1:50091")
+}
+
+async fn client() -> AutonomousResolutionServiceClient<tonic::transport::Channel> {
+    AutonomousResolutionServiceClient::connect(svc_addr().to_string())
+        .await
+        .expect("autonomous-resolution gRPC service unavailable")
+}
+
+fn grpc_json(s: String) -> Value {
+    serde_json::from_str(&s).unwrap_or_else(|_| serde_json::json!({ "error": "invalid gRPC response" }))
+}
+
+fn ok_response(v: Value) -> Response {
+    (StatusCode::OK, Json(v)).into_response()
+}
+
+fn err_response(status: StatusCode, message: &str) -> Response {
+    (status, Json(serde_json::json!({ "error": message }))).into_response()
+}
+
+#[derive(Deserialize, Debug)]
 pub struct EscalationRulesQuery {
-    is_active: Option<bool>,
+    pub is_active: Option<bool>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct PoliciesQuery {
-    is_active: Option<bool>,
+    pub is_active: Option<bool>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct LogsQuery {
-    outcome: Option<String>,
-    escalated: Option<bool>,
-    limit: Option<i32>,
-    offset: Option<i32>,
+    pub outcome: Option<String>,
+    pub escalated: Option<bool>,
+    pub limit: Option<i32>,
+    pub offset: Option<i32>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct EvaluateQuery {
-    conversation_id: String,
-    ai_confidence: f64,
-    validation_score: Option<f64>,
-    topic: Option<String>,
+    pub conversation_id: String,
+    pub ai_confidence: f64,
+    pub validation_score: Option<f64>,
+    pub topic: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct LogAttemptQuery {
-    conversation_id: String,
-    contact_id: String,
-    channel: String,
-    ai_confidence: f64,
-    validation_score: Option<f64>,
-    validation_passed: Option<bool>,
+    pub conversation_id: String,
+    pub contact_id: String,
+    pub channel: String,
+    pub ai_confidence: f64,
+    pub validation_score: Option<f64>,
+    pub validation_passed: Option<bool>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct SnapshotQuery {
-    days: Option<i32>,
+    pub days: Option<i32>,
 }
 
-// ——— Handlers ———
-
-/// GET /autonomous-resolution/summary
-pub async fn get_summary(State(state): State<AppState>) -> Result<Json<autonomous_resolution::ResolutionSummary>, (StatusCode, String)> {
-    let summary = autonomous_resolution::get_resolution_summary(&state)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    Ok(Json(summary))
+pub async fn get_summary(State(_state): State<AppState>) -> Response {
+    match client().await.get_summary(Empty {}).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
 }
 
-/// GET /autonomous-resolution/config
-pub async fn get_config(State(state): State<AppState>) -> Result<Json<autonomous_resolution::ResolutionConfig>, (StatusCode, String)> {
-    let config = autonomous_resolution::get_resolution_config(&state)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    Ok(Json(config))
+pub async fn get_config(State(_state): State<AppState>) -> Response {
+    match client().await.get_config(Empty {}).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
 }
 
-/// PUT /autonomous-resolution/config
 pub async fn update_config(
-    State(state): State<AppState>,
-    Json(config): Json<autonomous_resolution::ResolutionConfig>,
-) -> Result<Json<autonomous_resolution::ConfigResult>, (StatusCode, String)> {
-    let result = autonomous_resolution::update_resolution_config(&state, &config)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    Ok(Json(result))
+    State(_state): State<AppState>,
+    Json(config): Json<Value>,
+) -> Response {
+    let mut req = newax_proto::autonomous_resolution::v1::UpdateConfigRequest::default();
+    req.config_json = serde_json::to_string(&config).unwrap_or_default();
+    match client().await.update_config(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
 }
 
-/// GET /autonomous-resolution/escalation-rules
 pub async fn list_escalation_rules(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Query(params): Query<EscalationRulesQuery>,
-) -> Result<Json<Vec<autonomous_resolution::EscalationRule>>, (StatusCode, String)> {
-    let rules = autonomous_resolution::list_escalation_rules(&state, params.is_active)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    Ok(Json(rules))
+) -> Response {
+    let mut req = newax_proto::autonomous_resolution::v1::ListEscalationRulesRequest::default();
+    req.has_is_active = params.is_active.is_some();
+    req.is_active = params.is_active.unwrap_or_default();
+    match client().await.list_escalation_rules(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
 }
 
-/// POST /autonomous-resolution/escalation-rules
 pub async fn create_escalation_rule(
-    State(state): State<AppState>,
-    Json(rule): Json<autonomous_resolution::EscalationRule>,
-) -> Result<Json<autonomous_resolution::EscalationResult>, (StatusCode, String)> {
-    let result = autonomous_resolution::create_escalation_rule(
-        &state,
-        &rule.name,
-        &rule.condition_type,
-        rule.condition_value,
-        &rule.action_type,
-        rule.description.as_deref(),
-        rule.condition_topic.as_deref(),
-        rule.condition_keyword.as_deref(),
-        rule.assign_to_agent_id.as_deref(),
-        rule.assign_to_team_id.as_deref(),
-        rule.notify_webhook.as_deref(),
-        rule.notification_message.as_deref(),
-        rule.priority,
-    )
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    Ok(Json(result))
+    State(_state): State<AppState>,
+    Json(rule): Json<Value>,
+) -> Response {
+    let mut req = newax_proto::autonomous_resolution::v1::CreateEscalationRuleRequest::default();
+    req.name = rule.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    req.condition_type = rule.get("condition_type").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    req.condition_value = rule.get("condition_value").and_then(|v| v.as_f64()).unwrap_or(0.0);
+    req.action_type = rule.get("action_type").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    req.description = rule.get("description").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    req.condition_topic = rule.get("condition_topic").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    req.condition_keyword = rule.get("condition_keyword").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    req.assign_to_agent_id = rule.get("assign_to_agent_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    req.assign_to_team_id = rule.get("assign_to_team_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    req.notify_webhook = rule.get("notify_webhook").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    req.notification_message = rule.get("notification_message").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    req.priority = rule.get("priority").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+    match client().await.create_escalation_rule(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
 }
 
-/// PUT /autonomous-resolution/escalation-rules/{id}
 pub async fn update_escalation_rule(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(_id): Path<String>,
-    Json(rule): Json<autonomous_resolution::EscalationRule>,
-) -> Result<Json<autonomous_resolution::EscalationResult>, (StatusCode, String)> {
-    let result = autonomous_resolution::update_escalation_rule(&state, &rule)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    Ok(Json(result))
+    Json(rule): Json<Value>,
+) -> Response {
+    let mut req = newax_proto::autonomous_resolution::v1::UpdateEscalationRuleRequest::default();
+    req.rule_json = serde_json::to_string(&rule).unwrap_or_default();
+    match client().await.update_escalation_rule(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
 }
 
-/// DELETE /autonomous-resolution/escalation-rules/{id}
 pub async fn delete_escalation_rule(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<autonomous_resolution::EscalationResult>, (StatusCode, String)> {
-    let result = autonomous_resolution::delete_escalation_rule(&state, &id)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    Ok(Json(result))
+) -> Response {
+    let mut req = newax_proto::autonomous_resolution::v1::DeleteEscalationRuleRequest::default();
+    req.rule_id = id;
+    match client().await.delete_escalation_rule(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
 }
 
-/// GET /autonomous-resolution/policies
 pub async fn list_policies(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Query(params): Query<PoliciesQuery>,
-) -> Result<Json<Vec<autonomous_resolution::AgentPolicy>>, (StatusCode, String)> {
-    let policies = autonomous_resolution::list_agent_policies(&state, params.is_active)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    Ok(Json(policies))
+) -> Response {
+    let mut req = newax_proto::autonomous_resolution::v1::ListPoliciesRequest::default();
+    req.has_is_active = params.is_active.is_some();
+    req.is_active = params.is_active.unwrap_or_default();
+    match client().await.list_policies(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
 }
 
-/// POST /autonomous-resolution/evaluate
 pub async fn evaluate_decision(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Query(params): Query<EvaluateQuery>,
-) -> Result<Json<autonomous_resolution::ResolutionDecision>, (StatusCode, String)> {
-    let decision = autonomous_resolution::evaluate_resolution_decision(
-        &state,
-        &params.conversation_id,
-        params.ai_confidence,
-        params.validation_score,
-        params.topic.as_deref(),
-    )
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    Ok(Json(decision))
+) -> Response {
+    let mut req = newax_proto::autonomous_resolution::v1::EvaluateDecisionRequest::default();
+    req.conversation_id = params.conversation_id;
+    req.ai_confidence = params.ai_confidence;
+    req.has_validation_score = params.validation_score.is_some();
+    req.validation_score = params.validation_score.unwrap_or(0.0);
+    req.topic = params.topic.unwrap_or_default();
+    match client().await.evaluate_decision(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
 }
 
-/// POST /autonomous-resolution/log-attempt
 pub async fn log_attempt(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Json(params): Json<LogAttemptQuery>,
-) -> Result<Json<autonomous_resolution::ResolutionLog>, (StatusCode, String)> {
-    // First evaluate the decision
-    let decision = autonomous_resolution::evaluate_resolution_decision(
-        &state,
-        &params.conversation_id,
-        params.ai_confidence,
-        params.validation_score,
-        None,
-    )
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    // Then log the attempt
-    let log = autonomous_resolution::log_resolution_attempt(
-        &state,
-        &params.conversation_id,
-        &params.contact_id,
-        &params.channel,
-        params.ai_confidence,
-        params.validation_score,
-        params.validation_passed,
-        &decision,
-    )
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    Ok(Json(log))
+) -> Response {
+    let mut req = newax_proto::autonomous_resolution::v1::LogAttemptRequest::default();
+    req.conversation_id = params.conversation_id;
+    req.contact_id = params.contact_id;
+    req.channel = params.channel;
+    req.ai_confidence = params.ai_confidence;
+    req.has_validation_score = params.validation_score.is_some();
+    req.validation_score = params.validation_score.unwrap_or(0.0);
+    req.has_validation_passed = params.validation_passed.is_some();
+    req.validation_passed = params.validation_passed.unwrap_or_default();
+    match client().await.log_attempt(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
 }
 
-/// GET /autonomous-resolution/logs
 pub async fn list_logs(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Query(params): Query<LogsQuery>,
-) -> Result<Json<Vec<autonomous_resolution::ResolutionLog>>, (StatusCode, String)> {
-    let logs = autonomous_resolution::list_resolution_logs(
-        &state,
-        params.outcome.as_deref(),
-        params.escalated,
-        params.limit.unwrap_or(50),
-        params.offset.unwrap_or(0),
-    )
-    .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    Ok(Json(logs))
+) -> Response {
+    let mut req = newax_proto::autonomous_resolution::v1::ListLogsRequest::default();
+    req.outcome = params.outcome.clone().unwrap_or_default();
+    req.has_escalated = params.escalated.is_some();
+    req.escalated = params.escalated.unwrap_or_default();
+    req.limit = params.limit.unwrap_or(50);
+    req.offset = params.offset.unwrap_or(0);
+    match client().await.list_logs(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
 }
 
-/// POST /autonomous-resolution/snapshot
 pub async fn generate_snapshot(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Query(params): Query<SnapshotQuery>,
-) -> Result<Json<autonomous_resolution::AnalyticsSnapshot>, (StatusCode, String)> {
-    let days = params.days.unwrap_or(7);
-    let snapshot = autonomous_resolution::generate_analytics_snapshot(&state, days)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    Ok(Json(snapshot))
+) -> Response {
+    let mut req = newax_proto::autonomous_resolution::v1::GenerateSnapshotRequest::default();
+    req.days = params.days.unwrap_or(7);
+    match client().await.generate_snapshot(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
 }

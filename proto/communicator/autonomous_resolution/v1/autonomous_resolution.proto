@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+package newax.autonomous_resolution.v1;
+
+service AutonomousResolutionService {
+  rpc GetSummary(Empty) returns (JsonResponse);
+  rpc GetConfig(Empty) returns (JsonResponse);
+  rpc UpdateConfig(UpdateConfigRequest) returns (JsonResponse);
+  rpc ListEscalationRules(ListEscalationRulesRequest) returns (JsonResponse);
+  rpc CreateEscalationRule(CreateEscalationRuleRequest) returns (JsonResponse);
+  rpc UpdateEscalationRule(UpdateEscalationRuleRequest) returns (JsonResponse);
+  rpc DeleteEscalationRule(DeleteEscalationRuleRequest) returns (JsonResponse);
+  rpc ListPolicies(ListPoliciesRequest) returns (JsonResponse);
+  rpc EvaluateDecision(EvaluateDecisionRequest) returns (JsonResponse);
+  rpc LogAttempt(LogAttemptRequest) returns (JsonResponse);
+  rpc ListLogs(ListLogsRequest) returns (JsonResponse);
+  rpc GenerateSnapshot(GenerateSnapshotRequest) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message UpdateConfigRequest {
+  string config_json = 1;
+}
+
+message ListEscalationRulesRequest {
+  bool is_active = 1;
+  bool has_is_active = 2;
+}
+
+message CreateEscalationRuleRequest {
+  string name = 1;
+  string condition_type = 2;
+  double condition_value = 3;
+  string action_type = 4;
+  string description = 5;
+  string condition_topic = 6;
+  string condition_keyword = 7;
+  string assign_to_agent_id = 8;
+  string assign_to_team_id = 9;
+  string notify_webhook = 10;
+  string notification_message = 11;
+  int32 priority = 12;
+}
+
+message UpdateEscalationRuleRequest {
+  string rule_json = 1;
+}
+
+message DeleteEscalationRuleRequest {
+  string rule_id = 1;
+}
+
+message ListPoliciesRequest {
+  bool is_active = 1;
+  bool has_is_active = 2;
+}
+
+message EvaluateDecisionRequest {
+  string conversation_id = 1;
+  double ai_confidence = 2;
+  double validation_score = 3;
+  bool has_validation_score = 4;
+  string topic = 5;
+}
+
+message LogAttemptRequest {
+  string conversation_id = 1;
+  string contact_id = 2;
+  string channel = 3;
+  double ai_confidence = 4;
+  double validation_score = 5;
+  bool has_validation_score = 6;
+  bool validation_passed = 7;
+  bool has_validation_passed = 8;
+}
+
+message ListLogsRequest {
+  string outcome = 1;
+  bool escalated = 2;
+  bool has_escalated = 3;
+  int32 limit = 4;
+  int32 offset = 5;
+}
+
+message GenerateSnapshotRequest {
+  int32 days = 1;
+}

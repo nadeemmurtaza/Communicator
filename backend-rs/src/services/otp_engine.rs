@@ -1070,7 +1070,7 @@ impl OtpEngine {
             .replace("{{brand_name}}", brand_id);
 
         // Send via SMTP
-        let smtp_result = crate::services::smtp_email::send_raw_email(
+        let smtp_result = newax_smtp_email::send_raw_email(
             pool,
             &settings.2,
             settings.3 as u16,

@@ -4,13 +4,13 @@ mod config;
 mod db;
 mod hardening;
 mod validation;
+mod middleware;
 mod models;
 mod routes;
 mod services;
 
 use axum::{
     body::Body,
-    middleware,
     http::{header, HeaderValue, Request, Response, StatusCode},
     response::IntoResponse,
     routing::{delete, get, patch, post, put},
@@ -1374,6 +1374,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             get(routes::live_proof::capture_page),
         )
         .layer(cors)
+        .layer(
+            axum::middleware::from_fn_with_state(state.clone(), middleware::rls::rls_middleware),
+        )
         .with_state(state);
 
     if assets_dir.exists() {
@@ -1462,9 +1465,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Applied last so the SPA fallback (the HTML pages themselves) is covered
     // too; a layer only wraps what is registered before it.
     let app = app
-        .layer(middleware::from_fn(validation::gate))
-        .layer(middleware::from_fn(hardening::guard))
-        .layer(middleware::from_fn(hardening::security_headers));
+        .layer(axum::middleware::from_fn(validation::gate))
+        .layer(axum::middleware::from_fn(hardening::guard))
+        .layer(axum::middleware::from_fn(hardening::security_headers));
 
     let host: std::net::IpAddr = config.host.parse().map_err(|e| {
         format!(

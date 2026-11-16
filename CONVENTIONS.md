@@ -269,7 +269,7 @@ discipline, and a final checklist) — this section is just the live
 tracking table and status summary, not the how-to.
 
 The pattern in §3 is now proven working, not just specified —
-nineteen real modules split so far, each a standalone `tonic` gRPC
+twenty-seven real modules split so far, each a standalone `tonic` gRPC
 service
 with its old monolith route handlers reduced to a thin client, each
 verified with `cargo check --workspace`:
@@ -295,16 +295,31 @@ verified with `cargo check --workspace`:
 | subjects | nID | `crates/subjects` | `services/subjects` | 50077 |
 | unified-analytics | Communicator | `crates/unified_analytics` | `services/unified_analytics` | 50078 |
 | invitations | nID | `crates/invitations` | `services/invitations` | 50079 |
+| procedures | Communicator | `crates/procedures` | `services/procedures` | 50080 |
+| unified-inbox | Communicator | `crates/unified_inbox` | `services/unified_inbox` | 50081 |
+| notifications | Communicator | `crates/notifications` | `services/notifications` | 50082 |
+| suggestions | Communicator | `crates/suggestions` | `services/suggestions` | 50083 |
+| crm-sync | Communicator | `crates/crm_sync` | `services/crm_sync` | 50084 |
+| crypto-mesh | Communicator | `crates/crypto_mesh` | `services/crypto_mesh` | 50085 |
+| canned-macros-sla | Communicator | `crates/canned_macros_sla` | `services/canned_macros_sla` | 50086 |
+| agent-performance | Communicator | `crates/agent_performance` | `services/agent_performance` | 50087 |
+| topic-categorization | Communicator | `crates/topic_categorization` | `services/topic_categorization` | 50088 |
+| workflow-builder | Communicator | `crates/workflow_builder` | `services/workflow_builder` | 50089 |
+| brand-overrides | Communicator | `crates/brand_overrides` | `services/brand_overrides` | 50090 |
+| autonomous-resolution | Communicator | `crates/autonomous_resolution` | `services/autonomous_resolution` | 50091 |
+| smtp-email | Communicator | `crates/smtp_email` | `services/smtp_email` | 50092 |
+| access-control | Communicator | `crates/access_control` | `services/access_control` | 50093 |
+| copilot-reviewer | Communicator | `crates/copilot_reviewer` | `services/copilot_reviewer` | 50094 |
 
-`reply-integration` is the one case so far where a split module had
-genuine in-process coupling from elsewhere in the monolith
-(`backend-rs/src/services/reply_engine.rs` called
-`ReplyIntegrationService` directly, not through a route): resolved by
-having `reply_engine.rs` depend on the new `newax-reply-integration`
-crate directly as a library, not by routing an internal monolith call
-through gRPC.
+`reply-integration` and `alerts` are the cases so far where a split
+module had genuine in-process coupling from elsewhere in the monolith
+(`backend-rs/src/services/reply_engine.rs` called both
+`ReplyIntegrationService` and `send_hot_lead_alert` directly, not
+through a route): resolved by having `reply_engine.rs` depend on the
+new `newax-reply-integration` and `newax-alerts` crates directly as
+libraries, not by routing an internal monolith call through gRPC.
 
-Remaining: **~56 more modules in Communicator's `backend-rs`**
+Remaining: **~52 more modules in Communicator's `backend-rs`**
 (70 routes/90 services, 142k lines total) and **~14 more in nID's
 `apps/rust-api`**. This is not a mechanical find-and-replace — each
 module needs its cross-module Rust calls identified and either kept

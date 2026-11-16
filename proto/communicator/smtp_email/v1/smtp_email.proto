@@ -1,0 +1,99 @@
+syntax = "proto3";
+
+package newax.smtp_email.v1;
+
+service SmtpEmailService {
+  rpc GetSummary(Empty) returns (JsonResponse);
+  rpc ListSmtpSettings(Empty) returns (JsonResponse);
+  rpc GetSmtpSettings(GetSmtpSettingsRequest) returns (JsonResponse);
+  rpc CreateSmtpSettings(CreateSmtpSettingsRequest) returns (JsonResponse);
+  rpc UpdateSmtpSettings(UpdateSmtpSettingsRequest) returns (JsonResponse);
+  rpc DeleteSmtpSettings(DeleteSmtpSettingsRequest) returns (JsonResponse);
+  rpc TestSmtpConnection(TestSmtpConnectionRequest) returns (JsonResponse);
+  rpc ListEmailTemplates(ListEmailTemplatesRequest) returns (JsonResponse);
+  rpc CreateEmailTemplate(CreateEmailTemplateRequest) returns (JsonResponse);
+  rpc GetEmailTemplate(GetEmailTemplateRequest) returns (JsonResponse);
+  rpc UpdateEmailTemplate(UpdateEmailTemplateRequest) returns (JsonResponse);
+  rpc DeleteEmailTemplate(DeleteEmailTemplateRequest) returns (JsonResponse);
+  rpc SendEmail(SendEmailRequest) returns (JsonResponse);
+  rpc GetSendLogs(GetSendLogsRequest) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message GetSmtpSettingsRequest {
+  string id = 1;
+}
+
+message CreateSmtpSettingsRequest {
+  string brand_id = 1;
+  string host = 2;
+  int64 port = 3;
+  string security = 4;
+  string auth_method = 5;
+  string username = 6;
+  string password = 7;
+  string from_address = 8;
+  string from_name = 9;
+  string reply_to_address = 10;
+  int64 connection_timeout_seconds = 11;
+}
+
+message UpdateSmtpSettingsRequest {
+  string id = 1;
+  string updates_json = 2;
+}
+
+message DeleteSmtpSettingsRequest {
+  string id = 1;
+}
+
+message TestSmtpConnectionRequest {
+  string id = 1;
+  string to_address = 2;
+}
+
+message ListEmailTemplatesRequest {
+  string category = 1;
+  string brand_id = 2;
+}
+
+message CreateEmailTemplateRequest {
+  string brand_id = 1;
+  string name = 2;
+  string subject = 3;
+  string body_html = 4;
+  string body_text = 5;
+  string template_type = 6;
+  string category = 7;
+  string language = 8;
+  string variables_json = 9;
+}
+
+message GetEmailTemplateRequest {
+  string id = 1;
+}
+
+message UpdateEmailTemplateRequest {
+  string id = 1;
+  string updates_json = 2;
+}
+
+message DeleteEmailTemplateRequest {
+  string id = 1;
+}
+
+message SendEmailRequest {
+  string to_address = 1;
+  string template_name = 2;
+  string variables_json = 3;
+  string brand_id = 4;
+}
+
+message GetSendLogsRequest {
+  int64 limit = 1;
+}

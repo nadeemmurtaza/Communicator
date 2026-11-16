@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package newax.unified_inbox.v1;
+
+service UnifiedInboxService {
+  rpc ListInbox(ListInboxRequest) returns (JsonResponse);
+  rpc GetCustomer(IdRequest) returns (JsonResponse);
+  rpc ResolveCustomer(ResolveCustomerRequest) returns (JsonResponse);
+  rpc CreateMapping(CreateMappingRequest) returns (JsonResponse);
+  rpc GetSettings(GetSettingsRequest) returns (JsonResponse);
+  rpc UpdateSettings(UpdateSettingsRequest) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message IdRequest {
+  string id = 1;
+}
+
+message ListInboxRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+  optional string channel = 3;
+  optional string state = 4;
+  optional string search = 5;
+}
+
+message ResolveCustomerRequest {
+  string channel = 1;
+  string identifier = 2;
+}
+
+message CreateMappingRequest {
+  string customer_id = 1;
+  string contact_id = 2;
+  string channel = 3;
+  string channel_identifier = 4;
+}
+
+message GetSettingsRequest {
+  string organization_id = 1;
+}
+
+message UpdateSettingsRequest {
+  string organization_id = 1;
+  string payload_json = 2;
+}

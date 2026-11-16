@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package newax.topic_categorization.v1;
+
+service TopicCategorizationService {
+  rpc GetSummary(Empty) returns (JsonResponse);
+  rpc CategorizeConversation(CategorizeConversationRequest) returns (JsonResponse);
+  rpc GetConversationTopic(GetConversationTopicRequest) returns (JsonResponse);
+  rpc OverrideTopic(OverrideTopicRequest) returns (JsonResponse);
+  rpc BatchCategorize(Empty) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message CategorizeConversationRequest {
+  string conversation_id = 1;
+}
+
+message GetConversationTopicRequest {
+  string conversation_id = 1;
+}
+
+message OverrideTopicRequest {
+  string conversation_id = 1;
+  string topic = 2;
+  string subtopic = 3;
+  string overridden_by = 4;
+}

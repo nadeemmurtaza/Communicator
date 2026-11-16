@@ -1,13 +1,44 @@
-//! Agent Performance Analytics Routes — Phase 30
+//! Thin gRPC client forwarding agent performance requests to `svc-agent-performance` (port 50087).
 
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde::Deserialize;
 use serde_json::Value;
 
 use crate::db::AppState;
-use crate::services::agent_performance;
+
+use newax_proto::agent_performance::v1::{
+    agent_performance_service_client::AgentPerformanceServiceClient,
+    Empty,
+};
+
+fn svc_addr() -> &'static str {
+    option_env!("AGENT_PERFORMANCE_GRPC").unwrap_or("http://127.0.0.1:50087")
+}
+
+async fn client() -> AgentPerformanceServiceClient<tonic::transport::Channel> {
+    AgentPerformanceServiceClient::connect(svc_addr().to_string())
+        .await
+        .expect("agent-performance gRPC service unavailable")
+}
+
+fn grpc_json(s: String) -> Value {
+    serde_json::from_str(&s).unwrap_or_else(|_| serde_json::json!({ "error": "invalid gRPC response" }))
+}
+
+fn ok_response(v: Value) -> Response {
+    (StatusCode::OK, Json(v)).into_response()
+}
+
+fn created_response(v: Value) -> Response {
+    (StatusCode::CREATED, Json(v)).into_response()
+}
+
+fn err_response(message: &str) -> Response {
+    (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": message }))).into_response()
+}
 
 #[derive(Deserialize)]
 pub struct ListSnapshotsQuery {
@@ -26,113 +57,121 @@ pub struct ComparisonQuery {
     pub days: Option<i32>,
 }
 
-/// GET /agent-performance/summary
-pub async fn get_summary(state: State<AppState>) -> (StatusCode, Json<Value>) {
-    match agent_performance::get_performance_summary(&state).await {
-        Ok(summary) => (StatusCode::OK, Json(serde_json::to_value(summary).unwrap())),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))),
+pub async fn get_summary(State(_state): State<AppState>) -> Response {
+    match client().await.get_summary(Empty {}).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
-/// GET /agent-performance/snapshots
 pub async fn list_snapshots(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Query(query): Query<ListSnapshotsQuery>,
-) -> (StatusCode, Json<Value>) {
-    let days = query.days.unwrap_or(7);
-    match agent_performance::list_snapshots(&state, query.agent_id.as_deref(), days).await {
-        Ok(snapshots) => (StatusCode::OK, Json(serde_json::to_value(snapshots).unwrap())),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))),
+) -> Response {
+    let mut req = newax_proto::agent_performance::v1::ListSnapshotsRequest::default();
+    req.agent_id = query.agent_id.clone().unwrap_or_default();
+    req.days = query.days.unwrap_or(7);
+    match client().await.list_snapshots(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
-/// POST /agent-performance/snapshots
 pub async fn create_snapshot(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Json(data): Json<Value>,
-) -> (StatusCode, Json<Value>) {
+) -> Response {
     let agent_id = data.get("agent_id").and_then(|v| v.as_str()).unwrap_or("");
     let agent_name = data.get("agent_name").and_then(|v| v.as_str()).unwrap_or("");
-    match agent_performance::create_snapshot(&state, agent_id, agent_name, &data).await {
-        Ok(result) => (StatusCode::CREATED, Json(serde_json::to_value(result).unwrap())),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))),
+    let mut req = newax_proto::agent_performance::v1::CreateSnapshotRequest::default();
+    req.agent_id = agent_id.to_string();
+    req.agent_name = agent_name.to_string();
+    req.data = serde_json::to_string(&data).unwrap_or_default();
+    match client().await.create_snapshot(req).await {
+        Ok(resp) => created_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
-/// GET /agent-performance/insights
 pub async fn list_insights(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Query(query): Query<ListInsightsQuery>,
-) -> (StatusCode, Json<Value>) {
-    match agent_performance::list_insights(&state, query.agent_id.as_deref(), query.addressed).await {
-        Ok(insights) => (StatusCode::OK, Json(serde_json::to_value(insights).unwrap())),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))),
+) -> Response {
+    let mut req = newax_proto::agent_performance::v1::ListInsightsRequest::default();
+    req.agent_id = query.agent_id.clone().unwrap_or_default();
+    req.addressed = query.addressed.unwrap_or(false);
+    req.has_addressed = query.addressed.is_some();
+    match client().await.list_insights(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
-/// POST /agent-performance/insights
 pub async fn create_insight(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Json(data): Json<Value>,
-) -> (StatusCode, Json<Value>) {
+) -> Response {
     let agent_id = data.get("agent_id").and_then(|v| v.as_str()).unwrap_or("");
     let agent_name = data.get("agent_name").and_then(|v| v.as_str()).unwrap_or("");
-    match agent_performance::create_insight(&state, agent_id, agent_name, &data).await {
-        Ok(result) => (StatusCode::CREATED, Json(serde_json::to_value(result).unwrap())),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))),
+    let mut req = newax_proto::agent_performance::v1::CreateInsightRequest::default();
+    req.agent_id = agent_id.to_string();
+    req.agent_name = agent_name.to_string();
+    req.data = serde_json::to_string(&data).unwrap_or_default();
+    match client().await.create_insight(req).await {
+        Ok(resp) => created_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
-/// PUT /agent-performance/insights/{id}/address
 pub async fn address_insight(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(insight_id): Path<String>,
     Json(data): Json<Value>,
-) -> (StatusCode, Json<Value>) {
+) -> Response {
     let addressed_by = data.get("addressed_by").and_then(|v| v.as_str()).unwrap_or("admin");
-    match agent_performance::address_insight(&state, &insight_id, addressed_by).await {
-        Ok(result) => (StatusCode::OK, Json(serde_json::to_value(result).unwrap())),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))),
+    let mut req = newax_proto::agent_performance::v1::AddressInsightRequest::default();
+    req.insight_id = insight_id;
+    req.addressed_by = addressed_by.to_string();
+    match client().await.address_insight(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
-/// GET /agent-performance/comparison
 pub async fn get_comparison(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Query(query): Query<ComparisonQuery>,
-) -> (StatusCode, Json<Value>) {
-    let days = query.days.unwrap_or(7);
-    match agent_performance::get_comparison_metrics(&state, days).await {
-        Ok(metrics) => (StatusCode::OK, Json(serde_json::to_value(metrics).unwrap())),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))),
+) -> Response {
+    let mut req = newax_proto::agent_performance::v1::GetComparisonRequest::default();
+    req.days = query.days.unwrap_or(7);
+    match client().await.get_comparison(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
-/// POST /agent-performance/comparison/generate
-pub async fn generate_comparison(
-    State(state): State<AppState>,
-) -> (StatusCode, Json<Value>) {
-    match agent_performance::generate_comparison_snapshot(&state).await {
-        Ok(metrics) => (StatusCode::CREATED, Json(serde_json::to_value(metrics).unwrap())),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))),
+pub async fn generate_comparison(State(_state): State<AppState>) -> Response {
+    match client().await.generate_comparison(Empty {}).await {
+        Ok(resp) => created_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
-/// GET /agent-performance/settings
-pub async fn get_settings(state: State<AppState>) -> (StatusCode, Json<Value>) {
-    match agent_performance::get_settings(&state).await {
-        Ok(settings) => (StatusCode::OK, Json(serde_json::to_value(settings).unwrap())),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))),
+pub async fn get_settings(State(_state): State<AppState>) -> Response {
+    match client().await.get_settings(Empty {}).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
-/// PUT /agent-performance/settings
 pub async fn update_settings(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Json(data): Json<Value>,
-) -> (StatusCode, Json<Value>) {
-    match agent_performance::update_settings(&state, &data).await {
-        Ok(result) => (StatusCode::OK, Json(serde_json::to_value(result).unwrap())),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e.to_string() }))),
+) -> Response {
+    let mut req = newax_proto::agent_performance::v1::UpdateSettingsRequest::default();
+    req.data = serde_json::to_string(&data).unwrap_or_default();
+    match client().await.update_settings(req).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }

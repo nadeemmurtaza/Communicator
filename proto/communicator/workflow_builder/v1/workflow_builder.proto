@@ -1,0 +1,103 @@
+syntax = "proto3";
+
+package newax.workflow_builder.v1;
+
+service WorkflowBuilderService {
+  rpc GetSummary(Empty) returns (JsonResponse);
+  rpc ListWorkflows(ListWorkflowsRequest) returns (JsonResponse);
+  rpc GetWorkflow(GetWorkflowRequest) returns (JsonResponse);
+  rpc CreateWorkflow(CreateWorkflowRequest) returns (JsonResponse);
+  rpc UpdateWorkflow(UpdateWorkflowRequest) returns (JsonResponse);
+  rpc DeleteWorkflow(DeleteWorkflowRequest) returns (JsonResponse);
+  rpc AddStep(AddStepRequest) returns (JsonResponse);
+  rpc AddCondition(AddConditionRequest) returns (JsonResponse);
+  rpc AddTrigger(AddTriggerRequest) returns (JsonResponse);
+  rpc TriggerExecution(TriggerExecutionRequest) returns (JsonResponse);
+  rpc EvaluateConditions(EvaluateConditionsRequest) returns (JsonResponse);
+  rpc ListExecutions(ListExecutionsRequest) returns (JsonResponse);
+  rpc AvailableTriggers(Empty) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message ListWorkflowsRequest {
+  string organization_id = 1;
+  string workflow_type = 2;
+  string status = 3;
+  int32 limit = 4;
+  int32 offset = 5;
+}
+
+message GetWorkflowRequest {
+  string workflow_id = 1;
+}
+
+message CreateWorkflowRequest {
+  string organization_id = 1;
+  string name = 2;
+  string workflow_type = 3;
+  string trigger_type = 4;
+  string description = 5;
+  string trigger_config = 6;
+  string created_by = 7;
+}
+
+message UpdateWorkflowRequest {
+  string workflow_id = 1;
+  string updates = 2;
+}
+
+message DeleteWorkflowRequest {
+  string workflow_id = 1;
+}
+
+message AddStepRequest {
+  string workflow_id = 1;
+  string step_type = 2;
+  string name = 3;
+  int32 step_order = 4;
+  string config = 5;
+  string parent_step_id = 6;
+  string condition_branch = 7;
+}
+
+message AddConditionRequest {
+  string workflow_id = 1;
+  string step_id = 2;
+  string condition_type = 3;
+  string field = 4;
+  string operator = 5;
+  string value = 6;
+  string logic_operator = 7;
+}
+
+message AddTriggerRequest {
+  string workflow_id = 1;
+  string trigger_name = 2;
+  string trigger_event = 3;
+  string filter_conditions = 4;
+}
+
+message TriggerExecutionRequest {
+  string workflow_id = 1;
+  string trigger_source = 2;
+  string trigger_data = 3;
+  string target_contact_id = 4;
+  string target_conversation_id = 5;
+}
+
+message EvaluateConditionsRequest {
+  string step_id = 1;
+  string context = 2;
+}
+
+message ListExecutionsRequest {
+  string workflow_id = 1;
+  string status = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}

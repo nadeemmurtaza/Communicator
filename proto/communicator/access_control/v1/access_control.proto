@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package newax.access_control.v1;
+
+service AccessControl {
+  // Access Grants
+  rpc ListAccessGrants(ListAccessGrantsRequest) returns (ListAccessGrantsResponse);
+  rpc CreateAccessGrant(CreateAccessGrantRequest) returns (CreateAccessGrantResponse);
+  rpc UpdateAccessGrant(UpdateAccessGrantRequest) returns (UpdateAccessGrantResponse);
+  rpc RevokeAccessGrant(RevokeAccessGrantRequest) returns (RevokeAccessGrantResponse);
+  rpc TransferOwnership(TransferOwnershipRequest) returns (TransferOwnershipResponse);
+  rpc AddPartner(AddPartnerRequest) returns (AddPartnerResponse);
+  rpc GetMyPermissions(GetMyPermissionsRequest) returns (GetMyPermissionsResponse);
+
+  // Departments
+  rpc ListDepartments(ListDepartmentsRequest) returns (ListDepartmentsResponse);
+  rpc CreateDepartment(CreateDepartmentRequest) returns (CreateDepartmentResponse);
+  rpc UpdateDepartment(UpdateDepartmentRequest) returns (UpdateDepartmentResponse);
+  rpc AssignToDepartment(AssignToDepartmentRequest) returns (AssignToDepartmentResponse);
+  rpc RemoveDepartmentAssignment(RemoveDepartmentAssignmentRequest) returns (RemoveDepartmentAssignmentResponse);
+
+  // Permission Catalog
+  rpc GetPermissionCatalog(GetPermissionCatalogRequest) returns (GetPermissionCatalogResponse);
+  rpc GetAllPermissions(GetAllPermissionsRequest) returns (GetAllPermissionsResponse);
+  rpc GetPermissionsByGroup(GetPermissionsByGroupRequest) returns (GetPermissionsByGroupResponse);
+
+  // Invitations
+  rpc ListInvitations(ListInvitationsRequest) returns (ListInvitationsResponse);
+  rpc SendEmailInvitation(SendEmailInvitationRequest) returns (SendEmailInvitationResponse);
+  rpc SendUsernameInvitation(SendUsernameInvitationRequest) returns (SendUsernameInvitationResponse);
+  rpc AcceptInvitation(AcceptInvitationRequest) returns (AcceptInvitationResponse);
+  rpc RevokeInvitation(RevokeInvitationRequest) returns (RevokeInvitationResponse);
+
+  // nID Webhooks
+  rpc HandleNidAccessWebhook(HandleNidAccessWebhookRequest) returns (HandleNidAccessWebhookResponse);
+  rpc HandleNidDepartmentWebhook(HandleNidDepartmentWebhookRequest) returns (HandleNidDepartmentWebhookResponse);
+  rpc HandleNidRoleWebhook(HandleNidRoleWebhookRequest) returns (HandleNidRoleWebhookResponse);
+}
+
+message Empty {}
+
+// Access Grants
+message ListAccessGrantsRequest { string tenant_id = 1; string org_id = 2; string brand_id = 3; }
+message ListAccessGrantsResponse { string payload = 1; string error = 2; }
+message CreateAccessGrantRequest { string tenant_id = 1; string org_id = 2; string brand_id = 3; string body = 4; }
+message CreateAccessGrantResponse { string payload = 1; string error = 2; }
+message UpdateAccessGrantRequest { string tenant_id = 1; string grant_id = 2; string body = 3; }
+message UpdateAccessGrantResponse { string payload = 1; string error = 2; }
+message RevokeAccessGrantRequest { string tenant_id = 1; string grant_id = 2; }
+message RevokeAccessGrantResponse { string payload = 1; string error = 2; }
+message TransferOwnershipRequest { string tenant_id = 1; string body = 2; }
+message TransferOwnershipResponse { string payload = 1; string error = 2; }
+message AddPartnerRequest { string tenant_id = 1; string body = 2; }
+message AddPartnerResponse { string payload = 1; string error = 2; }
+message GetMyPermissionsRequest { string team_member_id = 1; string tenant_id = 2; string org_id = 3; string brand_id = 4; }
+message GetMyPermissionsResponse { string payload = 1; string error = 2; }
+
+// Departments
+message ListDepartmentsRequest { string tenant_id = 1; }
+message ListDepartmentsResponse { string payload = 1; string error = 2; }
+message CreateDepartmentRequest { string tenant_id = 1; string body = 2; }
+message CreateDepartmentResponse { string payload = 1; string error = 2; }
+message UpdateDepartmentRequest { string tenant_id = 1; string dept_id = 2; string body = 3; }
+message UpdateDepartmentResponse { string payload = 1; string error = 2; }
+message AssignToDepartmentRequest { string dept_id = 1; string body = 2; }
+message AssignToDepartmentResponse { string payload = 1; string error = 2; }
+message RemoveDepartmentAssignmentRequest { string tenant_id = 1; string assignment_id = 2; }
+message RemoveDepartmentAssignmentResponse { string payload = 1; string error = 2; }
+
+// Permission Catalog
+message GetPermissionCatalogRequest { string tenant_id = 1; }
+message GetPermissionCatalogResponse { string payload = 1; string error = 2; }
+message GetAllPermissionsRequest { string tenant_id = 1; }
+message GetAllPermissionsResponse { string payload = 1; string error = 2; }
+message GetPermissionsByGroupRequest { string group_name = 1; }
+message GetPermissionsByGroupResponse { string payload = 1; string error = 2; }
+
+// Invitations
+message ListInvitationsRequest { string tenant_id = 1; string status = 2; }
+message ListInvitationsResponse { string payload = 1; string error = 2; }
+message SendEmailInvitationRequest { string tenant_id = 1; string body = 2; }
+message SendEmailInvitationResponse { string payload = 1; string error = 2; }
+message SendUsernameInvitationRequest { string tenant_id = 1; string body = 2; }
+message SendUsernameInvitationResponse { string payload = 1; string error = 2; }
+message AcceptInvitationRequest { string invitation_id = 1; string team_member_id = 2; }
+message AcceptInvitationResponse { string payload = 1; string error = 2; }
+message RevokeInvitationRequest { string tenant_id = 1; string invitation_id = 2; }
+message RevokeInvitationResponse { string payload = 1; string error = 2; }
+
+// nID Webhooks
+message HandleNidAccessWebhookRequest { string body = 1; }
+message HandleNidAccessWebhookResponse { string payload = 1; string error = 2; }
+message HandleNidDepartmentWebhookRequest { string body = 1; }
+message HandleNidDepartmentWebhookResponse { string payload = 1; string error = 2; }
+message HandleNidRoleWebhookRequest { string body = 1; }
+message HandleNidRoleWebhookResponse { string payload = 1; string error = 2; }

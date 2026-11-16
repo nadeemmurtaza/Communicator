@@ -17,6 +17,21 @@ const PROTOS: &[&str] = &[
     "../../proto/communicator/ab_testing/v1/ab_testing.proto",
     "../../proto/communicator/compliance_dashboard/v1/compliance_dashboard.proto",
     "../../proto/communicator/unified_analytics/v1/unified_analytics.proto",
+    "../../proto/communicator/procedures/v1/procedures.proto",
+    "../../proto/communicator/unified_inbox/v1/unified_inbox.proto",
+    "../../proto/communicator/notifications/v1/notifications.proto",
+    "../../proto/communicator/suggestions/v1/suggestions.proto",
+    "../../proto/communicator/crm_sync/v1/crm_sync.proto",
+    "../../proto/communicator/crypto_mesh/v1/crypto_mesh.proto",
+    "../../proto/communicator/canned_macros_sla/v1/canned_macros_sla.proto",
+    "../../proto/communicator/agent_performance/v1/agent_performance.proto",
+    "../../proto/communicator/topic_categorization/v1/topic_categorization.proto",
+    "../../proto/communicator/workflow_builder/v1/workflow_builder.proto",
+    "../../proto/communicator/brand_overrides/v1/brand_overrides.proto",
+    "../../proto/communicator/autonomous_resolution/v1/autonomous_resolution.proto",
+    "../../proto/communicator/smtp_email/v1/smtp_email.proto",
+    "../../proto/communicator/access_control/v1/access_control.proto",
+    "../../proto/communicator/copilot_reviewer/v1/copilot_reviewer.proto",
 ];
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

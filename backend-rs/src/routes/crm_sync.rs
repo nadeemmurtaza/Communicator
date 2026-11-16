@@ -1,27 +1,45 @@
-﻿//! CRM Sync API routes (Phase 22).
+﻿//! CRM Sync API — Phase 22: CRM bidirectional sync.
+//!
+//! Thin gRPC client forwarding to svc-crm-sync; REST shape unchanged.
 
-use crate::db::AppState;
-use crate::routes::auth::Tenant;
-use crate::services::crm_sync;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
 use axum::Json;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::{json, Value};
 
-fn err(status: StatusCode, detail: impl Into<String>) -> Response {
-    (status, Json(json!({ "detail": detail.into() }))).into_response()
+use crate::db::AppState;
+
+use newax_proto::crm_sync::v1::{
+    crm_sync_service_client::CrmSyncServiceClient,
+    Empty, IdRequest, JsonResponse, ListConnectionsRequest,
+    CreateConnectionRequest, UpdateConnectionRequest, TriggerSyncRequest,
+    ListSyncLogsRequest, ListFieldMappingsRequest, GetExternalRefsRequest,
+    CreateExternalRefRequest,
+};
+
+async fn client() -> Result<CrmSyncServiceClient<tonic::transport::Channel>, (StatusCode, String)> {
+    let url = std::env::var("CRM_SYNC_SERVICE_URL").unwrap_or_else(|_| "http://127.0.0.1:50084".to_string());
+    CrmSyncServiceClient::connect(url)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("crm-sync service unavailable: {e}")))
 }
 
-fn db_err(e: sqlx::Error) -> Response {
-    err(
-        StatusCode::INTERNAL_SERVER_ERROR,
-        format!("Database error: {e}"),
-    )
+fn grpc_err(e: tonic::Status) -> (StatusCode, String) {
+    (StatusCode::INTERNAL_SERVER_ERROR, e.message().to_string())
 }
 
-// ——— Query params ———
+fn bad_request_err(e: tonic::Status) -> (StatusCode, String) {
+    (StatusCode::BAD_REQUEST, e.message().to_string())
+}
+
+fn parse_json(s: &str) -> Result<serde_json::Value, (StatusCode, String)> {
+    serde_json::from_str(s).map_err(|e| (StatusCode::BAD_REQUEST, format!("invalid json: {e}")))
+}
+
+// ---------------------------------------------------------------------------
+// Query parameters
+// ---------------------------------------------------------------------------
 
 #[derive(Deserialize)]
 pub struct ConnectionsQuery {
@@ -47,7 +65,9 @@ pub struct ExternalRefsQuery {
     pub local_id: String,
 }
 
-// ——— Payloads ———
+// ---------------------------------------------------------------------------
+// Payloads
+// ---------------------------------------------------------------------------
 
 #[derive(Deserialize)]
 pub struct CreateConnectionPayload {
@@ -81,171 +101,191 @@ pub struct CreateExternalRefPayload {
     pub crm_record_url: Option<String>,
 }
 
-// ——— Routes ———
+// ---------------------------------------------------------------------------
+// Routes
+// ---------------------------------------------------------------------------
 
-/// GET /crm-sync/summary
-pub async fn get_crm_sync_summary(State(state): State<AppState>) -> impl IntoResponse {
-    match crm_sync::get_crm_sync_summary(&state).await {
-        Ok(summary) => Json(json!(summary)).into_response(),
-        Err(e) => db_err(e),
-    }
+pub async fn get_crm_sync_summary(
+    State(_state): State<AppState>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut c = client().await?;
+    let resp = c.get_summary(Empty {}).await.map_err(grpc_err)?.into_inner();
+    let summary = parse_json(&resp.json)?;
+    Ok(Json(summary))
 }
 
-/// GET /crm-sync/providers
-pub async fn get_crm_providers() -> impl IntoResponse {
-    let providers = crm_sync::get_crm_providers();
-    Json(json!(providers)).into_response()
+pub async fn get_crm_providers(
+    State(_state): State<AppState>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut c = client().await?;
+    let resp = c.get_providers(Empty {}).await.map_err(grpc_err)?.into_inner();
+    let providers = parse_json(&resp.json)?;
+    Ok(Json(providers))
 }
 
-/// GET /crm-sync/connections
 pub async fn list_crm_connections(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Query(query): Query<ConnectionsQuery>,
-) -> impl IntoResponse {
-    match crm_sync::list_crm_connections(
-        &state,
-        query.provider.as_deref(),
-        query.status.as_deref(),
-    )
-    .await
-    {
-        Ok(connections) => Json(json!(connections)).into_response(),
-        Err(e) => db_err(e),
-    }
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut c = client().await?;
+    let resp = c
+        .list_connections(ListConnectionsRequest {
+            provider: query.provider,
+            status: query.status,
+        })
+        .await
+        .map_err(grpc_err)?
+        .into_inner();
+    let connections = parse_json(&resp.json)?;
+    Ok(Json(connections))
 }
 
-/// POST /crm-sync/connections
 pub async fn create_crm_connection(
-    State(state): State<AppState>,
-    Tenant(tenant_key): Tenant,
+    State(_state): State<AppState>,
     Json(payload): Json<CreateConnectionPayload>,
-) -> impl IntoResponse {
-    let organization_id = payload.organization_id.unwrap_or_else(|| tenant_key.clone());
+) -> Result<(StatusCode, Json<serde_json::Value>), (StatusCode, String)> {
+    let organization_id = payload.organization_id.unwrap_or_else(|| "default".to_string());
     let auth_type = payload.auth_type.unwrap_or_else(|| "oauth".to_string());
     let credentials = payload.credentials.and_then(|v| serde_json::to_string(&v).ok());
     let config = payload.config.and_then(|v| serde_json::to_string(&v).ok());
 
-    match crm_sync::create_crm_connection(
-        &state,
-        &organization_id,
-        &payload.provider,
-        &auth_type,
-        credentials.as_deref(),
-        config.as_deref(),
-    )
-    .await
-    {
-        Ok(conn) => (StatusCode::CREATED, Json(json!(conn))).into_response(),
-        Err(e) => db_err(e),
-    }
+    let mut c = client().await?;
+    let resp = c
+        .create_connection(CreateConnectionRequest {
+            organization_id,
+            provider: payload.provider,
+            auth_type,
+            credentials,
+            config,
+        })
+        .await
+        .map_err(bad_request_err)?
+        .into_inner();
+    let conn = parse_json(&resp.json)?;
+    Ok((StatusCode::CREATED, Json(conn)))
 }
 
-/// PUT /crm-sync/connections/{id}
 pub async fn update_crm_connection(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(id): Path<String>,
     Json(payload): Json<UpdateConnectionPayload>,
-) -> impl IntoResponse {
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
     let credentials = payload.credentials.and_then(|v| serde_json::to_string(&v).ok());
 
-    match crm_sync::update_crm_connection_status(
-        &state,
-        &id,
-        &payload.status,
-        credentials.as_deref(),
-        payload.last_error.as_deref(),
-    )
-    .await
-    {
-        Ok(conn) => Json(json!(conn)).into_response(),
-        Err(e) => db_err(e),
-    }
+    let mut c = client().await?;
+    let resp = c
+        .update_connection(UpdateConnectionRequest {
+            id,
+            status: payload.status,
+            credentials,
+            last_error: payload.last_error,
+        })
+        .await
+        .map_err(bad_request_err)?
+        .into_inner();
+    let conn = parse_json(&resp.json)?;
+    Ok(Json(conn))
 }
 
-/// DELETE /crm-sync/connections/{id}
 pub async fn delete_crm_connection(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(id): Path<String>,
-) -> impl IntoResponse {
-    match crm_sync::delete_crm_connection(&state, &id).await {
-        Ok(()) => Json(json!({ "deleted": true })).into_response(),
-        Err(e) => db_err(e),
-    }
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut c = client().await?;
+    c.delete_connection(IdRequest { id })
+        .await
+        .map_err(grpc_err)?;
+    Ok(Json(json!({ "deleted": true })))
 }
 
-/// POST /crm-sync/connections/{id}/sync
 pub async fn trigger_sync(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(id): Path<String>,
     Json(payload): Json<TriggerSyncPayload>,
-) -> impl IntoResponse {
-    match crm_sync::trigger_sync(&state, &id, &payload.direction, &payload.object_type).await {
-        Ok(result) => Json(json!(result)).into_response(),
-        Err(sqlx::Error::RowNotFound) => err(
-            StatusCode::BAD_REQUEST,
-            "Connection is not in 'connected' status",
-        ),
-        Err(e) => db_err(e),
-    }
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut c = client().await?;
+    let resp = c
+        .trigger_sync(TriggerSyncRequest {
+            connection_id: id,
+            direction: payload.direction,
+            object_type: payload.object_type,
+        })
+        .await
+        .map_err(bad_request_err)?
+        .into_inner();
+    let result = parse_json(&resp.json)?;
+    Ok(Json(result))
 }
 
-/// GET /crm-sync/logs
 pub async fn list_sync_logs(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Query(query): Query<SyncLogsQuery>,
-) -> impl IntoResponse {
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
     let limit = query.limit.unwrap_or(50);
-    match crm_sync::list_sync_logs(&state, query.connection_id.as_deref(), limit).await {
-        Ok(logs) => Json(json!(logs)).into_response(),
-        Err(e) => db_err(e),
-    }
+    let mut c = client().await?;
+    let resp = c
+        .list_sync_logs(ListSyncLogsRequest {
+            connection_id: query.connection_id,
+            limit,
+        })
+        .await
+        .map_err(grpc_err)?
+        .into_inner();
+    let logs = parse_json(&resp.json)?;
+    Ok(Json(logs))
 }
 
-/// GET /crm-sync/mappings
 pub async fn list_field_mappings(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Query(query): Query<FieldMappingsQuery>,
-) -> impl IntoResponse {
-    match crm_sync::list_field_mappings(
-        &state,
-        query.connection_id.as_deref(),
-        query.object_type.as_deref(),
-    )
-    .await
-    {
-        Ok(mappings) => Json(json!(mappings)).into_response(),
-        Err(e) => db_err(e),
-    }
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut c = client().await?;
+    let resp = c
+        .list_field_mappings(ListFieldMappingsRequest {
+            connection_id: query.connection_id,
+            object_type: query.object_type,
+        })
+        .await
+        .map_err(grpc_err)?
+        .into_inner();
+    let mappings = parse_json(&resp.json)?;
+    Ok(Json(mappings))
 }
 
-/// GET /crm-sync/refs
 pub async fn get_external_refs(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Query(query): Query<ExternalRefsQuery>,
-) -> impl IntoResponse {
-    match crm_sync::get_external_refs(&state, &query.local_type, &query.local_id).await {
-        Ok(refs) => Json(json!(refs)).into_response(),
-        Err(e) => db_err(e),
-    }
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut c = client().await?;
+    let resp = c
+        .get_external_refs(GetExternalRefsRequest {
+            local_type: query.local_type,
+            local_id: query.local_id,
+        })
+        .await
+        .map_err(grpc_err)?
+        .into_inner();
+    let refs = parse_json(&resp.json)?;
+    Ok(Json(refs))
 }
 
-/// POST /crm-sync/refs
 pub async fn create_external_ref(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Json(payload): Json<CreateExternalRefPayload>,
-) -> impl IntoResponse {
-    match crm_sync::create_external_ref(
-        &state,
-        &payload.connection_id,
-        &payload.local_type,
-        &payload.local_id,
-        &payload.crm_object_type,
-        &payload.crm_record_id,
-        payload.crm_record_url.as_deref(),
-    )
-    .await
-    {
-        Ok(ref_) => (StatusCode::CREATED, Json(json!(ref_))).into_response(),
-        Err(e) => db_err(e),
-    }
+) -> Result<(StatusCode, Json<serde_json::Value>), (StatusCode, String)> {
+    let mut c = client().await?;
+    let resp = c
+        .create_external_ref(CreateExternalRefRequest {
+            connection_id: payload.connection_id,
+            local_type: payload.local_type,
+            local_id: payload.local_id,
+            crm_object_type: payload.crm_object_type,
+            crm_record_id: payload.crm_record_id,
+            crm_record_url: payload.crm_record_url,
+        })
+        .await
+        .map_err(bad_request_err)?
+        .into_inner();
+    let ref_ = parse_json(&resp.json)?;
+    Ok((StatusCode::CREATED, Json(ref_)))
 }

@@ -46,6 +46,8 @@ pub struct Config {
     /// Slack-compatible incoming webhook for hot-lead alerts. Empty means the
     /// alert is recorded as not-sent rather than posted somewhere guessed.
     pub sales_alert_webhook_url: String,
+    /// gRPC address for the standalone access-control service. Empty defaults to 127.0.0.1:50093.
+    pub access_control_grpc_url: String,
     // nID identity provider (NEWAX ecosystem SSO + secrets vault)
     pub nid_base_url: String,
     pub nid_client_id: String,
@@ -147,6 +149,7 @@ impl Config {
             .and_then(|raw| raw.trim().parse::<f64>().ok())
             .filter(|value| (0.0..=1.0).contains(value));
         let sales_alert_webhook_url = env::var("SALES_ALERT_WEBHOOK_URL").unwrap_or_default();
+        let access_control_grpc_url = env::var("ACCESS_CONTROL_GRPC_URL").unwrap_or_default();
 
         let nid_base_url = env::var("NID_BASE_URL")
             .unwrap_or_else(|_| "http://localhost:4000".to_string());
@@ -215,6 +218,7 @@ impl Config {
             harvester_api_base_url,
             reply_auto_send_confidence,
             sales_alert_webhook_url,
+            access_control_grpc_url,
             nid_base_url,
             nid_client_id,
             nid_client_secret,
@@ -332,6 +336,7 @@ impl Config {
                 }
             }
             "sales_alert_webhook_url" => Self::set_string(&mut self.sales_alert_webhook_url, value),
+            "access_control_grpc_url" => Self::set_string(&mut self.access_control_grpc_url, value),
             "nid_base_url" => Self::set_string(&mut self.nid_base_url, value),
             "nid_client_id" => Self::set_string(&mut self.nid_client_id, value),
             "nid_client_secret" => Self::set_string(&mut self.nid_client_secret, value),

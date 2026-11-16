@@ -1,0 +1,104 @@
+syntax = "proto3";
+
+package newax.brand_overrides.v1;
+
+service BrandOverridesService {
+  rpc GetSummary(Empty) returns (JsonResponse);
+  rpc ListRules(ListRulesRequest) returns (JsonResponse);
+  rpc CreateRule(CreateRuleRequest) returns (JsonResponse);
+  rpc UpdateRule(UpdateRuleRequest) returns (JsonResponse);
+  rpc DeleteRule(DeleteRuleRequest) returns (JsonResponse);
+  rpc SwitchBrand(SwitchBrandRequest) returns (JsonResponse);
+  rpc GetSwitchLog(GetSwitchLogRequest) returns (JsonResponse);
+  rpc GetSettings(Empty) returns (JsonResponse);
+  rpc UpdateSettings(UpdateSettingsRequest) returns (JsonResponse);
+  rpc ListHierarchy(Empty) returns (JsonResponse);
+  rpc AddHierarchy(AddHierarchyRequest) returns (JsonResponse);
+  rpc RemoveHierarchy(RemoveHierarchyRequest) returns (JsonResponse);
+  rpc FindMatchingRules(FindMatchingRulesRequest) returns (JsonResponse);
+  rpc GetSubBrands(GetSubBrandsRequest) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message ListRulesRequest {
+  string organization_id = 1;
+  bool is_active = 2;
+  bool has_is_active = 3;
+  int32 limit = 4;
+  int32 offset = 5;
+}
+
+message CreateRuleRequest {
+  string organization_id = 1;
+  string name = 2;
+  string trigger_type = 3;
+  string from_brand_id = 4;
+  string to_brand_id = 5;
+  bool auto_switch_kb = 6;
+  bool auto_switch_ai_config = 7;
+  bool auto_switch_messenger = 8;
+}
+
+message UpdateRuleRequest {
+  string rule_id = 1;
+  string name = 2;
+  bool is_active = 3;
+  bool has_is_active = 4;
+  string to_brand_id = 5;
+}
+
+message DeleteRuleRequest {
+  string rule_id = 1;
+}
+
+message SwitchBrandRequest {
+  string conversation_id = 1;
+  string contact_id = 2;
+  string from_brand_id = 3;
+  string to_brand_id = 4;
+  string trigger_type = 5;
+  string trigger_source = 6;
+  string rule_id = 7;
+  string switched_by = 8;
+}
+
+message GetSwitchLogRequest {
+  string conversation_id = 1;
+}
+
+message UpdateSettingsRequest {
+  bool enabled = 1;
+  bool has_enabled = 2;
+  bool allow_cross_org_brands = 3;
+  bool has_allow_cross_org_brands = 4;
+  bool require_approval = 5;
+  bool has_require_approval = 6;
+  bool log_all_switches = 7;
+  bool has_log_all_switches = 8;
+}
+
+message AddHierarchyRequest {
+  string parent_brand_id = 1;
+  string sub_brand_id = 2;
+  string relationship_type = 3;
+  int32 priority = 4;
+}
+
+message RemoveHierarchyRequest {
+  string parent_brand_id = 1;
+  string sub_brand_id = 2;
+}
+
+message FindMatchingRulesRequest {
+  string from_brand_id = 1;
+  string organization_id = 2;
+}
+
+message GetSubBrandsRequest {
+  string parent_brand_id = 1;
+}
