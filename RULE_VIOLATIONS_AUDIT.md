@@ -59,7 +59,8 @@ not "confirmed clean," outside of the items explicitly listed under
 - **Rate limiting at every scope, shared across instances** (production
   readiness 7 / security 5): counters live in Redis (`crates/rate_limit`,
   sliding window, one atomic script) so every instance enforces one limit; an
-  unreachable store falls back to an in-process counter, never to no limit, and
+  unreachable store falls back to in-process `moka` counters (the documented
+  tier 1), never to no limit, and
   production refuses to start without `REDIS_URL`. Scopes: whole service, per
   IP, sign-in routes (10 a minute, 60 an hour), writes, public webhooks (own
   larger budget), per credential (hash of Authorization or X-Tenant-Key), per
