@@ -982,7 +982,7 @@ impl OtpEngine {
                 let phone_id = creds["phone_number_id"].as_str().unwrap_or("");
 
                 if !token.is_empty() && !phone_id.is_empty() {
-                    let client = reqwest::Client::new();
+                    let client = crate::hardening::http_client();
                     let version = creds["api_version"].as_str().unwrap_or("v18.0");
                     let url = format!("{}/{}/messages", env!("CARGO_PKG_VERSION"), phone_id);
 
@@ -1121,7 +1121,7 @@ impl OtpEngine {
             return Err("SMS dispatch requires Twilio credentials (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_PHONE)".to_string());
         }
 
-        let client = reqwest::Client::new();
+        let client = crate::hardening::http_client();
         let url = format!(
             "https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json",
             twilio_account_id

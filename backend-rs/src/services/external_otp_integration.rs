@@ -659,7 +659,7 @@ impl ExternalOtpIntegrationService {
         let event_type = event_type.to_string();
 
         tokio::spawn(async move {
-            let client = reqwest::Client::new();
+            let client = crate::hardening::http_client();
             let mut request = client.post(&webhook_url)
                 .header("Content-Type", "application/json")
                 .header("X-Communicator-Event", &event_type)

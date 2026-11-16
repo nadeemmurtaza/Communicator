@@ -4614,7 +4614,7 @@ pub async fn verify_discord_connection(State(state): State<AppState>) -> impl In
         }
     };
 
-    match reqwest::Client::new()
+    match crate::hardening::http_client()
         .get("https://discord.com/api/v10/@me")
         .header("Authorization", format!("Bot {token}"))
         .send()
@@ -4679,7 +4679,7 @@ pub async fn send_discord_test_message(
     }
 
     let url = format!("https://discord.com/api/v10/channels/{}/messages", channel_id);
-    match reqwest::Client::new()
+    match crate::hardening::http_client()
         .post(&url)
         .header("Authorization", format!("Bot {token}"))
         .json(&json!({ "content": message }))
@@ -4923,7 +4923,7 @@ pub async fn verify_slack_connection(State(state): State<AppState>) -> impl Into
         }
     };
 
-    match reqwest::Client::new()
+    match crate::hardening::http_client()
         .get("https://slack.com/api/api.test")
         .header("Authorization", format!("Bearer {bot_token}"))
         .send()
@@ -4994,7 +4994,7 @@ pub async fn send_slack_test_message(
 
     let form = serde_urlencoded::to_string([("channel", channel_id), ("text", message)])
         .unwrap_or_default();
-    match reqwest::Client::new()
+    match crate::hardening::http_client()
         .post("https://slack.com/api/chat.postMessage")
         .header("Authorization", format!("Bearer {bot_token}"))
         .header("Content-Type", "application/x-www-form-urlencoded")
