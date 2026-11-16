@@ -2,12 +2,14 @@
 
 mod config;
 mod db;
+mod hardening;
 mod models;
 mod routes;
 mod services;
 
 use axum::{
     body::Body,
+    middleware,
     http::{header, HeaderValue, Request, Response, StatusCode},
     response::IntoResponse,
     routing::{delete, get, patch, post, put},
@@ -17,10 +19,26 @@ use config::Config;
 use db::{init_db, AppState};
 use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 use tower_http::{
-    cors::{Any, CorsLayer},
+    cors::CorsLayer,
     services::ServeDir,
 };
 use tracing::{info, warn};
+
+fn cors_methods() -> Vec<axum::http::Method> {
+    use axum::http::Method;
+    vec![Method::GET, Method::POST, Method::PUT, Method::PATCH, Method::DELETE, Method::OPTIONS]
+}
+
+/// Only the headers the web app actually sends.
+fn cors_headers() -> Vec<axum::http::HeaderName> {
+    vec![
+        header::AUTHORIZATION,
+        header::CONTENT_TYPE,
+        header::ACCEPT,
+        axum::http::HeaderName::from_static("x-tenant-key"),
+        axum::http::HeaderName::from_static("x-brand-id"),
+    ]
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -46,7 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = Arc::new(config);
 
     let db = init_db(&config.database_url).await?;
-    let http_client = reqwest::Client::builder().build()?;
+    let http_client = hardening::http_client();
 
     let state = AppState {
         db: db.clone(),
@@ -71,8 +89,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "http://localhost:8000".parse::<HeaderValue>().unwrap_or_else(|_| HeaderValue::from_static("http://localhost:8000")),
                 tunnel_origin,
             ])
-            .allow_methods(Any)
-            .allow_headers(Any)
+            .allow_methods(cors_methods())
+            .allow_headers(cors_headers())
     } else {
         let public_origin: HeaderValue = config.public_url.parse().unwrap_or_else(|_| {
             warn!("PUBLIC_URL={:?} is not a valid origin; falling back to tunnel origin", config.public_url);
@@ -80,8 +98,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
         CorsLayer::new()
             .allow_origin([public_origin, tunnel_origin])
-            .allow_methods(Any)
-            .allow_headers(Any)
+            .allow_methods(cors_methods())
+            .allow_headers(cors_headers())
     };
 
     // Complete API Routes
@@ -1439,6 +1457,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    // Applied last so the SPA fallback (the HTML pages themselves) is covered
+    // too; a layer only wraps what is registered before it.
+    let app = app
+        .layer(middleware::from_fn_with_state(
+            hardening::RateLimiter::new(
+                std::env::var("RATE_LIMIT_PER_MINUTE").ok().and_then(|v| v.parse().ok()).unwrap_or(600),
+                std::time::Duration::from_secs(60),
+            ),
+            hardening::rate_limit,
+        ))
+        .layer(middleware::from_fn(hardening::security_headers));
+
     let host: std::net::IpAddr = config.host.parse().map_err(|e| {
         format!(
             "HOST={:?} is not a valid IP address ({e}); set HOST to an address this machine can bind",
@@ -1449,7 +1479,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Rust backend running on http://{}", addr);
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).await?;
 
     Ok(())
 }

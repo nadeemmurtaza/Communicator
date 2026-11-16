@@ -675,7 +675,7 @@ impl ShopifyStoreIntegrationService {
             }
         });
 
-        let client = reqwest::Client::new();
+        let client = crate::hardening::http_client();
         let resp = client
             .post(&url)
             .header("X-Shopify-Access-Token", access_token.as_str())

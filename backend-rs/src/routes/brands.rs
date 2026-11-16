@@ -3328,7 +3328,7 @@ pub async fn whatsapp_health(
             let api_version = creds_val["api_version"].as_str().unwrap_or("v18.0");
 
             if !token.is_empty() && !phone_id.is_empty() {
-                let client = reqwest::Client::new();
+                let client = crate::hardening::http_client();
                 let url = format!("https://graph.facebook.com/{}/{}", api_version, phone_id);
                 match client.get(&url)
                     .header("Authorization", format!("Bearer {}", token))
@@ -3790,7 +3790,7 @@ pub async fn create_whatsapp_template(
         let api_version = creds["api_version"].as_str().unwrap_or("v18.0");
 
         if !token.is_empty() && !waba_id.is_empty() {
-            let client = reqwest::Client::new();
+            let client = crate::hardening::http_client();
             let url = format!("https://graph.facebook.com/{}/{}", api_version, waba_id);
 
             let meta_body = serde_json::json!({
@@ -3877,7 +3877,7 @@ pub async fn sync_whatsapp_templates(
         return Err((StatusCode::BAD_REQUEST, Json(serde_json::json!({ "error": "No WhatsApp credentials configured" }))));
     }
 
-    let client = reqwest::Client::new();
+    let client = crate::hardening::http_client();
     let url = format!("https://graph.facebook.com/{}/{}", api_version, phone_id);
     let resp = client.get(&url)
         .header("Authorization", format!("Bearer {}", token))
@@ -4015,7 +4015,7 @@ pub async fn sync_whatsapp_profile_now(
         return Err((StatusCode::BAD_REQUEST, Json(serde_json::json!({ "error": "No WhatsApp credentials configured" }))));
     }
 
-    let client = reqwest::Client::new();
+    let client = crate::hardening::http_client();
     let url = format!("https://graph.facebook.com/{}/{}", api_version, phone_id);
     let resp = client.get(&url)
         .header("Authorization", format!("Bearer {}", token))
@@ -4115,7 +4115,7 @@ pub async fn send_whatsapp_test(
         return Err((StatusCode::BAD_REQUEST, Json(serde_json::json!({ "error": "No WhatsApp credentials configured" }))));
     }
 
-    let client = reqwest::Client::new();
+    let client = crate::hardening::http_client();
     let url = format!("https://graph.facebook.com/{}/{}", api_version, phone_id);
 
     let message_type = if body.message_type.is_empty() { "text".to_string() } else { body.message_type.clone() };
