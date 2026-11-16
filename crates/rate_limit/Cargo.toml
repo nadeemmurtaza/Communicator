@@ -1,0 +1,9 @@
+[package]
+name = "newax-rate-limit"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+redis = { version = "0.27", default-features = false, features = ["tokio-comp", "connection-manager", "script"] }
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"

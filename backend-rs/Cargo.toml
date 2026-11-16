@@ -16,6 +16,7 @@ tokio-native-tls = "0.3"
 tonic = "0.12"
 newax-proto = { path = "../crates/proto" }
 newax-reply-integration = { path = "../crates/reply_integration" }
+newax-rate-limit = { path = "../crates/rate_limit" }
 
 # Database (PostgreSQL only — shared with nID)
 sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "chrono", "uuid", "json", "migrate"] }
@@ -33,6 +34,7 @@ hmac = "0.12"
 sha2 = "0.10"
 hex = "0.4"
 urlencoding = "2.1"
+url = "2"
 
 # Environment & Logging
 dotenvy = "0.15"

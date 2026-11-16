@@ -3,6 +3,7 @@
 mod config;
 mod db;
 mod hardening;
+mod validation;
 mod models;
 mod routes;
 mod services;
@@ -62,6 +63,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let vault_secrets = services::vault_loader::load_secrets_from_nid_vault(&config).await;
     services::vault_loader::apply_vault_secrets(&mut config, &vault_secrets);
     let config = Arc::new(config);
+    hardening::init(config.app_env == "production").await?;
 
     let db = init_db(&config.database_url).await?;
     let http_client = hardening::http_client();
@@ -1460,13 +1462,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Applied last so the SPA fallback (the HTML pages themselves) is covered
     // too; a layer only wraps what is registered before it.
     let app = app
-        .layer(middleware::from_fn_with_state(
-            hardening::RateLimiter::new(
-                std::env::var("RATE_LIMIT_PER_MINUTE").ok().and_then(|v| v.parse().ok()).unwrap_or(600),
-                std::time::Duration::from_secs(60),
-            ),
-            hardening::rate_limit,
-        ))
+        .layer(middleware::from_fn(validation::gate))
+        .layer(middleware::from_fn(hardening::guard))
         .layer(middleware::from_fn(hardening::security_headers));
 
     let host: std::net::IpAddr = config.host.parse().map_err(|e| {
