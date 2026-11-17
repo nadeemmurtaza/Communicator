@@ -2,6 +2,8 @@
 
 mod config;
 mod db;
+mod hardening;
+mod validation;
 mod middleware;
 mod models;
 mod routes;
@@ -18,10 +20,26 @@ use config::Config;
 use db::{init_db, AppState};
 use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 use tower_http::{
-    cors::{Any, CorsLayer},
+    cors::CorsLayer,
     services::ServeDir,
 };
 use tracing::{info, warn};
+
+fn cors_methods() -> Vec<axum::http::Method> {
+    use axum::http::Method;
+    vec![Method::GET, Method::POST, Method::PUT, Method::PATCH, Method::DELETE, Method::OPTIONS]
+}
+
+/// Only the headers the web app actually sends.
+fn cors_headers() -> Vec<axum::http::HeaderName> {
+    vec![
+        header::AUTHORIZATION,
+        header::CONTENT_TYPE,
+        header::ACCEPT,
+        axum::http::HeaderName::from_static("x-tenant-key"),
+        axum::http::HeaderName::from_static("x-brand-id"),
+    ]
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -45,9 +63,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let vault_secrets = services::vault_loader::load_secrets_from_nid_vault(&config).await;
     services::vault_loader::apply_vault_secrets(&mut config, &vault_secrets);
     let config = Arc::new(config);
+    hardening::init(config.app_env == "production").await?;
 
     let db = init_db(&config.database_url).await?;
-    let http_client = reqwest::Client::builder().build()?;
+    let http_client = hardening::http_client();
 
     let state = AppState {
         db: db.clone(),
@@ -72,8 +91,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "http://localhost:8000".parse::<HeaderValue>().unwrap_or_else(|_| HeaderValue::from_static("http://localhost:8000")),
                 tunnel_origin,
             ])
-            .allow_methods(Any)
-            .allow_headers(Any)
+            .allow_methods(cors_methods())
+            .allow_headers(cors_headers())
     } else {
         let public_origin: HeaderValue = config.public_url.parse().unwrap_or_else(|_| {
             warn!("PUBLIC_URL={:?} is not a valid origin; falling back to tunnel origin", config.public_url);
@@ -81,8 +100,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
         CorsLayer::new()
             .allow_origin([public_origin, tunnel_origin])
-            .allow_methods(Any)
-            .allow_headers(Any)
+            .allow_methods(cors_methods())
+            .allow_headers(cors_headers())
     };
 
     // Complete API Routes
@@ -1443,6 +1462,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    // Applied last so the SPA fallback (the HTML pages themselves) is covered
+    // too; a layer only wraps what is registered before it.
+    let app = app
+        .layer(axum::middleware::from_fn(validation::gate))
+        .layer(axum::middleware::from_fn(hardening::guard))
+        .layer(axum::middleware::from_fn(hardening::security_headers));
+
     let host: std::net::IpAddr = config.host.parse().map_err(|e| {
         format!(
             "HOST={:?} is not a valid IP address ({e}); set HOST to an address this machine can bind",
@@ -1453,7 +1479,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Rust backend running on http://{}", addr);
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).await?;
 
     Ok(())
 }

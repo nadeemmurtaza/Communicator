@@ -39,10 +39,11 @@ fn extract_tenant_key(req: &Request<Body>, config: &crate::config::Config) -> St
 }
 
 /// Extract account ID from Bearer token via nID session validation.
-async fn extract_account_id(state: &AppState, req: &Request<Body>) -> String {
-    let auth_header = req.headers().get("authorization").and_then(|v| v.to_str().ok());
-    
-    if let Some(auth) = auth_header {
+///
+/// Takes the header value rather than the request: a `&Request<Body>` held
+/// across the await below makes the future non-`Send`, which axum rejects.
+async fn extract_account_id(state: &AppState, auth_header: Option<String>) -> String {
+    if let Some(auth) = auth_header.as_deref() {
         let token = if auth.starts_with("Bearer ") {
             &auth[7..]
         } else if auth.starts_with("bearer ") {
@@ -52,7 +53,7 @@ async fn extract_account_id(state: &AppState, req: &Request<Body>) -> String {
         };
         
         if !token.is_empty() {
-            if let Some(claims) = state.nid.validate_session(token).await.ok().flatten() {
+            if let Some(claims) = state.nid.validate_session(token).await {
                 return claims.account_id;
             }
         }
@@ -68,7 +69,8 @@ pub async fn rls_middleware(
     next: Next,
 ) -> impl IntoResponse {
     let tenant_key = extract_tenant_key(&req, &state.config);
-    let account_id = extract_account_id(&state, &req).await;
+    let auth_header = req.headers().get("authorization").and_then(|v| v.to_str().ok()).map(str::to_string);
+    let account_id = extract_account_id(&state, auth_header).await;
     
     // Store the RLS context in request extensions so handlers can access it
     // and so the connection middleware can set it on the DB connection.

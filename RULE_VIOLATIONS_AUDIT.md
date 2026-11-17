@@ -36,35 +36,70 @@ not "confirmed clean," outside of the items explicitly listed under
   privacy/terms files or routes found anywhere in the repo.
 - **Consent banner** (compliance 3) — no cookie/consent banner
   component found.
-- **Accessibility alt text** (compliance 16) — of 14 `<img>` tags
-  found, only 7 have `alt=`; `WhatsAppQRCode.tsx`,
-  `WhatsAppMediaComposer.tsx`, `WhatsAppMediaMessage.tsx`, and
-  `LiveChatIntegration.tsx` render images with no `alt`.
 - **Real business details** (compliance 11) — no footer/about page
   states the operating entity's name/contact/address; the "footer"
   grep hits found are WhatsApp message-template footers, unrelated.
-- **Rate limiting** (production readiness 7 / security 5) — no
-  rate-limiting crate (`tower-governor` or equivalent) in
-  `backend-rs/Cargo.toml`; existing throttling is per-OTP-provider
-  only, not API-wide.
 - **CDN** (production readiness 5) — no CDN configuration found.
 - **Queue + background jobs** (production readiness 8) — no durable
   job-queue crate; async work is ad hoc.
-- **Timeouts + retries** (production readiness 16) — several
-  `reqwest::Client::new()` calls (`external_otp_integration.rs:662`,
-  `otp_engine.rs:985,1124`, `shopify_store_integration.rs:678`) use
-  reqwest's default client, which has no timeout configured.
 - **Circuit breaker** (production readiness 17) — none found.
 - **Monitoring + alerts** (production readiness 18) — no Sentry/
   Prometheus/Datadog dependency anywhere.
 - **k6 load test** (production readiness 19) — no load-test script or
   directory.
-- **Security headers** (security 17) — no CSP/HSTS/X-Frame-Options/
-  X-Content-Type-Options middleware in `main.rs`.
-- **Lock down CORS** (security 8) — **partial violation**: the allowed
-  origins are an explicit list (not `*`, which is correct), but
-  `allow_methods(Any)` and `allow_headers(Any)` are wildcarded in both
-  the dev and prod branches of `main.rs` (~lines 66–84).
+### Fixed 2026-11-16 (Communicator, checked against a running backend)
+
+- **Security headers** (security 17): `nosniff`, `X-Frame-Options`,
+  `Referrer-Policy`, HSTS, a safe-subset CSP (`frame-ancestors`, `base-uri`,
+  `object-src`) and `Permissions-Policy` on every response, the SPA pages and
+  429s included (`backend-rs/src/hardening.rs`). A full `script-src` CSP still
+  needs the frontend's inline scripts audited.
+- **Lock down CORS** (security 8): methods and headers are an explicit list
+  (the headers the web app sends), no longer `Any`.
+- **Rate limiting at every scope, shared across instances** (production
+  readiness 7 / security 5): counters live in Redis (`crates/rate_limit`,
+  sliding window, one atomic script) so every instance enforces one limit; an
+  unreachable store falls back to in-process `moka` counters (the documented
+  tier 1), never to no limit, and
+  production refuses to start without `REDIS_URL`. Scopes: whole service, per
+  IP, sign-in routes (10 a minute, 60 an hour), writes, public webhooks (own
+  larger budget), per credential (hash of Authorization or X-Tenant-Key), per
+  phone or email on sign-in, and a lockout after repeated 401/403 or
+  malformed requests. Forwarding headers are trusted only for
+  `TRUSTED_PROXY_HOPS`. Proved with two live instances
+  (`scripts/security-smoke.sh`).
+- **Input validation** (security 6): a gate in front of every route
+  (`backend-rs/src/validation.rs`) checks path segments, query strings and JSON
+  bodies before any handler: size, depth, node and array limits, field-name
+  charset, no control, zero-width-space or direction-override characters (ZWNJ
+  and ZWJ stay allowed for Persian, Urdu and emoji), no HTML tags in short
+  text, and type rules for phone, email, slug, ids, country, currency, URLs
+  (public https for webhooks in production). Provider webhooks keep the size
+  and structure limits but not the field rules, since they carry arbitrary
+  signed payloads. The browser mirrors the rules in `apps/web/src/lib/formGuard.ts`,
+  which blocks submit, button saves and file choices until fields pass.
+  Not done: request structs do not reject unknown fields (hundreds of them),
+  and rules are by field name, so an unusual new field gets the default.
+- **Migration lock leak**: sqlx holds a session advisory lock during the run and
+  does not release it when a migration fails, so one failed migration kept the
+  lock on a pooled connection for the life of the process and no second
+  instance could start. Migrations now run on a dedicated connection that is
+  closed afterwards.
+- **Timeouts** (production readiness 16): one shared reqwest client with a 5 s
+  connect and 20 s total timeout replaces every default client. Retries and a
+  circuit breaker are still absent.
+- **Alt text** (compliance 16): the earlier finding was a false positive from a
+  line-by-line grep; every `<img>` has `alt=` on the next line.
+- Two empty directories (`crates/` and `services/in_app_messaging`) had no
+  `Cargo.toml` and broke every `cargo` command through the workspace globs;
+  removed.
+
+- **Open, found while testing**: migration `0005_client_profiles.sql` fails on a
+  fresh database ("column created_at of relation customers already exists")
+  because it uses plain `ADD COLUMN`. It is applied on existing databases, so
+  editing it would change its checksum; it needs a new migration that
+  repairs the schema, not an edit. Until then a from-scratch bootstrap
+  applies only migrations 1 to 4.
 
 ### Confirmed followed
 
