@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+// Mirrors nID's `proto/nid/events/v1/identity_events.proto` byte-for-byte.
+// These are the wire payloads nID publishes to NATS JetStream as the owner
+// of tenant/organization/brand/customer identity (COMMUNICATION.md's "who
+// owns which ID" table) — `crates/identity-sync` decodes them (via prost)
+// to build this repo's synced read-model. Not a gRPC service.
+//
+// Until `core-newax` exists to host a single shared `.proto`, this file is
+// a manually-kept copy; if either repo's message shape changes, update
+// both. Field numbers must stay in lockstep with nID's copy.
+package newax.identity.v1;
+
+message TenantEvent {
+  string event_id = 1;
+  string occurred_at = 2; // RFC3339
+  string id = 3;
+  string name = 4;
+  string slug = 5;
+  string data_residency_region = 6;
+  bool deleted = 7;
+}
+
+message OrganizationEvent {
+  string event_id = 1;
+  string occurred_at = 2;
+  string id = 3;
+  string tenant_id = 4;
+  string subject_id = 5;
+  string legal_name = 6;
+  optional string registration_number = 7;
+  optional string country_code = 8;
+  bool deleted = 9;
+}
+
+message BrandEvent {
+  string event_id = 1;
+  string occurred_at = 2;
+  string id = 3;
+  string organization_id = 4;
+  string name = 5;
+  string slug = 6;
+  bool active = 7;
+  bool deleted = 8;
+}
+
+message CustomerEvent {
+  string event_id = 1;
+  string occurred_at = 2;
+  string id = 3;
+  optional string phone = 4;
+  optional string email = 5;
+  optional string name = 6;
+  bool deleted = 7;
+}

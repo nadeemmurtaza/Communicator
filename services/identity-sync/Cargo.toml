@@ -1,0 +1,17 @@
+[package]
+name = "svc-identity-sync"
+version = "0.1.0"
+edition = "2021"
+description = "Long-running NATS JetStream consumer, not a gRPC service — keeps synced_tenant/organization/brand/customer current. See newax-identity-sync's doc comment."
+
+[[bin]]
+name = "svc-identity-sync"
+path = "src/main.rs"
+
+[dependencies]
+newax-identity-sync = { path = "../../crates/identity-sync" }
+tokio = { version = "1", features = ["full"] }
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "tls-rustls"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+dotenvy = "0.15"

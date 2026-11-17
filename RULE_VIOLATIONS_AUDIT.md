@@ -65,6 +65,34 @@ not "confirmed clean," outside of the items explicitly listed under
   origins are an explicit list (not `*`, which is correct), but
   `allow_methods(Any)` and `allow_headers(Any)` are wildcarded in both
   the dev and prod branches of `main.rs` (~lines 66–84).
+- **Found 2026-11-16 — `ECOSYSTEM.md`'s "no repo calls another repo
+  directly" and `COMMUNICATION.md`'s event-bus mandate, both
+  violated by existing (unused) scaffolding, not fixed here**:
+  `crates/nid_tenant_sync`, `nid_organization_sync`, `nid_brand_sync`
+  implement `ProcessWebhook` RPCs — a REST+HMAC webhook-receiver
+  design for tenant/org/brand sync from nID — which is exactly the
+  async "ID changed, propagate it" job `COMMUNICATION.md` assigns to
+  NATS JetStream, not webhooks. Nothing in nID actually calls these
+  endpoints (grepped nID for `ProcessWebhook`/these crate names: no
+  hits outside a generic, tenant-configurable `webhook_url` unrelated
+  to this), so it's dead code, not a live competing sync path — but
+  it's undocumented anywhere until now and should be removed or
+  explicitly superseded. Separately, migration `0064_nid_sync.sql`'s
+  views (`v_personal_profile`, `v_work_profile`, `v_user_organizations`,
+  `v_invoice_details`, `v_payment_details`, `v_subscription_details`)
+  join directly against nID's table names (`account`, `tenant`,
+  `organization`, `subject`, `profile`) as if both repos share one
+  Postgres instance; this repo's own `.env.example` shows it connects
+  to a separate `communicator` database, so these views reference
+  tables that don't exist here and cannot have ever resolved — dead
+  SQL, not applied schema, but still worth deleting rather than
+  leaving as a trap. A new, real event-bus-driven sync was added this
+  session in `crates/identity-sync` / `services/identity-sync` (see
+  nID's matching `RULE_VIOLATIONS_AUDIT.md` note and `COMMUNICATION.md`
+  for the full picture) — its tables (`synced_tenant`,
+  `synced_organization`, `synced_brand`, `synced_customer`) are
+  deliberately separate from `nid_tenants`/`nid_tenant_mapping`/
+  `nid_organization_mapping` above, not a replacement wired in yet.
 
 ### Confirmed followed
 
