@@ -72,6 +72,7 @@ pub struct VisionSettings {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct VisionSummary {
     pub total_images: i64,
     pub total_analyses: i64,
@@ -84,6 +85,7 @@ pub struct VisionSummary {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AnalysisTypeCount {
     pub analysis_type: String,
     pub count: i64,
