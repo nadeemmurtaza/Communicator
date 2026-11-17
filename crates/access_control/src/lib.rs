@@ -4,9 +4,9 @@
 //! invitations, and nID webhook mirroring.
 
 use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, FromRow};
-use uuid::Uuid;
+use sqlx::{FromRow, PgPool};
 use std::collections::HashMap;
+use uuid::Uuid;
 
 // ============================================================================
 // Data Models
@@ -236,8 +236,7 @@ pub async fn list_access_grants(
     org_id: Option<Uuid>,
     brand_id: Option<Uuid>,
 ) -> Result<Vec<AccessGrant>, StatusCode> {
-    let grants = sqlx::query_as(
-        AccessGrant,
+    let grants = sqlx::query_as::<_, AccessGrant>(
         r#"SELECT id, team_member_id, tenant_id, org_id, brand_id, access_type,
                   partnership_percentage, granted_by, status, granted_at
            FROM access_grants
@@ -245,10 +244,10 @@ pub async fn list_access_grants(
              AND (org_id IS NULL OR org_id = $2)
              AND (brand_id IS NULL OR brand_id = $3)
            ORDER BY granted_at DESC"#,
-        tenant_id,
-        org_id,
-        brand_id
     )
+    .bind(tenant_id)
+    .bind(org_id)
+    .bind(brand_id)
     .fetch_all(&state.db)
     .await
     .map_err(|_| StatusCode::InternalServerError)?;
@@ -261,25 +260,23 @@ pub async fn create_access_grant(
     req: &CreateAccessGrantRequest,
     granted_by: String,
 ) -> Result<AccessGrant, StatusCode> {
-    if req.access_type != "owner" && req.access_type != "partner" && req.access_type != "admin" && req.access_type != "member" {
+    if req.access_type != "owner"
+        && req.access_type != "partner"
+        && req.access_type != "admin"
+        && req.access_type != "member"
+    {
         return Err(StatusCode::BadRequest);
     }
-    if req.access_type == "partner" && (req.partnership_percentage.is_none() || req.partnership_percentage.unwrap() <= 0.0 || req.partnership_percentage.unwrap() > 100.0) {
+    if req.access_type == "partner"
+        && (req.partnership_percentage.is_none()
+            || req.partnership_percentage.unwrap() <= 0.0
+            || req.partnership_percentage.unwrap() > 100.0)
+    {
         return Err(StatusCode::BadRequest);
     }
-    let grant = sqlx::query_as(
-        AccessGrant,
-        r#"INSERT INTO access_grants (team_member_id, tenant_id, org_id, brand_id, access_type, partnership_percentage, granted_by, status)
+    let grant = sqlx::query_as::<_, AccessGrant>(r#"INSERT INTO access_grants (team_member_id, tenant_id, org_id, brand_id, access_type, partnership_percentage, granted_by, status)
            VALUES ($1, $2, $3, $4, $5, $6, $7, 'active')
-           RETURNING id, team_member_id, tenant_id, org_id, brand_id, access_type, partnership_percentage, granted_by, status, granted_at"#,
-        req.team_member_id,
-        tenant_id,
-        req.org_id,
-        req.brand_id,
-        req.access_type,
-        req.partnership_percentage,
-        granted_by
-    )
+           RETURNING id, team_member_id, tenant_id, org_id, brand_id, access_type, partnership_percentage, granted_by, status, granted_at"#).bind(req.team_member_id.clone()).bind(tenant_id).bind(req.org_id).bind(req.brand_id).bind(req.access_type.clone()).bind(req.partnership_percentage).bind(granted_by)
     .fetch_one(&state.db)
     .await
     .map_err(|_| StatusCode::InternalServerError)?;
@@ -293,10 +290,16 @@ pub async fn update_access_grant(
 ) -> Result<AccessGrant, StatusCode> {
     let mut sets = Vec::new();
     if let Some(ref access_type) = req.access_type {
-        sets.push(format!("access_type = '{}'", access_type.replace('\'', "''")));
+        sets.push(format!(
+            "access_type = '{}'",
+            access_type.replace('\'', "''")
+        ));
     }
     if let Some(partnership_percentage) = req.partnership_percentage {
-        sets.push(format!("partnership_percentage = {:.2}", partnership_percentage));
+        sets.push(format!(
+            "partnership_percentage = {:.2}",
+            partnership_percentage
+        ));
     }
     if let Some(ref status) = req.status {
         sets.push(format!("status = '{}'", status.replace('\'', "''")));
@@ -320,7 +323,8 @@ pub async fn revoke_access_grant(
     state: &AccessControlState,
     grant_id: Uuid,
 ) -> Result<(), StatusCode> {
-    sqlx::query("UPDATE access_grants SET status = 'revoked' WHERE id = $1", grant_id)
+    sqlx::query("UPDATE access_grants SET status = 'revoked' WHERE id = $1")
+        .bind(grant_id)
         .execute(&state.db)
         .await
         .map_err(|_| StatusCode::NotFound)?;
@@ -332,20 +336,13 @@ pub async fn transfer_ownership(
     tenant_id: String,
     req: &TransferOwnershipRequest,
 ) -> Result<AccessGrant, StatusCode> {
-    let grant = sqlx::query_as(
-        AccessGrant,
-        r#"INSERT INTO access_grants (team_member_id, tenant_id, org_id, brand_id, access_type, granted_by, status)
+    let grant = sqlx::query_as::<_, AccessGrant>(r#"INSERT INTO access_grants (team_member_id, tenant_id, org_id, brand_id, access_type, granted_by, status)
            SELECT $1, $2, $3, $4, 'owner', $1, 'active'
            WHERE NOT EXISTS (
                SELECT 1 FROM access_grants
                WHERE team_member_id = $1 AND tenant_id = $2 AND access_type = 'owner' AND status = 'active'
            )
-           RETURNING id, team_member_id, tenant_id, org_id, brand_id, access_type, partnership_percentage, granted_by, status, granted_at"#,
-        req.new_owner_id,
-        tenant_id,
-        req.org_id,
-        req.brand_id
-    )
+           RETURNING id, team_member_id, tenant_id, org_id, brand_id, access_type, partnership_percentage, granted_by, status, granted_at"#).bind(req.new_owner_id.clone()).bind(tenant_id).bind(req.org_id).bind(req.brand_id)
     .fetch_one(&state.db)
     .await
     .map_err(|_| StatusCode::Conflict)?;
@@ -358,18 +355,9 @@ pub async fn add_partner(
     req: &AddPartnerRequest,
     granted_by: String,
 ) -> Result<AccessGrant, StatusCode> {
-    let grant = sqlx::query_as(
-        AccessGrant,
-        r#"INSERT INTO access_grants (team_member_id, tenant_id, org_id, brand_id, access_type, partnership_percentage, granted_by, status)
+    let grant = sqlx::query_as::<_, AccessGrant>(r#"INSERT INTO access_grants (team_member_id, tenant_id, org_id, brand_id, access_type, partnership_percentage, granted_by, status)
            VALUES ($1, $2, $3, $4, 'partner', $5, $6, 'active')
-           RETURNING id, team_member_id, tenant_id, org_id, brand_id, access_type, partnership_percentage, granted_by, status, granted_at"#,
-        req.team_member_id,
-        tenant_id,
-        req.org_id,
-        req.brand_id,
-        req.partnership_percentage,
-        granted_by
-    )
+           RETURNING id, team_member_id, tenant_id, org_id, brand_id, access_type, partnership_percentage, granted_by, status, granted_at"#).bind(req.team_member_id.clone()).bind(tenant_id).bind(req.org_id).bind(req.brand_id).bind(req.partnership_percentage).bind(granted_by)
     .fetch_one(&state.db)
     .await
     .map_err(|_| StatusCode::InternalServerError)?;
@@ -392,14 +380,10 @@ pub async fn list_departments(
     state: &AccessControlState,
     tenant_id: String,
 ) -> Result<Vec<Department>, StatusCode> {
-    let depts = sqlx::query_as(
-        Department,
-        r#"SELECT id, tenant_id, name, slug, default_permissions, icon, color, inherited_from_tenant, created_at, updated_at
+    let depts = sqlx::query_as::<_, Department>(r#"SELECT id, tenant_id, name, slug, default_permissions, icon, color, inherited_from_tenant, created_at, updated_at
            FROM departments
            WHERE tenant_id = $1
-           ORDER BY name"#,
-        tenant_id
-    )
+           ORDER BY name"#).bind(tenant_id)
     .fetch_all(&state.db)
     .await
     .map_err(|_| StatusCode::InternalServerError)?;
@@ -412,24 +396,16 @@ pub async fn create_department(
     req: &CreateDepartmentRequest,
 ) -> Result<Department, StatusCode> {
     let slug = req.slug.clone().unwrap_or_else(|| {
-        req.name.to_lowercase()
+        req.name
+            .to_lowercase()
             .chars()
             .filter(|c| c.is_alphanumeric() || *c == '-')
             .map(|c| if c.is_whitespace() { '-' } else { c })
             .collect()
     });
-    let dept = sqlx::query_as(
-        Department,
-        r#"INSERT INTO departments (tenant_id, name, slug, default_permissions, icon, color)
+    let dept = sqlx::query_as::<_, Department>(r#"INSERT INTO departments (tenant_id, name, slug, default_permissions, icon, color)
            VALUES ($1, $2, $3, $4, $5, $6)
-           RETURNING id, tenant_id, name, slug, default_permissions, icon, color, inherited_from_tenant, created_at, updated_at"#,
-        tenant_id,
-        req.name,
-        slug,
-        req.default_permissions.clone(),
-        req.icon.as_deref(),
-        req.color.as_deref()
-    )
+           RETURNING id, tenant_id, name, slug, default_permissions, icon, color, inherited_from_tenant, created_at, updated_at"#).bind(tenant_id).bind(req.name.clone()).bind(slug).bind(req.default_permissions.clone()).bind(req.icon.as_deref()).bind(req.color.as_deref())
     .fetch_one(&state.db)
     .await
     .map_err(|_| StatusCode::InternalServerError)?;
@@ -475,27 +451,23 @@ pub async fn assign_to_department(
     dept_id: Uuid,
     req: &AssignDepartmentRequest,
 ) -> Result<DepartmentAssignment, StatusCode> {
-    let tenant_id: String = sqlx::query_scalar("SELECT tenant_id FROM departments WHERE id = $1", dept_id)
+    let tenant_id: String = sqlx::query_scalar("SELECT tenant_id FROM departments WHERE id = $1")
+        .bind(dept_id)
         .fetch_one(&state.db)
         .await
         .map_err(|_| StatusCode::NotFound)?;
     let scope = req.scope.clone().unwrap_or_else(|| {
-        if req.brand_id.is_some() { "brand".to_string() }
-        else if req.org_id.is_some() { "organization".to_string() }
-        else { "tenant".to_string() }
+        if req.brand_id.is_some() {
+            "brand".to_string()
+        } else if req.org_id.is_some() {
+            "organization".to_string()
+        } else {
+            "tenant".to_string()
+        }
     });
-    let assignment = sqlx::query_as(
-        DepartmentAssignment,
-        r#"INSERT INTO department_assignments (team_member_id, department_id, tenant_id, org_id, brand_id, scope)
+    let assignment = sqlx::query_as::<_, DepartmentAssignment>(r#"INSERT INTO department_assignments (team_member_id, department_id, tenant_id, org_id, brand_id, scope)
            VALUES ($1, $2, $3, $4, $5, $6)
-           RETURNING id, team_member_id, department_id, tenant_id, org_id, brand_id, scope, created_at"#,
-        req.team_member_id,
-        dept_id,
-        tenant_id,
-        req.org_id,
-        req.brand_id,
-        scope
-    )
+           RETURNING id, team_member_id, department_id, tenant_id, org_id, brand_id, scope, created_at"#).bind(req.team_member_id.clone()).bind(dept_id).bind(tenant_id).bind(req.org_id).bind(req.brand_id).bind(scope)
     .fetch_one(&state.db)
     .await
     .map_err(|_| StatusCode::InternalServerError)?;
@@ -506,7 +478,8 @@ pub async fn remove_department_assignment(
     state: &AccessControlState,
     assignment_id: Uuid,
 ) -> Result<(), StatusCode> {
-    sqlx::query("DELETE FROM department_assignments WHERE id = $1", assignment_id)
+    sqlx::query("DELETE FROM department_assignments WHERE id = $1")
+        .bind(assignment_id)
         .execute(&state.db)
         .await
         .map_err(|_| StatusCode::NotFound)?;
@@ -522,11 +495,21 @@ pub async fn resolve_effective_permissions(
     org_id: Option<Uuid>,
     brand_id: Option<Uuid>,
 ) -> Result<EffectivePermissions, StatusCode> {
-    let grant = check_entity_access(state, team_member_id.clone(), tenant_id.clone(), org_id, brand_id).await?;
-    let access_type = grant.as_ref().map(|g| g.access_type.clone()).unwrap_or_else(|| "none".to_string());
+    let grant = check_entity_access(
+        state,
+        team_member_id.clone(),
+        tenant_id.clone(),
+        org_id,
+        brand_id,
+    )
+    .await?;
+    let access_type = grant
+        .as_ref()
+        .map(|g| g.access_type.clone())
+        .unwrap_or_else(|| "none".to_string());
     if access_type == "owner" || access_type == "partner" {
         let all_perms: Vec<String> = sqlx::query_scalar(
-            r#"SELECT DISTINCT permission_key FROM permission_catalog ORDER BY permission_key"#
+            r#"SELECT DISTINCT permission_key FROM permission_catalog ORDER BY permission_key"#,
         )
         .fetch_all(&state.db)
         .await
@@ -550,11 +533,11 @@ pub async fn resolve_effective_permissions(
              AND (ra.org_id IS NULL OR ra.org_id = $3)
              AND (ra.brand_id IS NULL OR ra.brand_id = $4)
            ORDER BY 1"#,
-        team_member_id.clone(),
-        tenant_id.clone(),
-        org_id,
-        brand_id
     )
+    .bind(team_member_id.clone())
+    .bind(tenant_id.clone())
+    .bind(org_id)
+    .bind(brand_id)
     .fetch_all(&state.db)
     .await
     .map_err(|_| StatusCode::InternalServerError)?;
@@ -566,11 +549,11 @@ pub async fn resolve_effective_permissions(
            WHERE ra.team_member_id = $1 AND ra.tenant_id = $2
              AND (ra.org_id IS NULL OR ra.org_id = $3)
              AND (ra.brand_id IS NULL OR ra.brand_id = $4)"#,
-        team_member_id.clone(),
-        tenant_id.clone(),
-        org_id,
-        brand_id
     )
+    .bind(team_member_id.clone())
+    .bind(tenant_id.clone())
+    .bind(org_id)
+    .bind(brand_id)
     .fetch_all(&state.db)
     .await
     .map_err(|_| StatusCode::InternalServerError)?;
@@ -579,9 +562,9 @@ pub async fn resolve_effective_permissions(
            FROM department_assignments da
            JOIN departments d ON da.department_id = d.id
            WHERE da.team_member_id = $1 AND d.tenant_id = $2"#,
-        team_member_id.clone(),
-        tenant_id.clone()
     )
+    .bind(team_member_id.clone())
+    .bind(tenant_id.clone())
     .fetch_all(&state.db)
     .await
     .map_err(|_| StatusCode::InternalServerError)?;
@@ -604,9 +587,7 @@ pub async fn check_entity_access(
     org_id: Option<Uuid>,
     brand_id: Option<Uuid>,
 ) -> Result<Option<AccessGrant>, StatusCode> {
-    let grant = sqlx::query_as(
-        AccessGrant,
-        r#"SELECT id, team_member_id, tenant_id, org_id, brand_id, access_type,
+    let grant = sqlx::query_as::<_, AccessGrant>(r#"SELECT id, team_member_id, tenant_id, org_id, brand_id, access_type,
                   partnership_percentage, granted_by, status, granted_at
            FROM access_grants
            WHERE team_member_id = $1 AND tenant_id = $2 AND status = 'active'
@@ -614,12 +595,7 @@ pub async fn check_entity_access(
              AND (brand_id IS NULL OR brand_id = $4)
            ORDER BY
                CASE access_type WHEN 'owner' THEN 1 WHEN 'partner' THEN 2 WHEN 'admin' THEN 3 WHEN 'member' THEN 4 END
-           LIMIT 1"#,
-        team_member_id,
-        tenant_id,
-        org_id,
-        brand_id
-    )
+           LIMIT 1"#).bind(team_member_id).bind(tenant_id).bind(org_id).bind(brand_id)
     .fetch_optional(&state.db)
     .await
     .map_err(|_| StatusCode::InternalServerError)?;
@@ -631,11 +607,10 @@ pub async fn check_entity_access(
 pub async fn get_permission_catalog(
     state: &AccessControlState,
 ) -> Result<Vec<PermissionCatalogGroup>, StatusCode> {
-    let entries = sqlx::query_as(
-        PermissionCatalogEntry,
+    let entries = sqlx::query_as::<_, PermissionCatalogEntry>(
         r#"SELECT id, group_name, service_name, permission_key, label, description, created_at
            FROM permission_catalog
-           ORDER BY group_name, service_name, permission_key"#
+           ORDER BY group_name, service_name, permission_key"#,
     )
     .fetch_all(&state.db)
     .await
@@ -671,11 +646,10 @@ pub async fn get_permission_catalog(
 pub async fn get_all_permissions(
     state: &AccessControlState,
 ) -> Result<Vec<PermissionCatalogEntry>, StatusCode> {
-    let entries = sqlx::query_as(
-        PermissionCatalogEntry,
+    let entries = sqlx::query_as::<_, PermissionCatalogEntry>(
         r#"SELECT id, group_name, service_name, permission_key, label, description, created_at
            FROM permission_catalog
-           ORDER BY group_name, service_name, permission_key"#
+           ORDER BY group_name, service_name, permission_key"#,
     )
     .fetch_all(&state.db)
     .await
@@ -687,14 +661,13 @@ pub async fn get_permissions_by_group(
     state: &AccessControlState,
     group_name: &str,
 ) -> Result<Vec<PermissionCatalogEntry>, StatusCode> {
-    let entries = sqlx::query_as(
-        PermissionCatalogEntry,
+    let entries = sqlx::query_as::<_, PermissionCatalogEntry>(
         r#"SELECT id, group_name, service_name, permission_key, label, description, created_at
            FROM permission_catalog
            WHERE group_name = $1
            ORDER BY service_name, permission_key"#,
-        group_name
     )
+    .bind(group_name)
     .fetch_all(&state.db)
     .await
     .map_err(|_| StatusCode::InternalServerError)?;
@@ -709,29 +682,20 @@ pub async fn list_invitations(
     status: Option<&str>,
 ) -> Result<Vec<Invitation>, StatusCode> {
     let invitations = if let Some(status) = status {
-        sqlx::query_as(
-            Invitation,
-            r#"SELECT id, tenant_id, email, username, invited_by, org_id, brand_id, scope,
+        sqlx::query_as::<_, Invitation>(r#"SELECT id, tenant_id, email, username, invited_by, org_id, brand_id, scope,
                       role_definition_id, department_id, status, expires_at, accepted_at, accepted_by, created_at
                FROM invitations
                WHERE tenant_id = $1 AND status = $2
-               ORDER BY created_at DESC"#,
-            tenant_id,
-            status
-        )
+               ORDER BY created_at DESC"#).bind(tenant_id).bind(status)
         .fetch_all(&state.db)
         .await
         .map_err(|_| StatusCode::InternalServerError)?
     } else {
-        sqlx::query_as(
-            Invitation,
-            r#"SELECT id, tenant_id, email, username, invited_by, org_id, brand_id, scope,
+        sqlx::query_as::<_, Invitation>(r#"SELECT id, tenant_id, email, username, invited_by, org_id, brand_id, scope,
                       role_definition_id, department_id, status, expires_at, accepted_at, accepted_by, created_at
                FROM invitations
                WHERE tenant_id = $1
-               ORDER BY created_at DESC"#,
-            tenant_id
-        )
+               ORDER BY created_at DESC"#).bind(tenant_id)
         .fetch_all(&state.db)
         .await
         .map_err(|_| StatusCode::InternalServerError)?
@@ -747,21 +711,9 @@ pub async fn send_email_invitation(
 ) -> Result<Invitation, StatusCode> {
     let scope = req.scope.clone().unwrap_or_else(|| "tenant".to_string());
     let expires_at = chrono::Utc::now() + chrono::Duration::days(7);
-    let invitation = sqlx::query_as(
-        Invitation,
-        r#"INSERT INTO invitations (tenant_id, email, invited_by, org_id, brand_id, scope, role_definition_id, department_id, status, expires_at)
+    let invitation = sqlx::query_as::<_, Invitation>(r#"INSERT INTO invitations (tenant_id, email, invited_by, org_id, brand_id, scope, role_definition_id, department_id, status, expires_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', $9)
-           RETURNING id, tenant_id, email, username, invited_by, org_id, brand_id, scope, role_definition_id, department_id, status, expires_at, accepted_at, accepted_by, created_at"#,
-        tenant_id,
-        req.email,
-        invited_by,
-        req.org_id,
-        req.brand_id,
-        scope,
-        req.role_definition_id,
-        req.department_id,
-        expires_at
-    )
+           RETURNING id, tenant_id, email, username, invited_by, org_id, brand_id, scope, role_definition_id, department_id, status, expires_at, accepted_at, accepted_by, created_at"#).bind(tenant_id).bind(req.email.clone()).bind(invited_by).bind(req.org_id).bind(req.brand_id).bind(scope).bind(req.role_definition_id).bind(req.department_id).bind(expires_at)
     .fetch_one(&state.db)
     .await
     .map_err(|_| StatusCode::InternalServerError)?;
@@ -776,21 +728,9 @@ pub async fn send_username_invitation(
 ) -> Result<Invitation, StatusCode> {
     let scope = req.scope.clone().unwrap_or_else(|| "tenant".to_string());
     let expires_at = chrono::Utc::now() + chrono::Duration::days(7);
-    let invitation = sqlx::query_as(
-        Invitation,
-        r#"INSERT INTO invitations (tenant_id, username, invited_by, org_id, brand_id, scope, role_definition_id, department_id, status, expires_at)
+    let invitation = sqlx::query_as::<_, Invitation>(r#"INSERT INTO invitations (tenant_id, username, invited_by, org_id, brand_id, scope, role_definition_id, department_id, status, expires_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', $9)
-           RETURNING id, tenant_id, email, username, invited_by, org_id, brand_id, scope, role_definition_id, department_id, status, expires_at, accepted_at, accepted_by, created_at"#,
-        tenant_id,
-        req.username,
-        invited_by,
-        req.org_id,
-        req.brand_id,
-        scope,
-        req.role_definition_id,
-        req.department_id,
-        expires_at
-    )
+           RETURNING id, tenant_id, email, username, invited_by, org_id, brand_id, scope, role_definition_id, department_id, status, expires_at, accepted_at, accepted_by, created_at"#).bind(tenant_id).bind(req.username.clone()).bind(invited_by).bind(req.org_id).bind(req.brand_id).bind(scope).bind(req.role_definition_id).bind(req.department_id).bind(expires_at)
     .fetch_one(&state.db)
     .await
     .map_err(|_| StatusCode::InternalServerError)?;
@@ -802,14 +742,9 @@ pub async fn accept_invitation(
     invitation_id: Uuid,
     accepted_by: String,
 ) -> Result<Invitation, StatusCode> {
-    let invitation = sqlx::query_as(
-        Invitation,
-        r#"UPDATE invitations SET status = 'accepted', accepted_at = NOW(), accepted_by = $2
+    let invitation = sqlx::query_as::<_, Invitation>(r#"UPDATE invitations SET status = 'accepted', accepted_at = NOW(), accepted_by = $2
            WHERE id = $1 AND status = 'pending' AND expires_at > NOW()
-           RETURNING id, tenant_id, email, username, invited_by, org_id, brand_id, scope, role_definition_id, department_id, status, expires_at, accepted_at, accepted_by, created_at"#,
-        invitation_id,
-        accepted_by
-    )
+           RETURNING id, tenant_id, email, username, invited_by, org_id, brand_id, scope, role_definition_id, department_id, status, expires_at, accepted_at, accepted_by, created_at"#).bind(invitation_id).bind(accepted_by)
     .fetch_one(&state.db)
     .await
     .map_err(|_| StatusCode::NotFound)?;
@@ -820,7 +755,8 @@ pub async fn revoke_invitation(
     state: &AccessControlState,
     invitation_id: Uuid,
 ) -> Result<(), StatusCode> {
-    sqlx::query("UPDATE invitations SET status = 'revoked' WHERE id = $1 AND status = 'pending'", invitation_id)
+    sqlx::query("UPDATE invitations SET status = 'revoked' WHERE id = $1 AND status = 'pending'")
+        .bind(invitation_id)
         .execute(&state.db)
         .await
         .map_err(|_| StatusCode::NotFound)?;
@@ -838,14 +774,16 @@ pub async fn handle_nid_access_webhook(
     if event == "access.grant.created" || event == "access.grant.updated" {
         if let Some(tenant_id) = data.get("tenantId").and_then(|v| v.as_str()) {
             if let Some(team_member_id) = data.get("accountId").and_then(|v| v.as_str()) {
-                let access_type = data.get("accessType").and_then(|v| v.as_str()).unwrap_or("member");
-                let partnership_percentage = data.get("partnershipPercentage").and_then(|v| v.as_f64());
-                let _ = sqlx::query(
-                    r#"INSERT INTO access_grants (team_member_id, tenant_id, access_type, partnership_percentage, granted_by, status)
+                let access_type = data
+                    .get("accessType")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("member");
+                let partnership_percentage =
+                    data.get("partnershipPercentage").and_then(|v| v.as_f64());
+                let _ = sqlx::query(r#"INSERT INTO access_grants (team_member_id, tenant_id, access_type, partnership_percentage, granted_by, status)
                        VALUES ($1, $2, $3, $4, $1, 'active')
                        ON CONFLICT (team_member_id, tenant_id, org_id, brand_id)
-                       DO UPDATE SET access_type = $3, partnership_percentage = $4, status = 'active'"#,
-                )
+                       DO UPDATE SET access_type = $3, partnership_percentage = $4, status = 'active'"#)
                 .bind(team_member_id)
                 .bind(tenant_id)
                 .bind(access_type)
@@ -869,7 +807,10 @@ pub async fn handle_nid_department_webhook(
         if let Some(tenant_id) = data.get("tenantId").and_then(|v| v.as_str()) {
             let name = data.get("name").and_then(|v| v.as_str()).unwrap_or("");
             let name_lower = name.to_lowercase();
-            let slug = data.get("slug").and_then(|v| v.as_str()).unwrap_or(name_lower.as_str());
+            let slug = data
+                .get("slug")
+                .and_then(|v| v.as_str())
+                .unwrap_or(name_lower.as_str());
             let icon = data.get("icon").and_then(|v| v.as_str());
             let color = data.get("color").and_then(|v| v.as_str());
             let _ = sqlx::query(
@@ -901,15 +842,19 @@ pub async fn handle_nid_role_webhook(
         if let Some(tenant_id) = data.get("tenantId").and_then(|v| v.as_str()) {
             let name = data.get("name").and_then(|v| v.as_str()).unwrap_or("");
             let name_lower = name.to_lowercase();
-            let slug = data.get("slug").and_then(|v| v.as_str()).unwrap_or(name_lower.as_str());
+            let slug = data
+                .get("slug")
+                .and_then(|v| v.as_str())
+                .unwrap_or(name_lower.as_str());
             let description = data.get("description").and_then(|v| v.as_str());
-            let permissions = data.get("permissions").cloned().unwrap_or_else(|| serde_json::json!([]));
-            let _ = sqlx::query(
-                r#"INSERT INTO tenant_role_definitions (tenant_id, name, slug, description, permissions, is_built_in)
+            let permissions = data
+                .get("permissions")
+                .cloned()
+                .unwrap_or_else(|| serde_json::json!([]));
+            let _ = sqlx::query(r#"INSERT INTO tenant_role_definitions (tenant_id, name, slug, description, permissions, is_built_in)
                    VALUES ($1, $2, $3, $4, $5, false)
                    ON CONFLICT (tenant_id, slug)
-                   DO UPDATE SET name = $2, description = $4, permissions = $5, updated_at = NOW()"#,
-            )
+                   DO UPDATE SET name = $2, description = $4, permissions = $5, updated_at = NOW()"#)
             .bind(tenant_id)
             .bind(name)
             .bind(slug)

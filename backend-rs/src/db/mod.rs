@@ -99,12 +99,19 @@ pub async fn init_db(database_url: &str) -> Result<DbPool, sqlx::Error> {
     // Run sqlx migrations from the migrations/ directory.
     // This replaces the previous inline CREATE TABLE + ensure_column approach.
     const MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!();
-    match MIGRATOR.run(&pool).await {
+    // Run on a dedicated connection that is closed afterwards. sqlx takes a
+    // session-level advisory lock for the run and does not release it when a
+    // migration fails, so on a shared pooled connection a single failed
+    // migration kept the lock for the life of the process and no second
+    // instance could ever start. Closing the connection releases it.
+    let migrate_pool = PgPoolOptions::new().max_connections(1).connect(database_url).await?;
+    match MIGRATOR.run(&migrate_pool).await {
         Ok(_) => info!("sqlx migrations applied successfully"),
         Err(err) => {
             warn!("sqlx migration error: {err}");
         }
     }
+    migrate_pool.close().await;
 
     // Initialize RLS GUC variables so they are available for current_setting()
     // These are session-level defaults; the middleware overrides them per-request.

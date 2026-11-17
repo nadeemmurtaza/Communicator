@@ -1,9 +1,17 @@
 mod generated {
-    include!("generated/communicator.access_control.v1.rs");
+    tonic::include_proto!("newax.access_control.v1");
 }
 
 use generated::access_control_server::{AccessControl, AccessControlServer};
 use generated::*;
+// Proto messages share names with the request structs in newax_access_control.
+// Explicit imports win over the two glob imports; handlers that deserialize the
+// JSON body qualify the library type as `newax_access_control::...`.
+use generated::{
+    AddPartnerRequest, CreateAccessGrantRequest, CreateDepartmentRequest,
+    SendEmailInvitationRequest, SendUsernameInvitationRequest, TransferOwnershipRequest,
+    UpdateAccessGrantRequest, UpdateDepartmentRequest,
+};
 use newax_access_control::*;
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -55,7 +63,7 @@ impl AccessControl for AccessControlServiceImpl {
         request: Request<CreateAccessGrantRequest>,
     ) -> Result<Response<CreateAccessGrantResponse>, Status> {
         let msg = request.into_inner();
-        let req: CreateAccessGrantRequest =
+        let req: newax_access_control::CreateAccessGrantRequest =
             serde_json::from_str(&msg.body).map_err(|e| Status::invalid_argument(e.to_string()))?;
         let granted_by = req.team_member_id.clone();
         match create_access_grant(&self.state, msg.tenant_id, &req, granted_by).await {
@@ -76,7 +84,7 @@ impl AccessControl for AccessControlServiceImpl {
     ) -> Result<Response<UpdateAccessGrantResponse>, Status> {
         let msg = request.into_inner();
         let grant_id = parse_uuid_required(&msg.grant_id)?;
-        let req: UpdateAccessGrantRequest =
+        let req: newax_access_control::UpdateAccessGrantRequest =
             serde_json::from_str(&msg.body).map_err(|e| Status::invalid_argument(e.to_string()))?;
         match update_access_grant(&self.state, grant_id, &req).await {
             Ok(v) => Ok(Response::new(UpdateAccessGrantResponse {

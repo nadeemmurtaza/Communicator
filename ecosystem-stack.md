@@ -146,8 +146,12 @@ Honest status against the plan above, not papered over:
 - **Database: compliant.** SQLx + PostgreSQL, as planned.
   `docs/schema-reference/*.prisma` is schema-*modeling* only —
   confirmed no `@prisma/client` dependency anywhere in this repo.
-- **Cache: not implemented.** No `moka`, no Redis, in this repo today.
-  There is currently no caching layer at all, not a non-compliant one.
+- **Cache: partly implemented, for rate limiting only.** Tier 1 (`moka`,
+  in-process) and tier 2 (Redis, shared) both exist, in
+  `crates/rate_limit`, used by the rate limiter and nothing else. Redis is
+  required in production (`REDIS_URL`); in development, or if Redis is
+  unreachable, the same limits run from `moka` per instance and never fail
+  open. Application data is still uncached.
 - **Frontend: not compliant, and not a quick fix.** `apps/web` is
   React + Vite + Tailwind, not Svelte, and talks REST, not Connect.
   This is ~150 existing pages, not a prototype stub — re-platforming

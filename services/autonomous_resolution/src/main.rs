@@ -24,7 +24,7 @@ fn json_response(v: serde_json::Value) -> JsonResponse {
     JsonResponse { json: v.to_string() }
 }
 
-fn parse_json(s: &str) -> Result<serde_json::Value, Status> {
+fn parse_json<T: serde::de::DeserializeOwned>(s: &str) -> Result<T, Status> {
     serde_json::from_str(s).map_err(|e| Status::invalid_argument(e.to_string()))
 }
 
