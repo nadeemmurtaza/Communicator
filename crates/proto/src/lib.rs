@@ -165,3 +165,9 @@ pub mod copilot_reviewer {
         tonic::include_proto!("newax.copilot_reviewer.v1");
     }
 }
+
+pub mod identity_events {
+    pub mod v1 {
+        tonic::include_proto!("newax.identity.v1");
+    }
+}

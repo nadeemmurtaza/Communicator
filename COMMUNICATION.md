@@ -211,3 +211,36 @@ for the corresponding tech-stack compliance note:
   handle third parties (Communicator's Meta/TikTok integration).
   Nothing to change there; this doc just makes the existing pattern
   explicit.
+- **Stale relative to nID's copy of this file as of 2026-11-16**: nID's
+  `COMMUNICATION.md` carries a 2026-11-15 update (split-service counts)
+  and a 2026-11-16 update (the event-bus slice below) that hadn't
+  reached this copy. Re-sync from nID (or `core-newax` once it exists)
+  rather than trust this file's split-service counts/examples above.
+
+### Update 2026-11-16: a first real async-path slice, still not the real bus
+
+Mirrors nID's copy of this same section — see there for the full
+detail (event contract, what's published, flagged interim NATS,
+what's not done). This repo's side of it:
+
+- **`crates/identity-sync` / `services/identity-sync`**: a durable
+  NATS JetStream pull consumer (not a gRPC service) subscribed to
+  `newax.identity.>`, decoding `TenantEvent`/`OrganizationEvent`/
+  `BrandEvent`/`CustomerEvent` (manually-copied `.proto` — see that
+  crate's doc comment) and upserting `synced_tenant`/
+  `synced_organization`/`synced_brand`/`synced_customer`
+  (`backend-rs/migrations/0073_identity_sync.sql`), deduped on
+  `event_id` via `identity_sync_processed_event`. These are
+  deliberately new, separate tables — never treated as this repo's
+  source of truth for those IDs; nID is.
+- **Found and flagged, not fixed, while doing this**: this repo
+  already had unused webhook-based tenant/org/brand sync scaffolding
+  (`crates/nid_tenant_sync`/`nid_organization_sync`/`nid_brand_sync`)
+  and migration `0064_nid_sync.sql`'s views assuming a literally
+  shared Postgres instance with nID — both predate this slice,
+  neither matches this doc's event-bus mandate, and nothing on nID's
+  side calls the webhook endpoints. See `RULE_VIOLATIONS_AUDIT.md`.
+- **Not done**: runtime verification against a live NATS server (none
+  was available in this session — both sides only `cargo check`
+  clean), and the Module Gateway/Pingora synchronous path, same as
+  nID's note.
