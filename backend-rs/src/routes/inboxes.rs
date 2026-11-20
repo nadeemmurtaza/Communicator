@@ -1669,7 +1669,7 @@ pub async fn get_channels_health(State(state): State<AppState>) -> Result<impl I
 
     // 1. WhatsApp: probe Meta Graph API
     let (wa_real, wa_err, wa_info) = if wa_missing.is_empty() {
-        let (token, phone_id) = crate::services::meta_sync::resolve_meta_credentials(&state).await;
+        let (token, phone_id) = crate::routes::meta_sync_client::resolve_meta_credentials(&state).await;
         let t = usable(Some(token.as_str()));
         let p = usable(Some(phone_id.as_str()));
         match (t, p) {
@@ -1851,7 +1851,7 @@ pub async fn get_whatsapp_channel(State(state): State<AppState>) -> Json<Value> 
         .unwrap_or(Value::Null);
     let creds = inbox_credentials(inbox.as_ref(), &mut warnings);
 
-    let (raw_token, raw_phone_id) = crate::services::meta_sync::resolve_meta_credentials(&state).await;
+    let (raw_token, raw_phone_id) = crate::routes::meta_sync_client::resolve_meta_credentials(&state).await;
     let token = usable(Some(raw_token.as_str()));
     let phone_id = usable(Some(raw_phone_id.as_str()));
 
@@ -1988,7 +1988,7 @@ pub async fn update_whatsapp_channel(
 }
 
 pub async fn verify_whatsapp_connection(State(state): State<AppState>) -> impl IntoResponse {
-    let (raw_token, raw_phone_id) = crate::services::meta_sync::resolve_meta_credentials(&state).await;
+    let (raw_token, raw_phone_id) = crate::routes::meta_sync_client::resolve_meta_credentials(&state).await;
     let token = match usable(Some(raw_token.as_str())) {
         Some(v) => v,
         None => {
@@ -2067,7 +2067,7 @@ pub async fn verify_whatsapp_connection(State(state): State<AppState>) -> impl I
 }
 
 pub async fn list_channel_whatsapp_templates(State(state): State<AppState>) -> impl IntoResponse {
-    let (raw_token, _) = crate::services::meta_sync::resolve_meta_credentials(&state).await;
+    let (raw_token, _) = crate::routes::meta_sync_client::resolve_meta_credentials(&state).await;
     let token = match usable(Some(raw_token.as_str())) {
         Some(v) => v,
         None => {
@@ -2187,7 +2187,7 @@ pub async fn send_whatsapp_test_message(
         Err(resp) => return resp,
     };
 
-    let (raw_token, raw_phone_id) = crate::services::meta_sync::resolve_meta_credentials(&state).await;
+    let (raw_token, raw_phone_id) = crate::routes::meta_sync_client::resolve_meta_credentials(&state).await;
     let token = match usable(Some(raw_token.as_str())) {
         Some(v) => v,
         None => {
@@ -2330,8 +2330,8 @@ pub async fn list_whatsapp_events(State(state): State<AppState>) -> impl IntoRes
 }
 
 pub async fn get_whatsapp_profile(State(state): State<AppState>) -> impl IntoResponse {
-    let (wa_token, wa_phone_id) = crate::services::meta_sync::resolve_meta_credentials(&state).await;
-    let profile = crate::services::meta_sync::fetch_meta_business_profile(
+    let (wa_token, wa_phone_id) = crate::routes::meta_sync_client::resolve_meta_credentials(&state).await;
+    let profile = crate::routes::meta_sync_client::fetch_meta_business_profile(
         &state,
         &wa_token,
         &wa_phone_id,
@@ -2345,7 +2345,7 @@ pub async fn update_whatsapp_profile(
     State(state): State<AppState>,
     Json(payload): Json<serde_json::Value>,
 ) -> impl IntoResponse {
-    let (raw_token, raw_phone_id) = crate::services::meta_sync::resolve_meta_credentials(&state).await;
+    let (raw_token, raw_phone_id) = crate::routes::meta_sync_client::resolve_meta_credentials(&state).await;
     let token = match usable(Some(raw_token.as_str())) {
         Some(v) => v,
         None => return err_response(StatusCode::SERVICE_UNAVAILABLE, &missing_text("WhatsApp business profile update", &["meta access token"])),
@@ -2433,7 +2433,7 @@ pub async fn register_whatsapp_phone(
         }
     };
 
-    let (raw_token, raw_phone_id) = crate::services::meta_sync::resolve_meta_credentials(&state).await;
+    let (raw_token, raw_phone_id) = crate::routes::meta_sync_client::resolve_meta_credentials(&state).await;
     let token = match usable(Some(raw_token.as_str())) {
         Some(v) => v,
         None => return err_response(StatusCode::SERVICE_UNAVAILABLE, &missing_text("WhatsApp number registration", &["meta access token"])),

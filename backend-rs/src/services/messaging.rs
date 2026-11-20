@@ -17,7 +17,8 @@
 //!   caller cannot "forget" to handle the failure case.
 
 use crate::db::{AppState, DbPool};
-use crate::services::{business_hours, channels, compliance};
+use crate::services::{business_hours, channels};
+use newax_compliance as compliance;
 use serde_json::Value;
 use sqlx::Row;
 

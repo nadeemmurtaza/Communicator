@@ -1,0 +1,104 @@
+syntax = "proto3";
+
+package newax.nid_brand_sync.v1;
+
+service NidBrandSyncService {
+  rpc Webhook(WebhookRequest) returns (Empty);
+  rpc ListBrands(ListBrandsRequest) returns (BrandsResponse);
+  rpc GetBrand(IdRequest) returns (NidBrand);
+  rpc GetConnection(Empty) returns (BrandConnectionSettings);
+  rpc UpdateConnection(UpdateConnectionRequest) returns (BrandConnectionSettings);
+  rpc HealthCheck(Empty) returns (JsonResponse);
+  rpc GetSyncLog(GetSyncLogRequest) returns (SyncLogResponse);
+  rpc CreateRedirect(CreateRedirectRequest) returns (JsonResponse);
+  rpc RedirectCallback(RedirectCallbackRequest) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+// ——— Webhook ———
+
+message WebhookRequest {
+  string json = 1;
+}
+
+// ——— Brands ———
+
+message NidBrand {
+  string id = 1;
+  string nid_brand_id = 2;
+  string nid_org_id = 3;
+  string nid_tenant_id = 4;
+  string name = 5;
+  string slug = 6;
+  optional string description = 7;
+  optional string bio = 8;
+  optional string website = 9;
+  optional string email = 10;
+  optional string phone = 11;
+  optional string primary_color = 12;
+  optional string secondary_color = 13;
+  bool active = 14;
+  string synced_at = 15;
+  string created_at = 16;
+}
+
+message ListBrandsRequest {
+  optional string tenant_id = 1;
+}
+
+message BrandsResponse {
+  repeated NidBrand brands = 1;
+}
+
+message IdRequest {
+  string id = 1;
+}
+
+// ——— Connection ———
+
+message BrandConnectionSettings {
+  optional string webhook_url = 1;
+  optional string webhook_secret = 2;
+  int32 polling_interval_sec = 3;
+  bool enabled = 4;
+  string health_status = 5;
+}
+
+message UpdateConnectionRequest {
+  string json = 1;
+}
+
+// ——— Sync Log ———
+
+message GetSyncLogRequest {
+  int64 limit = 1;
+}
+
+message SyncLogEntry {
+  string id = 1;
+  string nid_brand_id = 2;
+  string event_type = 3;
+  string status = 4;
+  optional string error_msg = 5;
+  string created_at = 6;
+}
+
+message SyncLogResponse {
+  repeated SyncLogEntry entries = 1;
+}
+
+// ——— Redirect ———
+
+message CreateRedirectRequest {
+  string json = 1;
+}
+
+message RedirectCallbackRequest {
+  string state = 1;
+  string brand_id = 2;
+}

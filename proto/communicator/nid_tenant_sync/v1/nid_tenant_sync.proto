@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package newax.nid_tenant_sync.v1;
+
+service NidTenantSyncService {
+  rpc ProcessWebhook(ProcessWebhookRequest) returns (JsonResponse);
+  rpc ListTenants(ListTenantsRequest) returns (JsonResponse);
+  rpc GetTenant(GetTenantRequest) returns (JsonResponse);
+  rpc GetConnectionHealth(GetConnectionHealthRequest) returns (JsonResponse);
+  rpc UpdateConnectionSettings(UpdateConnectionSettingsRequest) returns (JsonResponse);
+  rpc CreateRedirectSession(CreateRedirectSessionRequest) returns (JsonResponse);
+  rpc HandleRedirectCallback(HandleRedirectCallbackRequest) returns (JsonResponse);
+  rpc GetRedirectSession(GetRedirectSessionRequest) returns (JsonResponse);
+  rpc GetSyncLog(GetSyncLogRequest) returns (JsonResponse);
+}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message JsonBody {
+  string json = 1;
+}
+
+message ProcessWebhookRequest {
+  string payload = 1;
+  string signature = 2;
+}
+
+message ListTenantsRequest {}
+
+message GetTenantRequest {
+  string tenant_id = 1;
+}
+
+message GetConnectionHealthRequest {}
+
+message UpdateConnectionSettingsRequest {
+  JsonBody body = 1;
+}
+
+message CreateRedirectSessionRequest {
+  JsonBody body = 1;
+}
+
+message HandleRedirectCallbackRequest {
+  string state = 1;
+  string tenant_id = 2;
+  string error = 3;
+}
+
+message GetRedirectSessionRequest {
+  string state = 1;
+}
+
+message GetSyncLogRequest {
+  int64 limit = 1;
+  string event_type = 2;
+}

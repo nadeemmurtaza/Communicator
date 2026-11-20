@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package newax.services_sequences.v1;
+
+service ServicesSequencesService {
+  rpc ListServices(ListServicesRequest) returns (JsonResponse);
+  rpc GetService(IdRequest) returns (JsonResponse);
+  rpc CreateService(CreateServiceRequest) returns (JsonResponse);
+  rpc ListSequences(Empty) returns (JsonResponse);
+  rpc CreateSequence(CreateSequenceRequest) returns (JsonResponse);
+  rpc SequenceVariantStats(IdRequest) returns (JsonResponse);
+}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message JsonBody {
+  string json = 1;
+}
+
+message Empty {}
+
+message IdRequest {
+  string id = 1;
+}
+
+message ListServicesRequest {
+  string tenant_key = 1;
+}
+
+message CreateServiceRequest {
+  JsonBody body = 1;
+  string tenant_key = 2;
+}
+
+message CreateSequenceRequest {
+  JsonBody body = 1;
+}

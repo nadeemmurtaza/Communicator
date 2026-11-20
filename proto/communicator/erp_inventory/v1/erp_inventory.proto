@@ -1,0 +1,266 @@
+syntax = "proto3";
+
+package newax.erp_inventory.v1;
+
+service ErpInventoryService {
+  // Locations
+  rpc ListLocations(ListLocationsRequest) returns (JsonResponse);
+  rpc GetLocation(GetLocationRequest) returns (JsonResponse);
+  rpc CreateLocation(CreateLocationRequest) returns (JsonResponse);
+  rpc UpdateLocation(UpdateLocationRequest) returns (JsonResponse);
+
+  // Variant Location Stock
+  rpc GetStockByLocation(GetStockByLocationRequest) returns (JsonResponse);
+  rpc GetStockByVariant(GetStockByVariantRequest) returns (JsonResponse);
+  rpc UpdateVariantStock(UpdateVariantStockRequest) returns (JsonResponse);
+  rpc GetTotalStock(GetTotalStockRequest) returns (JsonResponse);
+
+  // Stock Movements
+  rpc ListStockMovements(ListStockMovementsRequest) returns (JsonResponse);
+  rpc GetStockMovement(GetStockMovementRequest) returns (JsonResponse);
+  rpc CreateStockMovement(CreateStockMovementRequest) returns (JsonResponse);
+  rpc GetMovementsByVariant(GetMovementsByVariantRequest) returns (JsonResponse);
+
+  // Stock Variances
+  rpc ListStockVariances(ListStockVariancesRequest) returns (JsonResponse);
+  rpc GetStockVariance(GetStockVarianceRequest) returns (JsonResponse);
+  rpc CreateStockVariance(CreateStockVarianceRequest) returns (JsonResponse);
+  rpc ResolveVariance(ResolveVarianceRequest) returns (JsonResponse);
+
+  // Spot Check Policies
+  rpc ListSpotCheckPolicies(ListSpotCheckPoliciesRequest) returns (JsonResponse);
+  rpc CreateSpotCheckPolicy(CreateSpotCheckPolicyRequest) returns (JsonResponse);
+
+  // Spot Checks
+  rpc ListSpotChecks(ListSpotChecksRequest) returns (JsonResponse);
+  rpc GetSpotCheck(GetSpotCheckRequest) returns (JsonResponse);
+  rpc CreateSpotCheck(CreateSpotCheckRequest) returns (JsonResponse);
+  rpc StartSpotCheck(StartSpotCheckRequest) returns (JsonResponse);
+  rpc CompleteSpotCheck(CompleteSpotCheckRequest) returns (JsonResponse);
+
+  // Spot Check Lines
+  rpc ListSpotCheckLines(ListSpotCheckLinesRequest) returns (JsonResponse);
+  rpc CreateSpotCheckLine(CreateSpotCheckLineRequest) returns (JsonResponse);
+  rpc UpdateSpotCheckLine(UpdateSpotCheckLineRequest) returns (JsonResponse);
+
+  // Variant Sales Stats
+  rpc GetVariantSalesStat(GetVariantSalesStatRequest) returns (JsonResponse);
+  rpc ListSlowMovers(ListSlowMoversRequest) returns (JsonResponse);
+
+  // Variant Forecasts
+  rpc GetVariantForecast(GetVariantForecastRequest) returns (JsonResponse);
+  rpc CreateVariantForecast(CreateVariantForecastRequest) returns (JsonResponse);
+  rpc ListForecasts(ListForecastsRequest) returns (JsonResponse);
+
+  // Markdown Suggestions
+  rpc ListMarkdownSuggestions(ListMarkdownSuggestionsRequest) returns (JsonResponse);
+  rpc CreateMarkdownSuggestion(CreateMarkdownSuggestionRequest) returns (JsonResponse);
+  rpc UpdateMarkdownSuggestionStatus(UpdateMarkdownSuggestionStatusRequest) returns (JsonResponse);
+
+  // Lots
+  rpc ListLots(ListLotsRequest) returns (JsonResponse);
+  rpc GetLot(GetLotRequest) returns (JsonResponse);
+  rpc GetExpiringLots(GetExpiringLotsRequest) returns (JsonResponse);
+  rpc CreateLot(CreateLotRequest) returns (JsonResponse);
+
+  // Lot Stock
+  rpc ListLotStock(ListLotStockRequest) returns (JsonResponse);
+  rpc CreateLotStock(CreateLotStockRequest) returns (JsonResponse);
+
+  // Lot Allocations
+  rpc ListLotAllocations(ListLotAllocationsRequest) returns (JsonResponse);
+  rpc CreateLotAllocation(CreateLotAllocationRequest) returns (JsonResponse);
+
+  // Serialized Units
+  rpc ListSerializedUnits(ListSerializedUnitsRequest) returns (JsonResponse);
+  rpc GetSerializedUnit(GetSerializedUnitRequest) returns (JsonResponse);
+  rpc GetSerializedUnitBySerial(GetSerializedUnitBySerialRequest) returns (JsonResponse);
+  rpc CreateSerializedUnit(CreateSerializedUnitRequest) returns (JsonResponse);
+  rpc UpdateSerializedUnitStatus(UpdateSerializedUnitStatusRequest) returns (JsonResponse);
+
+  // Stock Counts
+  rpc ListStockCounts(ListStockCountsRequest) returns (JsonResponse);
+  rpc GetStockCount(GetStockCountRequest) returns (JsonResponse);
+  rpc CreateStockCount(CreateStockCountRequest) returns (JsonResponse);
+  rpc StartStockCount(StartStockCountRequest) returns (JsonResponse);
+  rpc CompleteStockCount(CompleteStockCountRequest) returns (JsonResponse);
+  rpc CancelStockCount(CancelStockCountRequest) returns (JsonResponse);
+
+  // Stock Count Lines
+  rpc ListStockCountLines(ListStockCountLinesRequest) returns (JsonResponse);
+  rpc CreateStockCountLine(CreateStockCountLineRequest) returns (JsonResponse);
+  rpc UpdateStockCountLine(UpdateStockCountLineRequest) returns (JsonResponse);
+
+  // Stats
+  rpc GetInventoryStats(GetInventoryStatsRequest) returns (JsonResponse);
+}
+
+message JsonResponse {
+  string json = 1;
+}
+
+// Generic JSON body for requests that pass through the full JSON payload
+message JsonBody {
+  string json = 1;
+}
+
+// Locations
+message ListLocationsRequest {
+  bool has_is_active = 1;
+  bool is_active = 2;
+}
+message GetLocationRequest { string id = 1; }
+message CreateLocationRequest { JsonBody body = 1; }
+message UpdateLocationRequest {
+  string id = 1;
+  JsonBody body = 2;
+}
+
+// Variant Location Stock
+message GetStockByLocationRequest { string location_id = 1; }
+message GetStockByVariantRequest { string variant_id = 1; }
+message UpdateVariantStockRequest {
+  string variant_id = 1;
+  string location_id = 2;
+  int32 quantity = 3;
+}
+message GetTotalStockRequest { string variant_id = 1; }
+
+// Stock Movements
+message ListStockMovementsRequest {
+  string variant_id = 1;
+  string reason = 2;
+  string location_id = 3;
+  int64 limit = 4;
+  int64 offset = 5;
+}
+message GetStockMovementRequest { string id = 1; }
+message CreateStockMovementRequest { JsonBody body = 1; }
+message GetMovementsByVariantRequest {
+  string variant_id = 1;
+  int64 limit = 2;
+}
+
+// Stock Variances
+message ListStockVariancesRequest {
+  string status = 1;
+  string variant_id = 2;
+  int64 limit = 3;
+  int64 offset = 4;
+}
+message GetStockVarianceRequest { string id = 1; }
+message CreateStockVarianceRequest { JsonBody body = 1; }
+message ResolveVarianceRequest {
+  string id = 1;
+  JsonBody body = 2;
+}
+
+// Spot Check Policies
+message ListSpotCheckPoliciesRequest {
+  bool has_is_active = 1;
+  bool is_active = 2;
+}
+message CreateSpotCheckPolicyRequest { JsonBody body = 1; }
+
+// Spot Checks
+message ListSpotChecksRequest {
+  string location_id = 1;
+  string status = 2;
+  int64 limit = 3;
+  int64 offset = 4;
+}
+message GetSpotCheckRequest { string id = 1; }
+message CreateSpotCheckRequest { JsonBody body = 1; }
+message StartSpotCheckRequest { string id = 1; }
+message CompleteSpotCheckRequest { string id = 1; }
+
+// Spot Check Lines
+message ListSpotCheckLinesRequest { string spot_check_id = 1; }
+message CreateSpotCheckLineRequest { JsonBody body = 1; }
+message UpdateSpotCheckLineRequest {
+  string id = 1;
+  JsonBody body = 2;
+}
+
+// Variant Sales Stats
+message GetVariantSalesStatRequest { string variant_id = 1; }
+message ListSlowMoversRequest {
+  int64 limit = 1;
+  int64 offset = 2;
+}
+
+// Variant Forecasts
+message GetVariantForecastRequest { string variant_id = 1; }
+message CreateVariantForecastRequest { JsonBody body = 1; }
+message ListForecastsRequest {
+  int64 limit = 1;
+  int64 offset = 2;
+}
+
+// Markdown Suggestions
+message ListMarkdownSuggestionsRequest {
+  string status = 1;
+  int64 limit = 2;
+  int64 offset = 3;
+}
+message CreateMarkdownSuggestionRequest { JsonBody body = 1; }
+message UpdateMarkdownSuggestionStatusRequest {
+  string id = 1;
+  JsonBody body = 2;
+}
+
+// Lots
+message ListLotsRequest {
+  string product_variant_id = 1;
+  int64 limit = 2;
+  int64 offset = 3;
+}
+message GetLotRequest { string id = 1; }
+message GetExpiringLotsRequest { int32 days = 1; }
+message CreateLotRequest { JsonBody body = 1; }
+
+// Lot Stock
+message ListLotStockRequest { string lot_id = 1; }
+message CreateLotStockRequest { JsonBody body = 1; }
+
+// Lot Allocations
+message ListLotAllocationsRequest { string lot_id = 1; }
+message CreateLotAllocationRequest { JsonBody body = 1; }
+
+// Serialized Units
+message ListSerializedUnitsRequest {
+  string product_variant_id = 1;
+  string status = 2;
+  int64 limit = 3;
+  int64 offset = 4;
+}
+message GetSerializedUnitRequest { string id = 1; }
+message GetSerializedUnitBySerialRequest { string serial_number = 1; }
+message CreateSerializedUnitRequest { JsonBody body = 1; }
+message UpdateSerializedUnitStatusRequest {
+  string id = 1;
+  JsonBody body = 2;
+}
+
+// Stock Counts
+message ListStockCountsRequest {
+  string status = 1;
+  int64 limit = 2;
+  int64 offset = 3;
+}
+message GetStockCountRequest { string id = 1; }
+message CreateStockCountRequest { JsonBody body = 1; }
+message StartStockCountRequest { string id = 1; }
+message CompleteStockCountRequest { string id = 1; }
+message CancelStockCountRequest { string id = 1; }
+
+// Stock Count Lines
+message ListStockCountLinesRequest { string stock_count_id = 1; }
+message CreateStockCountLineRequest { JsonBody body = 1; }
+message UpdateStockCountLineRequest {
+  string id = 1;
+  JsonBody body = 2;
+}
+
+// Stats
+message GetInventoryStatsRequest {}

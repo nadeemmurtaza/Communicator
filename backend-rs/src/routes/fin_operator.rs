@@ -1,24 +1,17 @@
-﻿//! Fin Operator — API endpoints (Phase 17).
-//!
-//! Endpoints:
-//! - GET  /operator/summary              — Get operator dashboard summary
-//! - GET  /operator/config               — Get operator configuration
-//! - PUT  /operator/config               — Update operator configuration
-//! - POST /operator/scan                 — Run a full operator scan
-//! - GET  /operator/proposals            — List proposals with filters
-//! - GET  /operator/proposals/{id}       — Get a single proposal
-//! - POST /operator/proposals/{id}/approve  — Approve a proposal
-//! - POST /operator/proposals/{id}/dismiss  — Dismiss a proposal
-//! - GET  /operator/logs                 — Get performance logs
-//! - GET  /operator/snapshots            — Get metrics snapshots
+//! Fin Operator — thin gRPC client forwarding to svc-fin-operator
 
-use crate::db::AppState;
-use crate::services::fin_operator;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
-use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde::Deserialize;
+
+use crate::db::AppState;
+
+use newax_proto::fin_operator::v1::fin_operator_service_client::FinOperatorServiceClient;
+use newax_proto::fin_operator::v1::{
+    Empty, UpdateConfigRequest, ListProposalsRequest, IdRequest,
+    ApproveProposalRequest, DismissProposalRequest, ListLogsRequest, ListSnapshotsRequest, JsonBody,
+};
 
 #[derive(Deserialize, Default)]
 pub struct ProposalQueryParams {
@@ -38,104 +31,90 @@ pub struct SnapshotQueryParams {
     pub limit: Option<i32>,
 }
 
+async fn client(state: &AppState) -> Result<FinOperatorServiceClient<tonic::transport::Channel>, (StatusCode, String)> {
+    let url = if state.config.fin_operator_grpc_url.is_empty() {
+        "http://127.0.0.1:50104".to_string()
+    } else {
+        state.config.fin_operator_grpc_url.clone()
+    };
+    FinOperatorServiceClient::connect(url)
+        .await
+        .map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, format!("gRPC connection failed: {}", e)))
+}
+
+fn parse_json_resp(resp: tonic::Response<newax_proto::fin_operator::v1::JsonResponse>) -> serde_json::Value {
+    let json_str = resp.into_inner().json;
+    serde_json::from_str(&json_str).unwrap_or_else(|_| serde_json::json!({"raw": json_str}))
+}
+
 /// GET /operator/summary
 pub async fn get_summary(
     State(state): State<AppState>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    match fin_operator::get_summary(&state).await {
-        Ok(summary) => {
-            let val = serde_json::to_value(&summary).unwrap_or_else(|_| json!({}));
-            Ok(Json(val))
-        }
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({"error": e.to_string()})),
-        )),
-    }
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let resp = c.get_summary(tonic::Request::new(Empty {})).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parse_json_resp(resp)))
 }
 
 /// GET /operator/config
 pub async fn get_config(
     State(state): State<AppState>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    match fin_operator::get_config(&state).await {
-        Ok(config) => {
-            let val = serde_json::to_value(&config).unwrap_or_else(|_| json!({}));
-            Ok(Json(val))
-        }
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({"error": e.to_string()})),
-        )),
-    }
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let resp = c.get_config(tonic::Request::new(Empty {})).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parse_json_resp(resp)))
 }
 
 /// PUT /operator/config
 pub async fn update_config(
     State(state): State<AppState>,
     Json(body): Json<serde_json::Value>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    match fin_operator::update_config(&state, &body).await {
-        Ok(config) => {
-            let val = serde_json::to_value(&config).unwrap_or_else(|_| json!({}));
-            Ok(Json(val))
-        }
-        Err((status, msg)) => Err((status, Json(json!({"error": msg})))),
-    }
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let json_str = serde_json::to_string(&body).map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let req = UpdateConfigRequest { body: Some(JsonBody { json: json_str }) };
+    let resp = c.update_config(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parse_json_resp(resp)))
 }
 
 /// POST /operator/scan
 pub async fn run_scan(
     State(state): State<AppState>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    match fin_operator::run_scan(&state).await {
-        Ok(result) => {
-            let val = serde_json::to_value(&result).unwrap_or_else(|_| json!({}));
-            Ok(Json(val))
-        }
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({"error": e.to_string()})),
-        )),
-    }
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let resp = c.run_scan(tonic::Request::new(Empty {})).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parse_json_resp(resp)))
 }
 
 /// GET /operator/proposals
 pub async fn list_proposals(
     State(state): State<AppState>,
     Query(params): Query<ProposalQueryParams>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let status = params.status.as_deref();
-    let proposal_type = params.proposal_type.as_deref();
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let status = params.status.unwrap_or_default();
+    let proposal_type = params.proposal_type.unwrap_or_default();
     let limit = params.limit.unwrap_or(50);
-
-    match fin_operator::list_proposals(&state, status, proposal_type, limit).await {
-        Ok(proposals) => {
-            let val = serde_json::to_value(&proposals).unwrap_or_else(|_| json!([]));
-            Ok(Json(json!({
-                "proposals": val,
-                "total": proposals.len(),
-            })))
-        }
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({"error": e.to_string()})),
-        )),
-    }
+    let req = ListProposalsRequest { status, proposal_type, limit };
+    let resp = c.list_proposals(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parse_json_resp(resp)))
 }
 
 /// GET /operator/proposals/{id}
 pub async fn get_proposal(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    match fin_operator::get_proposal(&state, &id).await {
-        Ok(proposal) => {
-            let val = serde_json::to_value(&proposal).unwrap_or_else(|_| json!({}));
-            Ok(Json(val))
-        }
-        Err((status, msg)) => Err((status, Json(json!({"error": msg})))),
-    }
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let req = IdRequest { id };
+    let resp = c.get_proposal(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parse_json_resp(resp)))
 }
 
 /// POST /operator/proposals/{id}/approve
@@ -143,16 +122,13 @@ pub async fn approve_proposal(
     State(state): State<AppState>,
     Path(id): Path<String>,
     Json(body): Json<serde_json::Value>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
     let reviewer = body.get("reviewer").and_then(|v| v.as_str()).unwrap_or("admin").to_string();
-
-    match fin_operator::approve_proposal(&state, &id, &reviewer).await {
-        Ok(proposal) => {
-            let val = serde_json::to_value(&proposal).unwrap_or_else(|_| json!({}));
-            Ok(Json(val))
-        }
-        Err((status, msg)) => Err((status, Json(json!({"error": msg})))),
-    }
+    let req = ApproveProposalRequest { id, reviewer };
+    let resp = c.approve_proposal(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parse_json_resp(resp)))
 }
 
 /// POST /operator/proposals/{id}/dismiss
@@ -160,59 +136,38 @@ pub async fn dismiss_proposal(
     State(state): State<AppState>,
     Path(id): Path<String>,
     Json(body): Json<serde_json::Value>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
     let reviewer = body.get("reviewer").and_then(|v| v.as_str()).unwrap_or("admin").to_string();
-
-    match fin_operator::dismiss_proposal(&state, &id, &reviewer).await {
-        Ok(()) => Ok(Json(json!({
-            "message": "Proposal dismissed",
-            "id": id,
-        }))),
-        Err((status, msg)) => Err((status, Json(json!({"error": msg})))),
-    }
+    let req = DismissProposalRequest { id, reviewer };
+    let resp = c.dismiss_proposal(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parse_json_resp(resp)))
 }
 
 /// GET /operator/logs
 pub async fn list_logs(
     State(state): State<AppState>,
     Query(params): Query<LogQueryParams>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let action_type = params.action_type.as_deref();
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let action_type = params.action_type.unwrap_or_default();
     let limit = params.limit.unwrap_or(50);
-
-    match fin_operator::list_logs(&state, action_type, limit).await {
-        Ok(logs) => {
-            let val = serde_json::to_value(&logs).unwrap_or_else(|_| json!([]));
-            Ok(Json(json!({
-                "logs": val,
-                "total": logs.len(),
-            })))
-        }
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({"error": e.to_string()})),
-        )),
-    }
+    let req = ListLogsRequest { action_type, limit };
+    let resp = c.list_logs(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parse_json_resp(resp)))
 }
 
 /// GET /operator/snapshots
 pub async fn list_snapshots(
     State(state): State<AppState>,
     Query(params): Query<SnapshotQueryParams>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
     let limit = params.limit.unwrap_or(20);
-
-    match fin_operator::list_snapshots(&state, limit).await {
-        Ok(snapshots) => {
-            let val = serde_json::to_value(&snapshots).unwrap_or_else(|_| json!([]));
-            Ok(Json(json!({
-                "snapshots": val,
-                "total": snapshots.len(),
-            })))
-        }
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({"error": e.to_string()})),
-        )),
-    }
+    let req = ListSnapshotsRequest { limit };
+    let resp = c.list_snapshots(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parse_json_resp(resp)))
 }

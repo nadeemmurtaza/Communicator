@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package newax.whatsapp_campaigns.v1;
+
+service WhatsAppCampaignsService {
+  rpc ListCampaigns(ListCampaignsRequest) returns (JsonResponse);
+  rpc CreateCampaign(CreateCampaignRequest) returns (JsonResponse);
+  rpc GetCampaign(GetCampaignRequest) returns (JsonResponse);
+  rpc DeleteCampaign(DeleteCampaignRequest) returns (JsonResponse);
+  rpc StartCampaign(StartCampaignRequest) returns (JsonResponse);
+  rpc PauseCampaign(PauseCampaignRequest) returns (JsonResponse);
+  rpc ResumeCampaign(ResumeCampaignRequest) returns (JsonResponse);
+  rpc CancelCampaign(CancelCampaignRequest) returns (JsonResponse);
+  rpc GetCampaignContacts(GetCampaignContactsRequest) returns (JsonResponse);
+  rpc AddCampaignContacts(AddCampaignContactsRequest) returns (JsonResponse);
+  rpc RetryCampaign(RetryCampaignRequest) returns (JsonResponse);
+  rpc GetCampaignAnalytics(GetCampaignAnalyticsRequest) returns (JsonResponse);
+}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message ListCampaignsRequest {
+  string brand_id = 1;
+  string status = 2;
+}
+
+message CreateCampaignRequest {
+  string brand_id = 1;
+  string name = 2;
+  string campaign_type = 3;
+  string template_flow_id = 4;
+  string scheduled_at = 5;
+}
+
+message GetCampaignRequest {
+  string campaign_id = 1;
+}
+
+message DeleteCampaignRequest {
+  string campaign_id = 1;
+}
+
+message StartCampaignRequest {
+  string campaign_id = 1;
+}
+
+message PauseCampaignRequest {
+  string campaign_id = 1;
+}
+
+message ResumeCampaignRequest {
+  string campaign_id = 1;
+}
+
+message CancelCampaignRequest {
+  string campaign_id = 1;
+}
+
+message GetCampaignContactsRequest {
+  string campaign_id = 1;
+}
+
+message AddCampaignContactsRequest {
+  string campaign_id = 1;
+  repeated string contact_ids = 2;
+}
+
+message RetryCampaignRequest {
+  string campaign_id = 1;
+}
+
+message GetCampaignAnalyticsRequest {
+  string campaign_id = 1;
+}

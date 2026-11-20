@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package newax.otp_engine.v1;
+
+service OtpEngineService {
+  rpc GenerateAndSend(GenerateAndSendRequest) returns (JsonResponse);
+  rpc Verify(VerifyRequest) returns (JsonResponse);
+  rpc GetChannelConfig(GetChannelConfigRequest) returns (JsonResponse);
+  rpc UpdateChannelConfig(UpdateChannelConfigRequest) returns (JsonResponse);
+  rpc ListRecords(ListRecordsRequest) returns (JsonResponse);
+  rpc GetAuditLog(GetAuditLogRequest) returns (JsonResponse);
+  rpc GetStats(GetStatsRequest) returns (JsonResponse);
+}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message GenerateAndSendRequest {
+  string brand_id = 1;
+  string recipient = 2;
+  string recipient_type = 3;
+  string purpose = 4;
+  string channel = 5;
+  string metadata = 6;
+  string ip_address = 7;
+  string user_agent = 8;
+}
+
+message VerifyRequest {
+  string otp_id = 1;
+  string code = 2;
+  string ip_address = 3;
+  string user_agent = 4;
+}
+
+message GetChannelConfigRequest {
+  string brand_id = 1;
+}
+
+message UpdateChannelConfigRequest {
+  string brand_id = 1;
+  string whatsapp_enabled = 2;
+  bool has_whatsapp_enabled = 3;
+  string email_enabled = 4;
+  bool has_email_enabled = 5;
+  string sms_enabled = 6;
+  bool has_sms_enabled = 7;
+  string in_app_enabled = 8;
+  bool has_in_app_enabled = 9;
+  string default_channel = 10;
+  bool has_default_channel = 11;
+  string code_length = 12;
+  bool has_code_length = 13;
+  string code_charset = 14;
+  bool has_code_charset = 15;
+  string ttl_seconds = 16;
+  bool has_ttl_seconds = 17;
+  string max_attempts = 18;
+  bool has_max_attempts = 19;
+  string rate_limit_per_minute = 20;
+  bool has_rate_limit_per_minute = 21;
+  string rate_limit_per_hour = 22;
+  bool has_rate_limit_per_hour = 23;
+  string cooldown_seconds = 24;
+  bool has_cooldown_seconds = 25;
+  string lockout_seconds = 26;
+  bool has_lockout_seconds = 27;
+  string template_name = 28;
+  bool has_template_name = 29;
+  string whatsapp_message_template = 30;
+  bool has_whatsapp_message_template = 31;
+  string sms_message_template = 32;
+  bool has_sms_message_template = 33;
+}
+
+message ListRecordsRequest {
+  string brand_id = 1;
+  int32 limit = 2;
+}
+
+message GetAuditLogRequest {
+  string brand_id = 1;
+  int32 limit = 2;
+}
+
+message GetStatsRequest {
+  string brand_id = 1;
+}

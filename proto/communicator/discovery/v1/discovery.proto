@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package newax.discovery.v1;
+
+service DiscoveryService {
+  rpc ListDiscoveryTemplates(QueryRequest) returns (JsonResponse);
+  rpc ListInquiries(QueryRequest) returns (JsonResponse);
+  rpc GetInquiry(IdRequest) returns (JsonResponse);
+  rpc ListCampaignTemplates(QueryRequest) returns (JsonResponse);
+  rpc SyncCampaignTemplateStatus(QueryRequest) returns (JsonResponse);
+}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message EmptyRequest {}
+
+message IdRequest {
+  string id = 1;
+}
+
+message QueryRequest {
+  string json = 1;
+}
+
+message CreateRequest {
+  string json = 1;
+}
+
+message UpdateRequest {
+  string id = 1;
+  string json = 2;
+}

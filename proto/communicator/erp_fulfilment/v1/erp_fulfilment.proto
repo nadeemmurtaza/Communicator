@@ -1,0 +1,110 @@
+syntax = "proto3";
+
+package newax.erp_fulfilment.v1;
+
+service ErpFulfilmentService {
+  // Summary
+  rpc GetSummary(Empty) returns (JsonResponse);
+
+  // Shipping Zones
+  rpc ListShippingZones(ListShippingZonesRequest) returns (JsonResponse);
+  rpc GetShippingZone(IdRequest) returns (JsonResponse);
+  rpc CreateShippingZone(CreateShippingZoneRequest) returns (JsonResponse);
+  rpc UpdateShippingZone(UpdateShippingZoneRequest) returns (JsonResponse);
+  rpc DeleteShippingZone(IdRequest) returns (Empty);
+
+  // Shipping Methods
+  rpc ListShippingMethods(ListShippingMethodsRequest) returns (JsonResponse);
+  rpc GetShippingMethod(IdRequest) returns (JsonResponse);
+  rpc CreateShippingMethod(CreateShippingMethodRequest) returns (JsonResponse);
+  rpc UpdateShippingMethod(UpdateShippingMethodRequest) returns (JsonResponse);
+  rpc DeleteShippingMethod(IdRequest) returns (Empty);
+
+  // Shipping Rates
+  rpc ListShippingRates(Empty) returns (JsonResponse);
+  rpc CreateShippingRate(CreateShippingRateRequest) returns (JsonResponse);
+  rpc GetShippingRate(IdRequest) returns (JsonResponse);
+  rpc UpdateShippingRate(UpdateShippingRateRequest) returns (JsonResponse);
+  rpc DeleteShippingRate(IdRequest) returns (Empty);
+
+  // Return Reasons
+  rpc ListReturnReasons(Empty) returns (JsonResponse);
+
+  // Return Requests (RMA)
+  rpc ListReturnRequests(Empty) returns (JsonResponse);
+  rpc GetReturnRequest(IdRequest) returns (JsonResponse);
+  rpc CreateReturnRequest(CreateReturnRequestRequest) returns (JsonResponse);
+  rpc UpdateReturnStatus(UpdateReturnStatusRequest) returns (JsonResponse);
+  rpc InspectReturnItem(InspectReturnItemRequest) returns (JsonResponse);
+  rpc GetReturnStats(Empty) returns (JsonResponse);
+
+  // Manifests
+  rpc ListManifests(Empty) returns (JsonResponse);
+  rpc DispatchManifest(IdRequest) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message IdRequest {
+  string id = 1;
+}
+
+// ——— Shipping Zones ———
+
+message ListShippingZonesRequest {
+  bool activeOnly = 1;
+}
+
+message CreateShippingZoneRequest {
+  string json = 1;
+}
+
+message UpdateShippingZoneRequest {
+  string zone_id = 1;
+  string json = 2;
+}
+
+// ——— Shipping Methods ———
+
+message ListShippingMethodsRequest {
+  bool activeOnly = 1;
+}
+
+message CreateShippingMethodRequest {
+  string json = 1;
+}
+
+message UpdateShippingMethodRequest {
+  string method_id = 1;
+  string json = 2;
+}
+
+// ——— Shipping Rates ———
+
+message CreateShippingRateRequest {
+  string json = 1;
+}
+
+message UpdateShippingRateRequest {
+  string rate_id = 1;
+  string json = 2;
+}
+
+// ——— Return Requests ———
+
+message CreateReturnRequestRequest {
+  string json = 1;
+}
+
+message UpdateReturnStatusRequest {
+  string return_id = 1;
+  string json = 2;
+}
+
+message InspectReturnItemRequest {
+  string json = 1;
+}

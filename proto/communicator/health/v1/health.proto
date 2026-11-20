@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package newax.health.v1;
+
+service HealthService {
+  rpc Check(EmptyRequest) returns (JsonResponse);
+}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message EmptyRequest {}

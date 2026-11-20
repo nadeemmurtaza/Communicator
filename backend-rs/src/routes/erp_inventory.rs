@@ -1,10 +1,16 @@
 use axum::{Json, extract::{Path, Query, State}, http::StatusCode, routing::{get, post, put}};
 use std::collections::HashMap;
-use serde::Deserialize;
-use crate::db::DbPool;
 use crate::AppState;
-use crate::models::*;
-use crate::services::erp_inventory::ErpInventoryService;
+use serde_json::Value;
+
+type ErpInventoryClient = newax_proto::erp_inventory::v1::erp_inventory_service_client::ErpInventoryServiceClient<tonic::transport::Channel>;
+
+async fn client(state: &AppState) -> Result<ErpInventoryClient, (StatusCode, String)> {
+    let endpoint = std::env::var("ERP_INVENTORY_GRPC_URL").unwrap_or("http://127.0.0.1:50101".to_string());
+    ErpInventoryClient::connect(endpoint)
+        .await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, format!("erp_inventory grpc: {}", e)))
+}
 
 // ============================================================
 // Locations
@@ -13,47 +19,67 @@ use crate::services::erp_inventory::ErpInventoryService;
 pub async fn list_locations(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
-) -> Result<Json<Vec<ErpLocation>>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
     let is_active = params.get("isActive").and_then(|v| v.parse().ok());
-    match ErpInventoryService::list_locations(pool, is_active).await {
-        Ok(locations) => Ok(Json(locations)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    let req = newax_proto::erp_inventory::v1::ListLocationsRequest {
+        has_is_active: is_active.is_some(),
+        is_active: is_active.unwrap_or(false),
+    };
+    let resp = c.list_locations(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn get_location(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<ErpLocation>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::get_location(pool, &id).await {
-        Ok(location) => Ok(Json(location)),
-        Err(e) => Err((StatusCode::NOT_FOUND, e)),
-    }
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let req = newax_proto::erp_inventory::v1::GetLocationRequest { id };
+    let resp = c.get_location(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn create_location(
     State(state): State<AppState>,
-    Json(req): Json<CreateLocationRequest>,
-) -> Result<Json<ErpLocation>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::create_location(pool, &req).await {
-        Ok(location) => Ok(Json(location)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    Json(req_body): Json<Value>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let json_str = serde_json::to_string(&req_body)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let req = newax_proto::erp_inventory::v1::CreateLocationRequest {
+        body: Some(newax_proto::erp_inventory::v1::JsonBody { json: json_str }),
+    };
+    let resp = c.create_location(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn update_location(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Json(req): Json<UpdateLocationRequest>,
-) -> Result<Json<ErpLocation>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::update_location(pool, &id, &req).await {
-        Ok(location) => Ok(Json(location)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    Json(req_body): Json<Value>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let json_str = serde_json::to_string(&req_body)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let req = newax_proto::erp_inventory::v1::UpdateLocationRequest {
+        id,
+        body: Some(newax_proto::erp_inventory::v1::JsonBody { json: json_str }),
+    };
+    let resp = c.update_location(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 // ============================================================
@@ -63,46 +89,57 @@ pub async fn update_location(
 pub async fn get_stock_by_location(
     State(state): State<AppState>,
     Path(location_id): Path<String>,
-) -> Result<Json<Vec<ErpVariantLocationStock>>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::get_stock_by_location(pool, &location_id).await {
-        Ok(stocks) => Ok(Json(stocks)),
-        Err(e) => Err((StatusCode::NOT_FOUND, e)),
-    }
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let req = newax_proto::erp_inventory::v1::GetStockByLocationRequest { location_id };
+    let resp = c.get_stock_by_location(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn get_stock_by_variant(
     State(state): State<AppState>,
     Path(variant_id): Path<String>,
-) -> Result<Json<Vec<ErpVariantLocationStock>>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::get_stock_by_variant(pool, &variant_id).await {
-        Ok(stocks) => Ok(Json(stocks)),
-        Err(e) => Err((StatusCode::NOT_FOUND, e)),
-    }
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let req = newax_proto::erp_inventory::v1::GetStockByVariantRequest { variant_id };
+    let resp = c.get_stock_by_variant(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn update_variant_stock(
     State(state): State<AppState>,
     Path((variant_id, location_id)): Path<(String, String)>,
-    Json(req): Json<UpdateVariantStockRequest>,
-) -> Result<Json<ErpVariantLocationStock>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::update_variant_location_stock(pool, &variant_id, &location_id, req.quantity).await {
-        Ok(stock) => Ok(Json(stock)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    Json(req_body): Json<Value>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let quantity = req_body.get("quantity").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+    let req = newax_proto::erp_inventory::v1::UpdateVariantStockRequest {
+        variant_id, location_id, quantity,
+    };
+    let resp = c.update_variant_stock(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn get_total_stock(
     State(state): State<AppState>,
     Path(variant_id): Path<String>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::get_total_stock(pool, &variant_id).await {
-        Ok(total) => Ok(Json(serde_json::json!({"variantId": variant_id, "totalStock": total}))),
-        Err(e) => Err((StatusCode::NOT_FOUND, e)),
-    }
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let req = newax_proto::erp_inventory::v1::GetTotalStockRequest { variant_id };
+    let resp = c.get_total_stock(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 // ============================================================
@@ -112,53 +149,68 @@ pub async fn get_total_stock(
 pub async fn list_stock_movements(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
-) -> Result<Json<Vec<ErpStockMovement>>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    let variant_id = params.get("variantId").map(|s| s.as_str());
-    let reason = params.get("reason").map(|s| s.as_str());
-    let location_id = params.get("locationId").map(|s| s.as_str());
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let variant_id = params.get("variantId").cloned().unwrap_or_default();
+    let reason = params.get("reason").cloned().unwrap_or_default();
+    let location_id = params.get("locationId").cloned().unwrap_or_default();
     let limit: i64 = params.get("limit").and_then(|v| v.parse().ok()).unwrap_or(50);
     let offset: i64 = params.get("offset").and_then(|v| v.parse().ok()).unwrap_or(0);
-
-    match ErpInventoryService::list_stock_movements(pool, variant_id, reason, location_id, limit, offset).await {
-        Ok(movements) => Ok(Json(movements)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    let req = newax_proto::erp_inventory::v1::ListStockMovementsRequest {
+        variant_id, reason, location_id, limit, offset,
+    };
+    let resp = c.list_stock_movements(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn get_stock_movement(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<ErpStockMovement>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::get_stock_movement(pool, &id).await {
-        Ok(movement) => Ok(Json(movement)),
-        Err(e) => Err((StatusCode::NOT_FOUND, e)),
-    }
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let req = newax_proto::erp_inventory::v1::GetStockMovementRequest { id };
+    let resp = c.get_stock_movement(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn create_stock_movement(
     State(state): State<AppState>,
-    Json(req): Json<CreateStockMovementRequest>,
-) -> Result<Json<ErpStockMovement>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::create_stock_movement(pool, &req).await {
-        Ok(movement) => Ok(Json(movement)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    Json(req_body): Json<Value>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let json_str = serde_json::to_string(&req_body)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let req = newax_proto::erp_inventory::v1::CreateStockMovementRequest {
+        body: Some(newax_proto::erp_inventory::v1::JsonBody { json: json_str }),
+    };
+    let resp = c.create_stock_movement(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn get_movements_by_variant(
     State(state): State<AppState>,
     Path(variant_id): Path<String>,
     Query(params): Query<HashMap<String, String>>,
-) -> Result<Json<Vec<ErpStockMovement>>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
     let limit: i64 = params.get("limit").and_then(|v| v.parse().ok()).unwrap_or(50);
-    match ErpInventoryService::get_movements_by_variant(pool, &variant_id, limit).await {
-        Ok(movements) => Ok(Json(movements)),
-        Err(e) => Err((StatusCode::NOT_FOUND, e)),
-    }
+    let req = newax_proto::erp_inventory::v1::GetMovementsByVariantRequest {
+        variant_id, limit,
+    };
+    let resp = c.get_movements_by_variant(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 // ============================================================
@@ -168,51 +220,69 @@ pub async fn get_movements_by_variant(
 pub async fn list_stock_variances(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
-) -> Result<Json<Vec<ErpStockVariance>>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    let status = params.get("status").map(|s| s.as_str());
-    let variant_id = params.get("variantId").map(|s| s.as_str());
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let status = params.get("status").cloned().unwrap_or_default();
+    let variant_id = params.get("variantId").cloned().unwrap_or_default();
     let limit: i64 = params.get("limit").and_then(|v| v.parse().ok()).unwrap_or(50);
     let offset: i64 = params.get("offset").and_then(|v| v.parse().ok()).unwrap_or(0);
-
-    match ErpInventoryService::list_stock_variances(pool, status, variant_id, limit, offset).await {
-        Ok(variances) => Ok(Json(variances)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    let req = newax_proto::erp_inventory::v1::ListStockVariancesRequest {
+        status, variant_id, limit, offset,
+    };
+    let resp = c.list_stock_variances(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn get_stock_variance(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<ErpStockVariance>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::get_stock_variance(pool, &id).await {
-        Ok(variance) => Ok(Json(variance)),
-        Err(e) => Err((StatusCode::NOT_FOUND, e)),
-    }
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let req = newax_proto::erp_inventory::v1::GetStockVarianceRequest { id };
+    let resp = c.get_stock_variance(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn create_stock_variance(
     State(state): State<AppState>,
-    Json(req): Json<CreateStockVarianceRequest>,
-) -> Result<Json<ErpStockVariance>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::create_stock_variance(pool, &req).await {
-        Ok(variance) => Ok(Json(variance)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    Json(req_body): Json<Value>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let json_str = serde_json::to_string(&req_body)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let req = newax_proto::erp_inventory::v1::CreateStockVarianceRequest {
+        body: Some(newax_proto::erp_inventory::v1::JsonBody { json: json_str }),
+    };
+    let resp = c.create_stock_variance(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn resolve_variance(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Json(req): Json<ResolveVarianceRequest>,
-) -> Result<Json<ErpStockVariance>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::resolve_variance(pool, &id, &req).await {
-        Ok(variance) => Ok(Json(variance)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    Json(req_body): Json<Value>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let json_str = serde_json::to_string(&req_body)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let req = newax_proto::erp_inventory::v1::ResolveVarianceRequest {
+        id,
+        body: Some(newax_proto::erp_inventory::v1::JsonBody { json: json_str }),
+    };
+    let resp = c.resolve_variance(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 // ============================================================
@@ -222,24 +292,35 @@ pub async fn resolve_variance(
 pub async fn list_spot_check_policies(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
-) -> Result<Json<Vec<ErpSpotCheckPolicy>>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
     let is_active = params.get("isActive").and_then(|v| v.parse().ok());
-    match ErpInventoryService::list_spot_check_policies(pool, is_active).await {
-        Ok(policies) => Ok(Json(policies)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    let req = newax_proto::erp_inventory::v1::ListSpotCheckPoliciesRequest {
+        has_is_active: is_active.is_some(),
+        is_active: is_active.unwrap_or(false),
+    };
+    let resp = c.list_spot_check_policies(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn create_spot_check_policy(
     State(state): State<AppState>,
-    Json(req): Json<CreateSpotCheckPolicyRequest>,
-) -> Result<Json<ErpSpotCheckPolicy>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::create_spot_check_policy(pool, &req).await {
-        Ok(policy) => Ok(Json(policy)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    Json(req_body): Json<Value>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let json_str = serde_json::to_string(&req_body)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let req = newax_proto::erp_inventory::v1::CreateSpotCheckPolicyRequest {
+        body: Some(newax_proto::erp_inventory::v1::JsonBody { json: json_str }),
+    };
+    let resp = c.create_spot_check_policy(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 // ============================================================
@@ -249,61 +330,76 @@ pub async fn create_spot_check_policy(
 pub async fn list_spot_checks(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
-) -> Result<Json<Vec<ErpSpotCheck>>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    let location_id = params.get("locationId").map(|s| s.as_str());
-    let status = params.get("status").map(|s| s.as_str());
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let location_id = params.get("locationId").cloned().unwrap_or_default();
+    let status = params.get("status").cloned().unwrap_or_default();
     let limit: i64 = params.get("limit").and_then(|v| v.parse().ok()).unwrap_or(50);
     let offset: i64 = params.get("offset").and_then(|v| v.parse().ok()).unwrap_or(0);
-
-    match ErpInventoryService::list_spot_checks(pool, location_id, status, limit, offset).await {
-        Ok(checks) => Ok(Json(checks)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    let req = newax_proto::erp_inventory::v1::ListSpotChecksRequest {
+        location_id, status, limit, offset,
+    };
+    let resp = c.list_spot_checks(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn get_spot_check(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<ErpSpotCheck>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::get_spot_check(pool, &id).await {
-        Ok(check) => Ok(Json(check)),
-        Err(e) => Err((StatusCode::NOT_FOUND, e)),
-    }
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let req = newax_proto::erp_inventory::v1::GetSpotCheckRequest { id };
+    let resp = c.get_spot_check(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn create_spot_check(
     State(state): State<AppState>,
-    Json(req): Json<CreateSpotCheckRequest>,
-) -> Result<Json<ErpSpotCheck>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::create_spot_check(pool, &req).await {
-        Ok(check) => Ok(Json(check)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    Json(req_body): Json<Value>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let json_str = serde_json::to_string(&req_body)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let req = newax_proto::erp_inventory::v1::CreateSpotCheckRequest {
+        body: Some(newax_proto::erp_inventory::v1::JsonBody { json: json_str }),
+    };
+    let resp = c.create_spot_check(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn start_spot_check(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<ErpSpotCheck>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::start_spot_check(pool, &id).await {
-        Ok(check) => Ok(Json(check)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let req = newax_proto::erp_inventory::v1::StartSpotCheckRequest { id };
+    let resp = c.start_spot_check(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn complete_spot_check(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<ErpSpotCheck>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::complete_spot_check(pool, &id).await {
-        Ok(check) => Ok(Json(check)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let req = newax_proto::erp_inventory::v1::CompleteSpotCheckRequest { id };
+    let resp = c.complete_spot_check(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 // ============================================================
@@ -313,35 +409,50 @@ pub async fn complete_spot_check(
 pub async fn list_spot_check_lines(
     State(state): State<AppState>,
     Path(spot_check_id): Path<String>,
-) -> Result<Json<Vec<ErpSpotCheckLine>>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::list_spot_check_lines(pool, &spot_check_id).await {
-        Ok(lines) => Ok(Json(lines)),
-        Err(e) => Err((StatusCode::NOT_FOUND, e)),
-    }
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let req = newax_proto::erp_inventory::v1::ListSpotCheckLinesRequest { spot_check_id };
+    let resp = c.list_spot_check_lines(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn create_spot_check_line(
     State(state): State<AppState>,
-    Json(req): Json<CreateSpotCheckLineRequest>,
-) -> Result<Json<ErpSpotCheckLine>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::create_spot_check_line(pool, &req).await {
-        Ok(line) => Ok(Json(line)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    Json(req_body): Json<Value>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let json_str = serde_json::to_string(&req_body)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let req = newax_proto::erp_inventory::v1::CreateSpotCheckLineRequest {
+        body: Some(newax_proto::erp_inventory::v1::JsonBody { json: json_str }),
+    };
+    let resp = c.create_spot_check_line(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn update_spot_check_line(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Json(req): Json<UpdateSpotCheckLineRequest>,
-) -> Result<Json<ErpSpotCheckLine>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::update_spot_check_line(pool, &id, &req).await {
-        Ok(line) => Ok(Json(line)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    Json(req_body): Json<Value>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let json_str = serde_json::to_string(&req_body)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let req = newax_proto::erp_inventory::v1::UpdateSpotCheckLineRequest {
+        id,
+        body: Some(newax_proto::erp_inventory::v1::JsonBody { json: json_str }),
+    };
+    let resp = c.update_spot_check_line(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 // ============================================================
@@ -351,26 +462,29 @@ pub async fn update_spot_check_line(
 pub async fn get_variant_sales_stat(
     State(state): State<AppState>,
     Path(variant_id): Path<String>,
-) -> Result<Json<ErpVariantSalesStat>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::get_variant_sales_stat(pool, &variant_id).await {
-        Ok(stat) => Ok(Json(stat)),
-        Err(e) => Err((StatusCode::NOT_FOUND, e)),
-    }
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let req = newax_proto::erp_inventory::v1::GetVariantSalesStatRequest { variant_id };
+    let resp = c.get_variant_sales_stat(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn list_slow_movers(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
-) -> Result<Json<Vec<ErpVariantSalesStat>>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
     let limit: i64 = params.get("limit").and_then(|v| v.parse().ok()).unwrap_or(50);
     let offset: i64 = params.get("offset").and_then(|v| v.parse().ok()).unwrap_or(0);
-
-    match ErpInventoryService::list_slow_movers(pool, limit, offset).await {
-        Ok(stats) => Ok(Json(stats)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    let req = newax_proto::erp_inventory::v1::ListSlowMoversRequest { limit, offset };
+    let resp = c.list_slow_movers(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 // ============================================================
@@ -380,37 +494,46 @@ pub async fn list_slow_movers(
 pub async fn get_variant_forecast(
     State(state): State<AppState>,
     Path(variant_id): Path<String>,
-) -> Result<Json<ErpVariantForecast>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::get_variant_forecast(pool, &variant_id).await {
-        Ok(forecast) => Ok(Json(forecast)),
-        Err(e) => Err((StatusCode::NOT_FOUND, e)),
-    }
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let req = newax_proto::erp_inventory::v1::GetVariantForecastRequest { variant_id };
+    let resp = c.get_variant_forecast(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn create_variant_forecast(
     State(state): State<AppState>,
-    Json(req): Json<CreateVariantForecastRequest>,
-) -> Result<Json<ErpVariantForecast>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::create_variant_forecast(pool, &req).await {
-        Ok(forecast) => Ok(Json(forecast)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    Json(req_body): Json<Value>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let json_str = serde_json::to_string(&req_body)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let req = newax_proto::erp_inventory::v1::CreateVariantForecastRequest {
+        body: Some(newax_proto::erp_inventory::v1::JsonBody { json: json_str }),
+    };
+    let resp = c.create_variant_forecast(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn list_forecasts(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
-) -> Result<Json<Vec<ErpVariantForecast>>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
     let limit: i64 = params.get("limit").and_then(|v| v.parse().ok()).unwrap_or(50);
     let offset: i64 = params.get("offset").and_then(|v| v.parse().ok()).unwrap_or(0);
-
-    match ErpInventoryService::list_forecasts(pool, limit, offset).await {
-        Ok(forecasts) => Ok(Json(forecasts)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    let req = newax_proto::erp_inventory::v1::ListForecastsRequest { limit, offset };
+    let resp = c.list_forecasts(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 // ============================================================
@@ -420,39 +543,55 @@ pub async fn list_forecasts(
 pub async fn list_markdown_suggestions(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
-) -> Result<Json<Vec<ErpMarkdownSuggestion>>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    let status = params.get("status").map(|s| s.as_str());
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let status = params.get("status").cloned().unwrap_or_default();
     let limit: i64 = params.get("limit").and_then(|v| v.parse().ok()).unwrap_or(50);
     let offset: i64 = params.get("offset").and_then(|v| v.parse().ok()).unwrap_or(0);
-
-    match ErpInventoryService::list_markdown_suggestions(pool, status, limit, offset).await {
-        Ok(suggestions) => Ok(Json(suggestions)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    let req = newax_proto::erp_inventory::v1::ListMarkdownSuggestionsRequest {
+        status, limit, offset,
+    };
+    let resp = c.list_markdown_suggestions(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn create_markdown_suggestion(
     State(state): State<AppState>,
-    Json(req): Json<CreateMarkdownSuggestionRequest>,
-) -> Result<Json<ErpMarkdownSuggestion>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::create_markdown_suggestion(pool, &req).await {
-        Ok(suggestion) => Ok(Json(suggestion)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    Json(req_body): Json<Value>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let json_str = serde_json::to_string(&req_body)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let req = newax_proto::erp_inventory::v1::CreateMarkdownSuggestionRequest {
+        body: Some(newax_proto::erp_inventory::v1::JsonBody { json: json_str }),
+    };
+    let resp = c.create_markdown_suggestion(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn update_markdown_suggestion_status(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Json(req): Json<UpdateMarkdownSuggestionStatusRequest>,
-) -> Result<Json<ErpMarkdownSuggestion>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::update_markdown_suggestion_status(pool, &id, &req).await {
-        Ok(suggestion) => Ok(Json(suggestion)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    Json(req_body): Json<Value>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let json_str = serde_json::to_string(&req_body)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let req = newax_proto::erp_inventory::v1::UpdateMarkdownSuggestionStatusRequest {
+        id,
+        body: Some(newax_proto::erp_inventory::v1::JsonBody { json: json_str }),
+    };
+    let resp = c.update_markdown_suggestion_status(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 // ============================================================
@@ -462,50 +601,63 @@ pub async fn update_markdown_suggestion_status(
 pub async fn list_lots(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
-) -> Result<Json<Vec<ErpLot>>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    let product_variant_id = params.get("productVariantId").map(|s| s.as_str());
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let product_variant_id = params.get("productVariantId").cloned().unwrap_or_default();
     let limit: i64 = params.get("limit").and_then(|v| v.parse().ok()).unwrap_or(50);
     let offset: i64 = params.get("offset").and_then(|v| v.parse().ok()).unwrap_or(0);
-
-    match ErpInventoryService::list_lots(pool, product_variant_id, limit, offset).await {
-        Ok(lots) => Ok(Json(lots)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    let req = newax_proto::erp_inventory::v1::ListLotsRequest {
+        product_variant_id, limit, offset,
+    };
+    let resp = c.list_lots(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn get_lot(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<ErpLot>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::get_lot(pool, &id).await {
-        Ok(lot) => Ok(Json(lot)),
-        Err(e) => Err((StatusCode::NOT_FOUND, e)),
-    }
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let req = newax_proto::erp_inventory::v1::GetLotRequest { id };
+    let resp = c.get_lot(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn get_expiring_lots(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
-) -> Result<Json<Vec<ErpLot>>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
     let days: i32 = params.get("days").and_then(|v| v.parse().ok()).unwrap_or(30);
-    match ErpInventoryService::get_expiring_lots(pool, days).await {
-        Ok(lots) => Ok(Json(lots)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    let req = newax_proto::erp_inventory::v1::GetExpiringLotsRequest { days };
+    let resp = c.get_expiring_lots(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn create_lot(
     State(state): State<AppState>,
-    Json(req): Json<CreateLotRequest>,
-) -> Result<Json<ErpLot>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::create_lot(pool, &req).await {
-        Ok(lot) => Ok(Json(lot)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    Json(req_body): Json<Value>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let json_str = serde_json::to_string(&req_body)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let req = newax_proto::erp_inventory::v1::CreateLotRequest {
+        body: Some(newax_proto::erp_inventory::v1::JsonBody { json: json_str }),
+    };
+    let resp = c.create_lot(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 // ============================================================
@@ -515,23 +667,31 @@ pub async fn create_lot(
 pub async fn list_lot_stock(
     State(state): State<AppState>,
     Path(lot_id): Path<String>,
-) -> Result<Json<Vec<ErpLotStock>>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::list_lot_stock(pool, &lot_id).await {
-        Ok(stocks) => Ok(Json(stocks)),
-        Err(e) => Err((StatusCode::NOT_FOUND, e)),
-    }
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let req = newax_proto::erp_inventory::v1::ListLotStockRequest { lot_id };
+    let resp = c.list_lot_stock(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn create_lot_stock(
     State(state): State<AppState>,
-    Json(req): Json<CreateLotStockRequest>,
-) -> Result<Json<ErpLotStock>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::create_lot_stock(pool, &req).await {
-        Ok(stock) => Ok(Json(stock)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    Json(req_body): Json<Value>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let json_str = serde_json::to_string(&req_body)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let req = newax_proto::erp_inventory::v1::CreateLotStockRequest {
+        body: Some(newax_proto::erp_inventory::v1::JsonBody { json: json_str }),
+    };
+    let resp = c.create_lot_stock(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 // ============================================================
@@ -541,23 +701,31 @@ pub async fn create_lot_stock(
 pub async fn list_lot_allocations(
     State(state): State<AppState>,
     Path(lot_id): Path<String>,
-) -> Result<Json<Vec<ErpLotAllocation>>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::list_lot_allocations(pool, &lot_id).await {
-        Ok(allocations) => Ok(Json(allocations)),
-        Err(e) => Err((StatusCode::NOT_FOUND, e)),
-    }
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let req = newax_proto::erp_inventory::v1::ListLotAllocationsRequest { lot_id };
+    let resp = c.list_lot_allocations(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn create_lot_allocation(
     State(state): State<AppState>,
-    Json(req): Json<CreateLotAllocationRequest>,
-) -> Result<Json<ErpLotAllocation>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::create_lot_allocation(pool, &req).await {
-        Ok(allocation) => Ok(Json(allocation)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    Json(req_body): Json<Value>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let json_str = serde_json::to_string(&req_body)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let req = newax_proto::erp_inventory::v1::CreateLotAllocationRequest {
+        body: Some(newax_proto::erp_inventory::v1::JsonBody { json: json_str }),
+    };
+    let resp = c.create_lot_allocation(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 // ============================================================
@@ -567,62 +735,82 @@ pub async fn create_lot_allocation(
 pub async fn list_serialized_units(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
-) -> Result<Json<Vec<ErpSerializedUnit>>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    let product_variant_id = params.get("productVariantId").map(|s| s.as_str());
-    let status = params.get("status").map(|s| s.as_str());
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let product_variant_id = params.get("productVariantId").cloned().unwrap_or_default();
+    let status = params.get("status").cloned().unwrap_or_default();
     let limit: i64 = params.get("limit").and_then(|v| v.parse().ok()).unwrap_or(50);
     let offset: i64 = params.get("offset").and_then(|v| v.parse().ok()).unwrap_or(0);
-
-    match ErpInventoryService::list_serialized_units(pool, product_variant_id, status, limit, offset).await {
-        Ok(units) => Ok(Json(units)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    let req = newax_proto::erp_inventory::v1::ListSerializedUnitsRequest {
+        product_variant_id, status, limit, offset,
+    };
+    let resp = c.list_serialized_units(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn get_serialized_unit(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<ErpSerializedUnit>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::get_serialized_unit(pool, &id).await {
-        Ok(unit) => Ok(Json(unit)),
-        Err(e) => Err((StatusCode::NOT_FOUND, e)),
-    }
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let req = newax_proto::erp_inventory::v1::GetSerializedUnitRequest { id };
+    let resp = c.get_serialized_unit(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn get_serialized_unit_by_serial(
     State(state): State<AppState>,
     Path(serial_number): Path<String>,
-) -> Result<Json<ErpSerializedUnit>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::get_serialized_unit_by_serial(pool, &serial_number).await {
-        Ok(unit) => Ok(Json(unit)),
-        Err(e) => Err((StatusCode::NOT_FOUND, e)),
-    }
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let req = newax_proto::erp_inventory::v1::GetSerializedUnitBySerialRequest { serial_number };
+    let resp = c.get_serialized_unit_by_serial(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn create_serialized_unit(
     State(state): State<AppState>,
-    Json(req): Json<CreateSerializedUnitRequest>,
-) -> Result<Json<ErpSerializedUnit>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::create_serialized_unit(pool, &req).await {
-        Ok(unit) => Ok(Json(unit)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    Json(req_body): Json<Value>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let json_str = serde_json::to_string(&req_body)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let req = newax_proto::erp_inventory::v1::CreateSerializedUnitRequest {
+        body: Some(newax_proto::erp_inventory::v1::JsonBody { json: json_str }),
+    };
+    let resp = c.create_serialized_unit(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn update_serialized_unit_status(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Json(req): Json<UpdateSerializedUnitStatusRequest>,
-) -> Result<Json<ErpSerializedUnit>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::update_serialized_unit_status(pool, &id, &req).await {
-        Ok(unit) => Ok(Json(unit)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    Json(req_body): Json<Value>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let json_str = serde_json::to_string(&req_body)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let req = newax_proto::erp_inventory::v1::UpdateSerializedUnitStatusRequest {
+        id,
+        body: Some(newax_proto::erp_inventory::v1::JsonBody { json: json_str }),
+    };
+    let resp = c.update_serialized_unit_status(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 // ============================================================
@@ -632,71 +820,88 @@ pub async fn update_serialized_unit_status(
 pub async fn list_stock_counts(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
-) -> Result<Json<Vec<ErpStockCount>>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    let status = params.get("status").map(|s| s.as_str());
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let status = params.get("status").cloned().unwrap_or_default();
     let limit: i64 = params.get("limit").and_then(|v| v.parse().ok()).unwrap_or(50);
     let offset: i64 = params.get("offset").and_then(|v| v.parse().ok()).unwrap_or(0);
-
-    match ErpInventoryService::list_stock_counts(pool, status, limit, offset).await {
-        Ok(counts) => Ok(Json(counts)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    let req = newax_proto::erp_inventory::v1::ListStockCountsRequest {
+        status, limit, offset,
+    };
+    let resp = c.list_stock_counts(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn get_stock_count(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<ErpStockCount>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::get_stock_count(pool, &id).await {
-        Ok(count) => Ok(Json(count)),
-        Err(e) => Err((StatusCode::NOT_FOUND, e)),
-    }
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let req = newax_proto::erp_inventory::v1::GetStockCountRequest { id };
+    let resp = c.get_stock_count(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn create_stock_count(
     State(state): State<AppState>,
-    Json(req): Json<CreateStockCountRequest>,
-) -> Result<Json<ErpStockCount>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::create_stock_count(pool, &req).await {
-        Ok(count) => Ok(Json(count)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    Json(req_body): Json<Value>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let json_str = serde_json::to_string(&req_body)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let req = newax_proto::erp_inventory::v1::CreateStockCountRequest {
+        body: Some(newax_proto::erp_inventory::v1::JsonBody { json: json_str }),
+    };
+    let resp = c.create_stock_count(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn start_stock_count(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<ErpStockCount>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::start_stock_count(pool, &id).await {
-        Ok(count) => Ok(Json(count)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let req = newax_proto::erp_inventory::v1::StartStockCountRequest { id };
+    let resp = c.start_stock_count(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn complete_stock_count(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<ErpStockCount>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::complete_stock_count(pool, &id).await {
-        Ok(count) => Ok(Json(count)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let req = newax_proto::erp_inventory::v1::CompleteStockCountRequest { id };
+    let resp = c.complete_stock_count(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn cancel_stock_count(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<ErpStockCount>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::cancel_stock_count(pool, &id).await {
-        Ok(count) => Ok(Json(count)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let req = newax_proto::erp_inventory::v1::CancelStockCountRequest { id };
+    let resp = c.cancel_stock_count(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 // ============================================================
@@ -706,35 +911,50 @@ pub async fn cancel_stock_count(
 pub async fn list_stock_count_lines(
     State(state): State<AppState>,
     Path(stock_count_id): Path<String>,
-) -> Result<Json<Vec<ErpStockCountLine>>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::list_stock_count_lines(pool, &stock_count_id).await {
-        Ok(lines) => Ok(Json(lines)),
-        Err(e) => Err((StatusCode::NOT_FOUND, e)),
-    }
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let req = newax_proto::erp_inventory::v1::ListStockCountLinesRequest { stock_count_id };
+    let resp = c.list_stock_count_lines(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn create_stock_count_line(
     State(state): State<AppState>,
-    Json(req): Json<CreateStockCountLineRequest>,
-) -> Result<Json<ErpStockCountLine>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::create_stock_count_line(pool, &req).await {
-        Ok(line) => Ok(Json(line)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    Json(req_body): Json<Value>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let json_str = serde_json::to_string(&req_body)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let req = newax_proto::erp_inventory::v1::CreateStockCountLineRequest {
+        body: Some(newax_proto::erp_inventory::v1::JsonBody { json: json_str }),
+    };
+    let resp = c.create_stock_count_line(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 pub async fn update_stock_count_line(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Json(req): Json<UpdateStockCountLineRequest>,
-) -> Result<Json<ErpStockCountLine>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::update_stock_count_line(pool, &id, &req).await {
-        Ok(line) => Ok(Json(line)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    Json(req_body): Json<Value>,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let json_str = serde_json::to_string(&req_body)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let req = newax_proto::erp_inventory::v1::UpdateStockCountLineRequest {
+        id,
+        body: Some(newax_proto::erp_inventory::v1::JsonBody { json: json_str }),
+    };
+    let resp = c.update_stock_count_line(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 // ============================================================
@@ -743,12 +963,14 @@ pub async fn update_stock_count_line(
 
 pub async fn get_inventory_stats(
     State(state): State<AppState>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let pool: &DbPool = &state.db;
-    match ErpInventoryService::get_inventory_stats(pool).await {
-        Ok(stats) => Ok(Json(stats)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let req = newax_proto::erp_inventory::v1::GetInventoryStatsRequest {};
+    let resp = c.get_inventory_stats(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    let parsed: Value = serde_json::from_str(&resp.into_inner().json)
+        .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))?;
+    Ok(Json(parsed))
 }
 
 // ============================================================
@@ -820,9 +1042,4 @@ pub fn router() -> axum::Router<AppState> {
         .route("/erp/inventory/stock-count-lines/:id", put(update_stock_count_line))
         // Stats
         .route("/erp/inventory/stats", get(get_inventory_stats))
-}
-
-#[derive(Debug, Deserialize)]
-pub struct UpdateVariantStockRequest {
-    pub quantity: i32,
 }

@@ -1,0 +1,20 @@
+[package]
+name = "svc-knowledge-base"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "svc-knowledge-base"
+path = "src/main.rs"
+
+[dependencies]
+newax-knowledge-base = { path = "../../crates/knowledge_base" }
+sqlx = { version = "0.8", features = ["runtime-tokio-native-tls", "postgres", "uuid", "chrono", "json"] }
+tonic = "0.12"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+serde_json = "1"
+
+[build-dependencies]
+tonic-build = "0.12"

@@ -1,0 +1,24 @@
+[package]
+name = "svc-whatsapp-template-sync"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "svc-whatsapp-template-sync"
+path = "src/main.rs"
+
+[build-dependencies]
+tonic-build = "0.11"
+
+[dependencies]
+newax-whatsapp-template-sync = { path = "../../crates/whatsapp_template_sync" }
+newax-proto = { path = "../../crates/proto" }
+tonic = "0.11"
+prost = "0.12"
+tokio = { version = "1", features = ["full"] }
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "uuid", "chrono", "tls-rustls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1"

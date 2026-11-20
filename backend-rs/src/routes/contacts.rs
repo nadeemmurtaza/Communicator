@@ -1,4 +1,4 @@
-﻿#![allow(dead_code)]
+#![allow(dead_code)]
 
 use crate::db::{AppState, DbPool};
 use crate::routes::auth::Tenant;
@@ -1459,7 +1459,7 @@ pub async fn sync_contact_meta(
     // the inboxes/integration_settings rows carry. Without them there is not
     // even a local refresh to attribute to a provider connection.
     let (access_token, phone_number_id) =
-        crate::services::meta_sync::resolve_meta_credentials(&state).await;
+        crate::routes::meta_sync_client::resolve_meta_credentials(&state).await;
     if access_token.is_empty() || phone_number_id.is_empty() {
         return missing_dependency_response(
             "Meta Cloud API credentials",
@@ -1530,7 +1530,7 @@ pub async fn sync_meta_contacts(
     // only resolves credentials and refreshes the business profile today, so
     // there is nothing real to write here and inventing a count would be a fake.
     let (access_token, phone_number_id) =
-        crate::services::meta_sync::resolve_meta_credentials(&state).await;
+        crate::routes::meta_sync_client::resolve_meta_credentials(&state).await;
     // A failed count must not be reported as "0 WhatsApp contacts"; the number
     // below is quoted back to the operator as fact.
     let whatsapp_contacts: i64 = match sqlx::query_scalar(

@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package newax.fin_operator.v1;
+
+service FinOperatorService {
+  rpc GetSummary(Empty) returns (JsonResponse);
+  rpc GetConfig(Empty) returns (JsonResponse);
+  rpc UpdateConfig(UpdateConfigRequest) returns (JsonResponse);
+  rpc RunScan(Empty) returns (JsonResponse);
+  rpc ListProposals(ListProposalsRequest) returns (JsonResponse);
+  rpc GetProposal(IdRequest) returns (JsonResponse);
+  rpc ApproveProposal(ApproveProposalRequest) returns (JsonResponse);
+  rpc DismissProposal(DismissProposalRequest) returns (JsonResponse);
+  rpc ListLogs(ListLogsRequest) returns (JsonResponse);
+  rpc ListSnapshots(ListSnapshotsRequest) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message JsonBody {
+  string json = 1;
+}
+
+message IdRequest {
+  string id = 1;
+}
+
+// ——— Config ———
+
+message UpdateConfigRequest {
+  JsonBody body = 1;
+}
+
+// ——— Proposals ———
+
+message ListProposalsRequest {
+  string status = 1;
+  string proposal_type = 2;
+  int32 limit = 3;
+}
+
+message ApproveProposalRequest {
+  string id = 1;
+  string reviewer = 2;
+}
+
+message DismissProposalRequest {
+  string id = 1;
+  string reviewer = 2;
+}
+
+// ——— Logs ———
+
+message ListLogsRequest {
+  string action_type = 1;
+  int32 limit = 2;
+}
+
+// ——— Snapshots ———
+
+message ListSnapshotsRequest {
+  int32 limit = 1;
+}

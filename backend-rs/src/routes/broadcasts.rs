@@ -687,8 +687,8 @@ pub async fn get_audience_preview(
 
     // Meta's per-number daily messaging cap is real account state, so it is read
     // from the connected phone number instead of assuming a number.
-    let (access_token, phone_number_id) = crate::services::meta_sync::resolve_meta_credentials(&state).await;
-    let profile = crate::services::meta_sync::fetch_meta_business_profile(
+    let (access_token, phone_number_id) = crate::routes::meta_sync_client::resolve_meta_credentials(&state).await;
+    let profile = crate::routes::meta_sync_client::fetch_meta_business_profile(
         &state,
         &access_token,
         &phone_number_id,

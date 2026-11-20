@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package newax.sso.v1;
+
+service SsoService {
+  rpc GetConfig(EmptyRequest) returns (JsonResponse);
+  rpc UpdateConfig(UpdateConfigRequest) returns (JsonResponse);
+  rpc SpMetadata(SpMetadataRequest) returns (JsonResponse);
+  rpc InitiateLogin(InitiateLoginRequest) returns (JsonResponse);
+  rpc AssertionConsumerService(AcsRequest) returns (JsonResponse);
+  rpc TestConnection(TestConnectionRequest) returns (JsonResponse);
+  rpc CheckEmail(CheckEmailRequest) returns (JsonResponse);
+}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message JsonBody {
+  string json = 1;
+}
+
+message EmptyRequest {}
+
+message UpdateConfigRequest {
+  JsonBody body = 1;
+  string headers_json = 2;
+}
+
+message SpMetadataRequest {
+  string headers_json = 1;
+}
+
+message InitiateLoginRequest {
+  string headers_json = 1;
+  string email = 2;
+  string relay_state = 3;
+}
+
+message AcsRequest {
+  string headers_json = 1;
+  bytes body = 2;
+}
+
+message TestConnectionRequest {
+  string headers_json = 1;
+  JsonBody body = 2;
+}
+
+message CheckEmailRequest {
+  string headers_json = 1;
+  string email = 2;
+}

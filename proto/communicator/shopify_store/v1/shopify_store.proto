@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package newax.shopify_store.v1;
+
+service ShopifyStoreService {
+  rpc CreateConnection(CreateConnectionRequest) returns (JsonResponse);
+  rpc ListConnections(ListConnectionsRequest) returns (JsonResponse);
+  rpc GetChannelPreferences(GetChannelPreferencesRequest) returns (JsonResponse);
+  rpc UpdateChannelPreferences(UpdateChannelPreferencesRequest) returns (JsonResponse);
+  rpc CreateAccount(CreateAccountRequest) returns (JsonResponse);
+  rpc VerifyAccount(VerifyAccountRequest) returns (JsonResponse);
+  rpc ResendOtp(ResendOtpRequest) returns (JsonResponse);
+  rpc ReceiveWebhook(ReceiveWebhookRequest) returns (JsonResponse);
+  rpc GetConnection(GetConnectionRequest) returns (JsonResponse);
+}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message CreateConnectionRequest {
+  string brand_id = 1;
+  string store_domain = 2;
+  string store_name = 3;
+  string shopify_api_key = 4;
+  string shopify_api_secret = 5;
+  string shopify_access_token = 6;
+  string shopify_webhook_secret = 7;
+  string auto_create_customer = 8;
+  string customer_tag = 9;
+  string default_purpose = 10;
+}
+
+message ListConnectionsRequest {
+  string brand_id = 1;
+}
+
+message GetChannelPreferencesRequest {
+  string connection_id = 1;
+  string purpose = 2;
+}
+
+message UpdateChannelPreferencesRequest {
+  string connection_id = 1;
+  string purpose = 2;
+  string whatsapp_enabled = 3;
+  string email_enabled = 4;
+  string sms_enabled = 5;
+  string in_app_enabled = 6;
+  string default_channel = 7;
+  string priority_order = 8;
+}
+
+message CreateAccountRequest {
+  string store_domain = 1;
+  string email = 2;
+  string phone = 3;
+  string first_name = 4;
+  string last_name = 5;
+  string channel = 6;
+  string metadata = 7;
+  string ip_address = 8;
+  string user_agent = 9;
+}
+
+message VerifyAccountRequest {
+  string pending_id = 1;
+  string code = 2;
+  string ip_address = 3;
+  string user_agent = 4;
+}
+
+message ResendOtpRequest {
+  string pending_id = 1;
+  string ip_address = 2;
+  string user_agent = 3;
+}
+
+message ReceiveWebhookRequest {
+  string connection_id = 1;
+  string signature = 2;
+  string topic = 3;
+  string shop_domain = 4;
+  string webhook_id = 5;
+  string payload = 6;
+}
+
+message GetConnectionRequest {
+  string connection_id = 1;
+}

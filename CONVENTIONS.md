@@ -269,8 +269,8 @@ discipline, and a final checklist) — this section is just the live
 tracking table and status summary, not the how-to.
 
 The pattern in §3 is now proven working, not just specified —
-twenty-seven real modules split so far, each a standalone `tonic` gRPC
-service
+fifty real modules split so far (including `conversations`),
+each a standalone `tonic` gRPC service
 with its old monolith route handlers reduced to a thin client, each
 verified with `cargo check --workspace`:
 
@@ -310,8 +310,46 @@ verified with `cargo check --workspace`:
 | smtp-email | Communicator | `crates/smtp_email` | `services/smtp_email` | 50092 |
 | access-control | Communicator | `crates/access_control` | `services/access_control` | 50093 |
 | copilot-reviewer | Communicator | `crates/copilot_reviewer` | `services/copilot_reviewer` | 50094 |
+| in-app-messaging | Communicator | `crates/in_app_messaging` | `services/in_app_messaging` | 50095 |
+| erp-payments | Communicator | `crates/erp_payments` | `services/erp_payments` | 50096 |
+| omni-broadcast | Communicator | `crates/omni_broadcast` | `services/omni_broadcast` | 50096 |
+| mcp-protocol | Communicator | `crates/mcp_protocol` | `services/mcp_protocol` | 50097 |
+| nid-sync | Communicator | `crates/nid_sync` | `services/nid_sync` | 50097 |
+| audience-kb-scoping | Communicator | `crates/audience_kb_scoping` | `services/audience_kb_scoping` | 50098 |
+| otp-engine | Communicator | `crates/otp_engine` | `services/otp_engine` | 50099 |
+| erp-orders | Communicator | `crates/erp_orders` | `services/erp_orders` | 50099 |
+| erp-fulfilment | Communicator | `crates/erp_fulfilment` | `services/erp_fulfilment` | 50097 |
+| whatsapp-flows | Communicator | `crates/whatsapp_flows` | `services/whatsapp_flows` | 50100 |
+| erp-catalog | Communicator | `crates/erp_catalog` | `services/erp_catalog` | 50100 |
+| erp-inventory | Communicator | `crates/erp_inventory` | `services/erp_inventory` | 50101 |
+| nid-organization-sync | Communicator | `crates/nid_organization_sync` | `services/nid_organization_sync` | 50102 |
+| nid-tenant-sync | Communicator | `crates/nid_tenant_sync` | `services/nid_tenant_sync` | 50103 |
+| nid-brand-sync | Communicator | `crates/nid_brand_sync` | `services/nid_brand_sync` | 50103 |
+| fin-operator | Communicator | `crates/fin_operator` | `services/fin_operator` | 50104 |
+| fin-vision | Communicator | `crates/fin_vision` | `services/fin_vision` | 50105 |
+| whatsapp-template-sync | Communicator | `crates/whatsapp_template_sync` | `services/whatsapp_template_sync` | 50104 |
+| store-connection | Communicator | `crates/store_connection` | `services/store_connection` | 50106 |
+| services-sequences | Communicator | `crates/services_sequences` | `services/services_sequences` | 50107 |
+| whatsapp-campaigns | Communicator | `crates/whatsapp_campaigns` | `services/whatsapp_campaigns` | 50107 |
+| external-otp | Communicator | `crates/external_otp` | `services/external_otp` | 50108 |
+| shopify-store | Communicator | `crates/shopify_store_integration` | `services/shopify_store` | 50108 |
+| sso | Communicator | `crates/sso` | `services/sso` | 50109 |
+| health | Communicator | `crates/health` | `services/health` | 50110 |
+| translation | Communicator | `crates/translation` | `services/translation` | 50111 |
+| csat-surveys | Communicator | `crates/csat_surveys` | `services/csat_surveys` | 50112 |
+| meta-sync | Communicator | `crates/meta_sync` | `services/meta_sync` | 50113 |
+| discovery | Communicator | `crates/discovery` | `services/discovery` | 50113 |
+| automation | Communicator | `crates/automation` | `services/automation` | 50114 |
+| business_profile | Communicator | `crates/business_profile` | `services/business_profile` | 50115 |
+| team_routing | Communicator | `crates/team_routing` | `services/team_routing` | 50116 |
+| knowledge_base | Communicator | `crates/knowledge_base` | `services/knowledge_base` | 50117 |
+| live_proof | Communicator | `crates/live_proof` | `services/live_proof` | 50118 |
+| conversations | Communicator | `crates/conversations` | `services/conversations` | 50120 |
+| whatsapp-automations | Communicator | `crates/whatsapp_automations` | `services/whatsapp_automations` | 50109 |
+| commerce-catalog | Communicator | `crates/commerce_catalog` | `services/commerce_catalog` | 50110 |
+| compliance | Communicator | `crates/compliance` | (library-only) | — |
 
-`reply-integration` and `alerts` are the cases so far where a split
+`reply-integration`, `alerts`, and `compliance` are the cases so far where a split
 module had genuine in-process coupling from elsewhere in the monolith
 (`backend-rs/src/services/reply_engine.rs` called both
 `ReplyIntegrationService` and `send_hot_lead_alert` directly, not
@@ -319,8 +357,9 @@ through a route): resolved by having `reply_engine.rs` depend on the
 new `newax-reply-integration` and `newax-alerts` crates directly as
 libraries, not by routing an internal monolith call through gRPC.
 
-Remaining: **~52 more modules in Communicator's `backend-rs`**
-(70 routes/90 services, 142k lines total) and **~14 more in nID's
+Remaining: **~39 more modules in Communicator's `backend-rs`**
+(most are complex coupled modules like auth, broadcasts, commerce, contacts,
+conversations, etc.) and **~14 more in nID's
 `apps/rust-api`**. This is not a mechanical find-and-replace — each
 module needs its cross-module Rust calls identified and either kept
 in-process (if it stays in the monolith) or turned into a gRPC call

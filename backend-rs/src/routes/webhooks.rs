@@ -1,11 +1,10 @@
-﻿use crate::db::AppState;
+use crate::db::AppState;
 use crate::services::inbound::{self, InboundMessage};
 use crate::services::signatures::{
     secrets_match, validate_line_signature, validate_meta_signature, validate_tiktok_signature,
     validate_twilio_signature,
 };
 use crate::services::whatsapp::WhatsAppService;
-use crate::services::whatsapp_automations::WhatsAppAutomationEngine;
 use axum::body::Bytes;
 use axum::extract::{OriginalUri, Query, State};
 use axum::http::{HeaderMap, StatusCode};
@@ -713,6 +712,8 @@ async fn sync_whatsapp_customer_profile(
 }
 
 /// Process WhatsApp automation for an inbound message
+///
+/// Thin gRPC client forwarding to svc-whatsapp-automations; REST shape unchanged.
 async fn process_whatsapp_automation(
     state: &AppState,
     brand_id: &str,
@@ -721,9 +722,7 @@ async fn process_whatsapp_automation(
     message_text: &str,
     msg_value: &serde_json::Value,
 ) {
-    let cfg = state.config.as_ref().clone();
-    let engine = WhatsAppAutomationEngine::new(state.db.clone(), cfg.clone());
-    let wa_service = WhatsAppService::new(state.db.clone(), cfg);
+    let wa_service = WhatsAppService::new(state.db.clone(), state.config.as_ref().clone());
 
     // 1. Update session window (24h tracking)
     let _ = wa_service.update_session_window(brand_id, contact_wa_id).await;
@@ -732,50 +731,143 @@ async fn process_whatsapp_automation(
     let interactive_type = msg_value.get("type").and_then(|v| v.as_str()).unwrap_or("");
     let button_id = extract_meta_payload_id(msg_value);
 
+    // gRPC client for whatsapp_automations service
+    async fn automations_client() -> Result<
+        newax_proto::whatsapp_automations::v1::whats_app_automations_service_client::WhatsAppAutomationsServiceClient<tonic::transport::Channel>,
+        String,
+    > {
+        let url = std::env::var("WHATSAPP_AUTOMATIONS_SERVICE_URL")
+            .unwrap_or_else(|_| "http://127.0.0.1:50109".to_string());
+        newax_proto::whatsapp_automations::v1::whats_app_automations_service_client::WhatsAppAutomationsServiceClient::connect(url)
+            .await
+            .map_err(|e| format!("whatsapp_automations service unavailable: {e}"))
+    }
+
+    use newax_proto::whatsapp_automations::v1::whats_app_automations_service_client::WhatsAppAutomationsServiceClient;
+    use newax_proto::whatsapp_automations::v1::*;
+
+    let mut client = match automations_client().await {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::warn!("Cannot connect to whatsapp_automations service: {e}");
+            return;
+        }
+    };
+
     // 3. Handle agent commands (#bot, #resolve, #csat, #tag) — highest priority
-    let agent_reply = engine.handle_agent_commands(brand_id, conversation_id, contact_wa_id, message_text).await;
-    if let Some(reply) = agent_reply {
-        tracing::info!("Agent command reply: {reply}");
-        // Send the reply back to the customer
-        let _ = wa_service.send_text(brand_id, contact_wa_id, &reply, false).await;
+    match client.handle_agent_commands(AgentCommandsRequest {
+        brand_id: brand_id.to_string(),
+        conversation_id: conversation_id.to_string(),
+        contact_id: contact_wa_id.to_string(),
+        text: message_text.to_string(),
+    }).await {
+        Ok(resp) => {
+            let json_str = resp.into_inner().json;
+            if let Ok(json_val) = serde_json::from_str::<serde_json::Value>(&json_str) {
+                if let Some(reply) = json_val.get("reply").and_then(|v| v.as_str()) {
+                    if !reply.is_empty() {
+                        tracing::info!("Agent command reply: {reply}");
+                        let _ = wa_service.send_text(brand_id, contact_wa_id, reply, false).await;
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            tracing::warn!("Agent commands gRPC call failed: {}", e);
+        }
     }
 
     // 4. Handle CSAT response (only for interactive/button replies)
     if interactive_type == "interactive" {
-        let csat_reply = engine.handle_csat_response(brand_id, conversation_id, contact_wa_id, message_text).await;
-        if let Some(reply) = csat_reply {
-            tracing::info!("CSAT reply: {reply}");
-            let _ = wa_service.send_text(brand_id, contact_wa_id, &reply, false).await;
+        match client.handle_csat_response(CsatResponseRequest {
+            brand_id: brand_id.to_string(),
+            conversation_id: conversation_id.to_string(),
+            contact_id: contact_wa_id.to_string(),
+            payload: message_text.to_string(),
+        }).await {
+            Ok(resp) => {
+                let json_str = resp.into_inner().json;
+                if let Ok(json_val) = serde_json::from_str::<serde_json::Value>(&json_str) {
+                    if let Some(reply) = json_val.get("reply").and_then(|v| v.as_str()) {
+                        if !reply.is_empty() {
+                            tracing::info!("CSAT reply: {reply}");
+                            let _ = wa_service.send_text(brand_id, contact_wa_id, reply, false).await;
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                tracing::warn!("CSAT response gRPC call failed: {}", e);
+            }
         }
     }
 
     // 5. Handle navigation menu (button clicks, list selections)
     if interactive_type == "interactive" {
         if let Some(ref bid) = button_id {
-            let menu_reply = engine.handle_navigation_menu(brand_id, contact_wa_id, bid).await;
-            if menu_reply.is_some() {
-                tracing::info!("Navigation menu handled for payload: {bid}");
+            match client.handle_navigation_menu(NavigationMenuRequest {
+                brand_id: brand_id.to_string(),
+                contact_id: contact_wa_id.to_string(),
+                payload: bid.clone(),
+            }).await {
+                Ok(resp) => {
+                    let json_str = resp.into_inner().json;
+                    if let Ok(json_val) = serde_json::from_str::<serde_json::Value>(&json_str) {
+                        if json_val.get("reply").and_then(|v| v.as_str()).is_some() {
+                            tracing::info!("Navigation menu handled for payload: {bid}");
+                        }
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("Navigation menu gRPC call failed: {}", e);
+                }
             }
         }
     }
 
     // 6. Match automation rules (keyword/regex/intent)
-    match engine.match_advanced_rule(brand_id, message_text).await {
-        Ok(Some((rule_id, action_type, _action_config))) => {
-            tracing::info!("Automation rule matched: {rule_id}, action: {action_type}");
+    match client.match_advanced_rule(RuleMatchRequest {
+        brand_id: brand_id.to_string(),
+        text: message_text.to_string(),
+    }).await {
+        Ok(resp) => {
+            let json_str = resp.into_inner().json;
+            if let Ok(json_val) = serde_json::from_str::<serde_json::Value>(&json_str) {
+                if let (Some(rule_id), Some(action_type)) = (
+                    json_val.get("rule_id").and_then(|v| v.as_str()),
+                    json_val.get("action_type").and_then(|v| v.as_str()),
+                ) {
+                    tracing::info!("Automation rule matched: {rule_id}, action: {action_type}");
+                }
+            }
         }
-        Ok(None) => {}
         Err(e) => {
             tracing::warn!("Automation rule matching failed: {e}");
         }
     }
 
     // 7. Send welcome greeting if first touch
-    let should_greet = engine.should_send_welcome_greeting(brand_id, conversation_id).await.unwrap_or(false);
-    if should_greet {
-        match engine.send_welcome_greeting(brand_id, conversation_id, contact_wa_id).await {
-            Ok(_) => tracing::info!("Welcome greeting sent to {contact_wa_id}"),
-            Err(e) => tracing::warn!("Welcome greeting failed: {e}"),
+    match client.should_send_welcome_greeting(GreetingCheckRequest {
+        brand_id: brand_id.to_string(),
+        conversation_id: conversation_id.to_string(),
+    }).await {
+        Ok(resp) => {
+            let json_str = resp.into_inner().json;
+            if let Ok(json_val) = serde_json::from_str::<serde_json::Value>(&json_str) {
+                if json_val.get("should_send").and_then(|v| v.as_bool()).unwrap_or(false) {
+                    match client.send_welcome_greeting(GreetingSendRequest {
+                        brand_id: brand_id.to_string(),
+                        conversation_id: conversation_id.to_string(),
+                        contact_id: contact_wa_id.to_string(),
+                    }).await {
+                        Ok(_) => tracing::info!("Welcome greeting sent to {contact_wa_id}"),
+                        Err(e) => tracing::warn!("Welcome greeting failed: {e}"),
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            tracing::warn!("Welcome greeting check failed: {e}");
         }
     }
 
@@ -876,7 +968,7 @@ pub async fn meta_whatsapp_inbound(
                 field,
                 "phone_number_quality_update" | "phone_number_name_update" | "account_update"
             ) {
-                let profile = crate::services::meta_sync::refresh_channel_info(&state).await;
+                let profile = crate::routes::meta_sync_client::refresh_channel_info(&state).await;
                 // WHY: refresh_channel_info reports what Meta returned, not what it
                 // stored, so the stored row is re-read and a re-sync is claimed only
                 // when the values on file actually match the fetched profile.

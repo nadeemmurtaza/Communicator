@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+package newax.store_connection.v1;
+
+service StoreConnectionService {
+  rpc CreateConnection(CreateConnectionRequest) returns (JsonResponse);
+  rpc GetConnection(IdRequest) returns (JsonResponse);
+  rpc GetConnectionByDomain(DomainRequest) returns (JsonResponse);
+  rpc GetConnectionByPublicKey(PublicKeyRequest) returns (JsonResponse);
+  rpc ListConnections(BrandRequest) returns (JsonResponse);
+  rpc UpdateConnection(UpdateConnectionRequest) returns (JsonResponse);
+  rpc DeactivateConnection(IdRequest) returns (JsonResponse);
+  rpc GetConnectionStatus(IdRequest) returns (JsonResponse);
+  rpc RunHealthCheck(IdRequest) returns (JsonResponse);
+  rpc SubmitUiCompatibilityReport(SubmitUiCompatibilityRequest) returns (JsonResponse);
+  rpc GetLatestUiCompatibility(IdRequest) returns (JsonResponse);
+  rpc GetBrandIsolation(BrandRequest) returns (JsonResponse);
+  rpc UpdateBrandIsolation(UpdateBrandIsolationRequest) returns (JsonResponse);
+  rpc VerifyBrandOtpIsolation(OtpIdRequest) returns (JsonResponse);
+  rpc InitiateAccountCreation(InitiateAccountCreationRequest) returns (JsonResponse);
+  rpc VerifyAccountCreation(VerifyAccountCreationRequest) returns (JsonResponse);
+  rpc ResendOtp(ResendOtpRequest) returns (JsonResponse);
+}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message JsonBody {
+  string json = 1;
+}
+
+message IdRequest {
+  string id = 1;
+}
+
+message BrandRequest {
+  string brand_id = 1;
+}
+
+message DomainRequest {
+  string store_domain = 1;
+}
+
+message PublicKeyRequest {
+  string public_key = 1;
+}
+
+message OtpIdRequest {
+  string otp_id = 1;
+}
+
+// ——— Connection CRUD ———
+
+message CreateConnectionRequest {
+  JsonBody body = 1;
+}
+
+message UpdateConnectionRequest {
+  string connection_id = 1;
+  JsonBody body = 2;
+}
+
+// ——— UI Compatibility ———
+
+message SubmitUiCompatibilityRequest {
+  string brand_id = 1;
+  JsonBody body = 2;
+}
+
+// ——— Brand OTP Isolation ———
+
+message UpdateBrandIsolationRequest {
+  string brand_id = 1;
+  JsonBody body = 2;
+}
+
+// ——— Account Creation ———
+
+message InitiateAccountCreationRequest {
+  string connection_id = 1;
+  JsonBody body = 2;
+}
+
+message VerifyAccountCreationRequest {
+  JsonBody body = 1;
+}
+
+message ResendOtpRequest {
+  string pending_id = 1;
+  JsonBody body = 2;
+}

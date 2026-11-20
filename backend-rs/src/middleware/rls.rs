@@ -15,7 +15,6 @@ use axum::body::Body;
 use axum::http::Request;
 use axum::http::Response;
 use axum::middleware::Next;
-use axum::response::IntoResponse;
 use sqlx::PgConnection;
 use sqlx::Connection;
 use tracing::debug;
@@ -67,7 +66,7 @@ pub async fn rls_middleware(
     state: axum::extract::State<AppState>,
     mut req: Request<Body>,
     next: Next,
-) -> impl IntoResponse {
+) -> Response<Body> {
     let tenant_key = extract_tenant_key(&req, &state.config);
     let auth_header = req.headers().get("authorization").and_then(|v| v.to_str().ok()).map(str::to_string);
     let account_id = extract_account_id(&state, auth_header).await;

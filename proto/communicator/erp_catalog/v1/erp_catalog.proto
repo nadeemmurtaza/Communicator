@@ -1,0 +1,203 @@
+syntax = "proto3";
+
+package newax.erp_catalog.v1;
+
+service ErpCatalogService {
+  // Categories
+  rpc ListCategories(ListCategoriesRequest) returns (JsonResponse);
+  rpc GetCategory(IdRequest) returns (JsonResponse);
+  rpc CreateCategory(CreateCategoryRequest) returns (JsonResponse);
+  rpc UpdateCategory(UpdateCategoryRequest) returns (JsonResponse);
+  rpc DeleteCategory(IdRequest) returns (Empty);
+
+  // Category Translations
+  rpc ListCategoryTranslations(IdRequest) returns (JsonResponse);
+  rpc UpsertCategoryTranslation(UpsertCategoryTranslationRequest) returns (JsonResponse);
+
+  // Products
+  rpc ListProducts(ListProductsRequest) returns (JsonResponse);
+  rpc GetProduct(IdRequest) returns (JsonResponse);
+  rpc GetProductBySlug(SlugRequest) returns (JsonResponse);
+  rpc CreateProduct(CreateProductRequest) returns (JsonResponse);
+  rpc UpdateProduct(UpdateProductRequest) returns (JsonResponse);
+  rpc DeleteProduct(IdRequest) returns (Empty);
+
+  // Product Translations
+  rpc ListProductTranslations(IdRequest) returns (JsonResponse);
+  rpc UpsertProductTranslation(UpsertProductTranslationRequest) returns (JsonResponse);
+
+  // Variants
+  rpc ListVariants(IdRequest) returns (JsonResponse);
+  rpc GetVariant(IdRequest) returns (JsonResponse);
+  rpc CreateVariant(CreateVariantRequest) returns (JsonResponse);
+  rpc UpdateVariant(UpdateVariantRequest) returns (JsonResponse);
+  rpc DeleteVariant(IdRequest) returns (Empty);
+
+  // Images
+  rpc ListImages(IdRequest) returns (JsonResponse);
+  rpc CreateImage(CreateImageRequest) returns (JsonResponse);
+  rpc DeleteImage(IdRequest) returns (Empty);
+
+  // Options
+  rpc ListProductOptions(IdRequest) returns (JsonResponse);
+  rpc CreateProductOption(CreateProductOptionRequest) returns (JsonResponse);
+  rpc DeleteProductOption(IdRequest) returns (Empty);
+  rpc ListOptionValues(IdRequest) returns (JsonResponse);
+  rpc CreateOptionValue(CreateOptionValueRequest) returns (JsonResponse);
+  rpc DeleteOptionValue(IdRequest) returns (Empty);
+
+  // Collections
+  rpc ListCollections(Empty) returns (JsonResponse);
+  rpc GetCollection(IdRequest) returns (JsonResponse);
+  rpc CreateCollection(CreateCollectionRequest) returns (JsonResponse);
+  rpc AddProductToCollection(AddProductToCollectionRequest) returns (Empty);
+  rpc RemoveProductFromCollection(RemoveProductFromCollectionRequest) returns (Empty);
+  rpc ListCollectionProducts(IdRequest) returns (JsonResponse);
+
+  // Stock Adjustments
+  rpc AdjustStock(AdjustStockRequest) returns (JsonResponse);
+  rpc ListStockAdjustments(ListStockAdjustmentsRequest) returns (JsonResponse);
+
+  // Cross-sells
+  rpc AddCrossSell(AddCrossSellRequest) returns (Empty);
+  rpc ListCrossSells(IdRequest) returns (JsonResponse);
+
+  // AI Suggestions
+  rpc ListAiSuggestions(IdRequest) returns (JsonResponse);
+  rpc ApproveAiSuggestion(IdRequest) returns (Empty);
+  rpc RejectAiSuggestion(IdRequest) returns (Empty);
+
+  // Redirects
+  rpc ListRedirects(Empty) returns (JsonResponse);
+  rpc CreateRedirect(CreateRedirectRequest) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message IdRequest {
+  string id = 1;
+}
+
+message SlugRequest {
+  string slug = 1;
+}
+
+// ——— Categories ———
+
+message ListCategoriesRequest {
+  bool active_only = 1;
+}
+
+message CreateCategoryRequest {
+  string json = 1;
+}
+
+message UpdateCategoryRequest {
+  string id = 1;
+  string json = 2;
+}
+
+// ——— Category Translations ———
+
+message UpsertCategoryTranslationRequest {
+  string category_id = 1;
+  string locale = 2;
+  string json = 3;
+}
+
+// ——— Products ———
+
+message ListProductsRequest {
+  string status = 1;
+  string kind = 2;
+  int64 limit = 3;
+  int64 offset = 4;
+}
+
+message CreateProductRequest {
+  string json = 1;
+}
+
+message UpdateProductRequest {
+  string id = 1;
+  string json = 2;
+}
+
+// ——— Product Translations ———
+
+message UpsertProductTranslationRequest {
+  string product_id = 1;
+  string locale = 2;
+  string json = 3;
+}
+
+// ——— Variants ———
+
+message CreateVariantRequest {
+  string json = 1;
+}
+
+message UpdateVariantRequest {
+  string id = 1;
+  string json = 2;
+}
+
+// ——— Images ———
+
+message CreateImageRequest {
+  string json = 1;
+}
+
+// ——— Options ———
+
+message CreateProductOptionRequest {
+  string json = 1;
+}
+
+message CreateOptionValueRequest {
+  string json = 1;
+}
+
+// ——— Collections ———
+
+message CreateCollectionRequest {
+  string json = 1;
+}
+
+message AddProductToCollectionRequest {
+  string collection_id = 1;
+  string json = 2;
+}
+
+message RemoveProductFromCollectionRequest {
+  string collection_id = 1;
+  string product_id = 2;
+}
+
+// ——— Stock Adjustments ———
+
+message AdjustStockRequest {
+  string json = 1;
+}
+
+message ListStockAdjustmentsRequest {
+  string variant_id = 1;
+  int64 limit = 2;
+}
+
+// ——— Cross-sells ———
+
+message AddCrossSellRequest {
+  string source_id = 1;
+  string json = 2;
+}
+
+// ——— Redirects ———
+
+message CreateRedirectRequest {
+  string json = 1;
+}

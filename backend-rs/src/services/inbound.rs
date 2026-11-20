@@ -1,7 +1,7 @@
 ﻿#![allow(dead_code)]
 
 use crate::db::DbPool;
-use crate::services::compliance::{self, ConsentStatus};
+use newax_compliance::{self as compliance, ConsentStatus};
 use sqlx::Row;
 
 const TERMINAL_STATES: [&str; 3] = ["opted_out", "closed_won", "closed_lost"];

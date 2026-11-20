@@ -16,7 +16,7 @@
 //! `status = 'sent'`.
 
 use crate::db::{AppState, DbPool};
-use crate::services::compliance::{self, ConsentStatus};
+use newax_compliance::{self as compliance, ConsentStatus};
 use crate::services::draft_actions;
 use crate::services::inbound::{self, InboundError};
 use crate::services::reply_engine;

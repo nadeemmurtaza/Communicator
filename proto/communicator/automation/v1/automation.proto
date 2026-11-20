@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package newax.automation.v1;
+
+service AutomationService {
+  rpc ListAutomationRules(QueryRequest) returns (JsonResponse);
+  rpc CreateAutomationRule(CreateRequest) returns (JsonResponse);
+  rpc UpdateAutomationRule(UpdateRequest) returns (JsonResponse);
+  rpc DeleteAutomationRule(IdRequest) returns (JsonResponse);
+  rpc TestAutomationRule(CreateRequest) returns (JsonResponse);
+  rpc ApplyAutomationRules(CreateRequest) returns (JsonResponse);
+  rpc GetAutomationStats(QueryRequest) returns (JsonResponse);
+  rpc RunInactivityNudges(EmptyRequest) returns (JsonResponse);
+}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message EmptyRequest {}
+
+message IdRequest {
+  string id = 1;
+}
+
+message QueryRequest {
+  string json = 1;
+}
+
+message CreateRequest {
+  string json = 1;
+}
+
+message UpdateRequest {
+  string id = 1;
+  string json = 2;
+}

@@ -1,78 +1,66 @@
-﻿use crate::db::AppState;
+//! Health check route — thin gRPC client forwarding to svc-health.
+
 use axum::{
     extract::State,
     http::StatusCode,
     response::IntoResponse,
     Json,
 };
-use chrono::Utc;
-use serde_json::json;
-use sqlx::Row;
-use tracing::warn;
+use crate::db::AppState;
+use newax_proto::health::v1::health_service_client::HealthServiceClient;
+use newax_proto::health::v1::EmptyRequest;
+use tonic::transport::Channel;
 
-/// Liveness/readiness probe. The database is pinged for real on every call:
-/// `status` is only ever `ok` when the pool actually answered, and a failed
-/// probe reports the driver error instead of an optimistic success.
-pub async fn health_check(State(state): State<AppState>) -> impl IntoResponse {
-    let started = std::time::Instant::now();
+#[derive(Clone)]
+struct HealthClient(HealthServiceClient<Channel>);
 
-    match sqlx::query_scalar::<_, String>("SELECT version() AS version")
-        .fetch_optional(&state.db)
+async fn client(state: &AppState) -> Result<HealthClient, String> {
+    let url = if state.config.health_grpc_url.is_empty() {
+        "http://[::1]:50110"
+    } else {
+        &state.config.health_grpc_url
+    };
+    let channel = Channel::from_shared(url.to_string())
+        .map_err(|e| format!("Invalid gRPC URL: {}", e))?
+        .connect()
         .await
-    {
-        Ok(Some(row)) => {
-            let version: String = row;
-            let checked = sqlx::query("SELECT COUNT(*) AS inboxes FROM inboxes")
-                .fetch_optional(&state.db)
-                .await
-                .ok()
-                .and_then(|r| r.and_then(|r| r.try_get::<i64, _>("inboxes").ok()));
+        .map_err(|e| format!("Failed to connect to health service: {}", e))?;
+    Ok(HealthClient(HealthServiceClient::new(channel)))
+}
 
-            (
-                StatusCode::OK,
-                Json(json!({
-                    "status": "ok",
-                    "database": {
-                        "reachable": true,
-                        "engine": "postgresql",
-                        "version": version,
-                        "roundTripMs": started.elapsed().as_millis() as i64,
-                        "inboxCount": checked,
-                    },
-                    "checkedAt": Utc::now().to_rfc3339(),
-                })),
-            )
-                .into_response()
+/// Liveness/readiness probe forwarded to svc-health.
+pub async fn health_check(State(state): State<AppState>) -> impl IntoResponse {
+    match client(&state).await {
+        Ok(mut c) => {
+            match c.0.check(EmptyRequest {}).await {
+                Ok(resp) => {
+                    let json_str = resp.into_inner().json;
+                    match serde_json::from_str::<serde_json::Value>(&json_str) {
+                        Ok(val) => (StatusCode::OK, Json(val)).into_response(),
+                        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": "Invalid JSON from health service" }))).into_response(),
+                    }
+                }
+                Err(e) => {
+                    (StatusCode::SERVICE_UNAVAILABLE, Json(serde_json::json!({
+                        "status": "degraded",
+                        "database": {
+                            "reachable": false,
+                            "error": format!("gRPC error: {}", e),
+                        },
+                        "checkedAt": chrono::Utc::now().to_rfc3339(),
+                    }))).into_response()
+                }
+            }
         }
-        Ok(None) => {
-            warn!("Health probe: the database returned no row for a liveness query");
-            (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(json!({
-                    "status": "degraded",
-                    "database": {
-                        "reachable": false,
-                        "error": "The database pool answered with an empty result set.",
-                    },
-                    "checkedAt": Utc::now().to_rfc3339(),
-                })),
-            )
-                .into_response()
-        }
-        Err(err) => {
-            warn!("Health probe: database unreachable: {err}");
-            (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(json!({
-                    "status": "degraded",
-                    "database": {
-                        "reachable": false,
-                        "error": err.to_string(),
-                    },
-                    "checkedAt": Utc::now().to_rfc3339(),
-                })),
-            )
-                .into_response()
+        Err(e) => {
+            (StatusCode::SERVICE_UNAVAILABLE, Json(serde_json::json!({
+                "status": "degraded",
+                "database": {
+                    "reachable": false,
+                    "error": format!("Failed to connect to health service: {}", e),
+                },
+                "checkedAt": chrono::Utc::now().to_rfc3339(),
+            }))).into_response()
         }
     }
 }

@@ -45,7 +45,7 @@ impl AutonomousResolutionService for Svc {
         req: Request<proto::UpdateConfigRequest>,
     ) -> Result<Response<JsonResponse>, Status> {
         let r = req.into_inner();
-        let config: autonomous_resolution::ResolutionConfig = parse_json(&r.config_json)?;
+        let config: autonomous_resolution::ResolutionConfig = serde_json::from_str(&r.config_json).map_err(|e| Status::invalid_argument(e.to_string()))?;
         let v = autonomous_resolution::update_resolution_config(&self.state, &config).await.map_err(to_status)?;
         Ok(Response::new(json_response(serde_json::to_value(v).map_err(to_status)?)))
     }
@@ -85,7 +85,7 @@ impl AutonomousResolutionService for Svc {
         req: Request<proto::UpdateEscalationRuleRequest>,
     ) -> Result<Response<JsonResponse>, Status> {
         let r = req.into_inner();
-        let rule: autonomous_resolution::EscalationRule = parse_json(&r.rule_json)?;
+        let rule: autonomous_resolution::EscalationRule = serde_json::from_str(&r.rule_json).map_err(|e| Status::invalid_argument(e.to_string()))?;
         let v = autonomous_resolution::update_escalation_rule(&self.state, &rule).await.map_err(to_status)?;
         Ok(Response::new(json_response(serde_json::to_value(v).map_err(to_status)?)))
     }

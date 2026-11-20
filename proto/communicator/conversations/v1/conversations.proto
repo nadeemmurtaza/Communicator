@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package newax.conversations.v1;
+
+service ConversationsService {
+  rpc ListConversations(EmptyRequest) returns (JsonResponse);
+  rpc GetConversation(GetConversationRequest) returns (JsonResponse);
+  rpc SendConversationMessage(SendMessageRequest) returns (JsonResponse);
+  rpc ResolveConversation(ResolveConversationRequest) returns (JsonResponse);
+  rpc UpdatePriority(UpdatePriorityRequest) returns (JsonResponse);
+  rpc AssignTeam(AssignTeamRequest) returns (JsonResponse);
+  rpc AssignAgent(AssignAgentRequest) returns (JsonResponse);
+  rpc SnoozeConversation(SnoozeConversationRequest) returns (JsonResponse);
+  rpc UpdateCustomAttributes(UpdateCustomAttributesRequest) returns (JsonResponse);
+  rpc AutoAssign(AutoAssignRequest) returns (JsonResponse);
+  rpc ListContactNotes(ListContactNotesRequest) returns (JsonResponse);
+  rpc AddContactNote(AddContactNoteRequest) returns (JsonResponse);
+  rpc EnrollSequence(EnrollSequenceRequest) returns (JsonResponse);
+  rpc SubmitMessageFeedback(SubmitFeedbackRequest) returns (JsonResponse);
+  rpc GetFeedbackSummary(EmptyRequest) returns (JsonResponse);
+}
+
+message EmptyRequest {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message GetConversationRequest {
+  string id = 1;
+}
+
+message SendMessageRequest {
+  string id = 1;
+  string json = 2;
+}
+
+message ResolveConversationRequest {
+  string id = 1;
+  string json = 2;
+}
+
+message UpdatePriorityRequest {
+  string id = 1;
+  string json = 2;
+}
+
+message AssignTeamRequest {
+  string id = 1;
+  string json = 2;
+}
+
+message AssignAgentRequest {
+  string id = 1;
+  string json = 2;
+}
+
+message SnoozeConversationRequest {
+  string id = 1;
+  string json = 2;
+}
+
+message UpdateCustomAttributesRequest {
+  string id = 1;
+  string json = 2;
+}
+
+message AutoAssignRequest {
+  string id = 1;
+}
+
+message ListContactNotesRequest {
+  string contact_id = 1;
+}
+
+message AddContactNoteRequest {
+  string contact_id = 1;
+  string json = 2;
+}
+
+message EnrollSequenceRequest {
+  string id = 1;
+  string json = 2;
+}
+
+message SubmitFeedbackRequest {
+  string message_id = 1;
+  string json = 2;
+}

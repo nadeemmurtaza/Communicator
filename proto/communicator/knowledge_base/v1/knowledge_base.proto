@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package newax.knowledge_base.v1;
+
+service KnowledgeBaseService {
+  // KB entries
+  rpc ListKnowledgeBase(QueryRequest) returns (JsonResponse);
+  rpc CreateKnowledgeBaseEntry(CreateRequest) returns (JsonResponse);
+  rpc DeleteKnowledgeBaseEntry(IdRequest) returns (JsonResponse);
+
+  // Document upload
+  rpc UploadKnowledgeDocument(CreateRequest) returns (JsonResponse);
+
+  // URL ingestion
+  rpc IngestUrl(CreateRequest) returns (JsonResponse);
+
+  // Hub overview
+  rpc GetKnowledgeHubOverview(QueryRequest) returns (JsonResponse);
+
+  // Recommendations
+  rpc ListKnowledgeRecommendations(QueryRequest) returns (JsonResponse);
+  rpc ApplyKnowledgeRecommendation(ApplyRequest) returns (JsonResponse);
+  rpc DismissKnowledgeRecommendation(IdRequest) returns (JsonResponse);
+
+  // Knowledge gaps
+  rpc ListKnowledgeGaps(QueryRequest) returns (JsonResponse);
+  rpc ScanKnowledgeGaps(EmptyRequest) returns (JsonResponse);
+  rpc ApproveKnowledgeGap(ApplyRequest) returns (JsonResponse);
+  rpc DismissKnowledgeGap(IdRequest) returns (JsonResponse);
+}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message EmptyRequest {}
+
+message IdRequest {
+  string id = 1;
+}
+
+message QueryRequest {
+  string json = 1;
+}
+
+message CreateRequest {
+  string json = 1;
+}
+
+message ApplyRequest {
+  string id = 1;
+  string json = 2;
+}

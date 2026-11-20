@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package newax.nid_sync.v1;
+
+service NidSyncService {
+  rpc GetLaunchpadOverview(IdRequest) returns (JsonResponse);
+  rpc GetPersonalProfile(IdRequest) returns (JsonResponse);
+  rpc GetWorkProfile(IdRequest) returns (JsonResponse);
+  rpc GetUserOrganizations(IdRequest) returns (JsonResponse);
+  rpc GetUserMemberships(IdRequest) returns (JsonResponse);
+  rpc GetInvoices(IdRequest) returns (JsonResponse);
+  rpc GetPayments(IdRequest) returns (JsonResponse);
+  rpc GetSubscriptions(IdRequest) returns (JsonResponse);
+  rpc SetOrderPlatformInfo(SetOrderPlatformInfoRequest) returns (Empty);
+  rpc GetTenants(Empty) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message IdRequest {
+  string id = 1;
+}
+
+message SetOrderPlatformInfoRequest {
+  string order_id = 1;
+  string platform_name = 2;
+  string platform_type = 3;
+  string brand_name = 4;
+  optional string shop_name = 5;
+}

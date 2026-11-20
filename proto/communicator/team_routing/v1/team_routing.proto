@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package newax.team_routing.v1;
+
+service TeamRoutingService {
+  // Team members
+  rpc ListTeam(EmptyRequest) returns (JsonResponse);
+  rpc CreateTeamMember(CreateRequest) returns (JsonResponse);
+  rpc DeleteTeamMember(IdRequest) returns (JsonResponse);
+
+  // Conversation assignment
+  rpc AssignConversation(AssignRequest) returns (JsonResponse);
+  rpc SetHumanTakeover(TakeoverRequest) returns (JsonResponse);
+
+  // Teams
+  rpc ListTeams(EmptyRequest) returns (JsonResponse);
+  rpc CreateTeam(CreateRequest) returns (JsonResponse);
+  rpc DeleteTeam(IdRequest) returns (JsonResponse);
+  rpc AddMemberToTeam(AddMemberRequest) returns (JsonResponse);
+  rpc RemoveMemberFromTeam(RemoveMemberRequest) returns (JsonResponse);
+
+  // Routing & capacity
+  rpc ListRoutingAgents(EmptyRequest) returns (JsonResponse);
+  rpc UpdateAgentStatus(StatusRequest) returns (JsonResponse);
+  rpc UpdateAgentCapacity(CapacityRequest) returns (JsonResponse);
+  rpc GetCapacityOverview(QueryRequest) returns (JsonResponse);
+  rpc BatchAutoAssign(CreateRequest) returns (JsonResponse);
+}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message EmptyRequest {}
+
+message CreateRequest {
+  string json = 1;
+}
+
+message IdRequest {
+  string id = 1;
+}
+
+message AssignRequest {
+  string conversation_id = 1;
+  string member_id = 2;
+}
+
+message TakeoverRequest {
+  string conversation_id = 1;
+  bool enabled = 2;
+}
+
+message AddMemberRequest {
+  string team_id = 1;
+  string json = 2;
+}
+
+message RemoveMemberRequest {
+  string team_id = 1;
+  string member_id = 2;
+}
+
+message StatusRequest {
+  string id = 1;
+  string json = 2;
+}
+
+message CapacityRequest {
+  string id = 1;
+  string json = 2;
+}
+
+message QueryRequest {
+  string team_id = 1;
+}

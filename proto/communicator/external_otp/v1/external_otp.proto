@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package newax.external_otp.v1;
+
+service ExternalOtpService {
+  rpc CreateIntegration(CreateIntegrationRequest) returns (JsonResponse);
+  rpc ListIntegrations(IdRequest) returns (JsonResponse);
+  rpc DeactivateIntegration(IdRequest) returns (JsonResponse);
+  rpc ExternalGenerate(ExternalGenerateRequest) returns (JsonResponse);
+  rpc ExternalVerify(ExternalVerifyRequest) returns (JsonResponse);
+  rpc GetIntegrationInfo(PublicKeyRequest) returns (JsonResponse);
+  rpc VerifySecretKey(SecretKeyRequest) returns (JsonResponse);
+}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message JsonBody {
+  string json = 1;
+}
+
+message IdRequest {
+  string id = 1;
+}
+
+message PublicKeyRequest {
+  string public_key = 1;
+}
+
+message SecretKeyRequest {
+  string secret_key = 1;
+}
+
+message CreateIntegrationRequest {
+  JsonBody body = 1;
+}
+
+message ExternalGenerateRequest {
+  JsonBody body = 1;
+  string secret_key = 2;
+  string ip_address = 3;
+  string user_agent = 4;
+}
+
+message ExternalVerifyRequest {
+  JsonBody body = 1;
+  string secret_key = 2;
+  string ip_address = 3;
+  string user_agent = 4;
+}

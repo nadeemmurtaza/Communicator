@@ -1,0 +1,190 @@
+syntax = "proto3";
+
+package newax.whatsapp_flows.v1;
+
+service WhatsAppFlowsService {
+  rpc ListIndustries(ListIndustriesRequest) returns (JsonResponse);
+  rpc CreateIndustry(CreateIndustryRequest) returns (JsonResponse);
+  rpc UpdateIndustry(UpdateIndustryRequest) returns (JsonResponse);
+  rpc DeleteIndustry(DeleteIndustryRequest) returns (JsonResponse);
+
+  rpc ListTemplateGroups(ListTemplateGroupsRequest) returns (JsonResponse);
+  rpc CreateTemplateGroup(CreateTemplateGroupRequest) returns (JsonResponse);
+  rpc UpdateTemplateGroup(UpdateTemplateGroupRequest) returns (JsonResponse);
+  rpc DeleteTemplateGroup(DeleteTemplateGroupRequest) returns (JsonResponse);
+
+  rpc ListFlows(ListFlowsRequest) returns (JsonResponse);
+  rpc CreateFlow(CreateFlowRequest) returns (JsonResponse);
+  rpc GetFlow(GetFlowRequest) returns (JsonResponse);
+  rpc UpdateFlow(UpdateFlowRequest) returns (JsonResponse);
+  rpc DeleteFlow(DeleteFlowRequest) returns (JsonResponse);
+  rpc DuplicateFlow(DuplicateFlowRequest) returns (JsonResponse);
+  rpc ValidateFlow(ValidateFlowRequest) returns (JsonResponse);
+
+  rpc ListFlowSteps(ListFlowStepsRequest) returns (JsonResponse);
+  rpc CreateFlowStep(CreateFlowStepRequest) returns (JsonResponse);
+  rpc UpdateFlowStep(UpdateFlowStepRequest) returns (JsonResponse);
+  rpc DeleteFlowStep(DeleteFlowStepRequest) returns (JsonResponse);
+}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message ListIndustriesRequest {}
+
+message CreateIndustryRequest {
+  string name = 1;
+  string description = 2;
+  string icon = 3;
+  bool has_icon = 4;
+}
+
+message UpdateIndustryRequest {
+  string industry_id = 1;
+  string name = 2;
+  bool has_name = 3;
+  string description = 4;
+  bool has_description = 5;
+  string icon = 6;
+  bool has_icon = 7;
+  string is_active = 8;
+  bool has_is_active = 9;
+}
+
+message DeleteIndustryRequest {
+  string industry_id = 1;
+}
+
+message ListTemplateGroupsRequest {
+  string brand_id = 1;
+  string industry_id = 2;
+  bool has_industry_id = 3;
+}
+
+message CreateTemplateGroupRequest {
+  string brand_id = 1;
+  string industry_id = 2;
+  bool has_industry_id = 3;
+  string name = 4;
+  string description = 5;
+  int32 sort_order = 6;
+}
+
+message UpdateTemplateGroupRequest {
+  string group_id = 1;
+  string name = 2;
+  bool has_name = 3;
+  string description = 4;
+  bool has_description = 5;
+  string sort_order = 6;
+  bool has_sort_order = 7;
+}
+
+message DeleteTemplateGroupRequest {
+  string group_id = 1;
+}
+
+message ListFlowsRequest {
+  string brand_id = 1;
+  string industry_id = 2;
+  bool has_industry_id = 3;
+  string group_id = 4;
+  bool has_group_id = 5;
+  string category = 6;
+  bool has_category = 7;
+  string status = 8;
+  bool has_status = 9;
+}
+
+message CreateFlowRequest {
+  string brand_id = 1;
+  string group_id = 2;
+  bool has_group_id = 3;
+  string industry_id = 4;
+  bool has_industry_id = 5;
+  string name = 6;
+  string flow_type = 7;
+  string category = 8;
+  string body = 9;
+  string header = 10;
+  bool has_header = 11;
+  string footer = 12;
+  bool has_footer = 13;
+  string buttons = 14;
+  bool has_buttons = 15;
+  string sections = 16;
+  bool has_sections = 17;
+  string language = 18;
+}
+
+message GetFlowRequest {
+  string flow_id = 1;
+}
+
+message UpdateFlowRequest {
+  string flow_id = 1;
+  string name = 2;
+  bool has_name = 3;
+  string body = 4;
+  bool has_body = 5;
+  string header = 6;
+  bool has_header = 7;
+  string footer = 8;
+  bool has_footer = 9;
+  string buttons = 10;
+  bool has_buttons = 11;
+  string sections = 12;
+  bool has_sections = 13;
+  string status = 14;
+  bool has_status = 15;
+  string is_active = 16;
+  bool has_is_active = 17;
+}
+
+message DeleteFlowRequest {
+  string flow_id = 1;
+}
+
+message DuplicateFlowRequest {
+  string flow_id = 1;
+  string name = 2;
+}
+
+message ValidateFlowRequest {
+  string flow_id = 1;
+}
+
+message ListFlowStepsRequest {
+  string flow_id = 1;
+}
+
+message CreateFlowStepRequest {
+  string flow_id = 1;
+  int32 step_number = 2;
+  string condition = 3;
+  bool has_condition = 4;
+  string action_type = 5;
+  string action_config = 6;
+  bool has_action_config = 7;
+  string next_step_id = 8;
+  bool has_next_step_id = 9;
+}
+
+message UpdateFlowStepRequest {
+  string step_id = 1;
+  string step_number = 2;
+  bool has_step_number = 3;
+  string condition = 4;
+  bool has_condition = 5;
+  string action_type = 6;
+  bool has_action_type = 7;
+  string action_config = 8;
+  bool has_action_config = 9;
+  string next_step_id = 10;
+  bool has_next_step_id = 11;
+}
+
+message DeleteFlowStepRequest {
+  string step_id = 1;
+}

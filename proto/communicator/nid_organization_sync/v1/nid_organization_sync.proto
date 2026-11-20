@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package newax.nid_organization_sync.v1;
+
+service NidOrganizationSyncService {
+  rpc Webhook(WebhookRequest) returns (Empty);
+  rpc ListOrganizations(Empty) returns (JsonResponse);
+  rpc GetOrganization(IdRequest) returns (JsonResponse);
+  rpc GetConnection(Empty) returns (JsonResponse);
+  rpc UpdateConnection(UpdateConnectionRequest) returns (Empty);
+  rpc GetHealth(Empty) returns (JsonResponse);
+  rpc GetSyncLog(GetSyncLogRequest) returns (JsonResponse);
+  rpc CreateRedirect(CreateRedirectRequest) returns (JsonResponse);
+  rpc RedirectCallback(RedirectCallbackRequest) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message IdRequest {
+  string id = 1;
+}
+
+// ——— Webhook ———
+
+message WebhookRequest {
+  string json = 1;
+}
+
+// ——— Connection ———
+
+message UpdateConnectionRequest {
+  string json = 1;
+}
+
+// ——— Sync Log ———
+
+message GetSyncLogRequest {
+  int64 limit = 1;
+}
+
+// ——— Redirect ———
+
+message CreateRedirectRequest {
+  string json = 1;
+}
+
+message RedirectCallbackRequest {
+  string state = 1;
+  string organization_id = 2;
+  string error = 3;
+}

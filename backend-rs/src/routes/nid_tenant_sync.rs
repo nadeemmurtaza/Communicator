@@ -1,241 +1,145 @@
-//! nID Tenant Sync Routes
-//!
-//! API endpoints for managing the nID tenant connection:
-//! - Webhook reception from nID
-//! - Tenant listing and status
-//! - Redirect flow for tenant creation
-//! - Connection settings management
+//! nID Tenant Sync Routes — thin gRPC client forwarding to svc-nid-tenant-sync
 
 use axum::extract::Path;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
-use serde::{Deserialize, Serialize};
-use tracing::info;
 
 use crate::db::AppState;
-use crate::services::nid_tenant_sync::{
-    CreateRedirectSessionRequest, NidTenantSyncService, UpdateConnectionSettingsRequest,
+
+use newax_proto::nid_tenant_sync::v1::nid_tenant_sync_service_client::NidTenantSyncServiceClient;
+use newax_proto::nid_tenant_sync::v1::{
+    ProcessWebhookRequest, ListTenantsRequest, GetTenantRequest, GetConnectionHealthRequest,
+    UpdateConnectionSettingsRequest, CreateRedirectSessionRequest, HandleRedirectCallbackRequest,
+    GetRedirectSessionRequest, GetSyncLogRequest, JsonBody,
 };
 
-// ---------------------------------------------------------------------------
-// Request/Response types
-// ---------------------------------------------------------------------------
-
-#[derive(Debug, Deserialize)]
-pub struct WebhookRequest {
-    pub event_type: String,
-    pub tenant_id: String,
-    pub timestamp: String,
-    pub data: serde_json::Value,
+async fn client(state: &AppState) -> Result<NidTenantSyncServiceClient<tonic::transport::Channel>, (StatusCode, String)> {
+    let url = if state.config.nid_tenant_sync_grpc_url.is_empty() {
+        "http://127.0.0.1:50103".to_string()
+    } else {
+        state.config.nid_tenant_sync_grpc_url.clone()
+    };
+    NidTenantSyncServiceClient::connect(url)
+        .await
+        .map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, format!("gRPC connection failed: {}", e)))
 }
 
-#[derive(Debug, Serialize)]
-pub struct WebhookResponse {
-    pub status: String,
-    pub message: String,
+fn parse_json_resp(resp: tonic::Response<newax_proto::nid_tenant_sync::v1::JsonResponse>) -> serde_json::Value {
+    let json_str = resp.into_inner().json;
+    serde_json::from_str(&json_str).unwrap_or_else(|_| serde_json::json!({"raw": json_str}))
 }
-
-// ---------------------------------------------------------------------------
-// Handlers
-// ---------------------------------------------------------------------------
 
 /// POST /api/v1/nid/webhook
-/// Receives webhook events from nID for tenant creation/updates
 pub async fn nid_webhook(
     State(state): State<AppState>,
     headers: axum::http::HeaderMap,
     Json(payload): Json<serde_json::Value>,
-) -> Result<Json<WebhookResponse>, (StatusCode, String)> {
-    let service = NidTenantSyncService::new(&state.db);
-
-    // Extract signature from header
-    let signature = headers
-        .get("X-nID-Signature")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("");
-
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut c = client(&state).await?;
+    let signature = headers.get("X-nID-Signature").and_then(|v| v.to_str().ok()).unwrap_or("");
     let payload_str = payload.to_string();
-    match service.process_webhook(&payload_str, signature).await {
-        Ok(result) => {
-            info!("nID webhook processed successfully");
-            Ok(Json(WebhookResponse {
-                status: "ok".to_string(),
-                message: result.to_string(),
-            }))
-        }
-        Err(e) => {
-            tracing::error!("nID webhook processing failed: {}", e);
-            Err((StatusCode::BAD_REQUEST, e))
-        }
-    }
+    let req = ProcessWebhookRequest { payload: payload_str, signature: signature.to_string() };
+    let resp = c.process_webhook(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    Ok(Json(parse_json_resp(resp)))
 }
 
 /// GET /api/v1/nid/tenants
-/// List all synced nID tenants
 pub async fn list_nid_tenants(
     State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let service = NidTenantSyncService::new(&state.db);
-
-    match service.list_tenants().await {
-        Ok(tenants) => Ok(Json(serde_json::json!({
-            "tenants": tenants,
-            "count": tenants.len()
-        }))),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    let mut c = client(&state).await?;
+    let resp = c.list_tenants(tonic::Request::new(ListTenantsRequest::default())).await
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    Ok(Json(parse_json_resp(resp)))
 }
 
 /// GET /api/v1/nid/tenants/{tenant_id}
-/// Get a specific nID tenant by ID
 pub async fn get_nid_tenant(
     State(state): State<AppState>,
     Path(tenant_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let service = NidTenantSyncService::new(&state.db);
-
-    match service.get_tenant(&tenant_id).await {
-        Ok(Some(tenant)) => Ok(Json(serde_json::json!(tenant))),
-        Ok(None) => Err((StatusCode::NOT_FOUND, "Tenant not found".to_string())),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    let mut c = client(&state).await?;
+    let req = GetTenantRequest { tenant_id };
+    let resp = c.get_tenant(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    Ok(Json(parse_json_resp(resp)))
 }
 
 /// GET /api/v1/nid/connection
-/// Get nID connection settings and health
 pub async fn get_nid_connection(
     State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let service = NidTenantSyncService::new(&state.db);
-    let health = service.check_connection_health().await;
-    Ok(Json(health))
+    let mut c = client(&state).await?;
+    let resp = c.get_connection_health(tonic::Request::new(GetConnectionHealthRequest::default())).await
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    Ok(Json(parse_json_resp(resp)))
 }
 
 /// PUT /api/v1/nid/connection
-/// Update nID connection settings
 pub async fn update_nid_connection(
     State(state): State<AppState>,
-    Json(req): Json<UpdateConnectionSettingsRequest>,
+    Json(body): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let service = NidTenantSyncService::new(&state.db);
-
-    match service.update_connection_settings(&req).await {
-        Ok(settings) => {
-            info!("nID connection settings updated");
-            Ok(Json(serde_json::json!(settings)))
-        }
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    let mut c = client(&state).await?;
+    let json_str = serde_json::to_string(&body).map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let req = UpdateConnectionSettingsRequest { body: Some(JsonBody { json: json_str }) };
+    let resp = c.update_connection_settings(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    Ok(Json(parse_json_resp(resp)))
 }
 
 /// POST /api/v1/nid/redirect/create
-/// Create a redirect session for tenant creation in nID
 pub async fn create_redirect_session(
     State(state): State<AppState>,
-    Json(req): Json<CreateRedirectSessionRequest>,
+    Json(body): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let service = NidTenantSyncService::new(&state.db);
-
-    match service.create_redirect_session(&req).await {
-        Ok(session) => {
-            info!("Redirect session created: {}", session.state_token);
-            Ok(Json(serde_json::json!({
-                "session": session,
-                "redirect_url": format!(
-                    "{}/tenant-create?state={}&return_url={}",
-                    service.get_connection_settings().await.nID_base_url,
-                    session.state_token,
-                    urlencoding::encode(&session.return_url)
-                )
-            })))
-        }
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    let mut c = client(&state).await?;
+    let json_str = serde_json::to_string(&body).map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let req = CreateRedirectSessionRequest { body: Some(JsonBody { json: json_str }) };
+    let resp = c.create_redirect_session(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    Ok(Json(parse_json_resp(resp)))
 }
 
 /// GET /api/v1/nid/redirect/callback
-/// Handle callback from nID after tenant creation
 pub async fn redirect_callback(
     State(state): State<AppState>,
     axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let service = NidTenantSyncService::new(&state.db);
-
-    let state = params
-        .get("state")
-        .ok_or_else(|| (StatusCode::BAD_REQUEST, "Invalid state parameter".to_string()))?;
-    let tenant_id = params.get("tenant_id").map(|s| s.as_str());
-    let error = params.get("error").map(|s| s.as_str());
-
-    match service.handle_redirect_callback(state, tenant_id, error).await {
-        Ok(result) => Ok(Json(result)),
-        Err(e) => Err((StatusCode::BAD_REQUEST, e)),
-    }
+    let mut c = client(&state).await?;
+    let state_token = params.get("state").cloned().ok_or_else(|| (StatusCode::BAD_REQUEST, "Invalid state parameter".to_string()))?;
+    let tenant_id = params.get("tenant_id").cloned().unwrap_or_default();
+    let error = params.get("error").cloned().unwrap_or_default();
+    let req = HandleRedirectCallbackRequest { state: state_token, tenant_id, error };
+    let resp = c.handle_redirect_callback(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    Ok(Json(parse_json_resp(resp)))
 }
 
 /// GET /api/v1/nid/redirect/{state}
-/// Get redirect session status
 pub async fn get_redirect_session(
     State(state): State<AppState>,
     Path(state_token): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let service = NidTenantSyncService::new(&state.db);
-
-    match service.get_redirect_session(&state_token).await {
-        Some(session) => Ok(Json(serde_json::json!(session))),
-        None => Err((StatusCode::NOT_FOUND, "Redirect session not found".to_string())),
-    }
+    let mut c = client(&state).await?;
+    let req = GetRedirectSessionRequest { state: state_token };
+    let resp = c.get_redirect_session(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    Ok(Json(parse_json_resp(resp)))
 }
 
 /// GET /api/v1/nid/sync-log
-/// Get tenant sync log entries
 pub async fn get_sync_log(
     State(state): State<AppState>,
     axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let limit: i64 = params
-        .get("limit")
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(50);
-    let event_type = params.get("event_type").cloned();
-
-    let pool_ref = &state.db;
-
-    let query = if let Some(ref et) = event_type {
-        format!(
-            r#"SELECT id, nid_tenant_id, event_type, processing_status, error_message, created_at
-               FROM tenant_sync_log
-               WHERE event_type = '{}'
-               ORDER BY created_at DESC LIMIT {}"#,
-            et.replace('\'', "''"),
-            limit
-        )
-    } else {
-        format!(
-            r#"SELECT id, nid_tenant_id, event_type, processing_status, error_message, created_at
-               FROM tenant_sync_log
-               ORDER BY created_at DESC LIMIT {}"#,
-            limit
-        )
-    };
-
-    let rows = sqlx::query_as::<_, (String, String, String, String, String, String)>(&query)
-        .fetch_all(pool_ref)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    Ok(Json(serde_json::json!({
-        "logs": rows.iter().map(|(id, nid_tenant_id, event_type, processing_status, error_message, created_at)| {
-            serde_json::json!({
-                "id": id,
-                "nid_tenant_id": nid_tenant_id,
-                "event_type": event_type,
-                "processing_status": processing_status,
-                "error_message": error_message,
-                "created_at": created_at,
-            })
-        }).collect::<Vec<_>>(),
-        "count": rows.len()
-    })))
+    let mut c = client(&state).await?;
+    let limit: i64 = params.get("limit").and_then(|v| v.parse().ok()).unwrap_or(50);
+    let event_type = params.get("event_type").cloned().unwrap_or_default();
+    let req = GetSyncLogRequest { limit, event_type };
+    let resp = c.get_sync_log(tonic::Request::new(req)).await
+        .map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    Ok(Json(parse_json_resp(resp)))
 }

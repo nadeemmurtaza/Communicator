@@ -166,8 +166,230 @@ pub mod copilot_reviewer {
     }
 }
 
+pub mod in_app_messaging {
+    pub mod v1 {
+        tonic::include_proto!("newax.in_app_messaging.v1");
+    }
+}
+
+pub mod erp_payments {
+    pub mod v1 {
+        tonic::include_proto!("newax.erp_payments.v1");
+    }
+}
+
+pub mod omni_broadcast {
+    pub mod v1 {
+        tonic::include_proto!("newax.omni_broadcast.v1");
+    }
+}
+
+pub mod mcp_protocol {
+    pub mod v1 {
+        tonic::include_proto!("newax.mcp_protocol.v1");
+    }
+}
+
+pub mod nid_sync {
+    pub mod v1 {
+        tonic::include_proto!("newax.nid_sync.v1");
+    }
+}
+
+pub mod audience_kb_scoping {
+    pub mod v1 {
+        tonic::include_proto!("newax.audience_kb_scoping.v1");
+    }
+}
+
+pub mod otp_engine {
+    pub mod v1 {
+        tonic::include_proto!("newax.otp_engine.v1");
+    }
+}
+
+pub mod erp_fulfilment {
+    pub mod v1 {
+        tonic::include_proto!("newax.erp_fulfilment.v1");
+    }
+}
+
+pub mod whatsapp_flows {
+    pub mod v1 {
+        tonic::include_proto!("newax.whatsapp_flows.v1");
+    }
+}
+
+pub mod erp_catalog {
+    pub mod v1 {
+        tonic::include_proto!("newax.erp_catalog.v1");
+    }
+}
+
+pub mod erp_inventory {
+    pub mod v1 {
+        tonic::include_proto!("newax.erp_inventory.v1");
+    }
+}
+
+pub mod nid_organization_sync {
+    pub mod v1 {
+        tonic::include_proto!("newax.nid_organization_sync.v1");
+    }
+}
+
+pub mod nid_brand_sync {
+    pub mod v1 {
+        tonic::include_proto!("newax.nid_brand_sync.v1");
+    }
+}
+
+pub mod nid_tenant_sync {
+    pub mod v1 {
+        tonic::include_proto!("newax.nid_tenant_sync.v1");
+    }
+}
+
+pub mod fin_operator {
+    pub mod v1 {
+        tonic::include_proto!("newax.fin_operator.v1");
+    }
+}
+
+pub mod fin_vision {
+    pub mod v1 {
+        tonic::include_proto!("newax.fin_vision.v1");
+    }
+}
+
+pub mod store_connection {
+    pub mod v1 {
+        tonic::include_proto!("newax.store_connection.v1");
+    }
+}
+
+pub mod whatsapp_template_sync {
+    pub mod v1 {
+        tonic::include_proto!("newax.whatsapp_template_sync.v1");
+    }
+}
+
+pub mod whatsapp_campaigns {
+    pub mod v1 {
+        tonic::include_proto!("newax.whatsapp_campaigns.v1");
+    }
+}
+
+pub mod shopify_store {
+    pub mod v1 {
+        tonic::include_proto!("newax.shopify_store.v1");
+    }
+}
+
+pub mod services_sequences {
+    pub mod v1 {
+        tonic::include_proto!("newax.services_sequences.v1");
+    }
+}
+
+pub mod external_otp {
+    pub mod v1 {
+        tonic::include_proto!("newax.external_otp.v1");
+    }
+}
+
+pub mod sso {
+    pub mod v1 {
+        tonic::include_proto!("newax.sso.v1");
+    }
+}
+
+pub mod health {
+    pub mod v1 {
+        tonic::include_proto!("newax.health.v1");
+    }
+}
+
+pub mod translation {
+    pub mod v1 {
+        tonic::include_proto!("newax.translation.v1");
+    }
+}
+
+pub mod csat_surveys {
+    pub mod v1 {
+        tonic::include_proto!("newax.csat_surveys.v1");
+    }
+}
+
+pub mod discovery {
+    pub mod v1 {
+        tonic::include_proto!("newax.discovery.v1");
+    }
+}
+
+pub mod automation {
+    pub mod v1 {
+        tonic::include_proto!("newax.automation.v1");
+    }
+}
+
+pub mod business_profile {
+    pub mod v1 {
+        tonic::include_proto!("newax.business_profile.v1");
+    }
+}
+
+pub mod team_routing {
+    pub mod v1 {
+        tonic::include_proto!("newax.team_routing.v1");
+    }
+}
+
+pub mod knowledge_base {
+    pub mod v1 {
+        tonic::include_proto!("newax.knowledge_base.v1");
+    }
+}
+
+pub mod live_proof {
+    pub mod v1 {
+        tonic::include_proto!("newax.live_proof.v1");
+    }
+}
+
 pub mod identity_events {
     pub mod v1 {
         tonic::include_proto!("newax.identity.v1");
+    }
+}
+
+ pub mod meta_sync {
+    pub mod v1 {
+        tonic::include_proto!("newax.meta_sync.v1");
+    }
+}
+
+pub mod whatsapp_automations {
+    pub mod v1 {
+        tonic::include_proto!("newax.whatsapp_automations.v1");
+    }
+}
+
+pub mod commerce_catalog {
+    pub mod v1 {
+        tonic::include_proto!("newax.commerce_catalog.v1");
+    }
+}
+
+pub mod conversations {
+    pub mod v1 {
+        tonic::include_proto!("newax.conversations.v1");
+    }
+}
+
+pub mod organization {
+    pub mod v1 {
+        tonic::include_proto!("newax.organization.v1");
     }
 }

@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package newax.business_profile.v1;
+
+service BusinessProfileService {
+  rpc GetBusinessProfile(EmptyRequest) returns (JsonResponse);
+  rpc UpdateBusinessProfile(CreateRequest) returns (JsonResponse);
+  rpc SyncMeta(EmptyRequest) returns (JsonResponse);
+}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message EmptyRequest {}
+
+message CreateRequest {
+  string json = 1;
+}

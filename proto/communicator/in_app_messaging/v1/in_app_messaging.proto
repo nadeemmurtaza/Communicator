@@ -1,0 +1,119 @@
+syntax = "proto3";
+
+package newax.in_app_messaging.v1;
+
+service InAppMessagingService {
+  rpc GetSummary(Empty) returns (JsonResponse);
+  rpc CreateMessage(CreateMessageRequest) returns (JsonResponse);
+  rpc ListMessages(ListMessagesRequest) returns (JsonResponse);
+  rpc GetMessage(GetMessageRequest) returns (JsonResponse);
+  rpc UpdateMessage(UpdateMessageRequest) returns (JsonResponse);
+  rpc DeleteMessage(DeleteMessageRequest) returns (JsonResponse);
+  rpc CreateTrigger(CreateTriggerRequest) returns (JsonResponse);
+  rpc ListTriggers(Empty) returns (JsonResponse);
+  rpc UpdateTrigger(UpdateTriggerRequest) returns (JsonResponse);
+  rpc DeleteTrigger(DeleteTriggerRequest) returns (JsonResponse);
+  rpc RecordBehavioralEvent(RecordBehavioralEventRequest) returns (JsonResponse);
+  rpc EvaluateTriggers(EvaluateTriggersRequest) returns (JsonResponse);
+  rpc RecordMessageEvent(RecordMessageEventRequest) returns (JsonResponse);
+  rpc GetSettings(Empty) returns (JsonResponse);
+  rpc UpdateSettings(UpdateSettingsRequest) returns (JsonResponse);
+  rpc ListBehavioralEvents(Empty) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message CreateMessageRequest {
+  string organization_id = 1;
+  string title = 2;
+  string body = 3;
+  string message_type = 4;
+  string trigger_type = 5;
+  string trigger_event = 6;
+  string trigger_page = 7;
+  string frequency = 8;
+}
+
+message ListMessagesRequest {
+  string status = 1;
+  string message_type = 2;
+}
+
+message GetMessageRequest {
+  string message_id = 1;
+}
+
+message UpdateMessageRequest {
+  string message_id = 1;
+  string title = 2;
+  string body = 3;
+  string message_type = 4;
+  string status = 5;
+  string button_text = 6;
+  string button_url = 7;
+  string trigger_type = 8;
+  string trigger_event = 9;
+  string frequency = 10;
+}
+
+message DeleteMessageRequest {
+  string message_id = 1;
+}
+
+message CreateTriggerRequest {
+  string organization_id = 1;
+  string name = 2;
+  string trigger_type = 3;
+  string condition = 4;
+  string action = 5;
+  string message_id = 6;
+  int32 delay_seconds = 7;
+}
+
+message UpdateTriggerRequest {
+  string trigger_id = 1;
+  string name = 2;
+  string trigger_type = 3;
+  string condition = 4;
+  string enabled = 5;
+  string message_id = 6;
+}
+
+message DeleteTriggerRequest {
+  string trigger_id = 1;
+}
+
+message RecordBehavioralEventRequest {
+  string organization_id = 1;
+  string contact_id = 2;
+  string session_id = 3;
+  string event_name = 4;
+  string event_data = 5;
+  string page_url = 6;
+}
+
+message EvaluateTriggersRequest {
+  string organization_id = 1;
+  string event_name = 2;
+  string page_url = 3;
+}
+
+message RecordMessageEventRequest {
+  string organization_id = 1;
+  string message_id = 2;
+  string contact_id = 3;
+  string session_id = 4;
+  string event_type = 5;
+}
+
+message UpdateSettingsRequest {
+  string enabled = 1;
+  string max_concurrent_messages = 2;
+  string default_style = 3;
+  string track_behavioral_events = 4;
+  string event_retention_days = 5;
+}

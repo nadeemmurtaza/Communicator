@@ -1,323 +1,299 @@
-//! External OTP Integration API Routes
-//!
-//! These endpoints are designed for external e-commerce platforms (Shopify, custom stores,
-//! WooCommerce, etc.) to connect to the Communicator OTP engine.
-//!
-//! Authentication: All endpoints require the `Authorization: Bearer {secret_key}` header.
-//! The secret key is generated when creating an integration and is only shown once.
+//! External OTP Integration — thin gRPC client forwarding to svc-external-otp (port 50108).
+
+use axum::extract::{Path, Query, State, ConnectInfo, Json};
+use axum::http::{HeaderMap, StatusCode};
+use axum::response::{IntoResponse, Response};
+use serde_json::{json, Value};
+use std::net::SocketAddr;
 
 use crate::db::AppState;
-use crate::services::external_otp_integration::{
-    ExternalGenerateRequest, ExternalIntegration, ExternalOtpIntegrationService,
-    ExternalVerifyRequest, CreateIntegrationRequest,
-};
-use axum::{
-    extract::{Path, Query, State, ConnectInfo, Json},
-    http::{HeaderMap, StatusCode},
-    response::Json as JsonResponse,
-};
-use serde::Deserialize;
-use std::net::SocketAddr;
+
+// ---------------------------------------------------------------------------
+// Client
+// ---------------------------------------------------------------------------
+
+type Client = newax_proto::external_otp::v1::external_otp_service_client::ExternalOtpServiceClient<tonic::transport::Channel>;
+
+async fn client(state: &AppState) -> Result<Client, (StatusCode, String)> {
+    let url = if state.config.external_otp_grpc_url.is_empty() {
+        "http://localhost:50108".to_string()
+    } else {
+        state.config.external_otp_grpc_url.clone()
+    };
+    Client::connect(url)
+        .await
+        .map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, format!("svc-external-otp unavailable: {e}")))
+}
+
+fn resp(body: Value) -> Response {
+    (StatusCode::OK, Json(body)).into_response()
+}
+
+fn err(status: StatusCode, message: String) -> Response {
+    (status, Json(json!({ "success": false, "error": message }))).into_response()
+}
 
 // ---------------------------------------------------------------------------
 // Authentication middleware helper
 // ---------------------------------------------------------------------------
 
-/// Extract and verify the secret key from the Authorization header.
 async fn authenticate_integration(
     state: &AppState,
     headers: &HeaderMap,
-) -> Result<ExternalIntegration, (StatusCode, JsonResponse<serde_json::Value>)> {
+) -> Result<String, Response> {
     let auth_header = headers
         .get("Authorization")
         .and_then(|v| v.to_str().ok())
-        .ok_or((
-            StatusCode::UNAUTHORIZED,
-            JsonResponse(serde_json::json!({
-                "success": false,
-                "error": "Missing Authorization header",
-            })),
-        ))?;
+        .ok_or_else(|| err(StatusCode::UNAUTHORIZED, "Missing Authorization header".to_string()))?;
 
-    // Extract Bearer token
     let secret_key = if auth_header.starts_with("Bearer ") {
         &auth_header[7..]
     } else if auth_header.starts_with("bearer ") {
         &auth_header[7..]
     } else {
-        return Err((
-            StatusCode::UNAUTHORIZED,
-            JsonResponse(serde_json::json!({
-                "success": false,
-                "error": "Invalid Authorization format. Use: Bearer {secret_key}",
-            })),
-        ));
+        return Err(err(StatusCode::UNAUTHORIZED, "Invalid Authorization format. Use: Bearer {secret_key}".to_string()));
     };
 
-    // Verify the secret key
-    match ExternalOtpIntegrationService::verify_secret_key(&state.db, secret_key).await {
-        Ok(integration) => Ok(integration),
-        Err(e) => Err((
-            StatusCode::UNAUTHORIZED,
-            JsonResponse(serde_json::json!({
-                "success": false,
-                "error": e,
-            })),
-        )),
+    let mut client = client(state).await.map_err(|(_, e)| err(StatusCode::SERVICE_UNAVAILABLE, e))?;
+    let result = client
+        .verify_secret_key(newax_proto::external_otp::v1::SecretKeyRequest {
+            secret_key: secret_key.to_string(),
+        })
+        .await;
+
+    match result {
+        Ok(resp) => {
+            let body: Value = serde_json::from_str(&resp.into_inner().json)
+                .map_err(|e| err(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            if body.get("success").and_then(|v| v.as_bool()).unwrap_or(false) {
+                Ok(secret_key.to_string())
+            } else {
+                Err(err(StatusCode::UNAUTHORIZED, "Invalid secret key".to_string()))
+            }
+        }
+        Err(e) => Err(err(StatusCode::UNAUTHORIZED, e.to_string())),
     }
 }
 
 // ---------------------------------------------------------------------------
-// Integration management (admin endpoints — require internal auth)
+// Routes
 // ---------------------------------------------------------------------------
 
 /// POST /api/v1/external-otp/integrations
-/// Create a new external integration key pair.
-/// This is an admin endpoint — the brand admin creates the integration and gets the keys.
 pub async fn create_integration(
     State(state): State<AppState>,
-    Json(body): Json<CreateIntegrationRequest>,
-) -> (StatusCode, JsonResponse<serde_json::Value>) {
-    match ExternalOtpIntegrationService::create_integration(&state.db, &body).await {
-        Ok(resp) => (
-            StatusCode::CREATED,
-            JsonResponse(serde_json::json!({
-                "success": true,
-                "id": resp.id,
-                "public_key": resp.public_key,
-                "secret_key": resp.secret_key,
-                "webhook_secret": resp.webhook_secret,
-                "message": resp.message,
-            })),
-        ),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            JsonResponse(serde_json::json!({
-                "success": false,
-                "error": e,
-            })),
-        ),
+    Json(body): Json<Value>,
+) -> Response {
+    let mut client = match client(&state).await {
+        Ok(c) => c,
+        Err(e) => return err(e.0, e.1),
+    };
+
+    let result = client
+        .create_integration(newax_proto::external_otp::v1::CreateIntegrationRequest {
+            body: Some(newax_proto::external_otp::v1::JsonBody {
+                json: body.to_string(),
+            }),
+        })
+        .await;
+
+    match result {
+        Ok(resp) => {
+            let body: Value = serde_json::from_str(&resp.into_inner().json)
+                .unwrap_or_else(|_| json!({ "success": false }));
+            if body.get("success").and_then(|v| v.as_bool()).unwrap_or(false) {
+                (StatusCode::CREATED, Json(body)).into_response()
+            } else {
+                err(StatusCode::INTERNAL_SERVER_ERROR, body.get("error").and_then(|v| v.as_str()).unwrap_or("").to_string())
+            }
+        }
+        Err(e) => err(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
     }
 }
 
 /// GET /api/v1/external-otp/integrations/{brand_id}
-/// List all integrations for a brand.
 pub async fn list_integrations(
     State(state): State<AppState>,
     Path(brand_id): Path<String>,
-) -> (StatusCode, JsonResponse<serde_json::Value>) {
-    match ExternalOtpIntegrationService::list_by_brand(&state.db, &brand_id).await {
-        Ok(integrations) => (
-            StatusCode::OK,
-            JsonResponse(serde_json::json!({
-                "success": true,
-                "integrations": integrations.iter().map(|i| serde_json::json!({
-                    "id": i.id,
-                    "platform_name": i.platform_name,
-                    "platform_url": i.platform_url,
-                    "display_name": i.display_name,
-                    "public_key": i.public_key,
-                    "webhook_url": i.webhook_url,
-                    "allowed_purposes": i.allowed_purposes,
-                    "allowed_channels": i.allowed_channels,
-                    "is_active": i.is_active,
-                    "rate_limit_per_minute": i.rate_limit_per_minute,
-                    "rate_limit_per_hour": i.rate_limit_per_hour,
-                    "last_used_at": i.last_used_at,
-                    "created_at": i.created_at,
-                })).collect::<Vec<_>>(),
-            })),
-        ),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            JsonResponse(serde_json::json!({
-                "success": false,
-                "error": e,
-            })),
-        ),
+) -> Response {
+    let mut client = match client(&state).await {
+        Ok(c) => c,
+        Err(e) => return err(e.0, e.1),
+    };
+
+    let result = client
+        .list_integrations(newax_proto::external_otp::v1::IdRequest { id: brand_id })
+        .await;
+
+    match result {
+        Ok(resp_result) => {
+            let body: Value = serde_json::from_str(&resp_result.into_inner().json)
+                .unwrap_or_else(|_| json!({ "success": false }));
+            resp(body)
+        }
+        Err(e) => err(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
     }
 }
 
 /// DELETE /api/v1/external-otp/integrations/{integration_id}
-/// Deactivate an integration.
 pub async fn deactivate_integration(
     State(state): State<AppState>,
     Path(integration_id): Path<String>,
-) -> (StatusCode, JsonResponse<serde_json::Value>) {
-    match ExternalOtpIntegrationService::deactivate(&state.db, &integration_id).await {
-        Ok(()) => (
-            StatusCode::OK,
-            JsonResponse(serde_json::json!({
-                "success": true,
-                "message": "Integration deactivated",
-            })),
-        ),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            JsonResponse(serde_json::json!({
-                "success": false,
-                "error": e,
-            })),
-        ),
+) -> Response {
+    let mut client = match client(&state).await {
+        Ok(c) => c,
+        Err(e) => return err(e.0, e.1),
+    };
+
+    let result = client
+        .deactivate_integration(newax_proto::external_otp::v1::IdRequest { id: integration_id })
+        .await;
+
+    match result {
+        Ok(resp_result) => {
+            let body: Value = serde_json::from_str(&resp_result.into_inner().json)
+                .unwrap_or_else(|_| json!({ "success": false }));
+            resp(body)
+        }
+        Err(e) => err(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
     }
 }
 
-// ---------------------------------------------------------------------------
-// External OTP endpoints (authenticated by secret key)
-// ---------------------------------------------------------------------------
-
 /// POST /api/v1/external-otp/generate
-/// Generate and send an OTP via the configured channel.
-///
-/// Authentication: Authorization: Bearer {secret_key}
-///
-/// Request body:
-/// {
-///   "recipient": "+1234567890",
-///   "recipient_type": "phone",  // optional: "phone" or "email"
-///   "purpose": "sign_up",       // optional: defaults to "sign_up"
-///   "channel": "whatsapp",      // optional: uses brand default
-///   "metadata": {}              // optional: additional context
-/// }
 pub async fn external_generate_otp(
     State(state): State<AppState>,
     headers: HeaderMap,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
-    Json(body): Json<ExternalGenerateRequest>,
-) -> (StatusCode, JsonResponse<serde_json::Value>) {
-    // Authenticate the integration
-    let integration = match authenticate_integration(&state, &headers).await {
-        Ok(integ) => integ,
-        Err(err) => return err,
+    Json(body): Json<Value>,
+) -> Response {
+    let secret_key = match authenticate_integration(&state, &headers).await {
+        Ok(sk) => sk,
+        Err(e) => return e,
     };
 
     let ip_address = addr.ip().to_string();
     let user_agent = headers
         .get("user-agent")
         .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string());
+        .map(|s| s.to_string())
+        .unwrap_or_default();
 
-    match ExternalOtpIntegrationService::external_generate(
-        &state.db, &integration, &body, &ip_address, user_agent,
-    ).await {
-        Ok(resp) => (
-            if resp.success { StatusCode::OK } else { StatusCode::BAD_REQUEST },
-            JsonResponse(serde_json::json!({
-                "success": resp.success,
-                "otp_id": resp.otp_id,
-                "channel": resp.channel,
-                "message": resp.message,
-                "expires_in_seconds": resp.expires_in_seconds,
-                "error": resp.error,
-            })),
-        ),
-        Err(e) => (
-            StatusCode::BAD_REQUEST,
-            JsonResponse(serde_json::json!({
-                "success": false,
-                "error": e,
-            })),
-        ),
+    let mut client = match client(&state).await {
+        Ok(c) => c,
+        Err(e) => return err(e.0, e.1),
+    };
+
+    let result = client
+        .external_generate(newax_proto::external_otp::v1::ExternalGenerateRequest {
+            body: Some(newax_proto::external_otp::v1::JsonBody {
+                json: body.to_string(),
+            }),
+            secret_key,
+            ip_address,
+            user_agent,
+        })
+        .await;
+
+    match result {
+        Ok(resp) => {
+            let body: Value = serde_json::from_str(&resp.into_inner().json)
+                .unwrap_or_else(|_| json!({ "success": false }));
+            let status = if body.get("success").and_then(|v| v.as_bool()).unwrap_or(false) {
+                StatusCode::OK
+            } else {
+                StatusCode::BAD_REQUEST
+            };
+            (status, Json(body)).into_response()
+        }
+        Err(e) => err(StatusCode::BAD_REQUEST, e.to_string()),
     }
 }
 
 /// POST /api/v1/external-otp/verify
-/// Verify an OTP code.
-///
-/// Authentication: Authorization: Bearer {secret_key}
-///
-/// Request body:
-/// {
-///   "otp_id": "otp_abc123...",
-///   "code": "A7xK9mP2qR5t"
-/// }
-///
-/// Response on success:
-/// {
-///   "success": true,
-///   "verified": true,
-///   "attempts_remaining": 4,
-///   "session_token": "otp_session_..."  // short-lived token for next step
-/// }
 pub async fn external_verify_otp(
     State(state): State<AppState>,
     headers: HeaderMap,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
-    Json(body): Json<ExternalVerifyRequest>,
-) -> (StatusCode, JsonResponse<serde_json::Value>) {
-    // Authenticate the integration
-    let integration = match authenticate_integration(&state, &headers).await {
-        Ok(integ) => integ,
-        Err(err) => return err,
+    Json(body): Json<Value>,
+) -> Response {
+    let secret_key = match authenticate_integration(&state, &headers).await {
+        Ok(sk) => sk,
+        Err(e) => return e,
     };
 
     let ip_address = addr.ip().to_string();
     let user_agent = headers
         .get("user-agent")
         .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string());
+        .map(|s| s.to_string())
+        .unwrap_or_default();
 
-    match ExternalOtpIntegrationService::external_verify(
-        &state.db, &integration, &body, &ip_address, user_agent,
-    ).await {
-        Ok(resp) => (
-            if resp.verified { StatusCode::OK } else { StatusCode::BAD_REQUEST },
-            JsonResponse(serde_json::json!({
-                "success": resp.success,
-                "verified": resp.verified,
-                "message": resp.message,
-                "attempts_remaining": resp.attempts_remaining,
-                "session_token": resp.session_token,
-                "error": resp.error,
-            })),
-        ),
-        Err(e) => (
-            StatusCode::BAD_REQUEST,
-            JsonResponse(serde_json::json!({
-                "success": false,
-                "verified": false,
-                "error": e,
-            })),
-        ),
+    let mut client = match client(&state).await {
+        Ok(c) => c,
+        Err(e) => return err(e.0, e.1),
+    };
+
+    let result = client
+        .external_verify(newax_proto::external_otp::v1::ExternalVerifyRequest {
+            body: Some(newax_proto::external_otp::v1::JsonBody {
+                json: body.to_string(),
+            }),
+            secret_key,
+            ip_address,
+            user_agent,
+        })
+        .await;
+
+    match result {
+        Ok(resp) => {
+            let body: Value = serde_json::from_str(&resp.into_inner().json)
+                .unwrap_or_else(|_| json!({ "success": false }));
+            let status = if body.get("verified").and_then(|v| v.as_bool()).unwrap_or(false) {
+                StatusCode::OK
+            } else {
+                StatusCode::BAD_REQUEST
+            };
+            (status, Json(body)).into_response()
+        }
+        Err(e) => err(StatusCode::BAD_REQUEST, e.to_string()),
     }
 }
 
 // ---------------------------------------------------------------------------
-// Integration info endpoint (public key lookup)
+// Integration info endpoint
 // ---------------------------------------------------------------------------
 
-/// GET /api/v1/external-otp/info?public_key=pk_...
-/// Get integration info by public key (safe for frontend).
-/// Returns only non-sensitive information.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 pub struct IntegrationInfoQuery {
     pub public_key: String,
 }
 
+/// GET /api/v1/external-otp/info?public_key=pk_...
 pub async fn get_integration_info(
     State(state): State<AppState>,
     Query(query): Query<IntegrationInfoQuery>,
-) -> (StatusCode, JsonResponse<serde_json::Value>) {
-    match ExternalOtpIntegrationService::get_by_public_key(&state.db, &query.public_key).await {
-        Ok(integration) => (
-            StatusCode::OK,
-            JsonResponse(serde_json::json!({
-                "success": true,
-                "id": integration.id,
-                "platform_name": integration.platform_name,
-                "display_name": integration.display_name,
-                "public_key": integration.public_key,
-                "allowed_purposes": integration.allowed_purposes,
-                "allowed_channels": integration.allowed_channels,
-                "is_active": integration.is_active,
-            })),
-        ),
-        Err(e) => (
-            StatusCode::NOT_FOUND,
-            JsonResponse(serde_json::json!({
-                "success": false,
-                "error": e,
-            })),
-        ),
+) -> Response {
+    let mut client = match client(&state).await {
+        Ok(c) => c,
+        Err(e) => return err(e.0, e.1),
+    };
+
+    let result = client
+        .get_integration_info(newax_proto::external_otp::v1::PublicKeyRequest {
+            public_key: query.public_key,
+        })
+        .await;
+
+    match result {
+        Ok(resp_result) => {
+            let body: Value = serde_json::from_str(&resp_result.into_inner().json)
+                .unwrap_or_else(|_| json!({ "success": false }));
+            if body.get("success").and_then(|v| v.as_bool()).unwrap_or(false) {
+                resp(body)
+            } else {
+                err(StatusCode::NOT_FOUND, body.get("error").and_then(|v| v.as_str()).unwrap_or("").to_string())
+            }
+        }
+        Err(e) => err(StatusCode::NOT_FOUND, e.to_string()),
     }
 }

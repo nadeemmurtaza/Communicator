@@ -50,7 +50,7 @@ pub mod autonomous_resolution;
 pub mod agent_performance;
 pub mod notifications;
 pub mod erp_catalog;
-pub mod erp_orders;
+// pub mod erp_orders; // TODO: re-enable when erp_orders proto is fixed
 pub mod erp_payments;
 pub mod erp_inventory;
 pub mod erp_fulfilment;
@@ -74,3 +74,5 @@ pub mod nid_organization_sync;
 pub mod nid_brand_sync;
 pub mod omni_broadcast;
 pub mod access_control;
+pub mod whatsapp_flows;
+pub mod meta_sync_client;

@@ -14,11 +14,27 @@ tokio-native-tls = "0.3"
 
 # gRPC clients for modules split out into services/ -- see crates/proto
 tonic = "0.12"
+prost = "0.13"
 newax-proto = { path = "../crates/proto" }
 newax-reply-integration = { path = "../crates/reply_integration" }
 newax-rate-limit = { path = "../crates/rate_limit" }
 newax-smtp-email = { path = "../crates/smtp_email" }
+newax-live-proof = { path = "../crates/live_proof" }
+newax-organization = { path = "../crates/organization" }
+newax-mcp-protocol = { path = "../crates/mcp_protocol" }
+newax-otp-engine = { path = "../crates/otp_engine" }
+newax-shopify-store-integration = { path = "../crates/shopify_store_integration" }
+newax-nid-tenant-sync = { path = "../crates/nid_tenant_sync" }
+newax-in-app-messaging = { path = "../crates/in_app_messaging" }
 newax-alerts = { path = "../crates/alerts" }
+newax-whatsapp-flows = { path = "../crates/whatsapp_flows" }
+newax-whatsapp-template-sync = { path = "../crates/whatsapp_template_sync" }
+newax-whatsapp-campaigns = { path = "../crates/whatsapp_campaigns" }
+newax-meta-sync = { path = "../crates/meta_sync" }
+newax-compliance = { path = "../crates/compliance" }
+newax-commerce-catalog = { path = "../crates/commerce_catalog" }
+newax-conversations = { path = "../crates/conversations" }
+newax-commerce-cart = { path = "../crates/commerce_cart" }
 
 # Database (PostgreSQL only — shared with nID)
 sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "chrono", "uuid", "json", "migrate"] }

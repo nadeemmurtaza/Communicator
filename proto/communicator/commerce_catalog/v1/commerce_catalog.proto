@@ -1,0 +1,99 @@
+syntax = "proto3";
+
+package newax.commerce_catalog.v1;
+
+service CommerceCatalogService {
+  rpc ListCategories(ListCategoriesRequest) returns (JsonResponse);
+  rpc GetCategory(GetCategoryRequest) returns (JsonResponse);
+  rpc CreateCategory(CreateCategoryRequest) returns (JsonResponse);
+  rpc UpdateCategory(UpdateCategoryRequest) returns (JsonResponse);
+  rpc DeleteCategory(DeleteCategoryRequest) returns (JsonResponse);
+  rpc ListProducts(ListProductsRequest) returns (JsonResponse);
+  rpc GetProduct(GetProductRequest) returns (JsonResponse);
+  rpc CreateProduct(CreateProductRequestBody) returns (JsonResponse);
+  rpc UpdateProduct(UpdateProductRequestBody) returns (JsonResponse);
+  rpc DeleteProduct(DeleteProductRequest) returns (JsonResponse);
+  rpc UpdateInventory(UpdateInventoryRequestBody) returns (JsonResponse);
+  rpc GetChannelVisibility(GetChannelVisibilityRequest) returns (JsonResponse);
+  rpc SetChannelVisibility(SetChannelVisibilityRequestBody) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+// Categories
+
+message ListCategoriesRequest {
+  string brand_id = 1;
+  bool active_only = 2;
+}
+
+message GetCategoryRequest {
+  string id = 1;
+}
+
+message CreateCategoryRequest {
+  string brand_id = 1;
+  string name = 2;
+  string parent_id = 3;
+  string sort_order = 4;
+}
+
+message UpdateCategoryRequest {
+  string id = 1;
+  string name = 2;
+  string parent_id = 3;
+  string sort_order = 4;
+  string is_active = 5;
+}
+
+message DeleteCategoryRequest {
+  string id = 1;
+}
+
+// Products
+
+message ListProductsRequest {
+  string brand_id = 1;
+  string category_id = 2;
+  bool active_only = 3;
+  string channel_type = 4;
+}
+
+message GetProductRequest {
+  string id = 1;
+}
+
+message CreateProductRequestBody {
+  string json = 1;
+}
+
+message UpdateProductRequestBody {
+  string id = 1;
+  string json = 2;
+}
+
+message DeleteProductRequest {
+  string id = 1;
+}
+
+// Inventory
+
+message UpdateInventoryRequestBody {
+  string product_id = 1;
+  string json = 2;
+}
+
+// Channel Visibility
+
+message GetChannelVisibilityRequest {
+  string product_id = 1;
+}
+
+message SetChannelVisibilityRequestBody {
+  string product_id = 1;
+  string json = 2;
+}

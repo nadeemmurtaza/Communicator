@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package newax.whatsapp_template_sync.v1;
+
+service WhatsAppTemplateSyncService {
+  rpc SyncTemplatesFromMeta(SyncTemplatesFromMetaRequest) returns (JsonResponse);
+  rpc FetchMessageLimitsFromMeta(FetchMessageLimitsFromMetaRequest) returns (JsonResponse);
+  rpc UpdateMessageLimitsInDb(UpdateMessageLimitsInDbRequest) returns (JsonResponse);
+  rpc CheckMessageLimit(CheckMessageLimitRequest) returns (JsonResponse);
+  rpc GetRemainingLimits(GetRemainingLimitsRequest) returns (JsonResponse);
+  rpc ListTemplates(ListTemplatesRequest) returns (JsonResponse);
+  rpc SyncCustomerPhoneNumbers(SyncCustomerPhoneNumbersRequest) returns (JsonResponse);
+}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message SyncTemplatesFromMetaRequest {
+  string brand_id = 1;
+}
+
+message FetchMessageLimitsFromMetaRequest {
+  string brand_id = 1;
+}
+
+message UpdateMessageLimitsInDbRequest {
+  string brand_id = 1;
+}
+
+message CheckMessageLimitRequest {
+  string brand_id = 1;
+}
+
+message GetRemainingLimitsRequest {
+  string brand_id = 1;
+}
+
+message ListTemplatesRequest {
+  string brand_id = 1;
+  string category = 2;
+  string status = 3;
+}
+
+message SyncCustomerPhoneNumbersRequest {
+  string brand_id = 1;
+}

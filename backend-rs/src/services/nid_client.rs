@@ -2,7 +2,7 @@
 
 use crate::config::Config;
 use crate::db::DbPool;
-use crate::services::otp_engine::{GenerateOtpRequest, OtpEngine, VerifyOtpRequest};
+use newax_otp_engine::{GenerateOtpRequest, OtpEngine, VerifyOtpRequest};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};

@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package newax.fin_vision.v1;
+
+service FinVisionService {
+  rpc GetSummary(Empty) returns (JsonResponse);
+  rpc UploadImage(UploadImageRequest) returns (JsonResponse);
+  rpc AnalyzeImage(AnalyzeImageRequest) returns (JsonResponse);
+  rpc ListImages(ListImagesRequest) returns (JsonResponse);
+  rpc GetImage(IdRequest) returns (JsonResponse);
+  rpc DeleteImage(IdRequest) returns (JsonResponse);
+  rpc GetSettings(GetSettingsRequest) returns (JsonResponse);
+  rpc UpdateSettings(UpdateSettingsRequest) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message JsonBody {
+  string json = 1;
+}
+
+message IdRequest {
+  string id = 1;
+}
+
+// ——— Upload ———
+
+message UploadImageRequest {
+  string image_data = 1;
+  string mime_type = 2;
+  int64 file_size = 3;
+  string organization_id = 4;
+  string conversation_id = 5;
+  string contact_id = 6;
+  string channel = 7;
+}
+
+// ——— Analyze ———
+
+message AnalyzeImageRequest {
+  string image_id = 1;
+  string analysis_type = 2;
+  string prompt = 3;
+  string claude_model = 4;
+}
+
+// ——— Images ———
+
+message ListImagesRequest {
+  string organization_id = 1;
+  string status = 2;
+  int64 limit = 3;
+}
+
+// ——— Settings ———
+
+message GetSettingsRequest {
+  string organization_id = 1;
+}
+
+message UpdateSettingsRequest {
+  string organization_id = 1;
+  JsonBody body = 2;
+}

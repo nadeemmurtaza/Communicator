@@ -1,15 +1,40 @@
-//! In-App Messaging & Proactive Triggers Routes — Phase 32
+//! Thin gRPC client forwarding in-app messaging requests to `svc-in-app-messaging` (port 50095).
 
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 use axum::Json;
-use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde::Deserialize;
+use serde_json::Value;
 
 use crate::db::AppState;
-use crate::services::in_app_messaging;
 
-// ——— Request/Response Types ———
+use newax_proto::in_app_messaging::v1::{
+    in_app_messaging_service_client::InAppMessagingServiceClient,
+    Empty,
+};
+
+fn svc_addr() -> &'static str {
+    option_env!("IN_APP_MESSAGING_GRPC").unwrap_or("http://127.0.0.1:50095")
+}
+
+async fn client() -> InAppMessagingServiceClient<tonic::transport::Channel> {
+    InAppMessagingServiceClient::connect(svc_addr().to_string())
+        .await
+        .expect("in-app-messaging gRPC service unavailable")
+}
+
+fn grpc_json(s: String) -> Value {
+    serde_json::from_str(&s).unwrap_or_else(|_| serde_json::json!({ "error": "invalid gRPC response" }))
+}
+
+fn ok_response(v: Value) -> Response {
+    (StatusCode::OK, Json(v)).into_response()
+}
+
+fn err_response(message: &str) -> Response {
+    (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": message }))).into_response()
+}
 
 #[derive(Deserialize)]
 pub struct CreateMessageRequest {
@@ -97,335 +122,234 @@ pub struct ListMessagesQuery {
     pub message_type: Option<String>,
 }
 
-// ——— Handlers ———
-
 pub async fn get_summary(
-    State(state): State<AppState>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    match in_app_messaging::get_summary(&state).await {
-        Ok(summary) => Ok(Json(serde_json::to_value(summary).unwrap())),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": e.to_string() })),
-        )),
+    State(_state): State<AppState>,
+) -> Response {
+    match client().await.get_summary(Empty {}).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
 pub async fn create_message(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Json(req): Json<CreateMessageRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+) -> Response {
     let message_type = req.message_type.unwrap_or_else(|| "popup".to_string());
     let trigger_type = req.trigger_type.unwrap_or_else(|| "event".to_string());
     let frequency = req.frequency.unwrap_or_else(|| "once_per_session".to_string());
-
-    match in_app_messaging::create_message(
-        &state,
-        &req.organization_id,
-        &req.title,
-        &req.body,
-        &message_type,
-        &trigger_type,
-        req.trigger_event.as_deref(),
-        req.trigger_page.as_deref(),
-        &frequency,
-    )
-    .await
-    {
-        Ok(result) => Ok(Json(json!({
-            "message_id": result.message_id,
-            "message": result.message,
-        }))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": e.to_string() })),
-        )),
+    let mut r = newax_proto::in_app_messaging::v1::CreateMessageRequest::default();
+    r.organization_id = req.organization_id;
+    r.title = req.title;
+    r.body = req.body;
+    r.message_type = message_type;
+    r.trigger_type = trigger_type;
+    r.trigger_event = req.trigger_event.unwrap_or_default();
+    r.trigger_page = req.trigger_page.unwrap_or_default();
+    r.frequency = frequency;
+    match client().await.create_message(r).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
 pub async fn list_messages(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Query(query): Query<ListMessagesQuery>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    match in_app_messaging::list_messages(
-        &state,
-        query.status.as_deref(),
-        query.message_type.as_deref(),
-    )
-    .await
-    {
-        Ok(messages) => Ok(Json(serde_json::to_value(messages).unwrap())),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": e.to_string() })),
-        )),
+) -> Response {
+    let mut r = newax_proto::in_app_messaging::v1::ListMessagesRequest::default();
+    r.status = query.status.unwrap_or_default();
+    r.message_type = query.message_type.unwrap_or_default();
+    match client().await.list_messages(r).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
 pub async fn get_message(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(message_id): Path<String>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    match in_app_messaging::get_message(&state, &message_id).await {
-        Ok(message) => Ok(Json(serde_json::to_value(message).unwrap())),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": e.to_string() })),
-        )),
+) -> Response {
+    let mut r = newax_proto::in_app_messaging::v1::GetMessageRequest::default();
+    r.message_id = message_id;
+    match client().await.get_message(r).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
 pub async fn update_message(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(message_id): Path<String>,
     Json(req): Json<UpdateMessageRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    match in_app_messaging::update_message(
-        &state,
-        &message_id,
-        req.title.as_deref(),
-        req.body.as_deref(),
-        req.message_type.as_deref(),
-        req.status.as_deref(),
-        req.button_text.as_deref(),
-        req.button_url.as_deref(),
-        req.trigger_type.as_deref(),
-        req.trigger_event.as_deref(),
-        req.frequency.as_deref(),
-    )
-    .await
-    {
-        Ok(result) => Ok(Json(json!({
-            "message_id": result.message_id,
-            "message": result.message,
-        }))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": e.to_string() })),
-        )),
+) -> Response {
+    let mut r = newax_proto::in_app_messaging::v1::UpdateMessageRequest::default();
+    r.message_id = message_id;
+    r.title = req.title.unwrap_or_default();
+    r.body = req.body.unwrap_or_default();
+    r.message_type = req.message_type.unwrap_or_default();
+    r.status = req.status.unwrap_or_default();
+    r.button_text = req.button_text.unwrap_or_default();
+    r.button_url = req.button_url.unwrap_or_default();
+    r.trigger_type = req.trigger_type.unwrap_or_default();
+    r.trigger_event = req.trigger_event.unwrap_or_default();
+    r.frequency = req.frequency.unwrap_or_default();
+    match client().await.update_message(r).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
 pub async fn delete_message(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(message_id): Path<String>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    match in_app_messaging::delete_message(&state, &message_id).await {
-        Ok(result) => Ok(Json(json!({
-            "message_id": result.message_id,
-            "message": result.message,
-        }))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": e.to_string() })),
-        )),
+) -> Response {
+    let mut r = newax_proto::in_app_messaging::v1::DeleteMessageRequest::default();
+    r.message_id = message_id;
+    match client().await.delete_message(r).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
 pub async fn create_trigger(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Json(req): Json<CreateTriggerRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+) -> Response {
     let condition = req.condition.unwrap_or_else(|| "{}".to_string());
     let action = req.action.unwrap_or_else(|| "show_message".to_string());
     let delay_seconds = req.delay_seconds.unwrap_or(0);
-
-    match in_app_messaging::create_trigger(
-        &state,
-        &req.organization_id,
-        &req.name,
-        &req.trigger_type,
-        &condition,
-        &action,
-        req.message_id.as_deref(),
-        delay_seconds,
-    )
-    .await
-    {
-        Ok(result) => Ok(Json(json!({
-            "trigger_id": result.trigger_id,
-            "message": result.message,
-        }))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": e.to_string() })),
-        )),
+    let mut r = newax_proto::in_app_messaging::v1::CreateTriggerRequest::default();
+    r.organization_id = req.organization_id;
+    r.name = req.name;
+    r.trigger_type = req.trigger_type;
+    r.condition = condition;
+    r.action = action;
+    r.message_id = req.message_id.unwrap_or_default();
+    r.delay_seconds = delay_seconds;
+    match client().await.create_trigger(r).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
 pub async fn list_triggers(
-    State(state): State<AppState>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    match in_app_messaging::list_triggers(&state).await {
-        Ok(triggers) => Ok(Json(serde_json::to_value(triggers).unwrap())),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": e.to_string() })),
-        )),
+    State(_state): State<AppState>,
+) -> Response {
+    match client().await.list_triggers(Empty {}).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
 pub async fn update_trigger(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(trigger_id): Path<String>,
     Json(req): Json<UpdateTriggerRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    match in_app_messaging::update_trigger(
-        &state,
-        &trigger_id,
-        req.name.as_deref(),
-        req.trigger_type.as_deref(),
-        req.condition.as_deref(),
-        req.enabled,
-        req.message_id.as_deref(),
-    )
-    .await
-    {
-        Ok(result) => Ok(Json(json!({
-            "trigger_id": result.trigger_id,
-            "message": result.message,
-        }))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": e.to_string() })),
-        )),
+) -> Response {
+    let mut r = newax_proto::in_app_messaging::v1::UpdateTriggerRequest::default();
+    r.trigger_id = trigger_id;
+    r.name = req.name.unwrap_or_default();
+    r.trigger_type = req.trigger_type.unwrap_or_default();
+    r.condition = req.condition.unwrap_or_default();
+    r.enabled = req.enabled.map_or(String::new(), |b| b.to_string());
+    r.message_id = req.message_id.unwrap_or_default();
+    match client().await.update_trigger(r).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
 pub async fn delete_trigger(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(trigger_id): Path<String>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    match in_app_messaging::delete_trigger(&state, &trigger_id).await {
-        Ok(result) => Ok(Json(json!({
-            "trigger_id": result.trigger_id,
-            "message": result.message,
-        }))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": e.to_string() })),
-        )),
+) -> Response {
+    let mut r = newax_proto::in_app_messaging::v1::DeleteTriggerRequest::default();
+    r.trigger_id = trigger_id;
+    match client().await.delete_trigger(r).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
 pub async fn record_behavioral_event(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Json(req): Json<RecordEventRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+) -> Response {
     let event_data = req.event_data.unwrap_or_default();
-
-    match in_app_messaging::record_behavioral_event(
-        &state,
-        &req.organization_id,
-        req.contact_id.as_deref(),
-        req.session_id.as_deref(),
-        &req.event_name,
-        &event_data,
-        req.page_url.as_deref(),
-    )
-    .await
-    {
-        Ok(result) => Ok(Json(json!({
-            "event_id": result.event_id,
-            "message": result.message,
-        }))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": e.to_string() })),
-        )),
+    let mut r = newax_proto::in_app_messaging::v1::RecordBehavioralEventRequest::default();
+    r.organization_id = req.organization_id;
+    r.contact_id = req.contact_id.unwrap_or_default();
+    r.session_id = req.session_id.unwrap_or_default();
+    r.event_name = req.event_name;
+    r.event_data = event_data;
+    r.page_url = req.page_url.unwrap_or_default();
+    match client().await.record_behavioral_event(r).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
 pub async fn evaluate_triggers(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Json(req): Json<EvaluateTriggersRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    match in_app_messaging::evaluate_triggers(
-        &state,
-        &req.organization_id,
-        &req.event_name,
-        req.page_url.as_deref(),
-    )
-    .await
-    {
-        Ok(results) => Ok(Json(serde_json::to_value(results).unwrap())),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": e.to_string() })),
-        )),
+) -> Response {
+    let mut r = newax_proto::in_app_messaging::v1::EvaluateTriggersRequest::default();
+    r.organization_id = req.organization_id;
+    r.event_name = req.event_name;
+    r.page_url = req.page_url.unwrap_or_default();
+    match client().await.evaluate_triggers(r).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
 pub async fn record_message_event(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Json(req): Json<RecordMessageEventRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    match in_app_messaging::record_message_event(
-        &state,
-        &req.organization_id,
-        &req.message_id,
-        req.contact_id.as_deref(),
-        req.session_id.as_deref(),
-        &req.event_type,
-    )
-    .await
-    {
-        Ok(result) => Ok(Json(json!({
-            "event_id": result.event_id,
-            "message": result.message,
-        }))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": e.to_string() })),
-        )),
+) -> Response {
+    let mut r = newax_proto::in_app_messaging::v1::RecordMessageEventRequest::default();
+    r.organization_id = req.organization_id;
+    r.message_id = req.message_id;
+    r.contact_id = req.contact_id.unwrap_or_default();
+    r.session_id = req.session_id.unwrap_or_default();
+    r.event_type = req.event_type;
+    match client().await.record_message_event(r).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
 pub async fn get_settings(
-    State(state): State<AppState>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    match in_app_messaging::get_settings(&state).await {
-        Ok(settings) => Ok(Json(serde_json::to_value(settings).unwrap())),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": e.to_string() })),
-        )),
+    State(_state): State<AppState>,
+) -> Response {
+    match client().await.get_settings(Empty {}).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
 pub async fn update_settings(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Json(req): Json<UpdateSettingsRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    match in_app_messaging::update_settings(
-        &state,
-        req.enabled,
-        req.max_concurrent_messages,
-        req.default_style.as_deref(),
-        req.track_behavioral_events,
-        req.event_retention_days,
-    )
-    .await
-    {
-        Ok(result) => Ok(Json(json!({
-            "settings_id": result.settings_id,
-            "message": result.message,
-        }))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": e.to_string() })),
-        )),
+) -> Response {
+    let mut r = newax_proto::in_app_messaging::v1::UpdateSettingsRequest::default();
+    r.enabled = req.enabled.map_or(String::new(), |b| b.to_string());
+    r.max_concurrent_messages = req.max_concurrent_messages.map_or(String::new(), |n| n.to_string());
+    r.default_style = req.default_style.unwrap_or_default();
+    r.track_behavioral_events = req.track_behavioral_events.map_or(String::new(), |b| b.to_string());
+    r.event_retention_days = req.event_retention_days.map_or(String::new(), |n| n.to_string());
+    match client().await.update_settings(r).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }
 
 pub async fn list_behavioral_events(
-    State(state): State<AppState>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    match in_app_messaging::list_behavioral_events(&state, None).await {
-        Ok(events) => Ok(Json(serde_json::to_value(events).unwrap())),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": e.to_string() })),
-        )),
+    State(_state): State<AppState>,
+) -> Response {
+    match client().await.list_behavioral_events(Empty {}).await {
+        Ok(resp) => ok_response(grpc_json(resp.into_inner().json)),
+        Err(e) => err_response(&e.to_string()),
     }
 }

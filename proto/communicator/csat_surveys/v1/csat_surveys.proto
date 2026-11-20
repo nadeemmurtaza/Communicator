@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package newax.csat_surveys.v1;
+
+service CSATSurveysService {
+  rpc ListTemplates(QueryRequest) returns (JsonResponse);
+  rpc GetTemplate(IdRequest) returns (JsonResponse);
+  rpc CreateTemplate(CreateRequest) returns (JsonResponse);
+  rpc UpdateTemplate(UpdateRequest) returns (JsonResponse);
+  rpc DeleteTemplate(IdRequest) returns (JsonResponse);
+  rpc ListSurveys(QueryRequest) returns (JsonResponse);
+  rpc CreateSurvey(CreateRequest) returns (JsonResponse);
+  rpc RespondToSurvey(RespondRequest) returns (JsonResponse);
+  rpc SendSurvey(IdRequest) returns (JsonResponse);
+  rpc GetCSATSummary(QueryRequest) returns (JsonResponse);
+  rpc GenerateSnapshot(EmptyRequest) returns (JsonResponse);
+  rpc ListSnapshots(EmptyRequest) returns (JsonResponse);
+}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message EmptyRequest {}
+
+message IdRequest {
+  string id = 1;
+}
+
+message QueryRequest {
+  string json = 1;
+}
+
+message CreateRequest {
+  string json = 1;
+}
+
+message UpdateRequest {
+  string id = 1;
+  string json = 2;
+}
+
+message RespondRequest {
+  string id = 1;
+  string json = 2;
+}

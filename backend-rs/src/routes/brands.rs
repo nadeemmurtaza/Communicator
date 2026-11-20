@@ -391,30 +391,7 @@ pub fn router() -> Router<AppState> {
         .route("/brands/{id}/whatsapp/send-interactive", post(send_whatsapp_interactive))
         .route("/brands/{id}/whatsapp/send-media", post(send_whatsapp_media))
         .route("/brands/{id}/whatsapp/send-voice", post(send_whatsapp_voice))
-        // ===== WhatsApp Campaigns, Flows, Industries =====
-        // Industries
-        .route("/brands/{id}/whatsapp/industries", get(list_industries))
-        .route("/brands/{id}/whatsapp/industries", post(create_industry))
-        .route("/brands/{id}/whatsapp/industries/{industry_id}", put(update_industry))
-        .route("/brands/{id}/whatsapp/industries/{industry_id}", delete(delete_industry))
-        // Template Groups
-        .route("/brands/{id}/whatsapp/groups", get(list_template_groups))
-        .route("/brands/{id}/whatsapp/groups", post(create_template_group))
-        .route("/brands/{id}/whatsapp/groups/{group_id}", put(update_template_group))
-        .route("/brands/{id}/whatsapp/groups/{group_id}", delete(delete_template_group))
-        // Template Flows
-        .route("/brands/{id}/whatsapp/flows", get(list_flows))
-        .route("/brands/{id}/whatsapp/flows", post(create_flow))
-        .route("/brands/{id}/whatsapp/flows/{flow_id}", get(get_flow))
-        .route("/brands/{id}/whatsapp/flows/{flow_id}", put(update_flow))
-        .route("/brands/{id}/whatsapp/flows/{flow_id}", delete(delete_flow))
-        .route("/brands/{id}/whatsapp/flows/{flow_id}/duplicate", post(duplicate_flow))
-        .route("/brands/{id}/whatsapp/flows/{flow_id}/validate", post(validate_flow))
-        // Flow Steps
-        .route("/brands/{id}/whatsapp/flows/{flow_id}/steps", get(list_flow_steps))
-        .route("/brands/{id}/whatsapp/flows/{flow_id}/steps", post(create_flow_step))
-        .route("/brands/{id}/whatsapp/flows/{flow_id}/steps/{step_id}", put(update_flow_step))
-        .route("/brands/{id}/whatsapp/flows/{flow_id}/steps/{step_id}", delete(delete_flow_step))
+        // ===== WhatsApp Campaigns, Industries =====
         // Campaigns
         .route("/brands/{id}/whatsapp/campaigns", get(list_campaigns))
         .route("/brands/{id}/whatsapp/campaigns", post(create_campaign))
@@ -4722,548 +4699,11 @@ pub async fn send_whatsapp_voice(
     }
 }
 
-// ---------------------------------------------------------------------------
-// WhatsApp Campaigns, Flows, Industries — Handlers
-// ---------------------------------------------------------------------------
+// --- Campaigns (gRPC client) ---
 
-// --- Industries ---
-
-pub async fn list_industries(
-    State(state): State<AppState>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let svc = crate::services::whatsapp_flows::WhatsAppFlowsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc.list_industries().await {
-        Ok(industries) => Ok(Json(serde_json::json!({ "industries": industries }))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
-        )),
-    }
+fn whatsapp_campaigns_client_url(state: &AppState) -> String {
+    state.config.whatsapp_campaigns_grpc_url.clone()
 }
-
-#[derive(Deserialize)]
-pub struct CreateIndustryRequest {
-    pub name: String,
-    pub description: Option<String>,
-    pub icon: Option<String>,
-}
-
-pub async fn create_industry(
-    State(state): State<AppState>,
-    Json(body): Json<CreateIndustryRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let svc = crate::services::whatsapp_flows::WhatsAppFlowsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc
-        .create_industry(&body.name, body.description.as_deref().unwrap_or(""), body.icon.as_deref())
-        .await
-    {
-        Ok(industry) => Ok(Json(serde_json::json!(industry))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
-        )),
-    }
-}
-
-#[derive(Deserialize)]
-pub struct UpdateIndustryRequest {
-    pub name: Option<String>,
-    pub description: Option<String>,
-    pub icon: Option<String>,
-    pub is_active: Option<bool>,
-}
-
-pub async fn update_industry(
-    State(state): State<AppState>,
-    Path(industry_id): Path<String>,
-    Json(body): Json<UpdateIndustryRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let svc = crate::services::whatsapp_flows::WhatsAppFlowsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc
-        .update_industry(
-            &industry_id,
-            body.name.as_deref(),
-            body.description.as_deref(),
-            body.icon.as_deref(),
-            body.is_active,
-        )
-        .await
-    {
-        Ok(()) => Ok(Json(serde_json::json!({ "updated": true }))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
-        )),
-    }
-}
-
-pub async fn delete_industry(
-    State(state): State<AppState>,
-    Path(industry_id): Path<String>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let svc = crate::services::whatsapp_flows::WhatsAppFlowsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc.delete_industry(&industry_id).await {
-        Ok(()) => Ok(Json(serde_json::json!({ "deleted": true }))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
-        )),
-    }
-}
-
-// --- Template Groups ---
-
-pub async fn list_template_groups(
-    State(state): State<AppState>,
-    Path(id): Path<String>,
-    headers: axum::http::HeaderMap,
-    Query(params): Query<HashMap<String, String>>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = verify_brand(&state, &id, &tenant_key).await?;
-
-    let svc = crate::services::whatsapp_flows::WhatsAppFlowsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    let industry_id = params.get("industry_id").map(|s| s.as_str());
-    match svc.list_template_groups(&id, industry_id).await {
-        Ok(groups) => Ok(Json(serde_json::json!({ "groups": groups }))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
-        )),
-    }
-}
-
-#[derive(Deserialize)]
-pub struct CreateTemplateGroupRequest {
-    pub industry_id: Option<String>,
-    pub name: String,
-    pub description: Option<String>,
-    pub sort_order: Option<i32>,
-}
-
-pub async fn create_template_group(
-    State(state): State<AppState>,
-    Path(id): Path<String>,
-    headers: axum::http::HeaderMap,
-    Json(body): Json<CreateTemplateGroupRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = verify_brand(&state, &id, &tenant_key).await?;
-
-    let svc = crate::services::whatsapp_flows::WhatsAppFlowsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc
-        .create_template_group(
-            &id,
-            body.industry_id.as_deref(),
-            &body.name,
-            body.description.as_deref().unwrap_or(""),
-            body.sort_order.unwrap_or(0),
-        )
-        .await
-    {
-        Ok(group) => Ok(Json(serde_json::json!(group))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
-        )),
-    }
-}
-
-#[derive(Deserialize)]
-pub struct UpdateTemplateGroupRequest {
-    pub name: Option<String>,
-    pub description: Option<String>,
-    pub sort_order: Option<i32>,
-}
-
-pub async fn update_template_group(
-    State(state): State<AppState>,
-    Path((id, group_id)): Path<(String, String)>,
-    headers: axum::http::HeaderMap,
-    Json(body): Json<UpdateTemplateGroupRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = verify_brand(&state, &id, &tenant_key).await?;
-
-    let svc = crate::services::whatsapp_flows::WhatsAppFlowsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc
-        .update_template_group(
-            &group_id,
-            body.name.as_deref(),
-            body.description.as_deref(),
-            body.sort_order,
-        )
-        .await
-    {
-        Ok(()) => Ok(Json(serde_json::json!({ "updated": true }))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
-        )),
-    }
-}
-
-pub async fn delete_template_group(
-    State(state): State<AppState>,
-    Path((id, group_id)): Path<(String, String)>,
-    headers: axum::http::HeaderMap,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = verify_brand(&state, &id, &tenant_key).await?;
-
-    let svc = crate::services::whatsapp_flows::WhatsAppFlowsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc.delete_template_group(&group_id).await {
-        Ok(()) => Ok(Json(serde_json::json!({ "deleted": true }))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
-        )),
-    }
-}
-
-// --- Template Flows ---
-
-pub async fn list_flows(
-    State(state): State<AppState>,
-    Path(id): Path<String>,
-    headers: axum::http::HeaderMap,
-    Query(params): Query<HashMap<String, String>>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = verify_brand(&state, &id, &tenant_key).await?;
-
-    let svc = crate::services::whatsapp_flows::WhatsAppFlowsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    let industry_id = params.get("industry_id").map(|s| s.as_str());
-    let group_id = params.get("group_id").map(|s| s.as_str());
-    let category = params.get("category").map(|s| s.as_str());
-    let status = params.get("status").map(|s| s.as_str());
-    match svc
-        .list_template_flows(&id, industry_id, group_id, category, status)
-        .await
-    {
-        Ok(flows) => Ok(Json(serde_json::json!({ "flows": flows }))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
-        )),
-    }
-}
-
-#[derive(Deserialize)]
-pub struct CreateFlowRequest {
-    pub group_id: Option<String>,
-    pub industry_id: Option<String>,
-    pub name: String,
-    pub flow_type: Option<String>,
-    pub category: Option<String>,
-    pub body: String,
-    pub header: Option<String>,
-    pub footer: Option<String>,
-    pub buttons: Option<String>,
-    pub sections: Option<String>,
-    pub language: Option<String>,
-}
-
-pub async fn create_flow(
-    State(state): State<AppState>,
-    Path(id): Path<String>,
-    headers: axum::http::HeaderMap,
-    Json(body): Json<CreateFlowRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let tenant_key = resolve_tenant_key(&headers).await?;
-    let _brand = verify_brand(&state, &id, &tenant_key).await?;
-
-    let svc = crate::services::whatsapp_flows::WhatsAppFlowsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc
-        .create_template_flow(
-            &id,
-            body.group_id.as_deref(),
-            body.industry_id.as_deref(),
-            &body.name,
-            body.flow_type.as_deref().unwrap_or("template"),
-            body.category.as_deref().unwrap_or("general"),
-            &body.body,
-            body.header.as_deref(),
-            body.footer.as_deref(),
-            body.buttons.as_deref(),
-            body.sections.as_deref(),
-            body.language.as_deref().unwrap_or("en_US"),
-        )
-        .await
-    {
-        Ok(flow) => Ok(Json(serde_json::json!(flow))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
-        )),
-    }
-}
-
-pub async fn get_flow(
-    State(state): State<AppState>,
-    Path(flow_id): Path<String>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let svc = crate::services::whatsapp_flows::WhatsAppFlowsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc.get_template_flow(&flow_id).await {
-        Ok(flow_with_steps) => Ok(Json(serde_json::json!(flow_with_steps))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
-        )),
-    }
-}
-
-#[derive(Deserialize)]
-pub struct UpdateFlowRequest {
-    pub name: Option<String>,
-    pub body: Option<String>,
-    pub header: Option<String>,
-    pub footer: Option<String>,
-    pub buttons: Option<String>,
-    pub sections: Option<String>,
-    pub status: Option<String>,
-    pub is_active: Option<bool>,
-}
-
-pub async fn update_flow(
-    State(state): State<AppState>,
-    Path(flow_id): Path<String>,
-    Json(body): Json<UpdateFlowRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let svc = crate::services::whatsapp_flows::WhatsAppFlowsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc
-        .update_template_flow(
-            &flow_id,
-            body.name.as_deref(),
-            body.body.as_deref(),
-            body.header.as_deref(),
-            body.footer.as_deref(),
-            body.buttons.as_deref(),
-            body.sections.as_deref(),
-            body.status.as_deref(),
-            body.is_active,
-        )
-        .await
-    {
-        Ok(()) => Ok(Json(serde_json::json!({ "updated": true }))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
-        )),
-    }
-}
-
-pub async fn delete_flow(
-    State(state): State<AppState>,
-    Path(flow_id): Path<String>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let svc = crate::services::whatsapp_flows::WhatsAppFlowsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc.delete_template_flow(&flow_id).await {
-        Ok(()) => Ok(Json(serde_json::json!({ "deleted": true }))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
-        )),
-    }
-}
-
-#[derive(Deserialize)]
-pub struct DuplicateFlowRequest {
-    pub name: String,
-}
-
-pub async fn duplicate_flow(
-    State(state): State<AppState>,
-    Path(flow_id): Path<String>,
-    Json(body): Json<DuplicateFlowRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let svc = crate::services::whatsapp_flows::WhatsAppFlowsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc.duplicate_flow(&flow_id, &body.name).await {
-        Ok(new_id) => Ok(Json(serde_json::json!({ "id": new_id }))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
-        )),
-    }
-}
-
-pub async fn validate_flow(
-    State(state): State<AppState>,
-    Path(flow_id): Path<String>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let svc = crate::services::whatsapp_flows::WhatsAppFlowsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc.validate_flow(&flow_id).await {
-        Ok(errors) => {
-            if errors.is_empty() {
-                Ok(Json(serde_json::json!({ "valid": true })))
-            } else {
-                Ok(Json(serde_json::json!({ "valid": false, "errors": errors })))
-            }
-        }
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
-        )),
-    }
-}
-
-// --- Flow Steps ---
-
-pub async fn list_flow_steps(
-    State(state): State<AppState>,
-    Path(flow_id): Path<String>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let svc = crate::services::whatsapp_flows::WhatsAppFlowsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc.list_flow_steps(&flow_id).await {
-        Ok(steps) => Ok(Json(serde_json::json!({ "steps": steps }))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
-        )),
-    }
-}
-
-#[derive(Deserialize)]
-pub struct CreateFlowStepRequest {
-    pub step_number: i32,
-    pub condition: Option<String>,
-    pub action_type: String,
-    pub action_config: Option<String>,
-    pub next_step_id: Option<String>,
-}
-
-pub async fn create_flow_step(
-    State(state): State<AppState>,
-    Path(flow_id): Path<String>,
-    Json(body): Json<CreateFlowStepRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let svc = crate::services::whatsapp_flows::WhatsAppFlowsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc
-        .create_flow_step(
-            &flow_id,
-            body.step_number,
-            body.condition.as_deref(),
-            &body.action_type,
-            body.action_config.as_deref(),
-            body.next_step_id.as_deref(),
-        )
-        .await
-    {
-        Ok(step) => Ok(Json(serde_json::json!(step))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
-        )),
-    }
-}
-
-#[derive(Deserialize)]
-pub struct UpdateFlowStepRequest {
-    pub step_number: Option<i32>,
-    pub condition: Option<String>,
-    pub action_type: Option<String>,
-    pub action_config: Option<String>,
-    pub next_step_id: Option<String>,
-}
-
-pub async fn update_flow_step(
-    State(state): State<AppState>,
-    Path((flow_id, step_id)): Path<(String, String)>,
-    Json(body): Json<UpdateFlowStepRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let svc = crate::services::whatsapp_flows::WhatsAppFlowsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc
-        .update_flow_step(
-            &step_id,
-            body.step_number,
-            body.condition.as_deref(),
-            body.action_type.as_deref(),
-            body.action_config.as_deref(),
-            body.next_step_id.as_deref(),
-        )
-        .await
-    {
-        Ok(()) => Ok(Json(serde_json::json!({ "updated": true }))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
-        )),
-    }
-}
-
-pub async fn delete_flow_step(
-    State(state): State<AppState>,
-    Path((flow_id, step_id)): Path<(String, String)>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let _flow_id = flow_id;
-    let svc = crate::services::whatsapp_flows::WhatsAppFlowsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc.delete_flow_step(&step_id).await {
-        Ok(()) => Ok(Json(serde_json::json!({ "deleted": true }))),
-        Err(e) => Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
-        )),
-    }
-}
-
-// --- Campaigns ---
 
 pub async fn list_campaigns(
     State(state): State<AppState>,
@@ -5274,17 +4714,29 @@ pub async fn list_campaigns(
     let tenant_key = resolve_tenant_key(&headers).await?;
     let _brand = verify_brand(&state, &id, &tenant_key).await?;
 
-    let svc = crate::services::whatsapp_campaigns::WhatsAppCampaignsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    let status = params.get("status").map(|s| s.as_str());
-    match svc.list_campaigns(&id, status).await {
-        Ok(campaigns) => Ok(Json(serde_json::json!({ "campaigns": campaigns }))),
-        Err(e) => Err((
+    let url = whatsapp_campaigns_client_url(&state);
+    let mut client = match newax_proto::whatsapp_campaigns::v1::whats_app_campaigns_service_client::WhatsAppCampaignsServiceClient::connect(url).await {
+        Ok(c) => c,
+        Err(e) => return Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
+            Json(serde_json::json!({ "error": format!("Failed to connect to whatsapp_campaigns service: {}", e) })),
         )),
+    };
+
+    let status = params.get("status").map(|s| s.clone()).unwrap_or_default();
+    let resp = match client.list_campaigns(
+        newax_proto::whatsapp_campaigns::v1::ListCampaignsRequest { brand_id: id, status },
+    ).await {
+        Ok(r) => r.into_inner(),
+        Err(e) => return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        )),
+    };
+
+    match serde_json::from_str(&resp.json) {
+        Ok(v) => Ok(Json(v)),
+        Err(_) => Ok(Json(serde_json::json!({ "error": "Invalid response" }))),
     }
 }
 
@@ -5305,25 +4757,34 @@ pub async fn create_campaign(
     let tenant_key = resolve_tenant_key(&headers).await?;
     let _brand = verify_brand(&state, &id, &tenant_key).await?;
 
-    let svc = crate::services::whatsapp_campaigns::WhatsAppCampaignsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc
-        .create_campaign(
-            &id,
-            &body.name,
-            body.campaign_type.as_deref().unwrap_or("whatsapp"),
-            body.template_flow_id.as_deref(),
-            body.scheduled_at.as_deref(),
-        )
-        .await
-    {
-        Ok(campaign) => Ok(Json(serde_json::json!(campaign))),
-        Err(e) => Err((
+    let url = whatsapp_campaigns_client_url(&state);
+    let mut client = match newax_proto::whatsapp_campaigns::v1::whats_app_campaigns_service_client::WhatsAppCampaignsServiceClient::connect(url).await {
+        Ok(c) => c,
+        Err(e) => return Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
+            Json(serde_json::json!({ "error": format!("Failed to connect to whatsapp_campaigns service: {}", e) })),
         )),
+    };
+
+    let resp = match client.create_campaign(
+        newax_proto::whatsapp_campaigns::v1::CreateCampaignRequest {
+            brand_id: id,
+            name: body.name,
+            campaign_type: body.campaign_type.unwrap_or_else(|| "whatsapp".to_string()),
+            template_flow_id: body.template_flow_id.unwrap_or_default(),
+            scheduled_at: body.scheduled_at.unwrap_or_default(),
+        },
+    ).await {
+        Ok(r) => r.into_inner(),
+        Err(e) => return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        )),
+    };
+
+    match serde_json::from_str(&resp.json) {
+        Ok(v) => Ok(Json(v)),
+        Err(_) => Ok(Json(serde_json::json!({ "error": "Invalid response" }))),
     }
 }
 
@@ -5331,16 +4792,28 @@ pub async fn get_campaign(
     State(state): State<AppState>,
     Path(campaign_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let svc = crate::services::whatsapp_campaigns::WhatsAppCampaignsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc.get_campaign(&campaign_id).await {
-        Ok(campaign) => Ok(Json(serde_json::json!(campaign))),
-        Err(e) => Err((
+    let url = whatsapp_campaigns_client_url(&state);
+    let mut client = match newax_proto::whatsapp_campaigns::v1::whats_app_campaigns_service_client::WhatsAppCampaignsServiceClient::connect(url).await {
+        Ok(c) => c,
+        Err(e) => return Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
+            Json(serde_json::json!({ "error": format!("Failed to connect to whatsapp_campaigns service: {}", e) })),
         )),
+    };
+
+    let resp = match client.get_campaign(
+        newax_proto::whatsapp_campaigns::v1::GetCampaignRequest { campaign_id },
+    ).await {
+        Ok(r) => r.into_inner(),
+        Err(e) => return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        )),
+    };
+
+    match serde_json::from_str(&resp.json) {
+        Ok(v) => Ok(Json(v)),
+        Err(_) => Ok(Json(serde_json::json!({ "error": "Invalid response" }))),
     }
 }
 
@@ -5348,16 +4821,28 @@ pub async fn delete_campaign(
     State(state): State<AppState>,
     Path(campaign_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let svc = crate::services::whatsapp_campaigns::WhatsAppCampaignsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc.delete_campaign(&campaign_id).await {
-        Ok(()) => Ok(Json(serde_json::json!({ "deleted": true }))),
-        Err(e) => Err((
+    let url = whatsapp_campaigns_client_url(&state);
+    let mut client = match newax_proto::whatsapp_campaigns::v1::whats_app_campaigns_service_client::WhatsAppCampaignsServiceClient::connect(url).await {
+        Ok(c) => c,
+        Err(e) => return Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
+            Json(serde_json::json!({ "error": format!("Failed to connect to whatsapp_campaigns service: {}", e) })),
         )),
+    };
+
+    let resp = match client.delete_campaign(
+        newax_proto::whatsapp_campaigns::v1::DeleteCampaignRequest { campaign_id },
+    ).await {
+        Ok(r) => r.into_inner(),
+        Err(e) => return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        )),
+    };
+
+    match serde_json::from_str(&resp.json) {
+        Ok(v) => Ok(Json(v)),
+        Err(_) => Ok(Json(serde_json::json!({ "error": "Invalid response" }))),
     }
 }
 
@@ -5365,16 +4850,28 @@ pub async fn start_campaign(
     State(state): State<AppState>,
     Path(campaign_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let svc = crate::services::whatsapp_campaigns::WhatsAppCampaignsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc.start_campaign(&campaign_id).await {
-        Ok(()) => Ok(Json(serde_json::json!({ "status": "running" }))),
-        Err(e) => Err((
+    let url = whatsapp_campaigns_client_url(&state);
+    let mut client = match newax_proto::whatsapp_campaigns::v1::whats_app_campaigns_service_client::WhatsAppCampaignsServiceClient::connect(url).await {
+        Ok(c) => c,
+        Err(e) => return Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
+            Json(serde_json::json!({ "error": format!("Failed to connect to whatsapp_campaigns service: {}", e) })),
         )),
+    };
+
+    let resp = match client.start_campaign(
+        newax_proto::whatsapp_campaigns::v1::StartCampaignRequest { campaign_id },
+    ).await {
+        Ok(r) => r.into_inner(),
+        Err(e) => return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        )),
+    };
+
+    match serde_json::from_str(&resp.json) {
+        Ok(v) => Ok(Json(v)),
+        Err(_) => Ok(Json(serde_json::json!({ "error": "Invalid response" }))),
     }
 }
 
@@ -5382,16 +4879,28 @@ pub async fn pause_campaign(
     State(state): State<AppState>,
     Path(campaign_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let svc = crate::services::whatsapp_campaigns::WhatsAppCampaignsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc.pause_campaign(&campaign_id).await {
-        Ok(()) => Ok(Json(serde_json::json!({ "status": "paused" }))),
-        Err(e) => Err((
+    let url = whatsapp_campaigns_client_url(&state);
+    let mut client = match newax_proto::whatsapp_campaigns::v1::whats_app_campaigns_service_client::WhatsAppCampaignsServiceClient::connect(url).await {
+        Ok(c) => c,
+        Err(e) => return Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
+            Json(serde_json::json!({ "error": format!("Failed to connect to whatsapp_campaigns service: {}", e) })),
         )),
+    };
+
+    let resp = match client.pause_campaign(
+        newax_proto::whatsapp_campaigns::v1::PauseCampaignRequest { campaign_id },
+    ).await {
+        Ok(r) => r.into_inner(),
+        Err(e) => return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        )),
+    };
+
+    match serde_json::from_str(&resp.json) {
+        Ok(v) => Ok(Json(v)),
+        Err(_) => Ok(Json(serde_json::json!({ "error": "Invalid response" }))),
     }
 }
 
@@ -5399,16 +4908,28 @@ pub async fn resume_campaign(
     State(state): State<AppState>,
     Path(campaign_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let svc = crate::services::whatsapp_campaigns::WhatsAppCampaignsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc.resume_campaign(&campaign_id).await {
-        Ok(()) => Ok(Json(serde_json::json!({ "status": "running" }))),
-        Err(e) => Err((
+    let url = whatsapp_campaigns_client_url(&state);
+    let mut client = match newax_proto::whatsapp_campaigns::v1::whats_app_campaigns_service_client::WhatsAppCampaignsServiceClient::connect(url).await {
+        Ok(c) => c,
+        Err(e) => return Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
+            Json(serde_json::json!({ "error": format!("Failed to connect to whatsapp_campaigns service: {}", e) })),
         )),
+    };
+
+    let resp = match client.resume_campaign(
+        newax_proto::whatsapp_campaigns::v1::ResumeCampaignRequest { campaign_id },
+    ).await {
+        Ok(r) => r.into_inner(),
+        Err(e) => return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        )),
+    };
+
+    match serde_json::from_str(&resp.json) {
+        Ok(v) => Ok(Json(v)),
+        Err(_) => Ok(Json(serde_json::json!({ "error": "Invalid response" }))),
     }
 }
 
@@ -5416,16 +4937,28 @@ pub async fn cancel_campaign(
     State(state): State<AppState>,
     Path(campaign_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let svc = crate::services::whatsapp_campaigns::WhatsAppCampaignsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc.cancel_campaign(&campaign_id).await {
-        Ok(()) => Ok(Json(serde_json::json!({ "status": "cancelled" }))),
-        Err(e) => Err((
+    let url = whatsapp_campaigns_client_url(&state);
+    let mut client = match newax_proto::whatsapp_campaigns::v1::whats_app_campaigns_service_client::WhatsAppCampaignsServiceClient::connect(url).await {
+        Ok(c) => c,
+        Err(e) => return Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
+            Json(serde_json::json!({ "error": format!("Failed to connect to whatsapp_campaigns service: {}", e) })),
         )),
+    };
+
+    let resp = match client.cancel_campaign(
+        newax_proto::whatsapp_campaigns::v1::CancelCampaignRequest { campaign_id },
+    ).await {
+        Ok(r) => r.into_inner(),
+        Err(e) => return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        )),
+    };
+
+    match serde_json::from_str(&resp.json) {
+        Ok(v) => Ok(Json(v)),
+        Err(_) => Ok(Json(serde_json::json!({ "error": "Invalid response" }))),
     }
 }
 
@@ -5433,16 +4966,28 @@ pub async fn get_campaign_contacts(
     State(state): State<AppState>,
     Path(campaign_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let svc = crate::services::whatsapp_campaigns::WhatsAppCampaignsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc.get_campaign_contacts(&campaign_id).await {
-        Ok(contacts) => Ok(Json(serde_json::json!({ "contacts": contacts }))),
-        Err(e) => Err((
+    let url = whatsapp_campaigns_client_url(&state);
+    let mut client = match newax_proto::whatsapp_campaigns::v1::whats_app_campaigns_service_client::WhatsAppCampaignsServiceClient::connect(url).await {
+        Ok(c) => c,
+        Err(e) => return Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
+            Json(serde_json::json!({ "error": format!("Failed to connect to whatsapp_campaigns service: {}", e) })),
         )),
+    };
+
+    let resp = match client.get_campaign_contacts(
+        newax_proto::whatsapp_campaigns::v1::GetCampaignContactsRequest { campaign_id },
+    ).await {
+        Ok(r) => r.into_inner(),
+        Err(e) => return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        )),
+    };
+
+    match serde_json::from_str(&resp.json) {
+        Ok(v) => Ok(Json(v)),
+        Err(_) => Ok(Json(serde_json::json!({ "error": "Invalid response" }))),
     }
 }
 
@@ -5456,19 +5001,31 @@ pub async fn add_campaign_contacts(
     Path(campaign_id): Path<String>,
     Json(body): Json<AddCampaignContactsRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let svc = crate::services::whatsapp_campaigns::WhatsAppCampaignsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc
-        .add_contacts_to_campaign(&campaign_id, &body.contact_ids)
-        .await
-    {
-        Ok(count) => Ok(Json(serde_json::json!({ "added": count }))),
-        Err(e) => Err((
+    let url = whatsapp_campaigns_client_url(&state);
+    let mut client = match newax_proto::whatsapp_campaigns::v1::whats_app_campaigns_service_client::WhatsAppCampaignsServiceClient::connect(url).await {
+        Ok(c) => c,
+        Err(e) => return Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
+            Json(serde_json::json!({ "error": format!("Failed to connect to whatsapp_campaigns service: {}", e) })),
         )),
+    };
+
+    let resp = match client.add_campaign_contacts(
+        newax_proto::whatsapp_campaigns::v1::AddCampaignContactsRequest {
+            campaign_id,
+            contact_ids: body.contact_ids,
+        },
+    ).await {
+        Ok(r) => r.into_inner(),
+        Err(e) => return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        )),
+    };
+
+    match serde_json::from_str(&resp.json) {
+        Ok(v) => Ok(Json(v)),
+        Err(_) => Ok(Json(serde_json::json!({ "error": "Invalid response" }))),
     }
 }
 
@@ -5476,16 +5033,28 @@ pub async fn retry_campaign(
     State(state): State<AppState>,
     Path(campaign_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let svc = crate::services::whatsapp_campaigns::WhatsAppCampaignsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc.retry_failed_messages(&campaign_id).await {
-        Ok(count) => Ok(Json(serde_json::json!({ "retried": count }))),
-        Err(e) => Err((
+    let url = whatsapp_campaigns_client_url(&state);
+    let mut client = match newax_proto::whatsapp_campaigns::v1::whats_app_campaigns_service_client::WhatsAppCampaignsServiceClient::connect(url).await {
+        Ok(c) => c,
+        Err(e) => return Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
+            Json(serde_json::json!({ "error": format!("Failed to connect to whatsapp_campaigns service: {}", e) })),
         )),
+    };
+
+    let resp = match client.retry_campaign(
+        newax_proto::whatsapp_campaigns::v1::RetryCampaignRequest { campaign_id },
+    ).await {
+        Ok(r) => r.into_inner(),
+        Err(e) => return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        )),
+    };
+
+    match serde_json::from_str(&resp.json) {
+        Ok(v) => Ok(Json(v)),
+        Err(_) => Ok(Json(serde_json::json!({ "error": "Invalid response" }))),
     }
 }
 
@@ -5493,16 +5062,28 @@ pub async fn get_campaign_analytics(
     State(state): State<AppState>,
     Path(campaign_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    let svc = crate::services::whatsapp_campaigns::WhatsAppCampaignsService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc.get_campaign_analytics(&campaign_id).await {
-        Ok(analytics) => Ok(Json(serde_json::json!(analytics))),
-        Err(e) => Err((
+    let url = whatsapp_campaigns_client_url(&state);
+    let mut client = match newax_proto::whatsapp_campaigns::v1::whats_app_campaigns_service_client::WhatsAppCampaignsServiceClient::connect(url).await {
+        Ok(c) => c,
+        Err(e) => return Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
+            Json(serde_json::json!({ "error": format!("Failed to connect to whatsapp_campaigns service: {}", e) })),
         )),
+    };
+
+    let resp = match client.get_campaign_analytics(
+        newax_proto::whatsapp_campaigns::v1::GetCampaignAnalyticsRequest { campaign_id },
+    ).await {
+        Ok(r) => r.into_inner(),
+        Err(e) => return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        )),
+    };
+
+    match serde_json::from_str(&resp.json) {
+        Ok(v) => Ok(Json(v)),
+        Err(_) => Ok(Json(serde_json::json!({ "error": "Invalid response" }))),
     }
 }
 
@@ -5516,16 +5097,28 @@ pub async fn get_message_limits(
     let tenant_key = resolve_tenant_key(&headers).await?;
     let _brand = verify_brand(&state, &id, &tenant_key).await?;
 
-    let svc = crate::services::whatsapp_template_sync::TemplateSyncService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc.get_remaining_limits(&id).await {
-        Ok(limits) => Ok(Json(limits)),
-        Err(e) => Err((
+    let url = state.config.whatsapp_template_sync_grpc_url.clone();
+    let mut client = match newax_proto::whatsapp_template_sync::v1::whats_app_template_sync_service_client::WhatsAppTemplateSyncServiceClient::connect(url).await {
+        Ok(c) => c,
+        Err(e) => return Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
+            Json(serde_json::json!({ "error": format!("Failed to connect to whatsapp_template_sync service: {}", e) })),
         )),
+    };
+
+    let resp = match client.get_remaining_limits(
+        newax_proto::whatsapp_template_sync::v1::GetRemainingLimitsRequest { brand_id: id },
+    ).await {
+        Ok(r) => r.into_inner(),
+        Err(e) => return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        )),
+    };
+
+    match serde_json::from_str(&resp.json) {
+        Ok(v) => Ok(Json(v)),
+        Err(_) => Ok(Json(serde_json::json!({ "error": "Invalid response" }))),
     }
 }
 
@@ -5537,16 +5130,28 @@ pub async fn sync_message_limits(
     let tenant_key = resolve_tenant_key(&headers).await?;
     let _brand = verify_brand(&state, &id, &tenant_key).await?;
 
-    let svc = crate::services::whatsapp_template_sync::TemplateSyncService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc.update_message_limits_in_db(&id).await {
-        Ok(result) => Ok(Json(serde_json::json!(result))),
-        Err(e) => Err((
+    let url = state.config.whatsapp_template_sync_grpc_url.clone();
+    let mut client = match newax_proto::whatsapp_template_sync::v1::whats_app_template_sync_service_client::WhatsAppTemplateSyncServiceClient::connect(url).await {
+        Ok(c) => c,
+        Err(e) => return Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
+            Json(serde_json::json!({ "error": format!("Failed to connect to whatsapp_template_sync service: {}", e) })),
         )),
+    };
+
+    let resp = match client.update_message_limits_in_db(
+        newax_proto::whatsapp_template_sync::v1::UpdateMessageLimitsInDbRequest { brand_id: id },
+    ).await {
+        Ok(r) => r.into_inner(),
+        Err(e) => return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        )),
+    };
+
+    match serde_json::from_str(&resp.json) {
+        Ok(v) => Ok(Json(v)),
+        Err(_) => Ok(Json(serde_json::json!({ "error": "Invalid response" }))),
     }
 }
 
@@ -5560,16 +5165,28 @@ pub async fn sync_templates_now(
     let tenant_key = resolve_tenant_key(&headers).await?;
     let _brand = verify_brand(&state, &id, &tenant_key).await?;
 
-    let svc = crate::services::whatsapp_template_sync::TemplateSyncService::new(
-        state.db.clone(),
-        state.config.as_ref().clone(),
-    );
-    match svc.sync_templates_from_meta(&id).await {
-        Ok(result) => Ok(Json(serde_json::json!(result))),
-        Err(e) => Err((
+    let url = state.config.whatsapp_template_sync_grpc_url.clone();
+    let mut client = match newax_proto::whatsapp_template_sync::v1::whats_app_template_sync_service_client::WhatsAppTemplateSyncServiceClient::connect(url).await {
+        Ok(c) => c,
+        Err(e) => return Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e })),
+            Json(serde_json::json!({ "error": format!("Failed to connect to whatsapp_template_sync service: {}", e) })),
         )),
+    };
+
+    let resp = match client.sync_templates_from_meta(
+        newax_proto::whatsapp_template_sync::v1::SyncTemplatesFromMetaRequest { brand_id: id },
+    ).await {
+        Ok(r) => r.into_inner(),
+        Err(e) => return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        )),
+    };
+
+    match serde_json::from_str(&resp.json) {
+        Ok(v) => Ok(Json(v)),
+        Err(_) => Ok(Json(serde_json::json!({ "error": "Invalid response" }))),
     }
 }
 

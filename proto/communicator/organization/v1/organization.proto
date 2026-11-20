@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package newax.organization.v1;
+
+service OrganizationService {
+  // Profile
+  rpc GetProfile(EmptyRequest) returns (JsonResponse);
+  rpc UpdateProfile(UpdateProfileRequest) returns (JsonResponse);
+
+  // Settings
+  rpc GetSettings(EmptyRequest) returns (JsonResponse);
+  rpc UpdateSettings(UpdateSettingsRequest) returns (JsonResponse);
+
+  // Stats
+  rpc GetStats(EmptyRequest) returns (JsonResponse);
+
+  // Channel verification
+  rpc VerifyChannel(VerifyChannelRequest) returns (JsonResponse);
+}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message EmptyRequest {}
+
+message UpdateProfileRequest {
+  string json = 1;
+}
+
+message UpdateSettingsRequest {
+  string json = 1;
+}
+
+message VerifyChannelRequest {
+  string channel = 1;
+}

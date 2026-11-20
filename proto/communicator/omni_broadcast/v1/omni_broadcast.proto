@@ -1,0 +1,132 @@
+syntax = "proto3";
+
+package newax.omni_broadcast.v1;
+
+service OmniBroadcastService {
+  rpc GetSummary(Empty) returns (JsonResponse);
+  rpc ListBroadcasts(ListBroadcastsRequest) returns (JsonResponse);
+  rpc GetBroadcast(GetBroadcastRequest) returns (JsonResponse);
+  rpc CreateBroadcast(CreateBroadcastRequest) returns (JsonResponse);
+  rpc UpdateBroadcast(UpdateBroadcastRequest) returns (JsonResponse);
+  rpc DeleteBroadcast(DeleteBroadcastRequest) returns (JsonResponse);
+  rpc UpdateBroadcastStatus(UpdateBroadcastStatusRequest) returns (JsonResponse);
+  rpc SendBroadcast(SendBroadcastRequest) returns (JsonResponse);
+  rpc GetFormatPreview(GetFormatPreviewRequest) returns (JsonResponse);
+  rpc ListAvailableChannels(Empty) returns (JsonResponse);
+  rpc UploadMedia(UploadMediaRequest) returns (JsonResponse);
+  rpc ListMedia(ListMediaRequest) returns (JsonResponse);
+  rpc DeleteMedia(DeleteMediaRequest) returns (JsonResponse);
+  rpc ListBroadcastChannels(ListBroadcastChannelsRequest) returns (JsonResponse);
+  rpc ListBroadcastRecipients(ListBroadcastRecipientsRequest) returns (JsonResponse);
+  rpc ListBroadcastLogs(ListBroadcastLogsRequest) returns (JsonResponse);
+  rpc GetSettings(GetSettingsRequest) returns (JsonResponse);
+  rpc UpdateSettings(UpdateSettingsRequest) returns (JsonResponse);
+  rpc PreviewHtmlForChannels(PreviewHtmlForChannelsRequest) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message ListBroadcastsRequest {
+  string status = 1;
+  int32 limit = 2;
+}
+
+message GetBroadcastRequest {
+  string id = 1;
+}
+
+message CreateBroadcastRequest {
+  string organization_id = 1;
+  string brand_id = 2;
+  string title = 3;
+  string created_by = 4;
+  string body_text = 5;
+  string body_html = 6;
+  string subject_line = 7;
+  string preview_text = 8;
+  string media_type = 9;
+  string primary_media_url = 10;
+  string media_caption = 11;
+  string link_url = 12;
+  string link_title = 13;
+  string link_description = 14;
+  string link_image_url = 15;
+  string target_type = 16;
+  string target_ids = 17;
+  string channels = 18;
+  string scheduled_at = 19;
+}
+
+message UpdateBroadcastRequest {
+  string id = 1;
+  string updates_json = 2;
+}
+
+message DeleteBroadcastRequest {
+  string id = 1;
+}
+
+message UpdateBroadcastStatusRequest {
+  string id = 1;
+  string status = 2;
+}
+
+message SendBroadcastRequest {
+  string id = 1;
+}
+
+message GetFormatPreviewRequest {
+  string id = 1;
+}
+
+message UploadMediaRequest {
+  string broadcast_id = 1;
+  string media_type = 2;
+  string file_name = 3;
+  int64 file_size_bytes = 4;
+  string mime_type = 5;
+  string file_url = 6;
+  string thumbnail_url = 7;
+}
+
+message ListMediaRequest {
+  string broadcast_id = 1;
+}
+
+message DeleteMediaRequest {
+  string id = 1;
+}
+
+message ListBroadcastChannelsRequest {
+  string broadcast_id = 1;
+}
+
+message ListBroadcastRecipientsRequest {
+  string broadcast_id = 1;
+  string status = 2;
+  int32 limit = 3;
+}
+
+message ListBroadcastLogsRequest {
+  string broadcast_id = 1;
+  int32 limit = 2;
+}
+
+message GetSettingsRequest {
+  string organization_id = 1;
+}
+
+message UpdateSettingsRequest {
+  string organization_id = 1;
+  string updates_json = 2;
+}
+
+message PreviewHtmlForChannelsRequest {
+  string html = 1;
+  string body_text = 2;
+  repeated string channels = 3;
+}

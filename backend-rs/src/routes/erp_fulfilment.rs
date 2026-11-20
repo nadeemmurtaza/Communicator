@@ -1,26 +1,28 @@
-//! Phase 39: ERP Fulfilment routes: Returns/RMA, shipping zones, methods, rates, manifests.
+//! ERP Fulfilment routes — thin gRPC client forwarding to svc-erp-fulfilment.
 
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, Query};
 use axum::http::StatusCode;
 use axum::Json;
-use crate::AppState;
-use crate::services::erp_fulfilment::ErpFulfilmentService;
-use crate::services::erp_fulfilment::{
-    CreateShippingZoneRequest, UpdateShippingZoneRequest,
-    CreateShippingMethodRequest, UpdateShippingMethodRequest,
-    CreateShippingRateRequest, CreateReturnRequestRequest,
-    UpdateReturnStatusRequest, InspectReturnItemRequest,
-};
+use newax_proto::erp_fulfilment::v1::erp_fulfilment_service_client::ErpFulfilmentServiceClient;
+use newax_proto::erp_fulfilment::v1::{Empty, IdRequest, JsonResponse, ListShippingZonesRequest, CreateShippingZoneRequest, UpdateShippingZoneRequest, ListShippingMethodsRequest, CreateShippingMethodRequest, CreateShippingRateRequest, UpdateShippingRateRequest, CreateReturnRequestRequest, InspectReturnItemRequest};
+
+async fn client() -> Result<ErpFulfilmentServiceClient<tonic::transport::Channel>, (StatusCode, String)> {
+    let url = std::env::var("ERP_FULFILMENT_SERVICE_URL")
+        .unwrap_or_else(|_| "http://127.0.0.1:50097".to_string());
+    ErpFulfilmentServiceClient::connect(url)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("erp-fulfilment service unavailable: {e}")))
+}
 
 // ---------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------
 
-pub async fn get_summary(
-    State(state): State<AppState>,
-) -> Result<Json<crate::services::erp_fulfilment::FulfilmentSummary>, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
-    service.get_summary().await.map(Json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
+pub async fn get_summary() -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = client().await?;
+    let resp = client.get_summary(Empty {}).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(json))
 }
 
 // ---------------------------------------------------------------------------
@@ -28,45 +30,50 @@ pub async fn get_summary(
 // ---------------------------------------------------------------------------
 
 pub async fn list_shipping_zones(
-    State(state): State<AppState>,
     Query(params): Query<serde_json::Value>,
-) -> Result<Json<Vec<crate::services::erp_fulfilment::ErpShippingZone>>, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = client().await?;
     let active_only = params.get("activeOnly").and_then(|v| v.as_bool()).unwrap_or(true);
-    service.list_shipping_zones(active_only).await.map(Json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))
+    let resp = client.list_shipping_zones(ListShippingZonesRequest { active_only }).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(json))
 }
 
 pub async fn get_shipping_zone(
-    State(state): State<AppState>,
     Path(zone_id): Path<String>,
-) -> Result<Json<crate::services::erp_fulfilment::ErpShippingZone>, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
-    service.get_shipping_zone(&zone_id).await.map(Json).map_err(|e| (StatusCode::NOT_FOUND, e))
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = client().await?;
+    let resp = client.get_shipping_zone(IdRequest { id: zone_id }).await.map_err(|e| (StatusCode::NOT_FOUND, e.to_string()))?;
+    let json: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(json))
 }
 
 pub async fn create_shipping_zone(
-    State(state): State<AppState>,
-    Json(req): Json<CreateShippingZoneRequest>,
-) -> Result<Json<crate::services::erp_fulfilment::ErpShippingZone>, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
-    service.create_shipping_zone(&req).await.map(Json).map_err(|e| (StatusCode::BAD_REQUEST, e))
+    Json(req): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = client().await?;
+    let json = serde_json::to_string(&req).map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let resp = client.create_shipping_zone(CreateShippingZoneRequest { json }).await.map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let json: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(json))
 }
 
 pub async fn update_shipping_zone(
-    State(state): State<AppState>,
     Path(zone_id): Path<String>,
-    Json(req): Json<UpdateShippingZoneRequest>,
-) -> Result<Json<crate::services::erp_fulfilment::ErpShippingZone>, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
-    service.update_shipping_zone(&zone_id, &req).await.map(Json).map_err(|e| (StatusCode::BAD_REQUEST, e))
+    Json(req): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = client().await?;
+    let json = serde_json::to_string(&req).map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let resp = client.update_shipping_zone(UpdateShippingZoneRequest { zone_id, json }).await.map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let json: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(json))
 }
 
 pub async fn delete_shipping_zone(
-    State(state): State<AppState>,
     Path(zone_id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
-    service.delete_shipping_zone(&zone_id).await.map(|_| StatusCode::NO_CONTENT).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))
+    let mut client = client().await?;
+    client.delete_shipping_zone(IdRequest { id: zone_id }).await.map(|_| StatusCode::NO_CONTENT).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
 }
 
 // ---------------------------------------------------------------------------
@@ -74,100 +81,109 @@ pub async fn delete_shipping_zone(
 // ---------------------------------------------------------------------------
 
 pub async fn list_shipping_methods(
-    State(state): State<AppState>,
     Query(params): Query<serde_json::Value>,
-) -> Result<Json<Vec<crate::services::erp_fulfilment::ErpShippingMethod>>, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = client().await?;
     let active_only = params.get("activeOnly").and_then(|v| v.as_bool()).unwrap_or(true);
-    service.list_shipping_methods(active_only).await.map(Json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))
+    let resp = client.list_shipping_methods(ListShippingMethodsRequest { active_only }).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(json))
 }
 
 pub async fn get_shipping_method(
-    State(state): State<AppState>,
     Path(method_id): Path<String>,
-) -> Result<Json<crate::services::erp_fulfilment::ErpShippingMethod>, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
-    service.get_shipping_method(&method_id).await.map(Json).map_err(|e| (StatusCode::NOT_FOUND, e))
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = client().await?;
+    let resp = client.get_shipping_method(IdRequest { id: method_id }).await.map_err(|e| (StatusCode::NOT_FOUND, e.to_string()))?;
+    let json: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(json))
 }
 
 pub async fn create_shipping_method(
-    State(state): State<AppState>,
-    Json(req): Json<CreateShippingMethodRequest>,
-) -> Result<Json<crate::services::erp_fulfilment::ErpShippingMethod>, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
-    service.create_shipping_method(&req).await.map(Json).map_err(|e| (StatusCode::BAD_REQUEST, e))
+    Json(req): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = client().await?;
+    let json = serde_json::to_string(&req).map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let resp = client.create_shipping_method(CreateShippingMethodRequest { json }).await.map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let json: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(json))
 }
 
 pub async fn update_shipping_method(
-    State(state): State<AppState>,
     Path(method_id): Path<String>,
-    Json(req): Json<UpdateShippingMethodRequest>,
-) -> Result<Json<crate::services::erp_fulfilment::ErpShippingMethod>, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
-    service.update_shipping_method(&method_id, &req).await.map(Json).map_err(|e| (StatusCode::BAD_REQUEST, e))
+    Json(req): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = client().await?;
+    let json = serde_json::to_string(&req).map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let resp = client.update_shipping_method(newax_proto::erp_fulfilment::v1::UpdateShippingMethodRequest { method_id, json }).await.map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let json: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(json))
 }
 
 pub async fn delete_shipping_method(
-    State(state): State<AppState>,
     Path(method_id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
-    service.delete_shipping_method(&method_id).await.map(|_| StatusCode::NO_CONTENT).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))
+    let mut client = client().await?;
+    client.delete_shipping_method(IdRequest { id: method_id }).await.map(|_| StatusCode::NO_CONTENT).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
 }
 
 // ---------------------------------------------------------------------------
 // Shipping Rates
 // ---------------------------------------------------------------------------
 
-pub async fn list_shipping_rates(
-    State(state): State<AppState>,
-) -> Result<Json<Vec<crate::services::erp_fulfilment::ErpShippingRate>>, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
-    service.list_shipping_rates(None, None).await.map(Json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))
+pub async fn list_shipping_rates() -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = client().await?;
+    let resp = client.list_shipping_rates(Empty {}).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(json))
 }
 
 pub async fn create_shipping_rate(
-    State(state): State<AppState>,
-    Json(req): Json<CreateShippingRateRequest>,
-) -> Result<Json<crate::services::erp_fulfilment::ErpShippingRate>, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
-    service.create_shipping_rate(&req).await.map(Json).map_err(|e| (StatusCode::BAD_REQUEST, e))
+    Json(req): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = client().await?;
+    let json = serde_json::to_string(&req).map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let resp = client.create_shipping_rate(CreateShippingRateRequest { json }).await.map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let json: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(json))
 }
 
 pub async fn get_shipping_rate(
-    State(state): State<AppState>,
     Path(rate_id): Path<String>,
-) -> Result<Json<crate::services::erp_fulfilment::ErpShippingRate>, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
-    service.get_shipping_rate(&rate_id).await.map(Json).map_err(|e| (StatusCode::NOT_FOUND, e))
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = client().await?;
+    let resp = client.get_shipping_rate(IdRequest { id: rate_id }).await.map_err(|e| (StatusCode::NOT_FOUND, e.to_string()))?;
+    let json: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(json))
 }
 
 pub async fn update_shipping_rate(
-    State(state): State<AppState>,
     Path(rate_id): Path<String>,
-    Json(req): Json<CreateShippingRateRequest>,
-) -> Result<Json<crate::services::erp_fulfilment::ErpShippingRate>, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
-    service.update_shipping_rate(&rate_id, &req).await.map(Json).map_err(|e| (StatusCode::BAD_REQUEST, e))
+    Json(req): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = client().await?;
+    let json = serde_json::to_string(&req).map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let resp = client.update_shipping_rate(UpdateShippingRateRequest { rate_id, json }).await.map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let json: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(json))
 }
 
 pub async fn delete_shipping_rate(
-    State(state): State<AppState>,
     Path(rate_id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
-    service.delete_shipping_rate(&rate_id).await.map(|_| StatusCode::NO_CONTENT).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))
+    let mut client = client().await?;
+    client.delete_shipping_rate(IdRequest { id: rate_id }).await.map(|_| StatusCode::NO_CONTENT).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
 }
 
 // ---------------------------------------------------------------------------
 // Return Reasons
 // ---------------------------------------------------------------------------
 
-pub async fn list_return_reasons(
-    State(state): State<AppState>,
-) -> Result<Json<Vec<crate::services::erp_fulfilment::ErpReturnReasonCode>>, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
-    service.list_return_reasons().await.map(Json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))
+pub async fn list_return_reasons() -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = client().await?;
+    let resp = client.list_return_reasons(Empty {}).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(json))
 }
 
 // ---------------------------------------------------------------------------
@@ -175,71 +191,77 @@ pub async fn list_return_reasons(
 // ---------------------------------------------------------------------------
 
 pub async fn list_return_requests(
-    State(state): State<AppState>,
-    Query(params): Query<serde_json::Value>,
-) -> Result<Json<Vec<crate::services::erp_fulfilment::ErpReturnRequest>>, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
-    let status = params.get("status").and_then(|v| v.as_str());
-    let order_id = params.get("orderId").and_then(|v| v.as_str());
-    service.list_return_requests(status, order_id).await.map(Json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))
+    Query(_params): Query<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = client().await?;
+    let resp = client.list_return_requests(Empty {}).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(json))
 }
 
 pub async fn get_return_request(
-    State(state): State<AppState>,
     Path(return_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
-    let (request, items) = service.get_return_request(&return_id).await.map_err(|e| (StatusCode::NOT_FOUND, e))?;
-    Ok(Json(serde_json::json!({ "request": request, "items": items })))
+    let mut client = client().await?;
+    let resp = client.get_return_request(IdRequest { id: return_id }).await.map_err(|e| (StatusCode::NOT_FOUND, e.to_string()))?;
+    let json: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(json))
 }
 
 pub async fn create_return_request(
-    State(state): State<AppState>,
-    Json(req): Json<CreateReturnRequestRequest>,
-) -> Result<Json<crate::services::erp_fulfilment::ErpReturnRequest>, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
-    service.create_return_request(&req).await.map(Json).map_err(|e| (StatusCode::BAD_REQUEST, e))
+    Json(req): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = client().await?;
+    let json = serde_json::to_string(&req).map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let resp = client.create_return_request(CreateReturnRequestRequest { json }).await.map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let json: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(json))
 }
 
 pub async fn update_return_status(
-    State(state): State<AppState>,
     Path(return_id): Path<String>,
-    Json(req): Json<UpdateReturnStatusRequest>,
-) -> Result<Json<crate::services::erp_fulfilment::ErpReturnRequest>, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
-    service.update_return_status(&return_id, &req).await.map(Json).map_err(|e| (StatusCode::BAD_REQUEST, e))
+    Json(req): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = client().await?;
+    let json = serde_json::to_string(&req).map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let resp = client.update_return_status(newax_proto::erp_fulfilment::v1::UpdateReturnStatusRequest { return_id, json }).await.map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let json: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(json))
 }
 
 pub async fn inspect_return_item(
-    State(state): State<AppState>,
-    Json(req): Json<InspectReturnItemRequest>,
-) -> Result<Json<crate::services::erp_fulfilment::ErpReturnRequestItem>, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
-    service.inspect_return_item(&req).await.map(Json).map_err(|e| (StatusCode::BAD_REQUEST, e))
+    Json(req): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = client().await?;
+    let json = serde_json::to_string(&req).map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let resp = client.inspect_return_item(InspectReturnItemRequest { json }).await.map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let json: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(json))
 }
 
-pub async fn get_return_stats(
-    State(state): State<AppState>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
-    service.get_return_stats().await.map(Json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))
+pub async fn get_return_stats() -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = client().await?;
+    let resp = client.get_return_stats(Empty {}).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(json))
 }
 
 // ---------------------------------------------------------------------------
 // Manifests
 // ---------------------------------------------------------------------------
 
-pub async fn list_manifests(
-    State(state): State<AppState>,
-) -> Result<Json<Vec<crate::services::erp_fulfilment::ErpManifest>>, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
-    service.list_manifests(None, None).await.map(Json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))
+pub async fn list_manifests() -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = client().await?;
+    let resp = client.list_manifests(Empty {}).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(json))
 }
 
 pub async fn dispatch_manifest(
-    State(state): State<AppState>,
     Path(manifest_id): Path<String>,
-) -> Result<Json<crate::services::erp_fulfilment::ErpManifest>, (StatusCode, String)> {
-    let service = ErpFulfilmentService::new(state.db.clone());
-    service.dispatch_manifest(&manifest_id).await.map(Json).map_err(|e| (StatusCode::BAD_REQUEST, e))
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = client().await?;
+    let resp = client.dispatch_manifest(IdRequest { id: manifest_id }).await.map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?;
+    let json: serde_json::Value = serde_json::from_str(&resp.into_inner().json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(json))
 }

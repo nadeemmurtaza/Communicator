@@ -1,21 +1,22 @@
-//! Omni-Channel Broadcast routes — Phase 46
+//! Omni-Channel Broadcast routes — thin gRPC client forwarding to svc-omni-broadcast.
 
 use serde_json::{json, Value};
-use sqlx::Row;
-use uuid::Uuid;
-
-use crate::db::AppState;
-use crate::services::omni_broadcast::{
-    Broadcast, BroadcastMedia, BroadcastChannel, BroadcastRecipient, BroadcastLog,
-    BroadcastSettings, BroadcastSummary, ChannelFormat, FormatPreview, SendBroadcastResult,
-    get_broadcast_summary, get_format_preview, get_available_channels, send_broadcast,
-    preview_html_for_all_channels,
-};
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Path, Query, State, Json},
     http::StatusCode,
-    Json,
 };
+use crate::db::AppState;
+use newax_proto::omni_broadcast::v1::omni_broadcast_service_client::OmniBroadcastServiceClient;
+
+async fn client(_state: &AppState) -> Result<OmniBroadcastServiceClient<tonic::transport::Channel>, (StatusCode, Json<Value>)> {
+    let url = std::env::var("OMNI_BROADCAST_GRPC_URL").unwrap_or_else(|_| "http://127.0.0.1:50096".to_string());
+    OmniBroadcastServiceClient::connect(url)
+        .await
+        .map_err(|e| {
+            tracing::error!("omni_broadcast gRPC connect failed: {}", e);
+            (StatusCode::SERVICE_UNAVAILABLE, Json(json!({ "error": "omni_broadcast service unavailable" })))
+        })
+}
 
 // ---------------------------------------------------------------------------
 // Summary
@@ -24,41 +25,12 @@ use axum::{
 pub async fn get_summary(
     State(state): State<AppState>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    match get_broadcast_summary(&state).await {
-        Ok(summary) => Ok(Json(json!({
-            "total_broadcasts": summary.total_broadcasts,
-            "draft_broadcasts": summary.draft_broadcasts,
-            "sent_broadcasts": summary.sent_broadcasts,
-            "failed_broadcasts": summary.failed_broadcasts,
-            "scheduled_broadcasts": summary.scheduled_broadcasts,
-            "total_recipients_sent": summary.total_recipients_sent,
-            "total_delivered": summary.total_delivered,
-            "total_failed": summary.total_failed,
-            "total_read": summary.total_read,
-            "total_clicked": summary.total_clicked,
-            "total_replied": summary.total_replied,
-            "by_channel": summary.by_channel,
-            "recent_broadcasts": summary.recent_broadcasts,
-        }))),
-        Err(e) => {
-            tracing::error!("Failed to get broadcast summary: {}", e);
-            Ok(Json(json!({
-                "total_broadcasts": 0i32,
-                "draft_broadcasts": 0i32,
-                "sent_broadcasts": 0i32,
-                "failed_broadcasts": 0i32,
-                "scheduled_broadcasts": 0i32,
-                "total_recipients_sent": 0i32,
-                "total_delivered": 0i32,
-                "total_failed": 0i32,
-                "total_read": 0i32,
-                "total_clicked": 0i32,
-                "total_replied": 0i32,
-                "by_channel": [],
-                "recent_broadcasts": [],
-            })))
-        }
-    }
+    let mut cli = client(&state).await?;
+    let resp = cli.get_summary(newax_proto::omni_broadcast::v1::Empty {}).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    let val: Value = serde_json::from_str(&resp.into_inner().json)
+        .unwrap_or(json!({}));
+    Ok(Json(val))
 }
 
 // ---------------------------------------------------------------------------
@@ -69,29 +41,24 @@ pub async fn list_broadcasts(
     State(state): State<AppState>,
     Query(params): Query<std::collections::HashMap<String, String>>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let status = params.get("status").map(|s| s.as_str());
+    let status = params.get("status").map(|s| s.as_str().to_string()).unwrap_or_default();
     let limit: i32 = params.get("limit").and_then(|s| s.parse().ok()).unwrap_or(50);
-
-    match Broadcast::list(&state.db, status, limit).await {
-        Ok(broadcasts) => Ok(Json(json!({ "broadcasts": broadcasts }))),
-        Err(e) => {
-            tracing::error!("Failed to list broadcasts: {}", e);
-            Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))))
-        }
-    }
+    let mut cli = client(&state).await?;
+    let resp = cli.list_broadcasts(newax_proto::omni_broadcast::v1::ListBroadcastsRequest { status, limit }).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    let val: Value = serde_json::from_str(&resp.into_inner().json).unwrap_or(json!({}));
+    Ok(Json(val))
 }
 
 pub async fn get_broadcast(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    match Broadcast::get(&state.db, &id).await {
-        Ok(broadcast) => Ok(Json(json!(broadcast))),
-        Err(e) => {
-            tracing::error!("Failed to get broadcast {}: {}", id, e);
-            Err((StatusCode::NOT_FOUND, Json(json!({ "error": e }))))
-        }
-    }
+    let mut cli = client(&state).await?;
+    let resp = cli.get_broadcast(newax_proto::omni_broadcast::v1::GetBroadcastRequest { id }).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    let val: Value = serde_json::from_str(&resp.into_inner().json).unwrap_or(json!({}));
+    Ok(Json(val))
 }
 
 pub async fn create_broadcast(
@@ -99,24 +66,24 @@ pub async fn create_broadcast(
     Json(body): Json<Value>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     let organization_id = body.get("organization_id").and_then(|v| v.as_str()).unwrap_or("default").to_string();
-    let brand_id = body.get("brand_id").and_then(|v| v.as_str()).map(String::from);
+    let brand_id = body.get("brand_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
     let title = body.get("title").and_then(|v| v.as_str()).unwrap_or("").to_string();
     let created_by = body.get("created_by").and_then(|v| v.as_str()).unwrap_or("system").to_string();
     let body_text = body.get("body_text").and_then(|v| v.as_str()).unwrap_or("").to_string();
-    let body_html = body.get("body_html").and_then(|v| v.as_str()).map(String::from);
-    let subject_line = body.get("subject_line").and_then(|v| v.as_str()).map(String::from);
-    let preview_text = body.get("preview_text").and_then(|v| v.as_str()).map(String::from);
+    let body_html = body.get("body_html").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let subject_line = body.get("subject_line").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let preview_text = body.get("preview_text").and_then(|v| v.as_str()).unwrap_or("").to_string();
     let media_type = body.get("media_type").and_then(|v| v.as_str()).unwrap_or("text").to_string();
-    let primary_media_url = body.get("primary_media_url").and_then(|v| v.as_str()).map(String::from);
-    let media_caption = body.get("media_caption").and_then(|v| v.as_str()).map(String::from);
-    let link_url = body.get("link_url").and_then(|v| v.as_str()).map(String::from);
-    let link_title = body.get("link_title").and_then(|v| v.as_str()).map(String::from);
-    let link_description = body.get("link_description").and_then(|v| v.as_str()).map(String::from);
-    let link_image_url = body.get("link_image_url").and_then(|v| v.as_str()).map(String::from);
+    let primary_media_url = body.get("primary_media_url").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let media_caption = body.get("media_caption").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let link_url = body.get("link_url").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let link_title = body.get("link_title").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let link_description = body.get("link_description").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let link_image_url = body.get("link_image_url").and_then(|v| v.as_str()).unwrap_or("").to_string();
     let target_type = body.get("target_type").and_then(|v| v.as_str()).unwrap_or("contacts").to_string();
     let target_ids = body.get("target_ids").map(|v| v.to_string()).unwrap_or_else(|| "[]".to_string());
     let channels = body.get("channels").map(|v| v.to_string()).unwrap_or_else(|| "[]".to_string());
-    let scheduled_at = body.get("scheduled_at").and_then(|v| v.as_str()).map(String::from);
+    let scheduled_at = body.get("scheduled_at").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
     if title.is_empty() {
         return Err((StatusCode::BAD_REQUEST, Json(json!({ "error": "Title is required" }))));
@@ -125,20 +92,15 @@ pub async fn create_broadcast(
         return Err((StatusCode::BAD_REQUEST, Json(json!({ "error": "Body text is required" }))));
     }
 
-    match Broadcast::create(
-        &state.db, &organization_id, brand_id.as_deref(), &title, &created_by,
-        &body_text, body_html.as_deref(), subject_line.as_deref(), preview_text.as_deref(),
-        &media_type, primary_media_url.as_deref(), media_caption.as_deref(),
-        link_url.as_deref(), link_title.as_deref(), link_description.as_deref(),
-        link_image_url.as_deref(), &target_type, &target_ids, &channels,
-        scheduled_at.as_deref(),
-    ).await {
-        Ok(broadcast) => Ok(Json(json!(broadcast))),
-        Err(e) => {
-            tracing::error!("Failed to create broadcast: {}", e);
-            Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))))
-        }
-    }
+    let mut cli = client(&state).await?;
+    let resp = cli.create_broadcast(newax_proto::omni_broadcast::v1::CreateBroadcastRequest {
+        organization_id, brand_id, title, created_by, body_text, body_html, subject_line, preview_text,
+        media_type, primary_media_url, media_caption, link_url, link_title, link_description,
+        link_image_url, target_type, target_ids, channels, scheduled_at,
+    }).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    let val: Value = serde_json::from_str(&resp.into_inner().json).unwrap_or(json!({}));
+    Ok(Json(val))
 }
 
 pub async fn update_broadcast(
@@ -150,27 +112,23 @@ pub async fn update_broadcast(
         Some(map) => map,
         None => return Err((StatusCode::BAD_REQUEST, Json(json!({ "error": "Invalid body" })))),
     };
-
-    match Broadcast::update(&state.db, &id, updates).await {
-        Ok(broadcast) => Ok(Json(json!(broadcast))),
-        Err(e) => {
-            tracing::error!("Failed to update broadcast {}: {}", id, e);
-            Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))))
-        }
-    }
+    let updates_json = serde_json::to_string(&updates).unwrap_or_default();
+    let mut cli = client(&state).await?;
+    let resp = cli.update_broadcast(newax_proto::omni_broadcast::v1::UpdateBroadcastRequest { id, updates_json }).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    let val: Value = serde_json::from_str(&resp.into_inner().json).unwrap_or(json!({}));
+    Ok(Json(val))
 }
 
 pub async fn delete_broadcast(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    match Broadcast::delete(&state.db, &id).await {
-        Ok(()) => Ok(Json(json!({ "success": true }))),
-        Err(e) => {
-            tracing::error!("Failed to delete broadcast {}: {}", id, e);
-            Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))))
-        }
-    }
+    let mut cli = client(&state).await?;
+    let resp = cli.delete_broadcast(newax_proto::omni_broadcast::v1::DeleteBroadcastRequest { id }).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    let val: Value = serde_json::from_str(&resp.into_inner().json).unwrap_or(json!({}));
+    Ok(Json(val))
 }
 
 // ---------------------------------------------------------------------------
@@ -181,13 +139,11 @@ pub async fn update_broadcast_status(
     State(state): State<AppState>,
     Path((id, status)): Path<(String, String)>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    match Broadcast::update_status(&state.db, &id, &status).await {
-        Ok(broadcast) => Ok(Json(json!(broadcast))),
-        Err(e) => {
-            tracing::error!("Failed to update status for broadcast {}: {}", id, e);
-            Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))))
-        }
-    }
+    let mut cli = client(&state).await?;
+    let resp = cli.update_broadcast_status(newax_proto::omni_broadcast::v1::UpdateBroadcastStatusRequest { id, status }).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    let val: Value = serde_json::from_str(&resp.into_inner().json).unwrap_or(json!({}));
+    Ok(Json(val))
 }
 
 // ---------------------------------------------------------------------------
@@ -198,13 +154,11 @@ pub async fn send_broadcast_handler(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    match send_broadcast(&state.db, &id).await {
-        Ok(result) => Ok(Json(json!(result))),
-        Err(e) => {
-            tracing::error!("Failed to send broadcast {}: {}", id, e);
-            Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))))
-        }
-    }
+    let mut cli = client(&state).await?;
+    let resp = cli.send_broadcast(newax_proto::omni_broadcast::v1::SendBroadcastRequest { id }).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    let val: Value = serde_json::from_str(&resp.into_inner().json).unwrap_or(json!({}));
+    Ok(Json(val))
 }
 
 // ---------------------------------------------------------------------------
@@ -215,13 +169,11 @@ pub async fn get_format_preview_handler(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    match get_format_preview(&state.db, &id).await {
-        Ok(preview) => Ok(Json(json!(preview))),
-        Err(e) => {
-            tracing::error!("Failed to get format preview for broadcast {}: {}", id, e);
-            Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))))
-        }
-    }
+    let mut cli = client(&state).await?;
+    let resp = cli.get_format_preview(newax_proto::omni_broadcast::v1::GetFormatPreviewRequest { id }).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    let val: Value = serde_json::from_str(&resp.into_inner().json).unwrap_or(json!({}));
+    Ok(Json(val))
 }
 
 // ---------------------------------------------------------------------------
@@ -229,8 +181,7 @@ pub async fn get_format_preview_handler(
 // ---------------------------------------------------------------------------
 
 pub async fn list_available_channels() -> Json<Value> {
-    let channels = get_available_channels();
-    Json(json!({ "channels": channels }))
+    Json(json!({ "channels": [] }))
 }
 
 // ---------------------------------------------------------------------------
@@ -247,48 +198,41 @@ pub async fn upload_media(
     let file_size_bytes: i64 = body.get("file_size_bytes").and_then(|v| v.as_i64()).unwrap_or(0);
     let mime_type = body.get("mime_type").and_then(|v| v.as_str()).unwrap_or("application/octet-stream").to_string();
     let file_url = body.get("file_url").and_then(|v| v.as_str()).unwrap_or("").to_string();
-    let thumbnail_url = body.get("thumbnail_url").and_then(|v| v.as_str()).map(String::from);
+    let thumbnail_url = body.get("thumbnail_url").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
     if broadcast_id.is_empty() || file_url.is_empty() {
         return Err((StatusCode::BAD_REQUEST, Json(json!({ "error": "broadcast_id and file_url are required" }))));
     }
 
-    match BroadcastMedia::upload(
-        &state.db, &broadcast_id, &media_type, &file_name, file_size_bytes,
-        &mime_type, &file_url, thumbnail_url.as_deref(),
-    ).await {
-        Ok(media) => Ok(Json(json!(media))),
-        Err(e) => {
-            tracing::error!("Failed to upload media: {}", e);
-            Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))))
-        }
-    }
+    let mut cli = client(&state).await?;
+    let resp = cli.upload_media(newax_proto::omni_broadcast::v1::UploadMediaRequest {
+        broadcast_id, media_type, file_name, file_size_bytes, mime_type, file_url, thumbnail_url,
+    }).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    let val: Value = serde_json::from_str(&resp.into_inner().json).unwrap_or(json!({}));
+    Ok(Json(val))
 }
 
 pub async fn list_media(
     State(state): State<AppState>,
     Path(broadcast_id): Path<String>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    match BroadcastMedia::list_by_broadcast(&state.db, &broadcast_id).await {
-        Ok(media) => Ok(Json(json!({ "media": media }))),
-        Err(e) => {
-            tracing::error!("Failed to list media for broadcast {}: {}", broadcast_id, e);
-            Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))))
-        }
-    }
+    let mut cli = client(&state).await?;
+    let resp = cli.list_media(newax_proto::omni_broadcast::v1::ListMediaRequest { broadcast_id }).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    let val: Value = serde_json::from_str(&resp.into_inner().json).unwrap_or(json!({}));
+    Ok(Json(val))
 }
 
 pub async fn delete_media(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    match BroadcastMedia::delete(&state.db, &id).await {
-        Ok(()) => Ok(Json(json!({ "success": true }))),
-        Err(e) => {
-            tracing::error!("Failed to delete media {}: {}", id, e);
-            Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))))
-        }
-    }
+    let mut cli = client(&state).await?;
+    let resp = cli.delete_media(newax_proto::omni_broadcast::v1::DeleteMediaRequest { id }).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    let val: Value = serde_json::from_str(&resp.into_inner().json).unwrap_or(json!({}));
+    Ok(Json(val))
 }
 
 // ---------------------------------------------------------------------------
@@ -299,13 +243,11 @@ pub async fn list_broadcast_channels(
     State(state): State<AppState>,
     Path(broadcast_id): Path<String>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    match BroadcastChannel::list_by_broadcast(&state.db, &broadcast_id).await {
-        Ok(channels) => Ok(Json(json!({ "channels": channels }))),
-        Err(e) => {
-            tracing::error!("Failed to list channels for broadcast {}: {}", broadcast_id, e);
-            Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))))
-        }
-    }
+    let mut cli = client(&state).await?;
+    let resp = cli.list_broadcast_channels(newax_proto::omni_broadcast::v1::ListBroadcastChannelsRequest { broadcast_id }).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    let val: Value = serde_json::from_str(&resp.into_inner().json).unwrap_or(json!({}));
+    Ok(Json(val))
 }
 
 // ---------------------------------------------------------------------------
@@ -317,16 +259,15 @@ pub async fn list_broadcast_recipients(
     Path(broadcast_id): Path<String>,
     Query(params): Query<std::collections::HashMap<String, String>>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let status = params.get("status").map(|s| s.as_str());
+    let status = params.get("status").map(|s| s.as_str().to_string()).unwrap_or_default();
     let limit: i32 = params.get("limit").and_then(|s| s.parse().ok()).unwrap_or(100);
-
-    match BroadcastRecipient::list_by_broadcast(&state.db, &broadcast_id, status, limit).await {
-        Ok(recipients) => Ok(Json(json!({ "recipients": recipients }))),
-        Err(e) => {
-            tracing::error!("Failed to list recipients for broadcast {}: {}", broadcast_id, e);
-            Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))))
-        }
-    }
+    let mut cli = client(&state).await?;
+    let resp = cli.list_broadcast_recipients(newax_proto::omni_broadcast::v1::ListBroadcastRecipientsRequest {
+        broadcast_id, status, limit,
+    }).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    let val: Value = serde_json::from_str(&resp.into_inner().json).unwrap_or(json!({}));
+    Ok(Json(val))
 }
 
 // ---------------------------------------------------------------------------
@@ -339,14 +280,13 @@ pub async fn list_broadcast_logs(
     Query(params): Query<std::collections::HashMap<String, String>>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     let limit: i32 = params.get("limit").and_then(|s| s.parse().ok()).unwrap_or(50);
-
-    match BroadcastLog::list_by_broadcast(&state.db, &broadcast_id, limit).await {
-        Ok(logs) => Ok(Json(json!({ "logs": logs }))),
-        Err(e) => {
-            tracing::error!("Failed to list logs for broadcast {}: {}", broadcast_id, e);
-            Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))))
-        }
-    }
+    let mut cli = client(&state).await?;
+    let resp = cli.list_broadcast_logs(newax_proto::omni_broadcast::v1::ListBroadcastLogsRequest {
+        broadcast_id, limit,
+    }).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    let val: Value = serde_json::from_str(&resp.into_inner().json).unwrap_or(json!({}));
+    Ok(Json(val))
 }
 
 // ---------------------------------------------------------------------------
@@ -358,14 +298,11 @@ pub async fn get_settings(
     Query(params): Query<std::collections::HashMap<String, String>>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     let org_id = params.get("organization_id").unwrap_or(&"default".to_string()).clone();
-
-    match BroadcastSettings::get(&state.db, &org_id).await {
-        Ok(settings) => Ok(Json(json!(settings))),
-        Err(e) => {
-            tracing::error!("Failed to get settings: {}", e);
-            Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))))
-        }
-    }
+    let mut cli = client(&state).await?;
+    let resp = cli.get_settings(newax_proto::omni_broadcast::v1::GetSettingsRequest { organization_id: org_id }).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    let val: Value = serde_json::from_str(&resp.into_inner().json).unwrap_or(json!({}));
+    Ok(Json(val))
 }
 
 pub async fn update_settings(
@@ -378,21 +315,22 @@ pub async fn update_settings(
         Some(map) => map,
         None => return Err((StatusCode::BAD_REQUEST, Json(json!({ "error": "Invalid body" })))),
     };
-
-    match BroadcastSettings::update(&state.db, &org_id, updates).await {
-        Ok(settings) => Ok(Json(json!(settings))),
-        Err(e) => {
-            tracing::error!("Failed to update settings: {}", e);
-            Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))))
-        }
-    }
+    let updates_json = serde_json::to_string(&updates).unwrap_or_default();
+    let mut cli = client(&state).await?;
+    let resp = cli.update_settings(newax_proto::omni_broadcast::v1::UpdateSettingsRequest {
+        organization_id: org_id, updates_json,
+    }).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    let val: Value = serde_json::from_str(&resp.into_inner().json).unwrap_or(json!({}));
+    Ok(Json(val))
 }
 
 // ---------------------------------------------------------------------------
-// HTML-to-all-channels preview (no broadcast needed)
+// HTML-to-all-channels preview
 // ---------------------------------------------------------------------------
 
 pub async fn preview_html_for_channels(
+    State(state): State<AppState>,
     Json(body): Json<Value>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     let html = body.get("html").and_then(|v| v.as_str()).unwrap_or("");
@@ -401,7 +339,6 @@ pub async fn preview_html_for_channels(
         .and_then(|v| v.as_array())
         .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
         .unwrap_or_else(|| {
-            // Default: all channels
             vec!["whatsapp".into(), "email".into(), "sms".into(), "instagram".into(),
                  "facebook".into(), "telegram".into(), "discord".into(), "slack".into()]
         });
@@ -410,6 +347,11 @@ pub async fn preview_html_for_channels(
         return Err((StatusCode::BAD_REQUEST, Json(json!({ "error": "Provide html or bodyText" }))));
     }
 
-    let formats = preview_html_for_all_channels(html, body_text, &channels);
-    Ok(Json(json!({ "formats": formats })))
+    let mut cli = client(&state).await?;
+    let resp = cli.preview_html_for_channels(newax_proto::omni_broadcast::v1::PreviewHtmlForChannelsRequest {
+        html: html.to_string(), body_text: body_text.to_string(), channels,
+    }).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))))?;
+    let val: Value = serde_json::from_str(&resp.into_inner().json).unwrap_or(json!({}));
+    Ok(Json(val))
 }

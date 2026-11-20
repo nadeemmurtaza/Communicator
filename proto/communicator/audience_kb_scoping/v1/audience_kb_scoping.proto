@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package newax.audience_kb_scoping.v1;
+
+service AudienceKbScopingService {
+  rpc GetAudienceSummary(Empty) returns (JsonResponse);
+  rpc GetSettings(Empty) returns (JsonResponse);
+  rpc UpdateSettings(UpdateSettingsRequest) returns (JsonResponse);
+  rpc GetSegmentKbLinks(IdRequest) returns (JsonResponse);
+  rpc GetAllLinks(Empty) returns (JsonResponse);
+  rpc LinkKbToSegment(LinkKbRequest) returns (JsonResponse);
+  rpc UnlinkKbFromSegment(PairRequest) returns (Empty);
+  rpc GetScopedKbForContact(IdRequest) returns (JsonResponse);
+  rpc GetSegmentMemberships(IdRequest) returns (JsonResponse);
+  rpc GetContactSegmentMemberships(IdRequest) returns (JsonResponse);
+  rpc GetAllMemberships(LimitRequest) returns (JsonResponse);
+  rpc AddContactToSegment(AddMembershipRequest) returns (JsonResponse);
+  rpc RemoveContactFromSegment(PairRequest) returns (Empty);
+  rpc LogKbUsage(LogUsageRequest) returns (Empty);
+  rpc GetSegmentUsageLogs(LimitedIdRequest) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message IdRequest {
+  string id = 1;
+}
+
+message LimitRequest {
+  int32 limit = 1;
+}
+
+message LimitedIdRequest {
+  string id = 1;
+  int32 limit = 2;
+}
+
+message PairRequest {
+  string first = 1;
+  string second = 2;
+}
+
+message UpdateSettingsRequest {
+  optional bool enabled = 1;
+  optional bool fallback_to_global_kb = 2;
+  optional bool merge_segments = 3;
+  optional string default_scope = 4;
+}
+
+message LinkKbRequest {
+  string segment_id = 1;
+  string kb_entry_id = 2;
+  int32 priority = 3;
+}
+
+message AddMembershipRequest {
+  string segment_id = 1;
+  string contact_id = 2;
+  string membership_type = 3;
+}
+
+message LogUsageRequest {
+  string conversation_id = 1;
+  string contact_id = 2;
+  string segment_id = 3;
+  string kb_entry_id = 4;
+  string query_text = 5;
+  double relevance_score = 6;
+  bool used_in_response = 7;
+}

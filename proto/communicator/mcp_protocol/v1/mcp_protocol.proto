@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+package newax.mcp_protocol.v1;
+
+service MCPProtocolService {
+  rpc GetSummary(Empty) returns (JsonResponse);
+  rpc ListServers(ListServersRequest) returns (JsonResponse);
+  rpc CreateServer(CreateServerRequest) returns (JsonResponse);
+  rpc UpdateServer(UpdateServerRequest) returns (JsonResponse);
+  rpc DeleteServer(DeleteServerRequest) returns (JsonResponse);
+  rpc DiscoverTools(DiscoverToolsRequest) returns (JsonResponse);
+  rpc ListTools(ListToolsRequest) returns (JsonResponse);
+  rpc CallTool(CallToolRequest) returns (JsonResponse);
+  rpc ListTemplates(Empty) returns (JsonResponse);
+  rpc GetSettings(Empty) returns (JsonResponse);
+  rpc UpdateSettings(UpdateSettingsRequest) returns (JsonResponse);
+  rpc ListCallLogs(ListCallLogsRequest) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message ListServersRequest {
+  string organization_id = 1;
+  bool is_active = 2;
+  bool has_is_active = 3;
+  int32 limit = 4;
+  int32 offset = 5;
+}
+
+message CreateServerRequest {
+  string organization_id = 1;
+  string name = 2;
+  string server_url = 3;
+  string transport_type = 4;
+}
+
+message UpdateServerRequest {
+  string id = 1;
+  string name = 2;
+  bool has_name = 3;
+  bool is_active = 4;
+  bool has_is_active = 5;
+  string server_url = 6;
+  bool has_server_url = 7;
+}
+
+message DeleteServerRequest {
+  string id = 1;
+}
+
+message DiscoverToolsRequest {
+  string id = 1;
+}
+
+message ListToolsRequest {
+  string server_id = 1;
+  bool is_enabled = 2;
+  bool has_is_enabled = 3;
+  int32 limit = 4;
+  int32 offset = 5;
+}
+
+message CallToolRequest {
+  string server_id = 1;
+  string tool_id = 2;
+  string tool_name = 3;
+  string input_data = 4;
+  string conversation_id = 5;
+  string contact_id = 6;
+}
+
+message UpdateSettingsRequest {
+  bool enabled = 1;
+  bool has_enabled = 2;
+  bool auto_discover_tools = 3;
+  bool has_auto_discover_tools = 4;
+  bool log_all_calls = 5;
+  bool has_log_all_calls = 6;
+  int32 max_concurrent_calls = 7;
+  bool has_max_concurrent_calls = 8;
+  int32 timeout_seconds = 9;
+  bool has_timeout_seconds = 10;
+}
+
+message ListCallLogsRequest {
+  string server_id = 1;
+  string status = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}

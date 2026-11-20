@@ -8,11 +8,11 @@ use axum::Json;
 use serde::Deserialize;
 
 use crate::db::AppState;
-use crate::services::commerce_catalog::{
-    CommerceCatalogService, CreateCategoryRequest, CreateProductRequest, SetChannelVisibilityRequest,
+use newax_commerce_catalog::{
+    CreateCategoryRequest, CreateProductRequest, SetChannelVisibilityRequest,
     UpdateCategoryRequest, UpdateInventoryRequest, UpdateProductRequest,
 };
-use crate::services::commerce_cart::{
+use newax_commerce_cart::{
     AddCartItemRequest, CommerceCartService, CreateCartRequest, UpdateCartItemRequest,
 };
 use crate::services::commerce_orders::{
@@ -72,6 +72,27 @@ pub struct GetOrCreateCartQuery {
 }
 
 // ---------------------------------------------------------------------------
+// gRPC client helper for commerce_catalog
+// ---------------------------------------------------------------------------
+
+mod catalog_grpc {
+    use super::*;
+    use newax_proto::commerce_catalog::v1::commerce_catalog_service_client::CommerceCatalogServiceClient;
+
+    pub async fn client() -> Result<CommerceCatalogServiceClient<tonic::transport::Channel>, String> {
+        let url = std::env::var("COMMERCE_CATALOG_SERVICE_URL")
+            .unwrap_or_else(|_| "http://127.0.0.1:50110".to_string());
+        CommerceCatalogServiceClient::connect(url)
+            .await
+            .map_err(|e| format!("commerce_catalog service unavailable: {e}"))
+    }
+
+    pub fn parse_json_response(resp: newax_proto::commerce_catalog::v1::JsonResponse) -> Result<serde_json::Value, (StatusCode, String)> {
+        serde_json::from_str(&resp.json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("invalid json from catalog service: {e}")))
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Categories
 // ---------------------------------------------------------------------------
 
@@ -79,36 +100,47 @@ pub async fn list_categories(
     State(state): State<AppState>,
     Query(query): Query<ListCategoriesQuery>,
 ) -> Result<Json<Vec<crate::models::Category>>, (StatusCode, String)> {
-    let service = CommerceCatalogService::new(state.db.clone());
-    match service
-        .list_categories(&query.brand_id, query.active_only.unwrap_or(true))
-        .await
-    {
-        Ok(cats) => Ok(Json(cats)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    let mut client = catalog_grpc::client().await.map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, e))?;
+    let resp = client.list_categories(
+        newax_proto::commerce_catalog::v1::ListCategoriesRequest {
+            brand_id: query.brand_id,
+            active_only: query.active_only.unwrap_or(true),
+        }
+    ).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json = catalog_grpc::parse_json_response(resp.into_inner())?;
+    let cats: Vec<crate::models::Category> = serde_json::from_value(json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("deserialize categories: {e}")))?;
+    Ok(Json(cats))
 }
 
 pub async fn get_category(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<crate::models::Category>, (StatusCode, String)> {
-    let service = CommerceCatalogService::new(state.db.clone());
-    match service.get_category(&id).await {
-        Ok(cat) => Ok(Json(cat)),
-        Err(e) => Err((StatusCode::NOT_FOUND, e)),
-    }
+    let mut client = catalog_grpc::client().await.map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, e))?;
+    let resp = client.get_category(
+        newax_proto::commerce_catalog::v1::GetCategoryRequest { id }
+    ).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json = catalog_grpc::parse_json_response(resp.into_inner())?;
+    let cat: crate::models::Category = serde_json::from_value(json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("deserialize category: {e}")))?;
+    Ok(Json(cat))
 }
 
 pub async fn create_category(
     State(state): State<AppState>,
     Json(req): Json<CreateCategoryRequest>,
 ) -> Result<Json<crate::models::Category>, (StatusCode, String)> {
-    let service = CommerceCatalogService::new(state.db.clone());
-    match service.create_category(&req).await {
-        Ok(cat) => Ok(Json(cat)),
-        Err(e) => Err((StatusCode::BAD_REQUEST, e)),
-    }
+    let mut client = catalog_grpc::client().await.map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, e))?;
+    let resp = client.create_category(
+        newax_proto::commerce_catalog::v1::CreateCategoryRequest {
+            brand_id: req.brand_id,
+            name: req.name,
+            parent_id: req.parent_id.unwrap_or_default(),
+            sort_order: req.sort_order.map(|v| v.to_string()).unwrap_or_default(),
+        }
+    ).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json = catalog_grpc::parse_json_response(resp.into_inner())?;
+    let cat: crate::models::Category = serde_json::from_value(json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("deserialize category: {e}")))?;
+    Ok(Json(cat))
 }
 
 pub async fn update_category(
@@ -116,22 +148,30 @@ pub async fn update_category(
     Path(id): Path<String>,
     Json(req): Json<UpdateCategoryRequest>,
 ) -> Result<Json<crate::models::Category>, (StatusCode, String)> {
-    let service = CommerceCatalogService::new(state.db.clone());
-    match service.update_category(&id, &req).await {
-        Ok(cat) => Ok(Json(cat)),
-        Err(e) => Err((StatusCode::BAD_REQUEST, e)),
-    }
+    let mut client = catalog_grpc::client().await.map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, e))?;
+    let resp = client.update_category(
+        newax_proto::commerce_catalog::v1::UpdateCategoryRequest {
+            id: id.clone(),
+            name: req.name.unwrap_or_default(),
+            parent_id: req.parent_id.unwrap_or_default(),
+            sort_order: req.sort_order.map(|v| v.to_string()).unwrap_or_default(),
+            is_active: req.is_active.map(|v| v.to_string()).unwrap_or_default(),
+        }
+    ).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json = catalog_grpc::parse_json_response(resp.into_inner())?;
+    let cat: crate::models::Category = serde_json::from_value(json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("deserialize category: {e}")))?;
+    Ok(Json(cat))
 }
 
 pub async fn delete_category(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    let service = CommerceCatalogService::new(state.db.clone());
-    match service.delete_category(&id).await {
-        Ok(()) => Ok(StatusCode::NO_CONTENT),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    let mut client = catalog_grpc::client().await.map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, e))?;
+    client.delete_category(
+        newax_proto::commerce_catalog::v1::DeleteCategoryRequest { id }
+    ).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 // ---------------------------------------------------------------------------
@@ -142,50 +182,55 @@ pub async fn list_products(
     State(state): State<AppState>,
     Query(query): Query<ListProductsQuery>,
 ) -> Result<Json<Vec<crate::models::Product>>, (StatusCode, String)> {
-    let service = CommerceCatalogService::new(state.db.clone());
-    let cat_id = query.category_id.as_deref();
-    let ch = query.channel_type.as_deref();
-    match service
-        .list_products(&query.brand_id, cat_id, query.active_only.unwrap_or(true), ch)
-        .await
-    {
-        Ok(prods) => Ok(Json(prods)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    let mut client = catalog_grpc::client().await.map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, e))?;
+    let resp = client.list_products(
+        newax_proto::commerce_catalog::v1::ListProductsRequest {
+            brand_id: query.brand_id,
+            category_id: query.category_id.unwrap_or_default(),
+            active_only: query.active_only.unwrap_or(true),
+            channel_type: query.channel_type.unwrap_or_default(),
+        }
+    ).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json = catalog_grpc::parse_json_response(resp.into_inner())?;
+    let prods: Vec<crate::models::Product> = serde_json::from_value(json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("deserialize products: {e}")))?;
+    Ok(Json(prods))
 }
 
 pub async fn get_product(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<crate::models::Product>, (StatusCode, String)> {
-    let service = CommerceCatalogService::new(state.db.clone());
-    match service.get_product(&id).await {
-        Ok(prod) => Ok(Json(prod)),
-        Err(e) => Err((StatusCode::NOT_FOUND, e)),
-    }
+    let mut client = catalog_grpc::client().await.map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, e))?;
+    let resp = client.get_product(
+        newax_proto::commerce_catalog::v1::GetProductRequest { id }
+    ).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json = catalog_grpc::parse_json_response(resp.into_inner())?;
+    let prod: crate::models::Product = serde_json::from_value(json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("deserialize product: {e}")))?;
+    Ok(Json(prod))
 }
 
 pub async fn create_product(
     State(state): State<AppState>,
     Json(req): Json<CreateProductRequest>,
 ) -> Result<Json<crate::models::Product>, (StatusCode, String)> {
-    let service = CommerceCatalogService::new(state.db.clone());
-    match service.create_product(&req).await {
-        Ok(prod) => {
-            // Auto-sync: queue product for outbound sync to all platforms
-            let sync = crate::services::sync_adapter::SyncService::new(
-                state.db.clone(),
-                state.http_client.clone(),
-            );
-            let brand_id = prod.brand_id.clone();
-            let pid = prod.id.clone();
-            let _ = tokio::spawn(async move {
-                let _ = sync.queue_product_sync(&pid, &brand_id).await;
-            });
-            Ok(Json(prod))
-        }
-        Err(e) => Err((StatusCode::BAD_REQUEST, e)),
-    }
+    let mut client = catalog_grpc::client().await.map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, e))?;
+    let body_json = serde_json::to_string(&req).map_err(|e| (StatusCode::BAD_REQUEST, format!("serialize product: {e}")))?;
+    let resp = client.create_product(
+        newax_proto::commerce_catalog::v1::CreateProductRequestBody { json: body_json }
+    ).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json = catalog_grpc::parse_json_response(resp.into_inner())?;
+    let prod: crate::models::Product = serde_json::from_value(json.clone()).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("deserialize product: {e}")))?;
+    // Auto-sync: queue product for outbound sync to all platforms
+    let sync = crate::services::sync_adapter::SyncService::new(
+        state.db.clone(),
+        state.http_client.clone(),
+    );
+    let brand_id = prod.brand_id.clone();
+    let pid = prod.id.clone();
+    let _ = tokio::spawn(async move {
+        let _ = sync.queue_product_sync(&pid, &brand_id).await;
+    });
+    Ok(Json(prod))
 }
 
 pub async fn update_product(
@@ -193,34 +238,38 @@ pub async fn update_product(
     Path(id): Path<String>,
     Json(req): Json<UpdateProductRequest>,
 ) -> Result<Json<crate::models::Product>, (StatusCode, String)> {
-    let service = CommerceCatalogService::new(state.db.clone());
-    match service.update_product(&id, &req).await {
-        Ok(prod) => {
-            // Auto-sync: queue product for outbound sync
-            let sync = crate::services::sync_adapter::SyncService::new(
-                state.db.clone(),
-                state.http_client.clone(),
-            );
-            let brand_id = prod.brand_id.clone();
-            let pid = prod.id.clone();
-            let _ = tokio::spawn(async move {
-                let _ = sync.queue_product_sync(&pid, &brand_id).await;
-            });
-            Ok(Json(prod))
+    let mut client = catalog_grpc::client().await.map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, e))?;
+    let body_json = serde_json::to_string(&req).map_err(|e| (StatusCode::BAD_REQUEST, format!("serialize product: {e}")))?;
+    let resp = client.update_product(
+        newax_proto::commerce_catalog::v1::UpdateProductRequestBody {
+            id: id.clone(),
+            json: body_json,
         }
-        Err(e) => Err((StatusCode::BAD_REQUEST, e)),
-    }
+    ).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json = catalog_grpc::parse_json_response(resp.into_inner())?;
+    let prod: crate::models::Product = serde_json::from_value(json.clone()).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("deserialize product: {e}")))?;
+    // Auto-sync: queue product for outbound sync
+    let sync = crate::services::sync_adapter::SyncService::new(
+        state.db.clone(),
+        state.http_client.clone(),
+    );
+    let brand_id = prod.brand_id.clone();
+    let pid = prod.id.clone();
+    let _ = tokio::spawn(async move {
+        let _ = sync.queue_product_sync(&pid, &brand_id).await;
+    });
+    Ok(Json(prod))
 }
 
 pub async fn delete_product(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    let service = CommerceCatalogService::new(state.db.clone());
-    match service.delete_product(&id).await {
-        Ok(()) => Ok(StatusCode::NO_CONTENT),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    let mut client = catalog_grpc::client().await.map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, e))?;
+    client.delete_product(
+        newax_proto::commerce_catalog::v1::DeleteProductRequest { id }
+    ).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 // ---------------------------------------------------------------------------
@@ -232,23 +281,27 @@ pub async fn update_inventory(
     Path(id): Path<String>,
     Json(req): Json<UpdateInventoryRequest>,
 ) -> Result<Json<crate::models::Product>, (StatusCode, String)> {
-    let service = CommerceCatalogService::new(state.db.clone());
-    match service.update_inventory(&id, &req).await {
-        Ok(prod) => {
-            // Auto-sync: queue inventory update for outbound sync
-            let sync = crate::services::sync_adapter::SyncService::new(
-                state.db.clone(),
-                state.http_client.clone(),
-            );
-            let brand_id = prod.brand_id.clone();
-            let pid = prod.id.clone();
-            let _ = tokio::spawn(async move {
-                let _ = sync.queue_inventory_sync(&pid, &brand_id).await;
-            });
-            Ok(Json(prod))
+    let mut client = catalog_grpc::client().await.map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, e))?;
+    let body_json = serde_json::to_string(&req).map_err(|e| (StatusCode::BAD_REQUEST, format!("serialize inventory: {e}")))?;
+    let resp = client.update_inventory(
+        newax_proto::commerce_catalog::v1::UpdateInventoryRequestBody {
+            product_id: id.clone(),
+            json: body_json,
         }
-        Err(e) => Err((StatusCode::BAD_REQUEST, e)),
-    }
+    ).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json = catalog_grpc::parse_json_response(resp.into_inner())?;
+    let prod: crate::models::Product = serde_json::from_value(json.clone()).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("deserialize product: {e}")))?;
+    // Auto-sync: queue inventory update for outbound sync
+    let sync = crate::services::sync_adapter::SyncService::new(
+        state.db.clone(),
+        state.http_client.clone(),
+    );
+    let brand_id = prod.brand_id.clone();
+    let pid = prod.id.clone();
+    let _ = tokio::spawn(async move {
+        let _ = sync.queue_inventory_sync(&pid, &brand_id).await;
+    });
+    Ok(Json(prod))
 }
 
 // ---------------------------------------------------------------------------
@@ -262,11 +315,13 @@ pub async fn get_channel_visibility(
     Json<Vec<crate::models::ProductChannelVisibility>>,
     (StatusCode, String),
 > {
-    let service = CommerceCatalogService::new(state.db.clone());
-    match service.get_channel_visibility(&id).await {
-        Ok(vis) => Ok(Json(vis)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    let mut client = catalog_grpc::client().await.map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, e))?;
+    let resp = client.get_channel_visibility(
+        newax_proto::commerce_catalog::v1::GetChannelVisibilityRequest { product_id: id }
+    ).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json = catalog_grpc::parse_json_response(resp.into_inner())?;
+    let vis: Vec<crate::models::ProductChannelVisibility> = serde_json::from_value(json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("deserialize visibility: {e}")))?;
+    Ok(Json(vis))
 }
 
 pub async fn set_channel_visibility(
@@ -274,11 +329,17 @@ pub async fn set_channel_visibility(
     Path(id): Path<String>,
     Json(req): Json<SetChannelVisibilityRequest>,
 ) -> Result<Json<crate::models::ProductChannelVisibility>, (StatusCode, String)> {
-    let service = CommerceCatalogService::new(state.db.clone());
-    match service.set_channel_visibility(&id, &req).await {
-        Ok(vis) => Ok(Json(vis)),
-        Err(e) => Err((StatusCode::BAD_REQUEST, e)),
-    }
+    let mut client = catalog_grpc::client().await.map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, e))?;
+    let body_json = serde_json::to_string(&req).map_err(|e| (StatusCode::BAD_REQUEST, format!("serialize visibility: {e}")))?;
+    let resp = client.set_channel_visibility(
+        newax_proto::commerce_catalog::v1::SetChannelVisibilityRequestBody {
+            product_id: id,
+            json: body_json,
+        }
+    ).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json = catalog_grpc::parse_json_response(resp.into_inner())?;
+    let vis: crate::models::ProductChannelVisibility = serde_json::from_value(json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("deserialize visibility: {e}")))?;
+    Ok(Json(vis))
 }
 
 // ---------------------------------------------------------------------------
@@ -288,7 +349,7 @@ pub async fn set_channel_visibility(
 pub async fn get_or_create_cart(
     State(state): State<AppState>,
     Query(query): Query<GetOrCreateCartQuery>,
-) -> Result<Json<crate::services::commerce_cart::CartWithItems>, (StatusCode, String)> {
+) -> Result<Json<newax_commerce_cart::CartWithItems>, (StatusCode, String)> {
     let service = CommerceCartService::new(state.db.clone());
     let ch = query.channel_type.as_deref();
     match service
@@ -318,7 +379,7 @@ pub async fn list_carts(
 pub async fn get_cart(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<crate::services::commerce_cart::CartWithItems>, (StatusCode, String)> {
+) -> Result<Json<newax_commerce_cart::CartWithItems>, (StatusCode, String)> {
     let service = CommerceCartService::new(state.db.clone());
     match service.get_cart_with_items(&id).await {
         Ok(cart) => Ok(Json(cart)),
@@ -360,7 +421,7 @@ pub async fn add_cart_item(
     State(state): State<AppState>,
     Path(cart_id): Path<String>,
     Json(req): Json<AddCartItemRequest>,
-) -> Result<Json<crate::services::commerce_cart::CartItemWithProduct>, (StatusCode, String)> {
+) -> Result<Json<newax_commerce_cart::CartItemWithProduct>, (StatusCode, String)> {
     let service = CommerceCartService::new(state.db.clone());
     match service.add_item(&cart_id, &req).await {
         Ok(item) => Ok(Json(item)),
@@ -372,7 +433,7 @@ pub async fn update_cart_item(
     State(state): State<AppState>,
     Path((cart_id, item_id)): Path<(String, String)>,
     Json(req): Json<UpdateCartItemRequest>,
-) -> Result<Json<crate::services::commerce_cart::CartItemWithProduct>, (StatusCode, String)> {
+) -> Result<Json<newax_commerce_cart::CartItemWithProduct>, (StatusCode, String)> {
     let service = CommerceCartService::new(state.db.clone());
     match service
         .update_item_quantity(&cart_id, &item_id, &req)

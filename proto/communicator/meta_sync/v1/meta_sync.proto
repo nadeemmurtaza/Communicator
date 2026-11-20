@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package newax.meta_sync.v1;
+
+service MetaSyncService {
+  rpc FetchBusinessProfile(FetchBusinessProfileRequest) returns (JsonResponse);
+  rpc ResolveMetaCredentials(ResolveMetaCredentialsRequest) returns (JsonResponse);
+  rpc RefreshChannelInfo(RefreshChannelInfoRequest) returns (JsonResponse);
+}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message FetchBusinessProfileRequest {
+  string access_token = 1;
+  string phone_number_id = 2;
+  string api_version = 3;
+}
+
+message ResolveMetaCredentialsRequest {
+}
+
+message RefreshChannelInfoRequest {
+}

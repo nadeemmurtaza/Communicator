@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package newax.live_proof.v1;
+
+service LiveProofService {
+  // Session management
+  rpc CreateSession(CreateSessionRequest) returns (JsonResponse);
+  rpc GetSessionDetails(GetSessionDetailsRequest) returns (JsonResponse);
+  rpc RecordDecision(RecordDecisionRequest) returns (JsonResponse);
+
+  // Evidence
+  rpc UploadEvidence(UploadEvidenceRequest) returns (JsonResponse);
+  rpc GetEvidenceMedia(GetEvidenceMediaRequest) returns (JsonResponse);
+
+  // Capture page
+  rpc GetCapturePage(GetCapturePageRequest) returns (JsonResponse);
+}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message EmptyRequest {}
+
+message GetSessionDetailsRequest {
+  string session_id = 1;
+  string token = 2;
+}
+
+message RecordDecisionRequest {
+  string session_id = 1;
+  string token = 2;
+  string json = 3;
+}
+
+message UploadEvidenceRequest {
+  string session_id = 1;
+  string token = 2;
+  string json = 3;
+}
+
+message GetEvidenceMediaRequest {
+  string session_id = 1;
+  string evidence_id = 2;
+  string token = 3;
+}
+
+message GetCapturePageRequest {
+  string session_id = 1;
+  string token = 2;
+}
+
+message CreateSessionRequest {
+  string json = 1;
+}

@@ -48,6 +48,54 @@ pub struct Config {
     pub sales_alert_webhook_url: String,
     /// gRPC address for the standalone access-control service. Empty defaults to 127.0.0.1:50093.
     pub access_control_grpc_url: String,
+    /// gRPC address for the standalone mcp-protocol service. Empty defaults to 127.0.0.1:50097.
+    pub mcp_protocol_grpc_url: String,
+    /// gRPC address for the standalone otp-engine service. Empty defaults to 127.0.0.1:50099.
+    pub otp_engine_grpc_url: String,
+    /// gRPC address for the standalone nid-tenant-sync service. Empty defaults to 127.0.0.1:50103.
+    pub nid_tenant_sync_grpc_url: String,
+    /// gRPC address for the standalone fin-operator service. Empty defaults to 127.0.0.1:50104.
+    pub fin_operator_grpc_url: String,
+    /// gRPC address for the standalone fin-vision service. Empty defaults to 127.0.0.1:50105.
+    pub fin_vision_grpc_url: String,
+    /// gRPC address for the standalone store-connection service. Empty defaults to 127.0.0.1:50106.
+    pub store_connection_grpc_url: String,
+    /// gRPC address for the standalone whatsapp-template-sync service. Empty defaults to 127.0.0.1:50104.
+    pub whatsapp_template_sync_grpc_url: String,
+    /// gRPC address for the standalone whatsapp-campaigns service. Empty defaults to 127.0.0.1:50107.
+    pub whatsapp_campaigns_grpc_url: String,
+    /// gRPC address for the standalone services-sequences service. Empty defaults to 127.0.0.1:50107.
+    pub services_sequences_grpc_url: String,
+    /// gRPC address for the standalone external-otp service. Empty defaults to 127.0.0.1:50108.
+    pub external_otp_grpc_url: String,
+    /// gRPC address for the standalone shopify-store service. Empty defaults to 127.0.0.1:50108.
+    pub shopify_store_grpc_url: String,
+    /// gRPC address for the standalone sso service. Empty defaults to 127.0.0.1:50109.
+    pub sso_grpc_url: String,
+    /// gRPC address for the standalone health service. Empty defaults to 127.0.0.1:50110.
+    pub health_grpc_url: String,
+    /// gRPC address for the standalone translation service. Empty defaults to 127.0.0.1:50111.
+    pub translation_grpc_url: String,
+    /// gRPC address for the standalone CSAT surveys service. Empty defaults to 127.0.0.1:50112.
+    pub csat_surveys_grpc_url: String,
+    /// gRPC address for the standalone discovery service. Empty defaults to 127.0.0.1:50113.
+    pub discovery_grpc_url: String,
+    /// gRPC address for the standalone automation service. Empty defaults to 127.0.0.1:50114.
+    pub automation_grpc_url: String,
+    /// gRPC address for the standalone business_profile service. Empty defaults to 127.0.0.1:50115.
+    pub business_profile_grpc_url: String,
+    /// gRPC address for the standalone team_routing service. Empty defaults to 127.0.0.1:50116.
+    pub team_routing_grpc_url: String,
+    /// gRPC address for the standalone knowledge_base service. Empty defaults to 127.0.0.1:50117.
+    pub knowledge_base_grpc_url: String,
+    /// gRPC address for the standalone live_proof service. Empty defaults to 127.0.0.1:50118.
+    pub live_proof_grpc_url: String,
+    /// gRPC address for the standalone commerce-catalog service. Empty defaults to 127.0.0.1:50110.
+    pub commerce_catalog_grpc_url: String,
+    /// gRPC address for the standalone conversations service. Empty defaults to 127.0.0.1:50120.
+    pub conversations_grpc_url: String,
+    /// gRPC address for the standalone meta-sync service. Empty defaults to 127.0.0.1:50113.
+    pub meta_sync_grpc_url: String,
     // nID identity provider (NEWAX ecosystem SSO + secrets vault)
     pub nid_base_url: String,
     pub nid_client_id: String,
@@ -150,6 +198,30 @@ impl Config {
             .filter(|value| (0.0..=1.0).contains(value));
         let sales_alert_webhook_url = env::var("SALES_ALERT_WEBHOOK_URL").unwrap_or_default();
         let access_control_grpc_url = env::var("ACCESS_CONTROL_GRPC_URL").unwrap_or_default();
+        let mcp_protocol_grpc_url = env::var("MCP_PROTOCOL_GRPC_URL").unwrap_or_default();
+        let otp_engine_grpc_url = env::var("OTP_ENGINE_GRPC_URL").unwrap_or_default();
+        let nid_tenant_sync_grpc_url = env::var("NID_TENANT_SYNC_GRPC_URL").unwrap_or_default();
+        let fin_operator_grpc_url = env::var("FIN_OPERATOR_GRPC_URL").unwrap_or_default();
+        let fin_vision_grpc_url = env::var("FIN_VISION_GRPC_URL").unwrap_or_default();
+        let store_connection_grpc_url = env::var("STORE_CONNECTION_GRPC_URL").unwrap_or_default();
+        let external_otp_grpc_url = env::var("EXTERNAL_OTP_GRPC_URL").unwrap_or_default();
+        let sso_grpc_url = env::var("SSO_GRPC_URL").unwrap_or_default();
+        let health_grpc_url = env::var("HEALTH_GRPC_URL").unwrap_or_default();
+        let translation_grpc_url = env::var("TRANSLATION_GRPC_URL").unwrap_or_default();
+        let csat_surveys_grpc_url = env::var("CSAT_SURVEYS_GRPC_URL").unwrap_or_default();
+        let discovery_grpc_url = env::var("DISCOVERY_GRPC_URL").unwrap_or_default();
+        let automation_grpc_url = env::var("AUTOMATION_GRPC_URL").unwrap_or_default();
+        let business_profile_grpc_url = env::var("BUSINESS_PROFILE_GRPC_URL").unwrap_or_default();
+        let team_routing_grpc_url = env::var("TEAM_ROUTING_GRPC_URL").unwrap_or_default();
+        let knowledge_base_grpc_url = env::var("KNOWLEDGE_BASE_GRPC_URL").unwrap_or_default();
+        let live_proof_grpc_url = env::var("LIVE_PROOF_GRPC_URL").unwrap_or_default();
+        let commerce_catalog_grpc_url = env::var("COMMERCE_CATALOG_GRPC_URL").unwrap_or_default();
+        let conversations_grpc_url = env::var("CONVERSATIONS_GRPC_URL").unwrap_or_default();
+        let meta_sync_grpc_url = env::var("META_SYNC_GRPC_URL").unwrap_or_default();
+        let whatsapp_template_sync_grpc_url = env::var("WHATSAPP_TEMPLATE_SYNC_GRPC_URL").unwrap_or_default();
+        let whatsapp_campaigns_grpc_url = env::var("WHATSAPP_CAMPAIGNS_GRPC_URL").unwrap_or_default();
+        let services_sequences_grpc_url = env::var("SERVICES_SEQUENCES_GRPC_URL").unwrap_or_default();
+        let shopify_store_grpc_url = env::var("SHOPIFY_STORE_GRPC_URL").unwrap_or_default();
 
         let nid_base_url = env::var("NID_BASE_URL")
             .unwrap_or_else(|_| "http://localhost:4000".to_string());
@@ -219,6 +291,30 @@ impl Config {
             reply_auto_send_confidence,
             sales_alert_webhook_url,
             access_control_grpc_url,
+            mcp_protocol_grpc_url,
+            otp_engine_grpc_url,
+            nid_tenant_sync_grpc_url,
+            fin_operator_grpc_url,
+            fin_vision_grpc_url,
+            store_connection_grpc_url,
+            whatsapp_template_sync_grpc_url,
+            whatsapp_campaigns_grpc_url,
+            services_sequences_grpc_url,
+            external_otp_grpc_url,
+            shopify_store_grpc_url,
+            sso_grpc_url,
+            health_grpc_url,
+            translation_grpc_url,
+            csat_surveys_grpc_url,
+            discovery_grpc_url,
+            automation_grpc_url,
+            business_profile_grpc_url,
+            team_routing_grpc_url,
+            knowledge_base_grpc_url,
+            live_proof_grpc_url,
+            commerce_catalog_grpc_url,
+            conversations_grpc_url,
+            meta_sync_grpc_url,
             nid_base_url,
             nid_client_id,
             nid_client_secret,
@@ -337,6 +433,29 @@ impl Config {
             }
             "sales_alert_webhook_url" => Self::set_string(&mut self.sales_alert_webhook_url, value),
             "access_control_grpc_url" => Self::set_string(&mut self.access_control_grpc_url, value),
+            "mcp_protocol_grpc_url" => Self::set_string(&mut self.mcp_protocol_grpc_url, value),
+            "otp_engine_grpc_url" => Self::set_string(&mut self.otp_engine_grpc_url, value),
+            "nid_tenant_sync_grpc_url" => Self::set_string(&mut self.nid_tenant_sync_grpc_url, value),
+            "fin_operator_grpc_url" => Self::set_string(&mut self.fin_operator_grpc_url, value),
+            "fin_vision_grpc_url" => Self::set_string(&mut self.fin_vision_grpc_url, value),
+            "store_connection_grpc_url" => Self::set_string(&mut self.store_connection_grpc_url, value),
+            "whatsapp_template_sync_grpc_url" => Self::set_string(&mut self.whatsapp_template_sync_grpc_url, value),
+            "whatsapp_campaigns_grpc_url" => Self::set_string(&mut self.whatsapp_campaigns_grpc_url, value),
+            "services_sequences_grpc_url" => Self::set_string(&mut self.services_sequences_grpc_url, value),
+            "external_otp_grpc_url" => Self::set_string(&mut self.external_otp_grpc_url, value),
+            "sso_grpc_url" => Self::set_string(&mut self.sso_grpc_url, value),
+            "health_grpc_url" => Self::set_string(&mut self.health_grpc_url, value),
+            "translation_grpc_url" => Self::set_string(&mut self.translation_grpc_url, value),
+            "csat_surveys_grpc_url" => Self::set_string(&mut self.csat_surveys_grpc_url, value),
+            "discovery_grpc_url" => Self::set_string(&mut self.discovery_grpc_url, value),
+            "automation_grpc_url" => Self::set_string(&mut self.automation_grpc_url, value),
+            "business_profile_grpc_url" => Self::set_string(&mut self.business_profile_grpc_url, value),
+            "team_routing_grpc_url" => Self::set_string(&mut self.team_routing_grpc_url, value),
+            "knowledge_base_grpc_url" => Self::set_string(&mut self.knowledge_base_grpc_url, value),
+            "live_proof_grpc_url" => Self::set_string(&mut self.live_proof_grpc_url, value),
+            "commerce_catalog_grpc_url" => Self::set_string(&mut self.commerce_catalog_grpc_url, value),
+            "conversations_grpc_url" => Self::set_string(&mut self.conversations_grpc_url, value),
+            "meta_sync_grpc_url" => Self::set_string(&mut self.meta_sync_grpc_url, value),
             "nid_base_url" => Self::set_string(&mut self.nid_base_url, value),
             "nid_client_id" => Self::set_string(&mut self.nid_client_id, value),
             "nid_client_secret" => Self::set_string(&mut self.nid_client_secret, value),

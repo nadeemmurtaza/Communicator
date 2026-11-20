@@ -1,0 +1,129 @@
+syntax = "proto3";
+
+package newax.erp_orders.v1;
+
+service ErpOrdersService {
+  // Orders
+  rpc ListOrders(ListOrdersRequest) returns (JsonResponse);
+  rpc GetOrder(IdRequest) returns (JsonResponse);
+  rpc GetOrderByNumber(IdRequest) returns (JsonResponse);
+  rpc CreateOrder(CreateOrderRequest) returns (JsonResponse);
+  rpc UpdateOrderStatus(UpdateOrderStatusRequest) returns (JsonResponse);
+  rpc CancelOrder(CancelOrderRequest) returns (JsonResponse);
+  rpc GetOrderItems(IdRequest) returns (JsonResponse);
+  rpc GetOrderStatusEvents(IdRequest) returns (JsonResponse);
+  rpc GetOrderStats(Empty) returns (JsonResponse);
+
+  // Carts
+  rpc ListCarts(ListCartsRequest) returns (JsonResponse);
+  rpc GetCart(IdRequest) returns (JsonResponse);
+  rpc CreateCart(CreateCartRequest) returns (JsonResponse);
+  rpc DeleteCart(IdRequest) returns (Empty);
+  rpc GetCartItems(IdRequest) returns (JsonResponse);
+  rpc AddCartItem(AddCartItemRequest) returns (JsonResponse);
+  rpc UpdateCartItem(UpdateCartItemRequest) returns (JsonResponse);
+  rpc RemoveCartItem(IdRequest) returns (Empty);
+  rpc CheckoutCart(CheckoutCartRequest) returns (JsonResponse);
+
+  // Shipments
+  rpc ListShipments(ListShipmentsRequest) returns (JsonResponse);
+  rpc GetShipment(IdRequest) returns (JsonResponse);
+  rpc CreateShipment(CreateShipmentRequest) returns (JsonResponse);
+  rpc UpdateShipmentStatus(UpdateShipmentStatusRequest) returns (JsonResponse);
+  rpc GetShipmentEvents(IdRequest) returns (JsonResponse);
+  rpc CreateShipmentEvent(CreateShipmentEventRequest) returns (JsonResponse);
+
+  // Back in Stock
+  rpc ListBackInStockRequests(ListBackInStockRequestsRequest) returns (JsonResponse);
+  rpc CreateBackInStockRequest(CreateBackInStockRequest) returns (JsonResponse);
+  rpc NotifyBackInStock(IdRequest) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message IdRequest {
+  string id = 1;
+}
+
+// ——— Orders ———
+
+message ListOrdersRequest {
+  optional string status = 1;
+  optional string channel = 2;
+  int64 limit = 3;
+  int64 offset = 4;
+}
+
+message CreateOrderRequest {
+  string json = 1;
+}
+
+message UpdateOrderStatusRequest {
+  string order_id = 1;
+  string json = 2;
+}
+
+message CancelOrderRequest {
+  string order_id = 1;
+  string reason = 2;
+  optional string actor_id = 3;
+}
+
+// ——— Carts ———
+
+message ListCartsRequest {
+  optional string user_id = 1;
+  optional string status = 2;
+}
+
+message CreateCartRequest {
+  string json = 1;
+}
+
+message AddCartItemRequest {
+  string json = 1;
+}
+
+message UpdateCartItemRequest {
+  string item_id = 1;
+  string json = 2;
+}
+
+message CheckoutCartRequest {
+  string json = 1;
+}
+
+// ——— Shipments ———
+
+message ListShipmentsRequest {
+  optional string order_id = 1;
+  optional string status = 2;
+}
+
+message CreateShipmentRequest {
+  string json = 1;
+}
+
+message UpdateShipmentStatusRequest {
+  string shipment_id = 1;
+  string json = 2;
+}
+
+message CreateShipmentEventRequest {
+  string json = 1;
+}
+
+// ——— Back in Stock ———
+
+message ListBackInStockRequestsRequest {
+  optional string product_id = 1;
+  optional string status = 2;
+}
+
+message CreateBackInStockRequest {
+  string json = 1;
+}

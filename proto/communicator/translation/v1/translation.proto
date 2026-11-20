@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package newax.translation.v1;
+
+service TranslationService {
+  rpc ListSupportedLanguages(EmptyRequest) returns (JsonResponse);
+  rpc GetTranslationSettings(EmptyRequest) returns (JsonResponse);
+  rpc UpdateTranslationSettings(SettingsRequest) returns (JsonResponse);
+  rpc DetectLanguage(DetectRequest) returns (JsonResponse);
+  rpc TranslateText(TranslateRequest) returns (JsonResponse);
+  rpc TranslateMessage(TranslateMessageRequest) returns (JsonResponse);
+  rpc PrepareOutbound(PrepareOutboundRequest) returns (JsonResponse);
+}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message EmptyRequest {}
+
+message SettingsRequest {
+  string json = 1;
+}
+
+message DetectRequest {
+  string text = 1;
+}
+
+message TranslateRequest {
+  string text = 1;
+  string target_language = 2;
+  string source_language = 3;
+}
+
+message TranslateMessageRequest {
+  string message_id = 1;
+  string target_language = 2;
+}
+
+message PrepareOutboundRequest {
+  string conversation_id = 1;
+  string text = 2;
+  string target_language = 3;
+}

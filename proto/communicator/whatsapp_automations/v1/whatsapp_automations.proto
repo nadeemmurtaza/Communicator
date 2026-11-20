@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package newax.whatsapp_automations.v1;
+
+service WhatsAppAutomationsService {
+  rpc HandleAgentCommands(AgentCommandsRequest) returns (JsonResponse);
+  rpc HandleCsatResponse(CsatResponseRequest) returns (JsonResponse);
+  rpc ExecuteHandoff(HandoffRequest) returns (JsonResponse);
+  rpc HandleNavigationMenu(NavigationMenuRequest) returns (JsonResponse);
+  rpc ShouldSendWelcomeGreeting(GreetingCheckRequest) returns (JsonResponse);
+  rpc SendWelcomeGreeting(GreetingSendRequest) returns (JsonResponse);
+  rpc MatchAdvancedRule(RuleMatchRequest) returns (JsonResponse);
+  rpc ExecuteRuleAction(RuleActionRequest) returns (JsonResponse);
+  rpc RunInactivityNudges(NudgesRequest) returns (JsonResponse);
+  rpc SyncCustomerProfileFromMeta(ProfileSyncRequest) returns (JsonResponse);
+}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message EmptyRequest {}
+
+message AgentCommandsRequest {
+  string brand_id = 1;
+  string conversation_id = 2;
+  string contact_id = 3;
+  string text = 4;
+}
+
+message CsatResponseRequest {
+  string brand_id = 1;
+  string conversation_id = 2;
+  string contact_id = 3;
+  string payload = 4;
+}
+
+message HandoffRequest {
+  string brand_id = 1;
+  string conversation_id = 2;
+}
+
+message NavigationMenuRequest {
+  string brand_id = 1;
+  string contact_id = 2;
+  string payload = 3;
+}
+
+message GreetingCheckRequest {
+  string brand_id = 1;
+  string conversation_id = 2;
+}
+
+message GreetingSendRequest {
+  string brand_id = 1;
+  string conversation_id = 2;
+  string contact_id = 3;
+}
+
+message RuleMatchRequest {
+  string brand_id = 1;
+  string text = 2;
+}
+
+message RuleActionRequest {
+  string brand_id = 1;
+  string contact_id = 2;
+  string conversation_id = 3;
+  string action_type = 4;
+  string action_config = 5;
+}
+
+message NudgesRequest {
+  string brand_id = 1;
+}
+
+message ProfileSyncRequest {
+  string brand_id = 1;
+  string wa_id = 2;
+  string profile_name = 3;
+  string profile_picture_url = 4;
+  string about = 5;
+}

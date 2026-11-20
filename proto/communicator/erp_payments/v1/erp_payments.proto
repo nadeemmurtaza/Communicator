@@ -1,0 +1,114 @@
+syntax = "proto3";
+
+package newax.erp_payments.v1;
+
+service ErpPaymentsService {
+  rpc ListPayments(ListPaymentsRequest) returns (JsonResponse);
+  rpc GetPayment(IdRequest) returns (JsonResponse);
+  rpc GetPaymentsByOrder(IdRequest) returns (JsonResponse);
+  rpc GetPaymentByReference(IdRequest) returns (JsonResponse);
+  rpc CreatePayment(CreatePaymentRequest) returns (JsonResponse);
+  rpc UpdatePaymentStatus(UpdatePaymentStatusRequest) returns (JsonResponse);
+  rpc MarkAsPaid(MarkAsPaidRequest) returns (JsonResponse);
+  rpc MarkAsFailed(MarkAsFailedRequest) returns (JsonResponse);
+  rpc RefundPayment(RefundPaymentRequest) returns (JsonResponse);
+  rpc UploadReceipt(UploadReceiptRequest) returns (JsonResponse);
+  rpc ApprovePayment(ApprovePaymentRequest) returns (JsonResponse);
+  rpc RejectPayment(RejectPaymentRequest) returns (JsonResponse);
+  rpc GetPendingApprovals(PendingApprovalsRequest) returns (JsonResponse);
+  rpc GetPaymentStats(Empty) returns (JsonResponse);
+  rpc ListPaymentMethods(Empty) returns (JsonResponse);
+  rpc GetPaymentMethod(IdRequest) returns (JsonResponse);
+  rpc GetPaymentMethodByCode(IdRequest) returns (JsonResponse);
+  rpc CreatePaymentMethod(CreatePaymentMethodRequest) returns (JsonResponse);
+  rpc UpdatePaymentMethod(UpdatePaymentMethodRequest) returns (JsonResponse);
+  rpc DeletePaymentMethod(IdRequest) returns (Empty);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+message IdRequest {
+  string id = 1;
+}
+
+message ListPaymentsRequest {
+  optional string order_id = 1;
+  optional string status = 2;
+  optional string provider = 3;
+  int64 limit = 4;
+  int64 offset = 5;
+}
+
+message CreatePaymentRequest {
+  string order_id = 1;
+  string provider = 2;
+  int64 amount = 3;
+  optional string currency = 4;
+  optional string reference = 5;
+  optional string meta_json = 6;
+}
+
+message UpdatePaymentStatusRequest {
+  string id = 1;
+  string status = 2;
+  optional string provider_ref = 3;
+  optional string receipt_url = 4;
+  optional string failure_reason = 5;
+  optional string approved_by_id = 6;
+  optional string meta_json = 7;
+}
+
+message MarkAsPaidRequest {
+  string id = 1;
+  optional string provider_ref = 2;
+  optional string approved_by_id = 3;
+}
+
+message MarkAsFailedRequest {
+  string id = 1;
+  string reason = 2;
+}
+
+message RefundPaymentRequest {
+  string id = 1;
+  int64 refund_amount = 2;
+  optional string reason = 3;
+}
+
+message UploadReceiptRequest {
+  string id = 1;
+  string receipt_url = 2;
+  optional string meta_json = 3;
+}
+
+message ApprovePaymentRequest {
+  string id = 1;
+  string approved_by_id = 2;
+}
+
+message RejectPaymentRequest {
+  string id = 1;
+  string reason = 2;
+}
+
+message PendingApprovalsRequest {
+  int64 limit = 1;
+  int64 offset = 2;
+}
+
+message CreatePaymentMethodRequest {
+  string name = 1;
+  string code = 2;
+  optional string config_json = 3;
+}
+
+message UpdatePaymentMethodRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string config_json = 3;
+  optional bool is_active = 4;
+}
