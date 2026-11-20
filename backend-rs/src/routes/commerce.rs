@@ -15,8 +15,8 @@ use newax_commerce_catalog::{
 use newax_commerce_cart::{
     AddCartItemRequest, CommerceCartService, CreateCartRequest, UpdateCartItemRequest,
 };
-use crate::services::commerce_orders::{
-    CheckoutRequest, CommerceOrdersService, UpdateOrderStatusRequest,
+use newax_commerce_orders::{
+    CheckoutRequest, UpdateOrderStatusRequest,
 };
 use crate::services::commerce_payments::{
     CommercePaymentsService, RecordPaymentRequest, UpdatePaymentStatusRequest,
@@ -89,6 +89,27 @@ mod catalog_grpc {
 
     pub fn parse_json_response(resp: newax_proto::commerce_catalog::v1::JsonResponse) -> Result<serde_json::Value, (StatusCode, String)> {
         serde_json::from_str(&resp.json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("invalid json from catalog service: {e}")))
+    }
+}
+
+// ---------------------------------------------------------------------------
+// gRPC client helper for commerce_orders
+// ---------------------------------------------------------------------------
+
+mod orders_grpc {
+    use super::*;
+    use newax_proto::commerce_orders::v1::commerce_orders_service_client::CommerceOrdersServiceClient;
+
+    pub async fn client() -> Result<CommerceOrdersServiceClient<tonic::transport::Channel>, String> {
+        let url = std::env::var("COMMERCE_ORDERS_SERVICE_URL")
+            .unwrap_or_else(|_| "http://127.0.0.1:50111".to_string());
+        CommerceOrdersServiceClient::connect(url)
+            .await
+            .map_err(|e| format!("commerce_orders service unavailable: {e}"))
+    }
+
+    pub fn parse_json_response(resp: newax_proto::commerce_orders::v1::JsonResponse) -> Result<serde_json::Value, (StatusCode, String)> {
+        serde_json::from_str(&resp.json).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("invalid json from orders service: {e}")))
     }
 }
 
@@ -364,7 +385,7 @@ pub async fn get_or_create_cart(
 pub async fn list_carts(
     State(state): State<AppState>,
     Query(query): Query<ListCartsQuery>,
-) -> Result<Json<Vec<crate::models::Cart>>, (StatusCode, String)> {
+) -> Result<Json<Vec<newax_commerce_cart::Cart>>, (StatusCode, String)> {
     let service = CommerceCartService::new(state.db.clone());
     let status = query.status.as_deref();
     match service
@@ -390,7 +411,7 @@ pub async fn get_cart(
 pub async fn create_cart(
     State(state): State<AppState>,
     Json(req): Json<CreateCartRequest>,
-) -> Result<Json<crate::models::Cart>, (StatusCode, String)> {
+) -> Result<Json<newax_commerce_cart::Cart>, (StatusCode, String)> {
     let service = CommerceCartService::new(state.db.clone());
     let ch = req.channel_type.as_deref();
     match service
@@ -474,24 +495,28 @@ pub async fn checkout_cart(
     State(state): State<AppState>,
     Path(cart_id): Path<String>,
     Json(req): Json<CheckoutRequest>,
-) -> Result<Json<crate::services::commerce_orders::OrderWithItems>, (StatusCode, String)> {
-    let service = CommerceOrdersService::new(state.db.clone());
-    match service.checkout(&cart_id, &req).await {
-        Ok(order) => {
-            // Auto-sync: queue order for outbound sync to all platforms
-            let sync = crate::services::sync_adapter::SyncService::new(
-                state.db.clone(),
-                state.http_client.clone(),
-            );
-            let brand_id = order.order.brand_id.clone();
-            let oid = order.order.id.clone();
-            let _ = tokio::spawn(async move {
-                let _ = sync.queue_order_sync(&oid, &brand_id).await;
-            });
-            Ok(Json(order))
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = orders_grpc::client().await.map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, e))?;
+    let resp = client.checkout(
+        newax_proto::commerce_orders::v1::CheckoutRequest {
+            cart_id,
+            json: serde_json::to_string(&req).map_err(|e| (StatusCode::BAD_REQUEST, e.to_string()))?,
         }
-        Err(e) => Err((StatusCode::BAD_REQUEST, e)),
+    ).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json = orders_grpc::parse_json_response(resp.into_inner())?;
+    // Auto-sync: queue order for outbound sync to all platforms
+    let brand_id_owned = json.get("brandId").and_then(|v| v.as_str()).map(|s| s.to_string());
+    let oid_owned = json.get("id").and_then(|v| v.as_str()).map(|s| s.to_string());
+    if let (Some(brand_id), Some(oid)) = (brand_id_owned, oid_owned) {
+        let sync = crate::services::sync_adapter::SyncService::new(
+            state.db.clone(),
+            state.http_client.clone(),
+        );
+        let _ = tokio::spawn(async move {
+            let _ = sync.queue_order_sync(&oid, &brand_id).await;
+        });
     }
+    Ok(Json(json))
 }
 
 // ---------------------------------------------------------------------------
@@ -509,64 +534,72 @@ pub struct ListOrdersQuery {
 pub async fn list_orders(
     State(state): State<AppState>,
     Query(query): Query<ListOrdersQuery>,
-) -> Result<Json<Vec<crate::models::CommerceOrder>>, (StatusCode, String)> {
-    let service = CommerceOrdersService::new(state.db.clone());
-    let cid = query.customer_id.as_deref();
-    let st = query.status.as_deref();
-    let ch = query.channel_type.as_deref();
-    match service
-        .list_orders(&query.brand_id, cid, st, ch)
-        .await
-    {
-        Ok(orders) => Ok(Json(orders)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = orders_grpc::client().await.map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, e))?;
+    let resp = client.list_orders(
+        newax_proto::commerce_orders::v1::ListOrdersRequest {
+            brand_id: query.brand_id,
+            customer_id: query.customer_id.unwrap_or_default(),
+            status: query.status.unwrap_or_default(),
+            channel_type: query.channel_type.unwrap_or_default(),
+        }
+    ).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json = orders_grpc::parse_json_response(resp.into_inner())?;
+    Ok(Json(json))
 }
 
 pub async fn get_order(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<crate::services::commerce_orders::OrderWithItems>, (StatusCode, String)> {
-    let service = CommerceOrdersService::new(state.db.clone());
-    match service.get_order_with_items(&id).await {
-        Ok(order) => Ok(Json(order)),
-        Err(e) => Err((StatusCode::NOT_FOUND, e)),
-    }
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = orders_grpc::client().await.map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, e))?;
+    let resp = client.get_order(
+        newax_proto::commerce_orders::v1::GetOrderRequest { id }
+    ).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json = orders_grpc::parse_json_response(resp.into_inner())?;
+    Ok(Json(json))
 }
 
 pub async fn update_order_status(
     State(state): State<AppState>,
     Path(id): Path<String>,
     Json(req): Json<UpdateOrderStatusRequest>,
-) -> Result<Json<crate::models::CommerceOrder>, (StatusCode, String)> {
-    let service = CommerceOrdersService::new(state.db.clone());
-    match service.update_order_status(&id, &req).await {
-        Ok(order) => {
-            // Auto-sync: queue order status update for outbound sync
-            let sync = crate::services::sync_adapter::SyncService::new(
-                state.db.clone(),
-                state.http_client.clone(),
-            );
-            let brand_id = order.brand_id.clone();
-            let oid = order.id.clone();
-            let _ = tokio::spawn(async move {
-                let _ = sync.queue_order_sync(&oid, &brand_id).await;
-            });
-            Ok(Json(order))
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let mut client = orders_grpc::client().await.map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, e))?;
+    let resp = client.update_order_status(
+        newax_proto::commerce_orders::v1::UpdateOrderStatusRequest {
+            id,
+            status: req.status,
         }
-        Err(e) => Err((StatusCode::BAD_REQUEST, e)),
+    ).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json = orders_grpc::parse_json_response(resp.into_inner())?;
+    // Auto-sync: queue order status update for outbound sync
+    let brand_id_owned = json.get("brandId").and_then(|v| v.as_str()).map(|s| s.to_string());
+    let oid_owned = json.get("id").and_then(|v| v.as_str()).map(|s| s.to_string());
+    if let (Some(brand_id), Some(oid)) = (brand_id_owned, oid_owned) {
+        let sync = crate::services::sync_adapter::SyncService::new(
+            state.db.clone(),
+            state.http_client.clone(),
+        );
+        let _ = tokio::spawn(async move {
+            let _ = sync.queue_order_sync(&oid, &brand_id).await;
+        });
     }
+    Ok(Json(json))
 }
 
 pub async fn get_order_stats(
     State(state): State<AppState>,
     Query(query): Query<ListCategoriesQuery>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let service = CommerceOrdersService::new(state.db.clone());
-    match service.get_order_stats(&query.brand_id).await {
-        Ok(stats) => Ok(Json(stats)),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    }
+    let mut client = orders_grpc::client().await.map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, e))?;
+    let resp = client.get_order_stats(
+        newax_proto::commerce_orders::v1::GetOrderStatsRequest {
+            brand_id: query.brand_id,
+        }
+    ).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json = orders_grpc::parse_json_response(resp.into_inner())?;
+    Ok(Json(json))
 }
 
 // ---------------------------------------------------------------------------

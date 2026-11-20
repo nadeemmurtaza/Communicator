@@ -92,6 +92,8 @@ pub struct Config {
     pub live_proof_grpc_url: String,
     /// gRPC address for the standalone commerce-catalog service. Empty defaults to 127.0.0.1:50110.
     pub commerce_catalog_grpc_url: String,
+    /// gRPC address for the standalone commerce-orders service. Empty defaults to 127.0.0.1:50111.
+    pub commerce_orders_grpc_url: String,
     /// gRPC address for the standalone conversations service. Empty defaults to 127.0.0.1:50120.
     pub conversations_grpc_url: String,
     /// gRPC address for the standalone meta-sync service. Empty defaults to 127.0.0.1:50113.
@@ -216,6 +218,7 @@ impl Config {
         let knowledge_base_grpc_url = env::var("KNOWLEDGE_BASE_GRPC_URL").unwrap_or_default();
         let live_proof_grpc_url = env::var("LIVE_PROOF_GRPC_URL").unwrap_or_default();
         let commerce_catalog_grpc_url = env::var("COMMERCE_CATALOG_GRPC_URL").unwrap_or_default();
+        let commerce_orders_grpc_url = env::var("COMMERCE_ORDERS_GRPC_URL").unwrap_or_default();
         let conversations_grpc_url = env::var("CONVERSATIONS_GRPC_URL").unwrap_or_default();
         let meta_sync_grpc_url = env::var("META_SYNC_GRPC_URL").unwrap_or_default();
         let whatsapp_template_sync_grpc_url = env::var("WHATSAPP_TEMPLATE_SYNC_GRPC_URL").unwrap_or_default();
@@ -313,6 +316,7 @@ impl Config {
             knowledge_base_grpc_url,
             live_proof_grpc_url,
             commerce_catalog_grpc_url,
+            commerce_orders_grpc_url,
             conversations_grpc_url,
             meta_sync_grpc_url,
             nid_base_url,
@@ -454,6 +458,7 @@ impl Config {
             "knowledge_base_grpc_url" => Self::set_string(&mut self.knowledge_base_grpc_url, value),
             "live_proof_grpc_url" => Self::set_string(&mut self.live_proof_grpc_url, value),
             "commerce_catalog_grpc_url" => Self::set_string(&mut self.commerce_catalog_grpc_url, value),
+            "commerce_orders_grpc_url" => Self::set_string(&mut self.commerce_orders_grpc_url, value),
             "conversations_grpc_url" => Self::set_string(&mut self.conversations_grpc_url, value),
             "meta_sync_grpc_url" => Self::set_string(&mut self.meta_sync_grpc_url, value),
             "nid_base_url" => Self::set_string(&mut self.nid_base_url, value),

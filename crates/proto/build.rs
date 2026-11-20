@@ -70,6 +70,7 @@ const PROTOS: &[&str] = &[
     "../../proto/communicator/commerce_catalog/v1/commerce_catalog.proto",
     "../../proto/communicator/conversations/v1/conversations.proto",
     "../../proto/communicator/organization/v1/organization.proto",
+    "../../proto/communicator/commerce_orders/v1/commerce_orders.proto",
 ];
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

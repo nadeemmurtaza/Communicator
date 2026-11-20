@@ -1,4 +1,4 @@
-﻿#![allow(dead_code)]
+#![allow(dead_code)]
 
 //! Order management service: create from cart, status transitions, order history.
 
@@ -6,13 +6,122 @@ use serde::{Deserialize, Serialize};
 use sqlx::{Row, PgPool};
 use uuid::Uuid;
 
-use crate::models::{CommerceOrder, CommerceOrderItem, OrderStatus, PaymentStatus};
+// ---------------------------------------------------------------------------
+// Models (inlined from backend-rs models to keep this crate self-contained)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OrderStatus {
+    Draft,
+    Pending,
+    Confirmed,
+    Processing,
+    Shipped,
+    Delivered,
+    Cancelled,
+}
+
+impl OrderStatus {
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "pending" => OrderStatus::Pending,
+            "confirmed" => OrderStatus::Confirmed,
+            "processing" => OrderStatus::Processing,
+            "shipped" => OrderStatus::Shipped,
+            "delivered" => OrderStatus::Delivered,
+            "cancelled" => OrderStatus::Cancelled,
+            _ => OrderStatus::Draft,
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            OrderStatus::Draft => "draft",
+            OrderStatus::Pending => "pending",
+            OrderStatus::Confirmed => "confirmed",
+            OrderStatus::Processing => "processing",
+            OrderStatus::Shipped => "shipped",
+            OrderStatus::Delivered => "delivered",
+            OrderStatus::Cancelled => "cancelled",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PaymentStatus {
+    Pending,
+    Paid,
+    PartiallyPaid,
+    Refunded,
+}
+
+impl PaymentStatus {
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "paid" => PaymentStatus::Paid,
+            "partially_paid" => PaymentStatus::PartiallyPaid,
+            "refunded" => PaymentStatus::Refunded,
+            _ => PaymentStatus::Pending,
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            PaymentStatus::Pending => "pending",
+            PaymentStatus::Paid => "paid",
+            PaymentStatus::PartiallyPaid => "partially_paid",
+            PaymentStatus::Refunded => "refunded",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct CommerceOrder {
+    pub id: String,
+    pub brand_id: String,
+    pub customer_id: String,
+    pub order_number: String,
+    pub channel_type: Option<String>,
+    pub status: String,
+    pub total_amount: f64,
+    pub subtotal: f64,
+    pub tax: f64,
+    pub shipping: f64,
+    pub currency: String,
+    pub items_snapshot: Option<String>,
+    pub shipping_address: Option<String>,
+    pub payment_status: String,
+    pub payment_method: Option<String>,
+    pub metadata: Option<String>,
+    pub source: String,
+    pub external_order_id: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct CommerceOrderItem {
+    pub id: String,
+    pub order_id: String,
+    pub product_id: String,
+    pub variant_id: Option<String>,
+    pub product_name: String,
+    pub sku: Option<String>,
+    pub quantity: i32,
+    pub unit_price: f64,
+    pub total_price: f64,
+    pub metadata: Option<String>,
+}
 
 // ---------------------------------------------------------------------------
 // Request/Response DTOs
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CheckoutRequest {
     pub shipping_address: Option<serde_json::Value>,
     pub payment_method: Option<String>,

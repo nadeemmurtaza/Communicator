@@ -133,6 +133,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "arc-swap"
+version = "1.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "84a22b5d51209f6de83d37a0b33d320acb8da88823e42a94c075140708f032a5"
+dependencies = [
+ "rustversion",
+]
+
+[[package]]
 name = "async-nats"
 version = "0.38.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -357,6 +366,7 @@ dependencies = [
  "newax-alerts",
  "newax-commerce-cart",
  "newax-commerce-catalog",
+ "newax-commerce-orders",
  "newax-compliance",
  "newax-conversations",
  "newax-in-app-messaging",
@@ -1782,6 +1792,15 @@ dependencies = [
 
 [[package]]
 name = "itertools"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
+dependencies = [
+ "either",
+]
+
+[[package]]
+name = "itertools"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
@@ -2277,6 +2296,17 @@ dependencies = [
 
 [[package]]
 name = "newax-commerce-catalog"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "uuid",
+]
+
+[[package]]
+name = "newax-commerce-orders"
 version = "0.1.0"
 dependencies = [
  "chrono",
@@ -3076,6 +3106,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc895af95856f929163a0aa20c26a78d26bfdc839f51b9d5aa7a5b79e52b7e83"
 dependencies = [
  "rand 0.8.8",
+]
+
+[[package]]
+name = "num-bigint"
+version = "0.4.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c89e69e7e0f03bea5ef08013795c25018e101932225a656383bd384495ecc367"
+dependencies = [
+ "num-integer",
+ "num-traits",
 ]
 
 [[package]]
@@ -4608,7 +4648,7 @@ version = "0.1.0"
 dependencies = [
  "newax-access-control",
  "newax-proto",
- "prost",
+ "prost 0.13.5",
  "serde",
  "serde_json",
  "sqlx",
@@ -4745,6 +4785,22 @@ name = "svc-commerce-catalog"
 version = "0.1.0"
 dependencies = [
  "newax-commerce-catalog",
+ "prost 0.13.5",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tonic 0.12.3",
+ "tonic-build 0.12.3",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "svc-commerce-orders"
+version = "0.1.0"
+dependencies = [
+ "newax-commerce-orders",
  "prost 0.13.5",
  "serde",
  "serde_json",

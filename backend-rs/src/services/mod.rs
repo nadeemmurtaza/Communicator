@@ -1,7 +1,6 @@
 pub mod business_hours;
 pub mod channels;
 pub mod claude_client;
-pub mod commerce_orders;
 pub mod commerce_payments;
 pub mod channel_commerce_templates;
 pub mod sync_adapter;

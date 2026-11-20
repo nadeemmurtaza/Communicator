@@ -5,7 +5,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::models::{Product, CommerceOrder};
-use crate::services::commerce_cart::CartItemWithProduct;
+use newax_commerce_cart::CartItemWithProduct;
 use crate::services::commerce_options::ProductOptionWithValues;
 
 // ---------------------------------------------------------------------------

@@ -80,12 +80,15 @@ pub async fn list_conversations(
         Ok(c) => c,
         Err(resp) => return resp,
     };
-    let resp = cli
+    let resp = match cli
         .list_conversations(EmptyRequest {})
         .await
-        .map_err(grpc_error)?;
+    {
+        Ok(r) => r,
+        Err(e) => return grpc_error(e),
+    };
     let body = resp.into_inner().json;
-    match serde_json::from_str(&body) {
+    match serde_json::from_str::<Value>(&body) {
         Ok(v) => (StatusCode::OK, Json(v)).into_response(),
         Err(_) => (
             StatusCode::BAD_GATEWAY,
@@ -103,12 +106,15 @@ pub async fn get_conversation(
         Ok(c) => c,
         Err(resp) => return resp,
     };
-    let resp = cli
+    let resp = match cli
         .get_conversation(GetConversationRequest { id })
         .await
-        .map_err(grpc_error)?;
+    {
+        Ok(r) => r,
+        Err(e) => return grpc_error(e),
+    };
     let body = resp.into_inner().json;
-    match serde_json::from_str(&body) {
+    match serde_json::from_str::<Value>(&body) {
         Ok(v) => (StatusCode::OK, Json(v)).into_response(),
         Err(_) => (
             StatusCode::BAD_GATEWAY,
@@ -128,12 +134,15 @@ pub async fn send_conversation_message(
         Err(resp) => return resp,
     };
     let json_str = body.to_string();
-    let resp = cli
+    let resp = match cli
         .send_conversation_message(SendMessageRequest { id, json: json_str })
         .await
-        .map_err(grpc_error)?;
+    {
+        Ok(r) => r,
+        Err(e) => return grpc_error(e),
+    };
     let body = resp.into_inner().json;
-    match serde_json::from_str(&body) {
+    match serde_json::from_str::<Value>(&body) {
         Ok(v) => (StatusCode::OK, Json(v)).into_response(),
         Err(_) => (
             StatusCode::BAD_GATEWAY,
@@ -153,12 +162,15 @@ pub async fn resolve_conversation(
         Err(resp) => return resp,
     };
     let json_str = body.to_string();
-    let resp = cli
+    let resp = match cli
         .resolve_conversation(ResolveConversationRequest { id, json: json_str })
         .await
-        .map_err(grpc_error)?;
+    {
+        Ok(r) => r,
+        Err(e) => return grpc_error(e),
+    };
     let body = resp.into_inner().json;
-    match serde_json::from_str(&body) {
+    match serde_json::from_str::<Value>(&body) {
         Ok(v) => (StatusCode::OK, Json(v)).into_response(),
         Err(_) => (
             StatusCode::BAD_GATEWAY,
@@ -178,12 +190,15 @@ pub async fn update_priority(
         Err(resp) => return resp,
     };
     let json_str = body.to_string();
-    let resp = cli
+    let resp = match cli
         .update_priority(UpdatePriorityRequest { id, json: json_str })
         .await
-        .map_err(grpc_error)?;
+    {
+        Ok(r) => r,
+        Err(e) => return grpc_error(e),
+    };
     let body = resp.into_inner().json;
-    match serde_json::from_str(&body) {
+    match serde_json::from_str::<Value>(&body) {
         Ok(v) => (StatusCode::OK, Json(v)).into_response(),
         Err(_) => (
             StatusCode::BAD_GATEWAY,
@@ -203,12 +218,15 @@ pub async fn assign_team(
         Err(resp) => return resp,
     };
     let json_str = body.to_string();
-    let resp = cli
+    let resp = match cli
         .assign_team(AssignTeamRequest { id, json: json_str })
         .await
-        .map_err(grpc_error)?;
+    {
+        Ok(r) => r,
+        Err(e) => return grpc_error(e),
+    };
     let body = resp.into_inner().json;
-    match serde_json::from_str(&body) {
+    match serde_json::from_str::<Value>(&body) {
         Ok(v) => (StatusCode::OK, Json(v)).into_response(),
         Err(_) => (
             StatusCode::BAD_GATEWAY,
@@ -228,12 +246,15 @@ pub async fn assign_agent(
         Err(resp) => return resp,
     };
     let json_str = body.to_string();
-    let resp = cli
+    let resp = match cli
         .assign_agent(AssignAgentRequest { id, json: json_str })
         .await
-        .map_err(grpc_error)?;
+    {
+        Ok(r) => r,
+        Err(e) => return grpc_error(e),
+    };
     let body = resp.into_inner().json;
-    match serde_json::from_str(&body) {
+    match serde_json::from_str::<Value>(&body) {
         Ok(v) => (StatusCode::OK, Json(v)).into_response(),
         Err(_) => (
             StatusCode::BAD_GATEWAY,
@@ -253,12 +274,15 @@ pub async fn snooze_conversation(
         Err(resp) => return resp,
     };
     let json_str = body.to_string();
-    let resp = cli
+    let resp = match cli
         .snooze_conversation(SnoozeConversationRequest { id, json: json_str })
         .await
-        .map_err(grpc_error)?;
+    {
+        Ok(r) => r,
+        Err(e) => return grpc_error(e),
+    };
     let body = resp.into_inner().json;
-    match serde_json::from_str(&body) {
+    match serde_json::from_str::<Value>(&body) {
         Ok(v) => (StatusCode::OK, Json(v)).into_response(),
         Err(_) => (
             StatusCode::BAD_GATEWAY,
@@ -278,12 +302,15 @@ pub async fn update_custom_attributes(
         Err(resp) => return resp,
     };
     let json_str = body.to_string();
-    let resp = cli
+    let resp = match cli
         .update_custom_attributes(UpdateCustomAttributesRequest { id, json: json_str })
         .await
-        .map_err(grpc_error)?;
+    {
+        Ok(r) => r,
+        Err(e) => return grpc_error(e),
+    };
     let body = resp.into_inner().json;
-    match serde_json::from_str(&body) {
+    match serde_json::from_str::<Value>(&body) {
         Ok(v) => (StatusCode::OK, Json(v)).into_response(),
         Err(_) => (
             StatusCode::BAD_GATEWAY,
@@ -301,12 +328,15 @@ pub async fn auto_assign(
         Ok(c) => c,
         Err(resp) => return resp,
     };
-    let resp = cli
+    let resp = match cli
         .auto_assign(AutoAssignRequest { id })
         .await
-        .map_err(grpc_error)?;
+    {
+        Ok(r) => r,
+        Err(e) => return grpc_error(e),
+    };
     let body = resp.into_inner().json;
-    match serde_json::from_str(&body) {
+    match serde_json::from_str::<Value>(&body) {
         Ok(v) => (StatusCode::OK, Json(v)).into_response(),
         Err(_) => (
             StatusCode::BAD_GATEWAY,
@@ -328,12 +358,15 @@ pub async fn list_contact_notes(
         Ok(c) => c,
         Err(resp) => return resp,
     };
-    let resp = cli
+    let resp = match cli
         .list_contact_notes(ListContactNotesRequest { contact_id })
         .await
-        .map_err(grpc_error)?;
+    {
+        Ok(r) => r,
+        Err(e) => return grpc_error(e),
+    };
     let body = resp.into_inner().json;
-    match serde_json::from_str(&body) {
+    match serde_json::from_str::<Value>(&body) {
         Ok(v) => (StatusCode::OK, Json(v)).into_response(),
         Err(_) => (
             StatusCode::BAD_GATEWAY,
@@ -353,12 +386,15 @@ pub async fn add_contact_note(
         Err(resp) => return resp,
     };
     let json_str = body.to_string();
-    let resp = cli
+    let resp = match cli
         .add_contact_note(AddContactNoteRequest { contact_id, json: json_str })
         .await
-        .map_err(grpc_error)?;
+    {
+        Ok(r) => r,
+        Err(e) => return grpc_error(e),
+    };
     let body = resp.into_inner().json;
-    match serde_json::from_str(&body) {
+    match serde_json::from_str::<Value>(&body) {
         Ok(v) => (StatusCode::OK, Json(v)).into_response(),
         Err(_) => (
             StatusCode::BAD_GATEWAY,
@@ -382,12 +418,15 @@ pub async fn enroll_sequence(
         Err(resp) => return resp,
     };
     let json_str = body.to_string();
-    let resp = cli
+    let resp = match cli
         .enroll_sequence(EnrollSequenceRequest { id, json: json_str })
         .await
-        .map_err(grpc_error)?;
+    {
+        Ok(r) => r,
+        Err(e) => return grpc_error(e),
+    };
     let body = resp.into_inner().json;
-    match serde_json::from_str(&body) {
+    match serde_json::from_str::<Value>(&body) {
         Ok(v) => (StatusCode::OK, Json(v)).into_response(),
         Err(_) => (
             StatusCode::BAD_GATEWAY,
@@ -437,12 +476,15 @@ pub async fn submit_message_feedback(
         Err(resp) => return resp,
     };
     let json_str = body.to_string();
-    let resp = cli
+    let resp = match cli
         .submit_message_feedback(SubmitFeedbackRequest { message_id, json: json_str })
         .await
-        .map_err(grpc_error)?;
+    {
+        Ok(r) => r,
+        Err(e) => return grpc_error(e),
+    };
     let body = resp.into_inner().json;
-    match serde_json::from_str(&body) {
+    match serde_json::from_str::<Value>(&body) {
         Ok(v) => (StatusCode::OK, Json(v)).into_response(),
         Err(_) => (
             StatusCode::BAD_GATEWAY,
@@ -457,12 +499,15 @@ pub async fn get_feedback_summary(State(state): State<AppState>) -> Response {
         Ok(c) => c,
         Err(resp) => return resp,
     };
-    let resp = cli
+    let resp = match cli
         .get_feedback_summary(EmptyRequest {})
         .await
-        .map_err(grpc_error)?;
+    {
+        Ok(r) => r,
+        Err(e) => return grpc_error(e),
+    };
     let body = resp.into_inner().json;
-    match serde_json::from_str(&body) {
+    match serde_json::from_str::<Value>(&body) {
         Ok(v) => (StatusCode::OK, Json(v)).into_response(),
         Err(_) => (
             StatusCode::BAD_GATEWAY,

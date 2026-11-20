@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package newax.commerce_orders.v1;
+
+service CommerceOrdersService {
+  rpc Checkout(CheckoutRequest) returns (JsonResponse);
+  rpc ListOrders(ListOrdersRequest) returns (JsonResponse);
+  rpc GetOrder(GetOrderRequest) returns (JsonResponse);
+  rpc UpdateOrderStatus(UpdateOrderStatusRequest) returns (JsonResponse);
+  rpc GetOrderStats(GetOrderStatsRequest) returns (JsonResponse);
+}
+
+message Empty {}
+
+message JsonResponse {
+  string json = 1;
+}
+
+// Checkout
+
+message CheckoutRequest {
+  string cart_id = 1;
+  string json = 2;
+}
+
+// List Orders
+
+message ListOrdersRequest {
+  string brand_id = 1;
+  string customer_id = 2;
+  string status = 3;
+  string channel_type = 4;
+}
+
+// Get Order
+
+message GetOrderRequest {
+  string id = 1;
+}
+
+// Update Order Status
+
+message UpdateOrderStatusRequest {
+  string id = 1;
+  string status = 2;
+}
+
+// Get Order Stats
+
+message GetOrderStatsRequest {
+  string brand_id = 1;
+}

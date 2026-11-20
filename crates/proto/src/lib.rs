@@ -393,3 +393,9 @@ pub mod organization {
         tonic::include_proto!("newax.organization.v1");
     }
 }
+
+pub mod commerce_orders {
+    pub mod v1 {
+        tonic::include_proto!("newax.commerce_orders.v1");
+    }
+}

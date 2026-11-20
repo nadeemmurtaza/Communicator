@@ -269,7 +269,7 @@ discipline, and a final checklist) — this section is just the live
 tracking table and status summary, not the how-to.
 
 The pattern in §3 is now proven working, not just specified —
-fifty real modules split so far (including `conversations`),
+fifty-one real modules split so far (including `organization`),
 each a standalone `tonic` gRPC service
 with its old monolith route handlers reduced to a thin client, each
 verified with `cargo check --workspace`:
@@ -344,9 +344,10 @@ verified with `cargo check --workspace`:
 | team_routing | Communicator | `crates/team_routing` | `services/team_routing` | 50116 |
 | knowledge_base | Communicator | `crates/knowledge_base` | `services/knowledge_base` | 50117 |
 | live_proof | Communicator | `crates/live_proof` | `services/live_proof` | 50118 |
-| conversations | Communicator | `crates/conversations` | `services/conversations` | 50120 |
+| organization | Communicator | `crates/organization` | `services/organization` | 50121 |
 | whatsapp-automations | Communicator | `crates/whatsapp_automations` | `services/whatsapp_automations` | 50109 |
 | commerce-catalog | Communicator | `crates/commerce_catalog` | `services/commerce_catalog` | 50110 |
+| commerce-orders | Communicator | `crates/commerce_orders` | `services/commerce_orders` | 50111 |
 | compliance | Communicator | `crates/compliance` | (library-only) | — |
 
 `reply-integration`, `alerts`, and `compliance` are the cases so far where a split
